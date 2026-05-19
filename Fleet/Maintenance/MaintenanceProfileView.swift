@@ -1,36 +1,27 @@
 import SwiftUI
 
-struct ProfileView: View {
-
+struct MaintenanceProfileView: View {
     var body: some View {
-
         NavigationStack {
-
             ScrollView {
-
                 VStack(spacing: 24) {
-
                     Image(systemName: "person.crop.circle.fill")
                         .font(.system(size: 100))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(.blue)
 
                     VStack(spacing: 8) {
-
-                        Text("Alex Johnson")
+                        Text("Mike Thompson")
                             .font(.title.bold())
 
-                        Text("Fleet Driver")
+                        Text("Senior Mechanic")
                             .foregroundStyle(.gray)
                     }
 
                     VStack(spacing: 16) {
-
+                        settingsRow(title: "Certifications", icon: "rosette")
+                        settingsRow(title: "Shift Schedule", icon: "calendar")
+                        settingsRow(title: "Assigned Depot", icon: "building.2.fill")
                         settingsRow(title: "Notifications", icon: "bell")
-
-                        settingsRow(title: "Documents", icon: "doc")
-
-                        settingsRow(title: "Support", icon: "questionmark.circle")
-
                         settingsRow(title: "Logout", icon: "rectangle.portrait.and.arrow.right")
                     }
                 }
@@ -42,13 +33,9 @@ struct ProfileView: View {
     }
 
     func settingsRow(title: String, icon: String) -> some View {
-
         HStack {
-
             Image(systemName: icon)
-
             Text(title)
-
             Spacer()
         }
         .padding()
@@ -57,3 +44,6 @@ struct ProfileView: View {
     }
 }
 
+#Preview {
+    MaintenanceProfileView()
+}
