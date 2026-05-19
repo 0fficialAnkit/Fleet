@@ -4,7 +4,6 @@ struct FuelView: View {
 
     @State private var volume: String = ""
     @State private var price: String = ""
-    @State private var isSubmitting: Bool = false
     @State private var showSuccess: Bool = false
     
     // Mock history
@@ -55,22 +54,15 @@ struct FuelView: View {
                         }
                         
                         Button(action: submitFuelLog) {
-                            HStack {
-                                if isSubmitting {
-                                    ProgressView()
-                                        .tint(.white)
-                                } else {
-                                    Text("Submit")
-                                        .fontWeight(.semibold)
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(volume.isEmpty || price.isEmpty ? Color.gray : Color.blue)
-                            .foregroundColor(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            Text("Submit")
+                                .fontWeight(.semibold)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(volume.isEmpty || price.isEmpty ? Color.gray : Color.blue)
+                                .foregroundColor(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
-                        .disabled(volume.isEmpty || price.isEmpty || isSubmitting)
+                        .disabled(volume.isEmpty || price.isEmpty)
                     }
                     .padding()
                     .background(Color.white.opacity(0.05))
@@ -125,28 +117,14 @@ struct FuelView: View {
     }
     
     private func submitFuelLog() {
-        isSubmitting = true
-        showSuccess = false
+        let newLog = FuelLogEntry(volume: volume, price: price, date: Date())
+        history.insert(newLog, at: 0)
         
-        // Simulate network delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            let newLog = FuelLogEntry(volume: volume, price: price, date: Date())
-            history.insert(newLog, at: 0)
-            
-            // Clear form
-            volume = ""
-            price = ""
-            
-            isSubmitting = false
-            showSuccess = true
-            
-            // Hide success message after 3 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                withAnimation {
-                    showSuccess = false
-                }
-            }
-        }
+        // Clear form
+        volume = ""
+        price = ""
+        
+        showSuccess = true
     }
 }
 

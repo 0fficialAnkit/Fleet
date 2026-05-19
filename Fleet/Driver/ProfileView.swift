@@ -12,7 +12,7 @@ struct ProfileView: View {
 
                     Image(systemName: "person.crop.circle.fill")
                         .font(.system(size: 100))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(.blue)
 
                     VStack(spacing: 8) {
 

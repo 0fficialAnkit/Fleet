@@ -38,8 +38,6 @@ struct DashboardView: View {
 
                     vehicleCard
 
-                    safetyCard
-
                     summaryCardsSection
 
                     checklistBanner
@@ -137,65 +135,19 @@ extension DashboardView {
         .clipShape(RoundedRectangle(cornerRadius: 30))
     }
 
-    var safetyCard: some View {
 
-        VStack(alignment: .leading, spacing: 20) {
-
-            HStack {
-
-                VStack(alignment: .leading) {
-
-                    Text("Safety Score")
-                        .font(.title2.bold())
-
-                    Text("This week")
-                        .foregroundStyle(.gray)
-                }
-
-                Spacer()
-
-                HStack {
-
-                    Image(systemName: "star.fill")
-                        .foregroundStyle(.yellow)
-
-                    Text("96")
-                        .font(.largeTitle.bold())
-
-                    Text("/100")
-                        .foregroundStyle(.green)
-                }
-            }
-
-            RoundedRectangle(cornerRadius: 20)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            .green.opacity(0.6),
-                            .green.opacity(0.1)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .frame(height: 100)
-        }
-        .padding()
-        .background(Color.white.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 30))
-    }
 
     var summaryCardsSection: some View {
 
         VStack(spacing: 16) {
             HStack {
-                SummaryCard(title: "Total Vehicles", count: "1", icon: "car.2.fill", color: .blue)
                 SummaryCard(title: "Trips Today", count: "2", icon: "paperplane.fill", color: .green)
+                SummaryCard(title: "KM Driven", count: "89", icon: "location.fill", color: .orange)
             }
             
             HStack {
-                SummaryCard(title: "KM Driven", count: "89", icon: "location.fill", color: .orange)
                 SummaryCard(title: "Hours Active", count: "4.5", icon: "clock.fill", color: .purple)
+                SummaryCard(title: "Vehicle Health", count: "Good", icon: "waveform.path.ecg", color: .red)
             }
         }
     }

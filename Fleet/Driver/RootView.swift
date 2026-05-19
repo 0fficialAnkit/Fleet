@@ -31,7 +31,7 @@ struct DriverRootView: View {
                     Label("Profile", systemImage: "person.crop.circle.fill")
                 }
         }
-        .tint(.green)
+        .tint(.blue)
         .preferredColorScheme(.dark)
     }
 }
