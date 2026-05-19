@@ -1,30 +1,11 @@
 import SwiftUI
 
-struct DashboardView: View {
+struct DriverDashboardView: View {
 
-    let vehicle = Vehicle(
-        id: UUID(),
-        make: "Ford",
-        model: "F-150",
-        year: 2024,
-        vin: nil,
-        licensePlate: "TRK-001",
-        assignedDriverId: nil,
-        status: .active
-    )
+    @StateObject private var dataStore = DataStore.shared
 
-    let trips: [Trip] = [
-        Trip(
-            id: UUID(),
-            vehicleId: UUID(),
-            driverId: UUID(),
-            routeId: UUID(),
-            startTime: Date(),
-            endTime: nil,
-            distance: 42,
-            status: .scheduled
-        )
-    ]
+    var vehicle: Vehicle { dataStore.vehicle }
+    var trips: [Trip] { dataStore.trips }
 
     var body: some View {
 
@@ -33,8 +14,6 @@ struct DashboardView: View {
             ScrollView(showsIndicators: false) {
 
                 VStack(spacing: 20) {
-
-                    topHeader
 
                     vehicleCard
 
@@ -47,44 +26,27 @@ struct DashboardView: View {
                 .padding()
             }
             .background(Color.black)
+            .navigationTitle("Driver Portal")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        // Action for notifications
+                    }) {
+                        Image(systemName: "bell")
+                            .font(.title3)
+                            .foregroundStyle(.white)
+                    }
+                }
+            }
         }
     }
 }
 
 #Preview {
-    DashboardView()
+    DriverDashboardView()
 }
 
-extension DashboardView {
-
-    var topHeader: some View {
-
-        HStack {
-
-            VStack(alignment: .leading, spacing: 6) {
-
-                Text("Good Morning")
-                    .foregroundStyle(.gray)
-
-                Text("Driver Portal")
-                    .font(.largeTitle.bold())
-            }
-
-            Spacer()
-
-            Button {
-
-            } label: {
-
-                Image(systemName: "bell")
-                    .font(.title3)
-                    .foregroundStyle(.white)
-                    .frame(width: 45, height: 45)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Circle())
-            }
-        }
-    }
+extension DriverDashboardView {
 
     var vehicleCard: some View {
 

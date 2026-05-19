@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ProfileView: View {
+struct DriverProfileView: View {
 
     var body: some View {
 

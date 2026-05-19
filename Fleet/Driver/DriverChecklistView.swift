@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ChecklistView: View {
+struct DriverChecklistView: View {
 
     @State private var checklistType: InspectionType = .preTrip
     @State private var checkedItems: Set<String> = []
@@ -92,5 +92,5 @@ struct ChecklistView: View {
 }
 
 #Preview {
-    ChecklistView()
+    DriverChecklistView()
 }

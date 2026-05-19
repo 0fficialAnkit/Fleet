@@ -1,16 +1,12 @@
 import SwiftUI
 
-struct FuelView: View {
+struct DriverFuelView: View {
 
     @State private var volume: String = ""
     @State private var price: String = ""
     @State private var showSuccess: Bool = false
     
-    // Mock history
-    @State private var history: [FuelLogEntry] = [
-        FuelLogEntry(volume: "48", price: "4200", date: Date().addingTimeInterval(-86400)),
-        FuelLogEntry(volume: "35", price: "3000", date: Date().addingTimeInterval(-172800))
-    ]
+    @StateObject private var dataStore = DataStore.shared
 
     var body: some View {
         NavigationStack {
@@ -86,20 +82,20 @@ struct FuelView: View {
                         Text("Recent Logs")
                             .font(.headline)
                         
-                        ForEach(history) { log in
+                        ForEach(dataStore.fuelLogs) { log in
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("\(log.volume) Liters")
+                                    Text("\(String(format: "%.1f", log.litersUsed ?? 0.0)) Liters")
                                         .font(.headline)
                                         .foregroundColor(.green)
-                                    Text(log.date.formatted(date: .abbreviated, time: .shortened))
+                                    Text((log.recordedAt ?? Date()).formatted(date: .abbreviated, time: .shortened))
                                         .font(.caption)
                                         .foregroundColor(.gray)
                                 }
                                 
                                 Spacer()
                                 
-                                Text("₹\(log.price)")
+                                Text("₹\(Int(log.fuelCost ?? 0.0))")
                                     .font(.headline)
                                     .foregroundColor(.white)
                             }
@@ -117,8 +113,17 @@ struct FuelView: View {
     }
     
     private func submitFuelLog() {
-        let newLog = FuelLogEntry(volume: volume, price: price, date: Date())
-        history.insert(newLog, at: 0)
+        let liters = Double(volume) ?? 0.0
+        let cost = Double(price) ?? 0.0
+        let newLog = FuelLog(
+            id: UUID(),
+            vehicleId: dataStore.vehicle.id,
+            driverId: nil,
+            litersUsed: liters,
+            fuelCost: cost,
+            recordedAt: Date()
+        )
+        dataStore.fuelLogs.insert(newLog, at: 0)
         
         // Clear form
         volume = ""
@@ -128,13 +133,6 @@ struct FuelView: View {
     }
 }
 
-struct FuelLogEntry: Identifiable {
-    let id = UUID()
-    let volume: String
-    let price: String
-    let date: Date
-}
-
 #Preview {
-    FuelView()
+    DriverFuelView()
 }

@@ -1,54 +1,23 @@
 import SwiftUI
 
-struct TripsView: View {
+struct DriverTripsView: View {
 
-    @State private var trips: [Trip] = [
-        Trip(
-            id: UUID(),
-            vehicleId: UUID(),
-            driverId: UUID(),
-            routeId: UUID(),
-            startTime: Calendar.current.date(byAdding: .hour, value: 1, to: Date()),
-            endTime: nil,
-            distance: 42,
-            status: .active
-        ),
-        Trip(
-            id: UUID(),
-            vehicleId: UUID(),
-            driverId: UUID(),
-            routeId: UUID(),
-            startTime: Calendar.current.date(byAdding: .hour, value: 3, to: Date()),
-            endTime: nil,
-            distance: 120,
-            status: .scheduled
-        ),
-        Trip(
-            id: UUID(),
-            vehicleId: UUID(),
-            driverId: UUID(),
-            routeId: UUID(),
-            startTime: Calendar.current.date(byAdding: .hour, value: -2, to: Date()),
-            endTime: Calendar.current.date(byAdding: .hour, value: -1, to: Date()),
-            distance: 35,
-            status: .completed
-        )
-    ]
+    @StateObject private var dataStore = DataStore.shared
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    ForEach(trips.sorted(by: { ($0.startTime ?? Date()) < ($1.startTime ?? Date()) })) { trip in
+                    ForEach(dataStore.trips.sorted(by: { ($0.startTime ?? Date()) < ($1.startTime ?? Date()) })) { trip in
                         TripCardView(trip: trip, onStart: {
-                            if let index = trips.firstIndex(where: { $0.id == trip.id }) {
-                                trips[index].status = .active
-                                trips[index].startTime = Date() // Record start time
+                            if let index = dataStore.trips.firstIndex(where: { $0.id == trip.id }) {
+                                dataStore.trips[index].status = .active
+                                dataStore.trips[index].startTime = Date() // Record start time
                             }
                         }, onEnd: {
-                            if let index = trips.firstIndex(where: { $0.id == trip.id }) {
-                                trips[index].status = .completed
-                                trips[index].endTime = Date() // Record end time
+                            if let index = dataStore.trips.firstIndex(where: { $0.id == trip.id }) {
+                                dataStore.trips[index].status = .completed
+                                dataStore.trips[index].endTime = Date() // Record end time
                             }
                         })
                     }
@@ -165,5 +134,5 @@ struct TripCardView: View {
 }
 
 #Preview {
-    TripsView()
+    DriverTripsView()
 }

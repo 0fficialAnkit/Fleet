@@ -6,27 +6,27 @@ struct DriverRootView: View {
 
         TabView {
 
-            DashboardView()
+            DriverDashboardView()
                 .tabItem {
                     Label("Dashboard", systemImage: "chart.bar.doc.horizontal.fill")
                 }
 
-            TripsView()
+            DriverTripsView()
                 .tabItem {
                     Label("Trips", systemImage: "map.fill")
                 }
 
-            ChecklistView()
+            DriverChecklistView()
                 .tabItem {
                     Label("Checklist", systemImage: "checklist")
                 }
 
-            FuelView()
+            DriverFuelView()
                 .tabItem {
                     Label("Fuel", systemImage: "fuelpump.fill")
                 }
 
-            ProfileView()
+            DriverProfileView()
                 .tabItem {
                     Label("Profile", systemImage: "person.crop.circle.fill")
                 }
