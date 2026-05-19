@@ -40,7 +40,7 @@ struct DashboardView: View {
 
                     safetyCard
 
-                    statsSection
+                    summaryCardsSection
 
                     checklistBanner
 
@@ -185,57 +185,19 @@ extension DashboardView {
         .clipShape(RoundedRectangle(cornerRadius: 30))
     }
 
-    var statsSection: some View {
+    var summaryCardsSection: some View {
 
-        HStack(spacing: 16) {
-
-            statsCard(
-                icon: "paperplane.fill",
-                value: "2",
-                title: "Trips Today",
-                color: .blue
-            )
-
-            statsCard(
-                icon: "location.fill",
-                value: "89",
-                title: "KM Driven",
-                color: .green
-            )
-
-            statsCard(
-                icon: "clock.fill",
-                value: "4.5h",
-                title: "Hours Active",
-                color: .orange
-            )
+        VStack(spacing: 16) {
+            HStack {
+                SummaryCard(title: "Total Vehicles", count: "1", icon: "car.2.fill", color: .blue)
+                SummaryCard(title: "Trips Today", count: "2", icon: "paperplane.fill", color: .green)
+            }
+            
+            HStack {
+                SummaryCard(title: "KM Driven", count: "89", icon: "location.fill", color: .orange)
+                SummaryCard(title: "Hours Active", count: "4.5", icon: "clock.fill", color: .purple)
+            }
         }
-    }
-
-    func statsCard(
-        icon: String,
-        value: String,
-        title: String,
-        color: Color
-    ) -> some View {
-
-        VStack(spacing: 14) {
-
-            Image(systemName: icon)
-                .foregroundStyle(color)
-                .font(.title2)
-
-            Text(value)
-                .font(.title.bold())
-
-            Text(title)
-                .foregroundStyle(.gray)
-                .font(.caption)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color.white.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 25))
     }
 
     var checklistBanner: some View {
