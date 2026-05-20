@@ -19,24 +19,19 @@ struct DashboardView: View {
             }
             .navigationTitle("Dashboard")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
+
                     Button(action: {
                         // Notification action
                     }) {
-                        Image(systemName: "bell.fill")
-                            .font(.system(size: 20))
-                            .foregroundColor(themeModel.textPrimary)
-                            .overlay(
-                                Circle()
-                                    .fill(themeModel.notificationError)
-                                    .frame(width: 8, height: 8)
-                                    .offset(x: 2, y: -2),
-                                alignment: .topTrailing
-                            )
-                            .padding(8)
-                            .background(themeModel.surfaceSecondary)
-                            .clipShape(Circle())
+
+                        Image(systemName: "bell")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(themeModel.textPrimary)
+                            .frame(width: 38, height: 38)
+                            .glassEffect(in: Circle())
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }

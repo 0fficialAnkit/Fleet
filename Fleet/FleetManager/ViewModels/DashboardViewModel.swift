@@ -2,7 +2,7 @@ import SwiftUI
 
 @Observable
 final class DashboardViewModel {
-    // These properties are loaded from MockData
+    //loaded from MockData
     private(set) var vehicles: [Vehicle] = MockData.vehicles
     private(set) var trips: [Trip] = MockData.trips
     private(set) var workOrders: [WorkOrder] = MockData.workOrders

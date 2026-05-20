@@ -299,19 +299,19 @@ enum MockData {
     static let routes: [Route] = [
         Route(
             id: rDelhibMumbai,
-            routeName: "Delhi — Mumbai Expressway",
+            routeName: "Delhi - Mumbai Expressway",
             startLocation: "Naraina Industrial Area, New Delhi",
             endLocation: "Bhiwandi Logistics Park, Mumbai"
         ),
         Route(
             id: rPuneNagpur,
-            routeName: "Pune — Nagpur Samruddhi",
+            routeName: "Pune - Nagpur Samruddhi",
             startLocation: "Chakan Industrial Zone, Pune",
             endLocation: "Butibori MIDC, Nagpur"
         ),
         Route(
             id: rBengaluruChennai,
-            routeName: "Bengaluru — Chennai NH-48",
+            routeName: "Bengaluru - Chennai NH-48",
             startLocation: "Electronic City Phase 2, Bengaluru",
             endLocation: "Sriperumbudur Industrial Corridor, Chennai"
         ),
