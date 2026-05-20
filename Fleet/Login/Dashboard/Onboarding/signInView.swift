@@ -82,13 +82,13 @@ struct SignInView: View {
     // MARK: - Title
     var titleSection: some View {
         VStack(spacing: 8) {
-            Text("FleetOS")
+            Text("PrimeFleet")
                 .font(.system(size: 34, weight: .bold))
                 .foregroundColor(.white)
             Text(
                 selectedTab == .signIn
-                ? "Sign in to FleetOS"
-                : "Sign up to FleetOS"
+                ? "Sign in to PrimeFleet"
+                : "Sign up to PrimeFleet"
             )
             .font(.system(size: 16))
             .foregroundColor(.white.opacity(0.5))
