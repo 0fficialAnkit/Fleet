@@ -273,5 +273,7 @@ struct SignInView: View {
             selectedTab: .signIn,
             showSignUp: true
         )
+        .environment(AuthViewModel())
     }
 }
+

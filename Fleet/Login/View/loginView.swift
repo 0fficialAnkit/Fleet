@@ -216,4 +216,6 @@ struct RoleCardView: View {
 // MARK: - Preview
 #Preview {
     LoginView()
+        .environment(AuthViewModel())
 }
+

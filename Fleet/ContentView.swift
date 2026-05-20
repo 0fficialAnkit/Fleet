@@ -9,7 +9,7 @@ import SwiftUI
 import Supabase
 
 struct ContentView: View {
-    @State private var authViewModel = AuthViewModel()
+    @Environment(AuthViewModel.self) private var authViewModel
     
     var body: some View {
         Group {
@@ -30,7 +30,6 @@ struct ContentView: View {
                 }
             } else {
                 LoginView()
-                    .environment(authViewModel)
             }
         }
         .task {
@@ -41,7 +40,9 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
+        .environment(AuthViewModel())
 }
+
 
 // MARK: - Placeholder Dashboards
 
