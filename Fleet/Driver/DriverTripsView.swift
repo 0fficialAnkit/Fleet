@@ -9,7 +9,7 @@ struct DriverTripsView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     ForEach(dataStore.trips.sorted(by: { ($0.startTime ?? Date()) < ($1.startTime ?? Date()) })) { trip in
-                        TripCardView(trip: trip, onStart: {
+                        DriverTripCardView(trip: trip, onStart: {
                             if let index = dataStore.trips.firstIndex(where: { $0.id == trip.id }) {
                                 dataStore.trips[index].status = .active
                                 dataStore.trips[index].startTime = Date() // Record start time
@@ -30,7 +30,7 @@ struct DriverTripsView: View {
     }
 }
 
-struct TripCardView: View {
+struct DriverTripCardView: View {
     let trip: Trip
     let onStart: () -> Void
     let onEnd: () -> Void

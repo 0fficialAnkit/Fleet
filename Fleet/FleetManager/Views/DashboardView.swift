@@ -63,7 +63,7 @@ struct DashboardView: View {
             .padding(.horizontal, themeModel.spacingMD)
             
             ForEach(viewModel.recentOrders) { trip in
-                TripCardView(trip: trip)
+                ManagerTripCardView(trip: trip)
                     .padding(.horizontal, themeModel.spacingMD)
             }
         }
@@ -120,7 +120,7 @@ struct MetricCardView: View {
     }
 }
 
-struct TripCardView: View {
+struct ManagerTripCardView: View {
     let trip: Trip
     
     var routeName: String {
