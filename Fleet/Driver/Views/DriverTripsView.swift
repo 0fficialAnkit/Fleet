@@ -2,29 +2,23 @@ import SwiftUI
 
 struct DriverTripsView: View {
 
-    @StateObject private var dataStore = DataStore.shared
+    @State private var viewModel = DriverTripsViewModel()
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    ForEach(dataStore.trips.sorted(by: { ($0.startTime ?? Date()) < ($1.startTime ?? Date()) })) { trip in
+                    ForEach(viewModel.sortedTrips) { trip in
                         DriverTripCardView(trip: trip, onStart: {
-                            if let index = dataStore.trips.firstIndex(where: { $0.id == trip.id }) {
-                                dataStore.trips[index].status = .active
-                                dataStore.trips[index].startTime = Date() // Record start time
-                            }
+                            viewModel.startTrip(id: trip.id)
                         }, onEnd: {
-                            if let index = dataStore.trips.firstIndex(where: { $0.id == trip.id }) {
-                                dataStore.trips[index].status = .completed
-                                dataStore.trips[index].endTime = Date() // Record end time
-                            }
+                            viewModel.endTrip(id: trip.id)
                         })
                     }
                 }
                 .padding()
             }
-            .background(Color.black)
+            .background(themeModel.backgroundPrimary.ignoresSafeArea())
             .navigationTitle("Assigned Routes")
         }
     }
@@ -37,11 +31,11 @@ struct DriverTripCardView: View {
 
     var statusColor: Color {
         switch trip.status {
-        case .scheduled: return .orange
-        case .active: return .blue
-        case .completed: return .green
-        case .cancelled: return .red
-        case .none: return .gray
+        case .scheduled: return themeModel.warning
+        case .active: return themeModel.info
+        case .completed: return themeModel.success
+        case .cancelled: return themeModel.danger
+        case .none: return themeModel.textDisabled
         }
     }
 
@@ -56,78 +50,80 @@ struct DriverTripCardView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
             HStack {
                 Text("Route #\(trip.id.uuidString.prefix(4))")
-                    .font(.headline)
-                    .foregroundColor(.white)
+                    .font(themeModel.headline())
+                    .foregroundStyle(themeModel.textPrimary)
                 
                 Spacer()
                 
                 Text(statusText)
-                    .font(.caption)
-                    .fontWeight(.bold)
+                    .font(themeModel.small())
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(statusColor.opacity(0.2))
-                    .foregroundColor(statusColor)
-                    .clipShape(Capsule())
+                    .background(statusColor.opacity(0.15))
+                    .foregroundStyle(statusColor)
+                    .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusXS))
             }
 
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Image(systemName: "circle.fill")
                         .font(.system(size: 8))
-                        .foregroundColor(.green)
+                        .foregroundStyle(themeModel.success)
                     Text("Start: Warehouse")
-                        .foregroundColor(.secondary)
+                        .font(themeModel.bodyMedium())
+                        .foregroundStyle(themeModel.textSecondary)
                 }
                 
                 Rectangle()
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(themeModel.divider)
                     .frame(width: 2, height: 16)
                     .padding(.leading, 3)
                 
                 HStack {
                     Image(systemName: "mappin.circle.fill")
-                        .foregroundColor(.red)
+                        .font(.system(size: 10))
+                        .foregroundStyle(themeModel.danger)
                     Text("Destination: Drop-off Zone")
-                        .foregroundColor(.primary)
+                        .font(themeModel.bodyMedium())
+                        .foregroundStyle(themeModel.textPrimary)
                 }
             }
             .padding(.vertical, 4)
 
             HStack {
                 Label(trip.startTime?.formatted(date: .omitted, time: .shortened) ?? "N/A", systemImage: "clock")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .font(themeModel.caption())
+                    .foregroundStyle(themeModel.textTertiary)
                 
                 Spacer()
                 
                 if trip.status == .scheduled {
                     Button(action: onStart) {
                         Text("Start Trip")
-                            .fontWeight(.semibold)
+                            .font(themeModel.bodyMedium())
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.blue)
+                    .tint(themeModel.info)
                 } else if trip.status == .active {
                     Button(action: onEnd) {
                         Text("End Trip")
-                            .fontWeight(.semibold)
+                            .font(themeModel.bodyMedium())
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.green)
+                    .tint(themeModel.success)
                 }
             }
         }
-        .padding()
-        .background(Color.white.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .padding(themeModel.spacingMD)
+        .background(themeModel.backgroundElevated)
+        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusLG))
         .overlay(
-            RoundedRectangle(cornerRadius: 20)
+            RoundedRectangle(cornerRadius: themeModel.radiusLG)
                 .stroke(statusColor.opacity(0.3), lineWidth: 1)
         )
     }
