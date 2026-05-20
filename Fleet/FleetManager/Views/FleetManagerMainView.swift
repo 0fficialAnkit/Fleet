@@ -28,38 +28,32 @@ struct FleetManagerMainView: View {
         TabView(selection: $selectedTab) {
             DashboardView()
                 .tabItem {
-                    Image(systemName: "square.grid.2x2.fill")
+                    Image(systemName: "square.grid.2x2")
                     Text("Dashboard")
                 }
                 .tag(0)
             
             VehiclesView()
                 .tabItem {
-                    Image(systemName: "car.fill")
+                    Image(systemName: "car")
                     Text("Vehicles")
                 }
                 .tag(1)
             
             EmployeesView()
                 .tabItem {
-                    Image(systemName: "person.3.fill")
+                    Image(systemName: "person.3")
                     Text("Employees")
                 }
                 .tag(2)
             
-            Text("Orders View") // Placeholder
-                .tabItem {
-                    Image(systemName: "doc.text.fill")
-                    Text("Orders")
-                }
-                .tag(3)
-            
+
             ProfileView()
                 .tabItem {
                     Image(systemName: "person.crop.circle")
                     Text("Profile")
                 }
-                .tag(4)
+                .tag(3)
         }
         .tint(themeModel.selectedTab)
     }
