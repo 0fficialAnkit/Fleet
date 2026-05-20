@@ -1,9 +1,6 @@
 import SwiftUI
-import Charts
 
 struct DashboardView: View {
-
-    // MARK: - MOCK DATA
 
     let vehicle = Vehicle(
         id: UUID(),
@@ -29,33 +26,13 @@ struct DashboardView: View {
         )
     ]
 
-    struct SafetyData: Identifiable {
-
-        let id = UUID()
-        let day: String
-        let value: Double
-    }
-
-    let graphData: [SafetyData] = [
-
-        .init(day: "M", value: 90),
-        .init(day: "T", value: 92),
-        .init(day: "W", value: 91),
-        .init(day: "T", value: 95),
-        .init(day: "F", value: 96),
-        .init(day: "S", value: 94),
-        .init(day: "S", value: 96)
-    ]
-
-    // MARK: - BODY
-
     var body: some View {
 
         NavigationStack {
 
             ScrollView(showsIndicators: false) {
 
-                VStack(spacing: 22) {
+                VStack(spacing: 20) {
 
                     topHeader
 
@@ -71,8 +48,7 @@ struct DashboardView: View {
                 }
                 .padding()
             }
-            .background(Color(.systemGroupedBackground))
-            .navigationBarHidden(true)
+            .background(Color.black)
         }
     }
 }
@@ -81,11 +57,7 @@ struct DashboardView: View {
     DashboardView()
 }
 
-// MARK: - COMPONENTS
-
 extension DashboardView {
-
-    // MARK: HEADER
 
     var topHeader: some View {
 
@@ -94,8 +66,7 @@ extension DashboardView {
             VStack(alignment: .leading, spacing: 6) {
 
                 Text("Good Morning")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.gray)
 
                 Text("Driver Portal")
                     .font(.largeTitle.bold())
@@ -103,74 +74,46 @@ extension DashboardView {
 
             Spacer()
 
-            HStack(spacing: 14) {
+            Button {
 
-                Button {
+            } label: {
 
-                } label: {
-
-                    Image(systemName: "bell.badge")
-                        .font(.title3)
-                        .foregroundStyle(.primary)
-                        .frame(width: 46, height: 46)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Circle())
-                }
-
-                Button {
-
-                } label: {
-
-                    Image(systemName: "plus")
-                        .font(.headline.bold())
-                        .foregroundStyle(.white)
-                        .frame(width: 46, height: 46)
-                        .background(Color.green)
-                        .clipShape(Circle())
-                }
+                Image(systemName: "bell")
+                    .font(.title3)
+                    .foregroundStyle(.white)
+                    .frame(width: 45, height: 45)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
             }
         }
     }
 
-    // MARK: VEHICLE CARD
-
     var vehicleCard: some View {
 
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 18) {
 
             HStack {
 
                 VStack(alignment: .leading, spacing: 8) {
 
                     Text("Assigned Vehicle")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.gray)
 
                     Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
                         .font(.title.bold())
 
                     Text(vehicle.licensePlate ?? "")
                         .foregroundStyle(.blue)
-                        .fontWeight(.medium)
                 }
 
                 Spacer()
 
-                ZStack {
-
-                    RoundedRectangle(
-                        cornerRadius: 22,
-                        style: .continuous
-                    )
-                    .fill(.thinMaterial)
-                    .frame(width: 72, height: 72)
-
-                    Image(systemName: "truck.box.fill")
-                        .font(.system(size: 30))
-                        .foregroundStyle(.blue)
-                }
+                Image(systemName: "truck.box.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(.blue)
             }
 
-            HStack(spacing: 24) {
+            HStack(spacing: 20) {
 
                 Label("72% Fuel", systemImage: "fuelpump.fill")
                     .foregroundStyle(.green)
@@ -178,142 +121,69 @@ extension DashboardView {
                 Label("48.2k km", systemImage: "location.fill")
                     .foregroundStyle(.blue)
             }
-            .font(.subheadline.weight(.medium))
         }
-        .padding(24)
+        .padding()
         .frame(maxWidth: .infinity)
         .background(
             LinearGradient(
                 colors: [
-                    Color.blue.opacity(0.35),
-                    Color.indigo.opacity(0.22)
+                    Color.blue.opacity(0.4),
+                    Color.indigo.opacity(0.3)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         )
-        .clipShape(
-            RoundedRectangle(
-                cornerRadius: 32,
-                style: .continuous
-            )
-        )
+        .clipShape(RoundedRectangle(cornerRadius: 30))
     }
-
-    // MARK: SAFETY CARD
 
     var safetyCard: some View {
 
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 20) {
 
-            HStack(alignment: .top) {
+            HStack {
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading) {
 
                     Text("Safety Score")
-                        .font(.title3.weight(.semibold))
+                        .font(.title2.bold())
 
-                    Text("This Week")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    Text("This week")
+                        .foregroundStyle(.gray)
                 }
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: 2) {
+                HStack {
 
-                    HStack(spacing: 4) {
+                    Image(systemName: "star.fill")
+                        .foregroundStyle(.yellow)
 
-                        Image(systemName: "star.fill")
-                            .font(.caption)
-                            .foregroundStyle(.yellow)
+                    Text("96")
+                        .font(.largeTitle.bold())
 
-                        Text("96")
-                            .font(.system(size: 34, weight: .bold))
-                    }
-
-                    Text("Excellent")
-                        .font(.caption)
+                    Text("/100")
                         .foregroundStyle(.green)
                 }
             }
 
-            Chart(graphData) { item in
-
-                AreaMark(
-                    x: .value("Day", item.day),
-                    y: .value("Score", item.value)
-                )
-                .interpolationMethod(.catmullRom)
-                .foregroundStyle(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(
                     LinearGradient(
                         colors: [
-                            Color.green.opacity(0.22),
-                            Color.green.opacity(0.02)
+                            .green.opacity(0.6),
+                            .green.opacity(0.1)
                         ],
                         startPoint: .top,
                         endPoint: .bottom
                     )
                 )
-
-                LineMark(
-                    x: .value("Day", item.day),
-                    y: .value("Score", item.value)
-                )
-                .interpolationMethod(.catmullRom)
-                .foregroundStyle(.green)
-                .lineStyle(
-                    StrokeStyle(
-                        lineWidth: 3,
-                        lineCap: .round,
-                        lineJoin: .round
-                    )
-                )
-            }
-            .frame(height: 120)
-            .chartYScale(domain: 80...100)
-            .chartYAxis(.hidden)
-            .chartXAxis {
-
-                AxisMarks(position: .bottom) { value in
-
-                    AxisValueLabel {
-
-                        if let day = value.as(String.self) {
-
-                            Text(day)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    AxisGridLine(
-                        stroke: StrokeStyle(lineWidth: 0)
-                    )
-                }
-            }
+                .frame(height: 100)
         }
-        .padding(24)
-        .background(.ultraThinMaterial)
-        .clipShape(
-            RoundedRectangle(
-                cornerRadius: 32,
-                style: .continuous
-            )
-        )
-        .overlay(
-            RoundedRectangle(
-                cornerRadius: 32,
-                style: .continuous
-            )
-            .stroke(
-                Color.white.opacity(0.05),
-                lineWidth: 1
-            )
-        )
+        .padding()
+        .background(Color.white.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 30))
     }
-
-    // MARK: STATS
 
     var statsSection: some View {
 
@@ -322,21 +192,21 @@ extension DashboardView {
             statsCard(
                 icon: "paperplane.fill",
                 value: "2",
-                title: "Trips",
+                title: "Trips Today",
                 color: .blue
             )
 
             statsCard(
                 icon: "location.fill",
                 value: "89",
-                title: "KM",
+                title: "KM Driven",
                 color: .green
             )
 
             statsCard(
                 icon: "clock.fill",
                 value: "4.5h",
-                title: "Hours",
+                title: "Hours Active",
                 color: .orange
             )
         }
@@ -351,82 +221,57 @@ extension DashboardView {
 
         VStack(spacing: 14) {
 
-            ZStack {
-
-                RoundedRectangle(
-                    cornerRadius: 18,
-                    style: .continuous
-                )
-                .fill(color.opacity(0.15))
-                .frame(width: 52, height: 52)
-
-                Image(systemName: icon)
-                    .foregroundStyle(color)
-                    .font(.title3)
-            }
+            Image(systemName: icon)
+                .foregroundStyle(color)
+                .font(.title2)
 
             Text(value)
                 .font(.title.bold())
 
             Text(title)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.gray)
                 .font(.caption)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 24)
-        .background(.regularMaterial)
-        .clipShape(
-            RoundedRectangle(
-                cornerRadius: 28,
-                style: .continuous
-            )
-        )
+        .padding()
+        .background(Color.white.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 25))
     }
-
-    // MARK: CHECKLIST
 
     var checklistBanner: some View {
 
-        HStack(spacing: 16) {
+        HStack {
 
             Image(systemName: "checkmark.circle.fill")
-                .font(.title2)
                 .foregroundStyle(.green)
+                .font(.title)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
 
                 Text("Pre-trip checklist complete")
                     .fontWeight(.semibold)
 
-                Text("8/8 items verified • Today 8:04 AM")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Text("8/8 items verified")
+                    .foregroundStyle(.gray)
             }
 
             Spacer()
         }
         .padding()
-        .background(Color.green.opacity(0.14))
-        .clipShape(
-            RoundedRectangle(
-                cornerRadius: 28,
-                style: .continuous
-            )
-        )
+        .background(Color.green.opacity(0.15))
+        .clipShape(RoundedRectangle(cornerRadius: 25))
     }
-
-    // MARK: ROUTES
 
     var routesSection: some View {
 
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 16) {
 
             Text("Today's Routes")
                 .font(.title2.bold())
 
             ForEach(trips) { trip in
 
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 16) {
 
                     HStack {
 
@@ -437,30 +282,28 @@ extension DashboardView {
                         Spacer()
 
                         Label("09:00 AM", systemImage: "clock")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.gray)
                     }
 
-                    VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 12) {
 
-                        HStack(spacing: 14) {
-
+                        HStack {
                             Circle()
                                 .fill(.green)
-                                .frame(width: 10, height: 10)
+                                .frame(width: 10)
 
                             Text("Warehouse A")
                         }
 
                         Rectangle()
                             .fill(.gray.opacity(0.4))
-                            .frame(width: 1, height: 24)
+                            .frame(width: 1, height: 20)
                             .padding(.leading, 4)
 
-                        HStack(spacing: 14) {
-
+                        HStack {
                             Circle()
                                 .fill(.red)
-                                .frame(width: 10, height: 10)
+                                .frame(width: 10)
 
                             Text("Distribution Center")
                         }
@@ -469,30 +312,19 @@ extension DashboardView {
                     HStack {
 
                         Text("42 km")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.gray)
 
                         Spacer()
 
-                        Button {
+                        Button("Navigate") {
 
-                        } label: {
-
-                            Text("Navigate")
-                                .fontWeight(.semibold)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
                         }
                         .buttonStyle(.borderedProminent)
                     }
                 }
-                .padding(22)
-                .background(.regularMaterial)
-                .clipShape(
-                    RoundedRectangle(
-                        cornerRadius: 30,
-                        style: .continuous
-                    )
-                )
+                .padding()
+                .background(Color.white.opacity(0.05))
+                .clipShape(RoundedRectangle(cornerRadius: 30))
             }
         }
     }
