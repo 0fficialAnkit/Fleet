@@ -33,17 +33,17 @@ struct FleetManagerMainView: View {
                 }
                 .tag(0)
             
-            Text("Vehicles View") // Placeholder
+            VehiclesView()
                 .tabItem {
                     Image(systemName: "car.fill")
                     Text("Vehicles")
                 }
                 .tag(1)
             
-            Text("Driver View") // Placeholder
+            EmployeesView()
                 .tabItem {
-                    Image(systemName: "person.fill")
-                    Text("Driver")
+                    Image(systemName: "person.3.fill")
+                    Text("Employees")
                 }
                 .tag(2)
             
@@ -54,7 +54,7 @@ struct FleetManagerMainView: View {
                 }
                 .tag(3)
             
-            Text("Profile View") // Placeholder
+            ProfileView()
                 .tabItem {
                     Image(systemName: "person.crop.circle")
                     Text("Profile")
