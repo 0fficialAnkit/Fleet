@@ -3,10 +3,7 @@ import Supabase
 import SwiftUI
 import Observation
 
-struct SignUpMetadata: Encodable {
-    let fullName: String
-    let role: String
-}
+
 
 @MainActor
 @Observable
@@ -15,6 +12,15 @@ class AuthViewModel {
     var currentUser: Auth.User?
     var errorMessage: String?
     var isLoading = false
+    
+    var userRole: String? {
+        guard let metadata = currentUser?.userMetadata,
+              let roleJSON = metadata["role"],
+              case .string(let role) = roleJSON else {
+            return nil
+        }
+        return role
+    }
     
     func checkUserSession() async {
         do {
@@ -32,7 +38,10 @@ class AuthViewModel {
         isLoading = true
         errorMessage = nil
         do {
-            let metadata = SignUpMetadata(fullName: fullName, role: "fleet_manager")
+            let metadata: [String: AnyJSON] = [
+                "fullName": .string(fullName),
+                "role": .string("fleet_manager")
+            ]
             let response = try await supabase.auth.signUp(
                 email: email,
                 password: password,
