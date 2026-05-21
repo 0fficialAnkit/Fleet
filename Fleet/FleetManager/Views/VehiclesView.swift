@@ -1,8 +1,7 @@
 import SwiftUI
 
 struct VehiclesView: View {
-    @State private var viewModel = VehiclesViewModel()
-    @State private var isShowingAddVehicle = false
+    var viewModel: VehiclesViewModel
     
     var body: some View {
         Group {
@@ -25,27 +24,10 @@ struct VehiclesView: View {
                     .padding(.horizontal, themeModel.spacingMD)
                 }
             }
-            .navigationTitle("Vehicles")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        isShowingAddVehicle = true
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(themeModel.textPrimary)
-                            .frame(width: 38, height: 38)
-                            .glassEffect(in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .sheet(isPresented: $isShowingAddVehicle) {
-                AddVehicleView(viewModel: viewModel)
             }
         }
     }
-}
+
 
 struct VehicleRowView: View {
     let vehicle: Vehicle
@@ -91,6 +73,6 @@ struct VehicleRowView: View {
 
 #Preview {
     NavigationStack {
-        VehiclesView()
+        VehiclesView(viewModel: VehiclesViewModel())
     }
 }

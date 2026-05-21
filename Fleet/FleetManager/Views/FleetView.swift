@@ -1,62 +1,88 @@
 import SwiftUI
 
+enum FleetTab: String, CaseIterable {
+    case vehicles = "Vehicles"
+    case drivers = "Drivers"
+    case maintenance = "Maintenance"
+}
+
 struct FleetView: View {
+    @State private var selectedTab: FleetTab = .vehicles
+    
+    @State private var vehiclesViewModel = VehiclesViewModel()
+    @State private var employeesViewModel = EmployeesViewModel()
+    @State private var maintenanceViewModel = MaintenanceViewModel()
+    
+    @State private var isShowingAddVehicle = false
+    @State private var isShowingAddDriver = false
+    @State private var isShowingAddMaintenance = false
+    
+    init() {
+        // Customize segmented control appearance
+        UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(themeModel.info)
+        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
+        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor(themeModel.textSecondary)], for: .normal)
+    }
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
                 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: themeModel.spacingMD) {
-                        NavigationLink(destination: VehiclesView()) {
-                            FleetOptionCard(title: "Vehicles", icon: "car.fill", color: themeModel.info)
+                VStack(spacing: 0) {
+                    Picker("Fleet Section", selection: $selectedTab) {
+                        ForEach(FleetTab.allCases, id: \.self) { tab in
+                            Text(tab.rawValue).tag(tab)
                         }
-                        .buttonStyle(.plain)
-                        
-                        NavigationLink(destination: EmployeesView()) {
-                            FleetOptionCard(title: "Employees", icon: "person.3.fill", color: themeModel.analyticsPurple)
-                        }
-                        .buttonStyle(.plain)
                     }
-                    .padding(.vertical, themeModel.spacingMD)
+                    .pickerStyle(.segmented)
                     .padding(.horizontal, themeModel.spacingMD)
+                    .padding(.vertical, themeModel.spacingMD)
+                    
+                    switch selectedTab {
+                    case .vehicles:
+                        VehiclesView(viewModel: vehiclesViewModel)
+                    case .drivers:
+                        EmployeesView(viewModel: employeesViewModel)
+                    case .maintenance:
+                        MaintenanceView(viewModel: maintenanceViewModel)
+                    }
+                    
+                    Spacer(minLength: 0)
                 }
             }
-            .navigationTitle("Fleet")
-        }
-    }
-}
-
-struct FleetOptionCard: View {
-    let title: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        HStack(spacing: themeModel.spacingMD) {
-            ZStack {
-                Circle()
-                    .fill(color.opacity(0.15))
-                    .frame(width: 48, height: 48)
-                
-                Image(systemName: icon)
-                    .font(.system(size: 20))
-                    .foregroundColor(color)
+            .navigationTitle(selectedTab.rawValue)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: {
+                        switch selectedTab {
+                        case .vehicles:
+                            isShowingAddVehicle = true
+                        case .drivers:
+                            isShowingAddDriver = true
+                        case .maintenance:
+                            isShowingAddMaintenance = true
+                        }
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(themeModel.textPrimary)
+                            .frame(width: 38, height: 38)
+                            .glassEffect(in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            
-            Text(title)
-                .font(themeModel.headline(18))
-                .foregroundColor(themeModel.textPrimary)
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(themeModel.textTertiary)
+            .sheet(isPresented: $isShowingAddVehicle) {
+                AddVehicleView(viewModel: vehiclesViewModel)
+            }
+            .sheet(isPresented: $isShowingAddDriver) {
+                AddEmployeeView(viewModel: employeesViewModel)
+            }
+            .sheet(isPresented: $isShowingAddMaintenance) {
+                AddMaintenanceView(viewModel: maintenanceViewModel)
+            }
         }
-        .padding(themeModel.spacingMD)
-        .background(themeModel.backgroundElevated)
-        .cornerRadius(themeModel.radiusLG)
     }
 }
 

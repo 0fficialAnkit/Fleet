@@ -1,8 +1,7 @@
 import SwiftUI
 
 struct EmployeesView: View {
-    @State private var viewModel = EmployeesViewModel()
-    @State private var isShowingAddEmployee = false
+    var viewModel: EmployeesViewModel
     
     var body: some View {
         Group {
@@ -30,27 +29,10 @@ struct EmployeesView: View {
                     .padding(.horizontal, themeModel.spacingMD)
                 }
             }
-            .navigationTitle("Employees")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        isShowingAddEmployee = true
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(themeModel.textPrimary)
-                            .frame(width: 38, height: 38)
-                            .glassEffect(in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .sheet(isPresented: $isShowingAddEmployee) {
-                AddEmployeeView(viewModel: viewModel)
             }
         }
     }
-}
+
 
 struct EmployeeRowView: View {
     let user: User
@@ -91,6 +73,6 @@ struct EmployeeRowView: View {
 
 #Preview {
     NavigationStack {
-        EmployeesView()
+        EmployeesView(viewModel: EmployeesViewModel())
     }
 }
