@@ -512,3 +512,57 @@ struct FuelLog: Codable, Identifiable, Hashable, Sendable {
       case recordedAt = "recorded_at"
   }
 }
+
+// MARK: - Support Ticket System
+
+enum TicketCategory: String, Codable, CaseIterable, Sendable {
+  case vehicleIssue = "vehicle_issue"
+  case routeProblem = "route_problem"
+  case tripUpdate = "trip_update"
+  case documentRequest = "document_request"
+  case other = "other"
+}
+
+enum TicketStatus: String, Codable, CaseIterable, Sendable {
+  case open = "open"
+  case inProgress = "in_progress"
+  case resolved = "resolved"
+  case closed = "closed"
+}
+
+struct SupportTicket: Codable, Identifiable, Hashable, Sendable {
+  let id: UUID
+  var driverId: UUID
+  var managerId: UUID?
+  var category: TicketCategory?
+  var subject: String?
+  var status: TicketStatus?
+  var createdAt: Date?
+  var updatedAt: Date?
+
+  enum CodingKeys: String, CodingKey {
+      case id
+      case driverId = "driver_id"
+      case managerId = "manager_id"
+      case category, subject, status
+      case createdAt = "created_at"
+      case updatedAt = "updated_at"
+  }
+}
+
+struct TicketMessage: Codable, Identifiable, Hashable, Sendable {
+  let id: UUID
+  var ticketId: UUID
+  var senderId: UUID
+  var message: String?
+  var sentAt: Date?
+
+  enum CodingKeys: String, CodingKey {
+      case id
+      case ticketId = "ticket_id"
+      case senderId = "sender_id"
+      case message
+      case sentAt = "sent_at"
+  }
+}
+
