@@ -14,23 +14,56 @@ class AuthViewModel {
     var isLoading = false
     var isSessionChecked = false
     
-    var userRole: String? {
-        guard let metadata = currentUser?.userMetadata,
-              let roleJSON = metadata["role"],
-              case .string(let role) = roleJSON else {
-            return nil
+    var resolvedRoleName: String?
+    
+    struct UserRecord: Codable {
+        let role_id: UUID?
+    }
+    
+    struct RoleRecord: Codable {
+        let role_name: String?
+    }
+    
+    func fetchRoleName() async {
+        guard let userId = currentUser?.id else { return }
+        do {
+            // First, get the role_id from the users table
+            let userResponse: [UserRecord] = try await supabase
+                .from("users")
+                .select("role_id")
+                .eq("id", value: userId)
+                .execute()
+                .value
+            
+            guard let roleId = userResponse.first?.role_id else { return }
+            
+            // Then, fetch the role_name from the roles table
+            let roleResponse: [RoleRecord] = try await supabase
+                .from("roles")
+                .select("role_name")
+                .eq("id", value: roleId)
+                .execute()
+                .value
+            
+            if let roleName = roleResponse.first?.role_name {
+                self.resolvedRoleName = roleName
+            }
+        } catch {
+            print("Failed to fetch role name: \(error)")
+            self.errorMessage = "Failed to load user role."
         }
-        return role
     }
     
     func checkUserSession() async {
         do {
             let session = try await supabase.auth.session
             self.currentUser = session.user
+            await fetchRoleName()
             self.isAuthenticated = true
         } catch {
             self.isAuthenticated = false
             self.currentUser = nil
+            self.resolvedRoleName = nil
         }
         self.isSessionChecked = true
     }
@@ -63,6 +96,7 @@ class AuthViewModel {
         do {
             let response = try await supabase.auth.signIn(email: email, password: password)
             self.currentUser = response.user
+            await fetchRoleName()
             self.isAuthenticated = true
         } catch {
             self.errorMessage = error.localizedDescription
