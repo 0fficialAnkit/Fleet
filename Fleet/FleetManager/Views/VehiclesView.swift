@@ -2,6 +2,7 @@ import SwiftUI
 
 struct VehiclesView: View {
     @State private var viewModel = VehiclesViewModel()
+    @State private var isShowingAddVehicle = false
     
     var body: some View {
         Group {
@@ -28,7 +29,7 @@ struct VehiclesView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
-                        // Add vehicle action
+                        isShowingAddVehicle = true
                     }) {
                         Image(systemName: "plus")
                             .font(.system(size: 17, weight: .medium))
@@ -38,6 +39,9 @@ struct VehiclesView: View {
                     }
                     .buttonStyle(.plain)
                 }
+            }
+            .sheet(isPresented: $isShowingAddVehicle) {
+                AddVehicleView(viewModel: viewModel)
             }
         }
     }
