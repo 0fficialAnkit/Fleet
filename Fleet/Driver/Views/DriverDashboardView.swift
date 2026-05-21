@@ -17,7 +17,7 @@ struct DriverDashboardView: View {
     var vehicle: Vehicle { viewModel.vehicle }
     var trips: [Trip] { viewModel.todaysTrips }
 
-    var body: some View {
+    var body: some View  {
 
         NavigationStack {
 
