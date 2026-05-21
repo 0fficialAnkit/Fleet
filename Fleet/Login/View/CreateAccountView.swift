@@ -132,6 +132,9 @@ struct CreateAccountView: View {
                             Task {
                                 let selectedRoleName = roleItems.first(where: { $0.id == selectedRoleId })?.roleName ?? "Fleet Manager"
                                 await authViewModel.signUp(email: email, password: password, fullName: fullName, role: selectedRoleName)
+                                if authViewModel.errorMessage == nil {
+                                    dismiss()
+                                }
                             }
                         }) {
                             HStack {
