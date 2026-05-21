@@ -15,7 +15,7 @@ struct EmployeesView: View {
                             let role = viewModel.getRole(for: user)
                             let roleName = role?.roleName ?? "Unknown Role"
                             
-                            NavigationLink(destination: EmployeeDetailView(user: user, roleName: roleName, viewModel: viewModel)) {
+                            NavigationLink(destination: EmployeeDetailView(user: user, viewModel: viewModel)) {
                                 EmployeeRowView(
                                     user: user,
                                     roleName: roleName,
