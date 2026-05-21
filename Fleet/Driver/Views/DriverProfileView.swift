@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ProfileView: View {
+struct DriverProfileView: View {
 
     var body: some View {
 
@@ -12,7 +12,7 @@ struct ProfileView: View {
 
                     Image(systemName: "person.crop.circle.fill")
                         .font(.system(size: 100))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(.blue)
 
                     VStack(spacing: 8) {
 
@@ -56,3 +56,4 @@ struct ProfileView: View {
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 }
+
