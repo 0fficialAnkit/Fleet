@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @State private var viewModel = ProfileViewModel()
+    @Environment(AuthViewModel.self) private var authViewModel
     
     var body: some View {
         NavigationStack {
@@ -78,7 +79,9 @@ struct ProfileView: View {
                             
                             // Logout Button
                             Button(action: {
-                                viewModel.logout()
+                                Task {
+                                    await authViewModel.signOut()
+                                }
                             }) {
                                 HStack {
                                     Spacer()
