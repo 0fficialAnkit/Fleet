@@ -21,6 +21,7 @@ struct SignInView: View {
     @State private var isPasswordVisible = false
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(AuthViewModel.self) private var authViewModel
 
     // MARK: - Tabs
     enum AuthTab {
@@ -81,13 +82,13 @@ struct SignInView: View {
     // MARK: - Title
     var titleSection: some View {
         VStack(spacing: 8) {
-            Text("FleetOS")
+            Text("PrimeFleet")
                 .font(.system(size: 34, weight: .bold))
                 .foregroundColor(.white)
             Text(
                 selectedTab == .signIn
-                ? "Sign in to FleetOS"
-                : "Sign up to FleetOS"
+                ? "Sign in to PrimeFleet"
+                : "Sign up to PrimeFleet"
             )
             .font(.system(size: 16))
             .foregroundColor(.white.opacity(0.5))
@@ -140,6 +141,12 @@ struct SignInView: View {
     // MARK: - Input Fields
     var inputFields: some View {
         VStack(spacing: 14) {
+            if let errorMessage = authViewModel.errorMessage {
+                Text(errorMessage)
+                    .foregroundColor(.red)
+                    .font(.caption)
+                    .multilineTextAlignment(.center)
+            }
             if selectedTab == .signUp {
                 TextField(
                     "",
@@ -219,20 +226,32 @@ struct SignInView: View {
     // MARK: - Main Button
     var actionButton: some View {
         Button {
-            if selectedTab == .signIn {
-                print("Sign In tapped")
-            } else {
-                print("Create Account tapped")
+            Task {
+                if selectedTab == .signIn {
+                    await authViewModel.signIn(email: emailOrPhone, password: password)
+                } else {
+                    await authViewModel.signUp(email: emailOrPhone, password: password, fullName: fullName)
+                }
             }
         } label: {
-            Text(selectedTab == .signIn ? "Sign In" : "Create Account")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(Color.blue)
-                .cornerRadius(16)
+            if authViewModel.isLoading {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(Color.blue)
+                    .cornerRadius(16)
+            } else {
+                Text(selectedTab == .signIn ? "Sign In" : "Create Account")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(Color.blue)
+                    .cornerRadius(16)
+            }
         }
+        .disabled(authViewModel.isLoading || emailOrPhone.isEmpty || password.isEmpty)
     }
     // MARK: - Back Button
     var backButton: some View {
@@ -254,5 +273,7 @@ struct SignInView: View {
             selectedTab: .signIn,
             showSignUp: true
         )
+        .environment(AuthViewModel())
     }
 }
+

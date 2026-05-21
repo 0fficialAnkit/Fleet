@@ -99,7 +99,7 @@ struct LoginView: View {
     // MARK: - Title + Subtitle
     var titleSection: some View {
         VStack(spacing: 8) {
-            Text("FleetOS")
+            Text("PrimeFleet")
                 .font(.system(size: 34, weight: .bold))
                 .foregroundColor(.white)
             Text("Select your role to continue")
@@ -216,4 +216,6 @@ struct RoleCardView: View {
 // MARK: - Preview
 #Preview {
     LoginView()
+        .environment(AuthViewModel())
 }
+
