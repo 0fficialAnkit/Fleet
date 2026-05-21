@@ -20,14 +20,12 @@ struct DashboardView: View {
             .navigationTitle("Dashboard")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-
                     NavigationLink(destination: ProfileView()) {
-                        Image(systemName: "person.crop.circle")
-                            .font(.system(size: 20, weight: .medium))
-                            .foregroundStyle(themeModel.textPrimary)
-                            .frame(width: 38, height: 38)
-                            .background(themeModel.surfaceTertiary)
-                            .clipShape(Circle())
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.white)
+                            .frame(width: 34, height: 34)
+//                            .background(Circle().fill(Color.white.opacity(0.18)))
                     }
                     .buttonStyle(.plain)
                 }

@@ -60,8 +60,8 @@ struct FleetView: View {
                         Image(systemName: "plus")
                             .font(.system(size: 17, weight: .medium))
                             .foregroundStyle(themeModel.textPrimary)
-                            .frame(width: 38, height: 38)
-                            .background(themeModel.surfaceTertiary)
+                            .frame(width: 34, height: 34)
+//                            .background(themeModel.surfaceTertiary)
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
