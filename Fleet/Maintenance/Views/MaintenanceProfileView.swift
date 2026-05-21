@@ -3,44 +3,50 @@ import SwiftUI
 struct MaintenanceProfileView: View {
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 100))
-                        .foregroundStyle(.blue)
+            ZStack {
+                themeModel.backgroundPrimary.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: themeModel.spacingLG) {
+                        ProfileHeader(
+                            icon: "wrench.and.screwdriver.fill",
+                            name: "Mike Thompson",
+                            role: "Senior Mechanic",
+                            accentColor: themeModel.maintenancePrimary
+                        )
 
-                    VStack(spacing: 8) {
-                        Text("Mike Thompson")
-                            .font(.title.bold())
+                        
+                            VStack(spacing: 0) {
+                                ActionRow(icon: "rosette", title: "Certifications")
+                                Divider().background(themeModel.textTertiary.opacity(0.3)).padding(.leading, 40)
+                                ActionRow(icon: "calendar.badge.clock", title: "Shift Schedule")
+                                Divider().background(themeModel.textTertiary.opacity(0.3)).padding(.leading, 40)
+                                ActionRow(icon: "building.2", title: "Assigned Depot")
+                                Divider().background(themeModel.textTertiary.opacity(0.3)).padding(.leading, 40)
+                                ActionRow(icon: "bell.badge", title: "Notifications")
+                            }
+                            .padding(themeModel.spacingMD)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+//                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
 
-                        Text("Senior Mechanic")
-                            .foregroundStyle(.gray)
+                        
+VStack(spacing: 0) {
+                            ActionRow(icon: "door.left.hand.open", title: "Logout", isDestructive: true)
+                        
+                        }
+                        .padding(themeModel.spacingMD)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                        )
+//                        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
                     }
-
-                    VStack(spacing: 16) {
-                        settingsRow(title: "Certifications", icon: "rosette")
-                        settingsRow(title: "Shift Schedule", icon: "calendar")
-                        settingsRow(title: "Assigned Depot", icon: "building.2.fill")
-                        settingsRow(title: "Notifications", icon: "bell")
-                        settingsRow(title: "Logout", icon: "rectangle.portrait.and.arrow.right")
-                    }
+                    .padding(themeModel.spacingMD)
                 }
-                .padding()
             }
-            .background(Color.black)
             .navigationTitle("Profile")
         }
-    }
-
-    func settingsRow(title: String, icon: String) -> some View {
-        HStack {
-            Image(systemName: icon)
-            Text(title)
-            Spacer()
-        }
-        .padding()
-        .background(Color.white.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 }
 
