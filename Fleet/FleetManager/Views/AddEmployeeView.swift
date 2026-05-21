@@ -21,93 +21,48 @@ struct AddEmployeeView: View {
     
     var body: some View {
         NavigationStack {
-            ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+            Form {
+                Section(header: Text("Personal Details").foregroundColor(themeModel.textSecondary)) {
+                    TextField("Full Name", text: $fullName)
+                        .foregroundColor(themeModel.textPrimary)
+                    TextField("Email", text: $email)
+                        .keyboardType(.emailAddress)
+                        .autocapitalization(.none)
+                        .foregroundColor(themeModel.textPrimary)
+                    TextField("Phone", text: $phone)
+                        .keyboardType(.phonePad)
+                        .foregroundColor(themeModel.textPrimary)
+                    
+                    TextField("Driver License Number", text: $licenseNumber)
+                        .foregroundColor(isDriverSelected ? themeModel.textPrimary : themeModel.textDisabled)
+                        .disabled(!isDriverSelected)
+                }
+                .listRowBackground(themeModel.backgroundElevated)
                 
-                ScrollView {
-                    VStack(spacing: themeModel.spacingLG) {
-                        
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
-                            SectionHeader(title: "Personal Details")
-                                .padding(.horizontal, themeModel.spacingMD)
-                            
-                            
-                                VStack(spacing: 0) {
-                                    TextField("Full Name", text: $fullName)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
-                                    
-                                    Divider().background(themeModel.divider)
-                                    
-                                    TextField("Email", text: $email)
-                                        .keyboardType(.emailAddress)
-                                        .autocapitalization(.none)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
-                                    
-                                    Divider().background(themeModel.divider)
-                                    
-                                    TextField("Phone", text: $phone)
-                                        .keyboardType(.phonePad)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
-                                    
-                                    Divider().background(themeModel.divider)
-                                    
-                                    TextField("Driver License Number", text: $licenseNumber)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(isDriverSelected ? themeModel.textPrimary : themeModel.textDisabled)
-                                        .disabled(!isDriverSelected)
-                                }
-                                .padding(themeModel.spacingMD)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                                        .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                                )
-                                .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
-                            SectionHeader(title: "Role & Access")
-                                .padding(.horizontal, themeModel.spacingMD)
-                            
-                            
-VStack(spacing: 0) {
-                                Picker("Select Role", selection: $selectedRoleId) {
-                                    Text("Select a role").tag(UUID?.none)
-                                    ForEach(assignableRoles) { role in
-                                        Text(role.roleName).tag(UUID?.some(role.id))
-                                    }
-                                }
-                                .pickerStyle(.menu)
-                                .tint(themeModel.textPrimary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 8)
-                            
-                            }
-                            .padding(themeModel.spacingMD)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                            )
-                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
+                Section(header: Text("Role & Access").foregroundColor(themeModel.textSecondary)) {
+                    Picker("Select Role", selection: $selectedRoleId) {
+                        Text("Select a role").tag(UUID?.none)
+                        ForEach(assignableRoles) { role in
+                            Text(role.roleName).tag(UUID?.some(role.id))
                         }
                     }
-                    .padding(.vertical, themeModel.spacingMD)
+                    .foregroundColor(themeModel.textPrimary)
                 }
+                .listRowBackground(themeModel.backgroundElevated)
             }
+            .scrollContentBackground(.hidden)
+            .background(themeModel.backgroundPrimary)
             .navigationTitle("Add Employee")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(themeModel.info)
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
@@ -123,15 +78,17 @@ VStack(spacing: 0) {
                             dismiss()
                         }
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(themeModel.info)
                     .bold()
                     .disabled(fullName.isEmpty || selectedRoleId == nil)
                 }
             }
         }
+        .preferredColorScheme(.dark)
     }
 }
 
 #Preview {
     AddEmployeeView(viewModel: EmployeesViewModel())
 }
+

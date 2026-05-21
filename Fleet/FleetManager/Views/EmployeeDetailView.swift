@@ -2,18 +2,8 @@ import SwiftUI
 
 struct EmployeeDetailView: View {
     let user: User
+    let roleName: String
     let viewModel: EmployeesViewModel
-    
-    @Environment(\.dismiss) private var dismiss
-    @State private var isShowingEditSheet = false
-    
-    var currentUser: User {
-        viewModel.users.first { $0.id == user.id } ?? user
-    }
-    
-    var currentRoleName: String {
-        viewModel.getRole(for: currentUser)?.roleName ?? "Unknown Role"
-    }
     
     var body: some View {
         ZStack {
@@ -25,44 +15,44 @@ struct EmployeeDetailView: View {
                     VStack(spacing: themeModel.spacingSM) {
                         ZStack {
                             Circle()
-                                .fill(viewModel.getColor(for: currentRoleName).opacity(0.15))
+                                .fill(viewModel.getColor(for: roleName).opacity(0.15))
                                 .frame(width: 110, height: 110)
                             
-                            Image(systemName: viewModel.getIcon(for: currentRoleName))
+                            Image(systemName: viewModel.getIcon(for: roleName))
                                 .font(.system(size: 44))
-                                .foregroundColor(viewModel.getColor(for: currentRoleName))
+                                .foregroundColor(viewModel.getColor(for: roleName))
                         }
                         .padding(.bottom, 8)
                         
-                        Text(currentUser.fullName)
+                        Text(user.fullName)
                             .font(themeModel.largeTitle(28))
                             .foregroundColor(themeModel.textPrimary)
                         
-                        Text(currentRoleName)
+                        Text(roleName)
                             .font(themeModel.bodyMedium(14))
-                            .foregroundColor(viewModel.getColor(for: currentRoleName))
+                            .foregroundColor(viewModel.getColor(for: roleName))
                             .padding(.horizontal, 16)
                             .padding(.vertical, 6)
-                            .background(viewModel.getColor(for: currentRoleName).opacity(0.15))
+                            .background(viewModel.getColor(for: roleName).opacity(0.15))
                             .clipShape(Capsule())
                     }
                     .padding(.top, themeModel.spacingXL)
                     
                     // Information Cards
                     VStack(spacing: themeModel.spacingMD) {
-                        InfoRowView(icon: "envelope.fill", title: "Email", value: currentUser.email)
+                        InfoRowView(icon: "envelope.fill", title: "Email", value: user.email)
                         
-                        if let phone = currentUser.phone {
+                        if let phone = user.phone {
                             Divider().background(themeModel.divider)
                             InfoRowView(icon: "phone.fill", title: "Phone", value: phone)
                         }
                         
-                        if currentRoleName.lowercased() == "driver", let license = currentUser.licenseNumber, !license.isEmpty {
+                        if roleName.lowercased() == "driver", let license = user.licenseNumber, !license.isEmpty {
                             Divider().background(themeModel.divider)
                             InfoRowView(icon: "lanyardcard.fill", title: "License", value: license)
                         }
                         
-                        if let status = currentUser.status {
+                        if let status = user.status {
                             Divider().background(themeModel.divider)
                             InfoRowView(
                                 icon: status == .active ? "checkmark.circle.fill" : "xmark.circle.fill",
@@ -72,7 +62,7 @@ struct EmployeeDetailView: View {
                             )
                         }
                         
-                        if let date = currentUser.createdAt {
+                        if let date = user.createdAt {
                             Divider().background(themeModel.divider)
                             InfoRowView(icon: "calendar", title: "Joined", value: date.formatted(date: .abbreviated, time: .omitted))
                         }
@@ -89,32 +79,6 @@ struct EmployeeDetailView: View {
         .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button(action: {
-                        isShowingEditSheet = true
-                    }) {
-                        Label("Edit", systemImage: "pencil")
-                    }
-                    
-                    Button(role: .destructive, action: {
-                        viewModel.deleteEmployee(currentUser)
-                        dismiss()
-                    }) {
-                        Label("Delete", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 17, weight: .regular))
-                        .foregroundColor(themeModel.textPrimary)
-                        .padding(8)
-                }
-            }
-        }
-        .sheet(isPresented: $isShowingEditSheet) {
-            EditEmployeeView(user: currentUser, viewModel: viewModel)
-        }
     }
 }
 
@@ -149,6 +113,7 @@ struct InfoRowView: View {
     NavigationStack {
         EmployeeDetailView(
             user: MockData.users.first(where: { $0.fullName == "Ravi Kumar" }) ?? MockData.users.first!,
+            roleName: "Driver",
             viewModel: EmployeesViewModel()
         )
         .preferredColorScheme(.dark)
