@@ -13,7 +13,13 @@ struct ContentView: View {
     
     var body: some View {
         Group {
-            if authViewModel.isAuthenticated {
+            if !authViewModel.isSessionChecked {
+                ZStack {
+                    Color(red: 0.07, green: 0.09, blue: 0.13).ignoresSafeArea()
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                }
+            } else if authViewModel.isAuthenticated {
                 if let role = authViewModel.userRole {
                     switch role {
                     case "fleet_manager":
