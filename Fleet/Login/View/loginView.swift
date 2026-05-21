@@ -69,18 +69,7 @@ struct LoginView: View {
                 .padding(.horizontal, 24)
             }
             .navigationDestination(isPresented: $navigateToSignIn) {
-
-                if selectedRoleId == 1 {
-                    SignInView(
-                        selectedTab: .signIn,
-                        showSignUp: true
-                    )
-                } else {
-                    SignInView(
-                        selectedTab: .signIn,
-                        showSignUp: false
-                    )
-                }
+                SignInView()
             }
         }
     }
