@@ -5,7 +5,7 @@ struct MaintenanceRootView: View {
         TabView {
             MaintenanceDashboardView()
                 .tabItem {
-                    Label("Dashboard", systemImage: "chart.bar.doc.horizontal.fill")
+                    Label("Dashboard", systemImage: "gauge.with.dots.needle.33percent")
                 }
             
             WorkOrderListView()
@@ -15,7 +15,7 @@ struct MaintenanceRootView: View {
             
             InventoryView()
                 .tabItem {
-                    Label("Inventory", systemImage: "shippingbox.fill")
+                    Label("Inventory", systemImage: "archivebox.fill")
                 }
             
             MaintenanceProfileView()
@@ -23,8 +23,7 @@ struct MaintenanceRootView: View {
                     Label("Profile", systemImage: "person.crop.circle.fill")
                 }
         }
-        .tint(.blue)
-        .preferredColorScheme(.dark)
+        .tint(themeModel.maintenancePrimary)
     }
 }
 

@@ -33,27 +33,21 @@ struct FleetManagerMainView: View {
                 }
                 .tag(0)
             
-            VehiclesView()
+            FleetView()
                 .tabItem {
                     Image(systemName: "car")
-                    Text("Vehicles")
+                    Text("Fleet")
                 }
                 .tag(1)
             
-            EmployeesView()
-                .tabItem {
-                    Image(systemName: "person.3")
-                    Text("Employees")
-                }
-                .tag(2)
-            
+
 
             ProfileView()
                 .tabItem {
                     Image(systemName: "person.crop.circle")
                     Text("Profile")
                 }
-                .tag(3)
+                .tag(2)
         }
         .tint(themeModel.selectedTab)
     }
