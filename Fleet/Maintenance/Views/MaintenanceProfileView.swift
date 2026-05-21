@@ -1,37 +1,36 @@
 import SwiftUI
 
-struct ProfileView: View {
-
+struct MaintenanceProfileView: View {
+    @Environment(AuthViewModel.self) private var authViewModel
+    
     var body: some View {
-
         NavigationStack {
-
             ScrollView {
-
                 VStack(spacing: 24) {
-
                     Image(systemName: "person.crop.circle.fill")
                         .font(.system(size: 100))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(.blue)
 
                     VStack(spacing: 8) {
-
-                        Text("Alex Johnson")
+                        Text("Mike Thompson")
                             .font(.title.bold())
 
-                        Text("Fleet Driver")
+                        Text("Senior Mechanic")
                             .foregroundStyle(.gray)
                     }
 
                     VStack(spacing: 16) {
-
+                        settingsRow(title: "Certifications", icon: "rosette")
+                        settingsRow(title: "Shift Schedule", icon: "calendar")
+                        settingsRow(title: "Assigned Depot", icon: "building.2.fill")
                         settingsRow(title: "Notifications", icon: "bell")
-
-                        settingsRow(title: "Documents", icon: "doc")
-
-                        settingsRow(title: "Support", icon: "questionmark.circle")
-
-                        settingsRow(title: "Logout", icon: "rectangle.portrait.and.arrow.right")
+                        Button(action: {
+                            Task {
+                                await authViewModel.signOut()
+                            }
+                        }) {
+                            settingsRow(title: "Logout", icon: "rectangle.portrait.and.arrow.right")
+                        }
                     }
                 }
                 .padding()
@@ -42,17 +41,17 @@ struct ProfileView: View {
     }
 
     func settingsRow(title: String, icon: String) -> some View {
-
         HStack {
-
             Image(systemName: icon)
-
             Text(title)
-
             Spacer()
         }
         .padding()
         .background(Color.white.opacity(0.05))
         .clipShape(RoundedRectangle(cornerRadius: 20))
     }
+}
+
+#Preview {
+    MaintenanceProfileView()
 }

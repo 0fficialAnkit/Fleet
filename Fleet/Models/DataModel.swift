@@ -132,6 +132,7 @@ struct User: Codable, Identifiable, Hashable, Sendable {
   var email: String
   var passwordHash: String
   var phone: String?
+  var licenseNumber: String?
   var roleId: UUID //FK
   var status: UserStatus?
   var createdAt: Date?
@@ -142,6 +143,7 @@ struct User: Codable, Identifiable, Hashable, Sendable {
       case email
       case passwordHash = "password_hash"
       case phone
+      case licenseNumber = "license_number"
       case roleId = "role_id"
       case status
       case createdAt = "created_at"
@@ -156,12 +158,18 @@ struct Vehicle: Codable, Identifiable, Hashable, Sendable {
   var year: Int?
   var vin: String?
   var licensePlate: String?
+  var tankCapacity: Double?
+  var mileage: Double?
+  var purchaseDate: Date?
   var assignedDriverId: UUID? //FK
   var status: VehicleStatus?
 
   enum CodingKeys: String, CodingKey {
       case id, make, model, year, vin
       case licensePlate = "license_plate"
+      case tankCapacity = "tank_capacity"
+      case mileage
+      case purchaseDate = "purchase_date"
       case assignedDriverId = "assigned_driver_id"
       case status
   }
