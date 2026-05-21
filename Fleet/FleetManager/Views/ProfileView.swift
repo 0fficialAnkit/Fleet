@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ProfileView: View {
+    @Environment(AuthViewModel.self) private var authViewModel
     @State private var viewModel = ProfileViewModel()
     
     var body: some View {
@@ -74,11 +75,12 @@ struct ProfileView: View {
                             
 VStack(spacing: 0) {
                                 Button(action: {
-                                    viewModel.logout()
+                                    Task {
+                                        await authViewModel.signOut()
+                                    }
                                 }) {
                                     ActionRow(icon: "door.left.hand.open", title: "Logout", isDestructive: true)
                                 }
-                            
                             }
                             .padding(themeModel.spacingMD)
                             .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
@@ -112,4 +114,5 @@ VStack(spacing: 0) {
 
 #Preview {
     ProfileView()
+        .environment(AuthViewModel())
 }
