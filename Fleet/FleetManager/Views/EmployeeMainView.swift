@@ -1,18 +1,14 @@
 import SwiftUI
 
-enum FleetTab: String, CaseIterable {
-    case vehicles = "Vehicles"
-    case maintenance = "Maintenance"
+enum EmployeeTab: String, CaseIterable {
+    case drivers = "Drivers"
+    case maintenance = "Maintenance Staff"
 }
 
-struct FleetView: View {
-    @State private var selectedTab: FleetTab = .vehicles
-    
-    @State private var vehiclesViewModel = VehiclesViewModel()
-    @State private var maintenanceViewModel = MaintenanceViewModel()
-    
-    @State private var isShowingAddVehicle = false
-    @State private var isShowingAddMaintenance = false
+struct EmployeeMainView: View {
+    @State private var selectedTab: EmployeeTab = .drivers
+    @State private var employeesViewModel = EmployeesViewModel()
+    @State private var isShowingAddEmployee = false
     
     init() {
         // Customize segmented control appearance
@@ -27,8 +23,8 @@ struct FleetView: View {
                 themeModel.backgroundPrimary.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    Picker("Fleet Section", selection: $selectedTab) {
-                        ForEach(FleetTab.allCases, id: \.self) { tab in
+                    Picker("Employee Section", selection: $selectedTab) {
+                        ForEach(EmployeeTab.allCases, id: \.self) { tab in
                             Text(tab.rawValue).tag(tab)
                         }
                     }
@@ -37,25 +33,20 @@ struct FleetView: View {
                     .padding(.vertical, themeModel.spacingMD)
                     
                     switch selectedTab {
-                    case .vehicles:
-                        VehiclesView(viewModel: vehiclesViewModel)
+                    case .drivers:
+                        EmployeesView(viewModel: employeesViewModel, filterRole: "driver")
                     case .maintenance:
-                        MaintenanceView(viewModel: maintenanceViewModel)
+                        EmployeesView(viewModel: employeesViewModel, filterRole: "maintenance")
                     }
                     
                     Spacer(minLength: 0)
                 }
             }
-            .navigationTitle(selectedTab.rawValue)
+            .navigationTitle("Employees")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
-                        switch selectedTab {
-                        case .vehicles:
-                            isShowingAddVehicle = true
-                        case .maintenance:
-                            isShowingAddMaintenance = true
-                        }
+                        isShowingAddEmployee = true
                     }) {
                         Image(systemName: "plus")
                             .font(.system(size: 17, weight: .medium))
@@ -67,16 +58,16 @@ struct FleetView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .sheet(isPresented: $isShowingAddVehicle) {
-                AddVehicleView(viewModel: vehiclesViewModel)
-            }
-            .sheet(isPresented: $isShowingAddMaintenance) {
-                AddMaintenanceView(viewModel: maintenanceViewModel)
+            .sheet(isPresented: $isShowingAddEmployee) {
+                AddEmployeeView(
+                    viewModel: employeesViewModel,
+                    preselectedRoleName: selectedTab == .drivers ? "driver" : "maintenance"
+                )
             }
         }
     }
 }
 
 #Preview {
-    FleetView()
+    EmployeeMainView()
 }

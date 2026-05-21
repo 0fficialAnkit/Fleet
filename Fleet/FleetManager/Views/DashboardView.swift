@@ -21,15 +21,13 @@ struct DashboardView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
 
-                    Button(action: {
-                        // Notification action
-                    }) {
-
-                        Image(systemName: "bell")
-                            .font(.system(size: 17, weight: .medium))
+                    NavigationLink(destination: ProfileView()) {
+                        Image(systemName: "person.crop.circle")
+                            .font(.system(size: 20, weight: .medium))
                             .foregroundStyle(themeModel.textPrimary)
                             .frame(width: 38, height: 38)
-                            .glassEffect(in: Circle())
+                            .background(themeModel.surfaceTertiary)
+                            .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
                 }

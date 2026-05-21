@@ -6,11 +6,18 @@ final class EmployeesViewModel {
     private(set) var roles: [Role] = MockData.roles
     
     var employees: [User] {
-        // Return all users except the Fleet Manager
         users.filter { user in
             let role = getRole(for: user)
             return role?.roleName.lowercased() != "fleet manager"
         }
+    }
+    
+    var drivers: [User] {
+        users.filter { getRole(for: $0)?.roleName.lowercased() == "driver" }
+    }
+    
+    var maintenanceStaff: [User] {
+        users.filter { getRole(for: $0)?.roleName.lowercased() == "maintenance" }
     }
     
     func getRole(for user: User) -> Role? {

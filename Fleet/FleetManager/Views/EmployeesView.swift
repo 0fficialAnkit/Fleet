@@ -2,6 +2,14 @@ import SwiftUI
 
 struct EmployeesView: View {
     var viewModel: EmployeesViewModel
+    var filterRole: String? = nil
+    
+    var filteredEmployees: [User] {
+        if let role = filterRole {
+            return viewModel.employees.filter { viewModel.getRole(for: $0)?.roleName.lowercased() == role.lowercased() }
+        }
+        return viewModel.employees
+    }
     
     var body: some View {
         Group {
@@ -10,7 +18,12 @@ struct EmployeesView: View {
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: themeModel.spacingMD) {
-                        ForEach(viewModel.employees) { user in
+                        if filteredEmployees.isEmpty {
+                            Text("No employees found.")
+                                .foregroundColor(themeModel.textSecondary)
+                                .padding(.top, 40)
+                        } else {
+                            ForEach(filteredEmployees) { user in
                             let role = viewModel.getRole(for: user)
                             let roleName = role?.roleName ?? "Unknown Role"
                             
@@ -23,15 +36,16 @@ struct EmployeesView: View {
                                 )
                             }
                             .buttonStyle(.plain)
+                            }
                         }
                     }
                     .padding(.vertical, themeModel.spacingMD)
                     .padding(.horizontal, themeModel.spacingMD)
                 }
             }
-            }
         }
     }
+}
 
 
 struct EmployeeRowView: View {
@@ -47,9 +61,21 @@ struct EmployeeRowView: View {
                     .font(themeModel.headline(18))
                     .foregroundColor(themeModel.textPrimary)
                 
-                Text(roleName)
-                    .font(themeModel.caption(14))
-                    .foregroundColor(themeModel.textSecondary)
+                HStack(spacing: 6) {
+                    Text(roleName)
+                        .font(themeModel.caption(14))
+                        .foregroundColor(themeModel.textSecondary)
+                    
+                    if let license = user.licenseNumber {
+                        Text("•")
+                            .font(themeModel.caption(14))
+                            .foregroundColor(themeModel.textTertiary)
+                        
+                        Text(license)
+                            .font(themeModel.caption(14))
+                            .foregroundColor(themeModel.textSecondary)
+                    }
+                }
             }
             
             Spacer()

@@ -112,6 +112,7 @@ enum MockData {
             email: "ravi.kumar@fleetpro.in",
             passwordHash: "$2b$12$hashedpassword002",
             phone: "+91-91234-56789",
+            licenseNumber: "DL-1420110012345",
             roleId: roleDriver,
             status: .active,
             createdAt: daysAgo(90)
@@ -122,6 +123,7 @@ enum MockData {
             email: "suresh.patil@fleetpro.in",
             passwordHash: "$2b$12$hashedpassword003",
             phone: "+91-97890-12345",
+            licenseNumber: "MH-1220130098765",
             roleId: roleDriver,
             status: .active,
             createdAt: daysAgo(75)
@@ -132,6 +134,7 @@ enum MockData {
             email: "deepak.sharma@fleetpro.in",
             passwordHash: "$2b$12$hashedpassword004",
             phone: "+91-93456-78901",
+            licenseNumber: "KA-0120150045678",
             roleId: roleDriver,
             status: .inactive,
             createdAt: daysAgo(60)

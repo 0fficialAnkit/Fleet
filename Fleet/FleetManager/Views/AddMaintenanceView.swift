@@ -5,6 +5,7 @@ struct AddMaintenanceView: View {
     var viewModel: MaintenanceViewModel
     
     @State private var selectedVehicleId: UUID?
+    @State private var selectedStaffId: UUID?
     @State private var selectedTaskType: MaintenanceTaskType = .inspection
     @State private var description = ""
     @State private var scheduledDate = Date()
@@ -24,6 +25,17 @@ struct AddMaintenanceView: View {
                         ForEach(vehicles) { vehicle in
                             Text("\(vehicle.make ?? "") \(vehicle.model ?? "") (\(vehicle.licensePlate ?? ""))")
                                 .tag(UUID?.some(vehicle.id))
+                        }
+                    }
+                    .foregroundColor(themeModel.textPrimary)
+                }
+                .listRowBackground(themeModel.backgroundElevated)
+                
+                Section(header: Text("Assign To").foregroundColor(themeModel.textSecondary)) {
+                    Picker("Select Staff", selection: $selectedStaffId) {
+                        Text("Unassigned").tag(UUID?.none)
+                        ForEach(viewModel.maintenanceStaff) { staff in
+                            Text(staff.fullName).tag(UUID?.some(staff.id))
                         }
                     }
                     .foregroundColor(themeModel.textPrimary)
@@ -70,7 +82,8 @@ struct AddMaintenanceView: View {
                                 vehicleId: vehicleId,
                                 taskType: selectedTaskType,
                                 description: description,
-                                scheduledDate: scheduledDate
+                                scheduledDate: scheduledDate,
+                                assignedTo: selectedStaffId
                             )
                             dismiss()
                         }

@@ -41,4 +41,14 @@ final class VehiclesViewModel {
         )
         vehicles.append(newVehicle)
     }
+    
+    func deleteVehicle(_ vehicle: Vehicle) {
+        vehicles.removeAll { $0.id == vehicle.id }
+    }
+    
+    func updateVehicle(_ updatedVehicle: Vehicle) {
+        if let index = vehicles.firstIndex(where: { $0.id == updatedVehicle.id }) {
+            vehicles[index] = updatedVehicle
+        }
+    }
 }

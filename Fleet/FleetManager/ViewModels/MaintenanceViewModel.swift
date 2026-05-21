@@ -4,6 +4,13 @@ import SwiftUI
 final class MaintenanceViewModel {
     var tasks: [MaintenanceTask] = MockData.maintenanceTasks
     private let vehicles: [Vehicle] = MockData.vehicles
+    private let users: [User] = MockData.users
+    private let roles: [Role] = MockData.roles
+    
+    var maintenanceStaff: [User] {
+        let maintenanceRoleId = roles.first { $0.roleName.lowercased() == "maintenance" }?.id
+        return users.filter { $0.roleId == maintenanceRoleId }
+    }
     
     func getVehicle(for vehicleId: UUID) -> Vehicle? {
         vehicles.first { $0.id == vehicleId }
@@ -19,12 +26,12 @@ final class MaintenanceViewModel {
         }
     }
     
-    func addTask(vehicleId: UUID, taskType: MaintenanceTaskType, description: String, scheduledDate: Date) {
+    func addTask(vehicleId: UUID, taskType: MaintenanceTaskType, description: String, scheduledDate: Date, assignedTo: UUID? = nil) {
         let newTask = MaintenanceTask(
             id: UUID(),
             vehicleId: vehicleId,
             scheduledBy: nil,
-            assignedTo: nil,
+            assignedTo: assignedTo,
             taskType: taskType,
             description: description,
             scheduledDate: scheduledDate,

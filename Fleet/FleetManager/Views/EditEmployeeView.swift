@@ -44,26 +44,18 @@ struct EditEmployeeView: View {
                         .keyboardType(.phonePad)
                         .foregroundColor(themeModel.textPrimary)
                     
-                    TextField("Driver License Number", text: $licenseNumber)
-                        .foregroundColor(isDriverSelected ? themeModel.textPrimary : themeModel.textDisabled)
-                        .disabled(!isDriverSelected)
+                    if isDriverSelected {
+                        TextField("Driver License Number", text: $licenseNumber)
+                            .foregroundColor(themeModel.textPrimary)
+                    }
                 }
                 .listRowBackground(themeModel.backgroundElevated)
                 
-                Section(header: Text("Role & Access").foregroundColor(themeModel.textSecondary)) {
-                    Picker("Select Role", selection: $selectedRoleId) {
-                        Text("Select a role").tag(UUID?.none)
-                        ForEach(assignableRoles) { role in
-                            Text(role.roleName).tag(UUID?.some(role.id))
-                        }
-                    }
-                    .foregroundColor(themeModel.textPrimary)
-                }
-                .listRowBackground(themeModel.backgroundElevated)
+
             }
             .scrollContentBackground(.hidden)
             .background(themeModel.backgroundPrimary)
-            .navigationTitle("Edit Employee")
+            .navigationTitle(isDriverSelected ? "Edit Driver" : "Edit Maintenance")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)

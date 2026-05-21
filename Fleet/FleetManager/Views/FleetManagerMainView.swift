@@ -40,14 +40,15 @@ struct FleetManagerMainView: View {
                 }
                 .tag(1)
             
-
-
-            ProfileView()
+            EmployeeMainView()
                 .tabItem {
-                    Image(systemName: "person.crop.circle")
-                    Text("Profile")
+                    Image(systemName: "person.3")
+                    Text("Employees")
                 }
                 .tag(2)
+            
+
+
         }
         .tint(themeModel.selectedTab)
     }

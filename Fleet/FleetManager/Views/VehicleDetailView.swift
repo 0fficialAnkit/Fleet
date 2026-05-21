@@ -3,13 +3,19 @@ import SwiftUI
 struct VehicleDetailView: View {
     let vehicle: Vehicle
     let viewModel: VehiclesViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var isShowingEditSheet = false
+    
+    var currentVehicle: Vehicle {
+        viewModel.vehicles.first { $0.id == vehicle.id } ?? vehicle
+    }
     
     var driverName: String {
-        viewModel.getDriver(for: vehicle.assignedDriverId)?.fullName ?? "Unassigned"
+        viewModel.getDriver(for: currentVehicle.assignedDriverId)?.fullName ?? "Unassigned"
     }
     
     var pastTrips: [Trip] {
-        viewModel.getPastTrips(for: vehicle.id)
+        viewModel.getPastTrips(for: currentVehicle.id)
     }
     
     var body: some View {
@@ -25,11 +31,11 @@ struct VehicleDetailView: View {
                             .foregroundColor(themeModel.info)
                             .padding(.bottom, 8)
                         
-                        Text("\(vehicle.make ?? "Unknown") \(vehicle.model ?? "")")
+                        Text("\(currentVehicle.make ?? "Unknown") \(currentVehicle.model ?? "")")
                             .font(themeModel.largeTitle(28))
                             .foregroundColor(themeModel.textPrimary)
                         
-                        Text(vehicle.licensePlate ?? "No License Plate")
+                        Text(currentVehicle.licensePlate ?? "No License Plate")
                             .font(themeModel.bodyMedium(16))
                             .foregroundColor(themeModel.textSecondary)
                             .padding(.horizontal, 16)
@@ -41,17 +47,17 @@ struct VehicleDetailView: View {
                     
                     // Vehicle Info Card
                     VStack(spacing: 0) {
-                        DetailInfoRow(title: "Manufacturer", value: vehicle.make ?? "N/A")
+                        DetailInfoRow(title: "Manufacturer", value: currentVehicle.make ?? "N/A")
                         Divider().background(themeModel.divider)
-                        DetailInfoRow(title: "Model", value: vehicle.model ?? "N/A")
+                        DetailInfoRow(title: "Model", value: currentVehicle.model ?? "N/A")
                         Divider().background(themeModel.divider)
-                        DetailInfoRow(title: "Year", value: vehicle.year != nil ? String(vehicle.year!) : "N/A")
+                        DetailInfoRow(title: "Year", value: currentVehicle.year != nil ? String(currentVehicle.year!) : "N/A")
                         Divider().background(themeModel.divider)
-                        DetailInfoRow(title: "Tank Capacity", value: vehicle.tankCapacity != nil ? "\(String(format: "%.1f", vehicle.tankCapacity!)) L" : "N/A")
+                        DetailInfoRow(title: "Tank Capacity", value: currentVehicle.tankCapacity != nil ? "\(String(format: "%.1f", currentVehicle.tankCapacity!)) L" : "N/A")
                         Divider().background(themeModel.divider)
-                        DetailInfoRow(title: "Mileage", value: vehicle.mileage != nil ? "\(String(format: "%.1f", vehicle.mileage!)) km/l" : "N/A")
+                        DetailInfoRow(title: "Mileage", value: currentVehicle.mileage != nil ? "\(String(format: "%.1f", currentVehicle.mileage!)) km/l" : "N/A")
                         Divider().background(themeModel.divider)
-                        DetailInfoRow(title: "Purchase Date", value: vehicle.purchaseDate?.formatted(date: .abbreviated, time: .omitted) ?? "N/A")
+                        DetailInfoRow(title: "Purchase Date", value: currentVehicle.purchaseDate?.formatted(date: .abbreviated, time: .omitted) ?? "N/A")
                     }
                     .padding(themeModel.spacingMD)
                     .background(themeModel.backgroundElevated)
@@ -111,6 +117,35 @@ struct VehicleDetailView: View {
         }
         .navigationTitle("Details")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button(action: {
+                        isShowingEditSheet = true
+                    }) {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                    
+                    Button(role: .destructive, action: {
+                        viewModel.deleteVehicle(currentVehicle)
+                        dismiss()
+                    }) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 17, weight: .regular))
+                        .foregroundColor(themeModel.textPrimary)
+                        .padding(8)
+                }
+            }
+        }
+        .sheet(isPresented: $isShowingEditSheet) {
+            EditVehicleView(vehicle: currentVehicle, viewModel: viewModel)
+        }
     }
 }
 

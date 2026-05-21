@@ -106,9 +106,9 @@ struct EmployeeDetailView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 17, weight: .regular))
+                        .font(.system(size: 14, weight: .regular))
                         .foregroundColor(themeModel.textPrimary)
-                        .padding(8)
+                        .padding(7)
                 }
             }
         }

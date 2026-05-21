@@ -10,6 +10,15 @@ struct AddEmployeeView: View {
     @State private var licenseNumber = ""
     @State private var selectedRoleId: UUID?
     
+    init(viewModel: EmployeesViewModel, preselectedRoleName: String? = nil) {
+        self.viewModel = viewModel
+        
+        if let roleName = preselectedRoleName,
+           let role = viewModel.roles.first(where: { $0.roleName.lowercased() == roleName.lowercased() }) {
+            _selectedRoleId = State(initialValue: role.id)
+        }
+    }
+    
     var isDriverSelected: Bool {
         guard let id = selectedRoleId, let role = viewModel.roles.first(where: { $0.id == id }) else { return false }
         return role.roleName.lowercased() == "driver"
@@ -33,26 +42,18 @@ struct AddEmployeeView: View {
                         .keyboardType(.phonePad)
                         .foregroundColor(themeModel.textPrimary)
                     
-                    TextField("Driver License Number", text: $licenseNumber)
-                        .foregroundColor(isDriverSelected ? themeModel.textPrimary : themeModel.textDisabled)
-                        .disabled(!isDriverSelected)
+                    if isDriverSelected {
+                        TextField("Driver License Number", text: $licenseNumber)
+                            .foregroundColor(themeModel.textPrimary)
+                    }
                 }
                 .listRowBackground(themeModel.backgroundElevated)
                 
-                Section(header: Text("Role & Access").foregroundColor(themeModel.textSecondary)) {
-                    Picker("Select Role", selection: $selectedRoleId) {
-                        Text("Select a role").tag(UUID?.none)
-                        ForEach(assignableRoles) { role in
-                            Text(role.roleName).tag(UUID?.some(role.id))
-                        }
-                    }
-                    .foregroundColor(themeModel.textPrimary)
-                }
-                .listRowBackground(themeModel.backgroundElevated)
+
             }
             .scrollContentBackground(.hidden)
             .background(themeModel.backgroundPrimary)
-            .navigationTitle("Add Employee")
+            .navigationTitle(isDriverSelected ? "Add Driver" : "Add Maintenance")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
@@ -89,6 +90,6 @@ struct AddEmployeeView: View {
 }
 
 #Preview {
-    AddEmployeeView(viewModel: EmployeesViewModel())
+    AddEmployeeView(viewModel: EmployeesViewModel(), preselectedRoleName: "driver")
 }
 
