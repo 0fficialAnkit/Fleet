@@ -33,7 +33,7 @@ struct FleetManagerMainView: View {
                 }
                 .tag(0)
             
-            VehiclesView()
+            FleetView()
                 .tabItem {
                     Image(systemName: "car")
                     Text("Fleet")

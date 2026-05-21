@@ -5,7 +5,7 @@ struct EmployeesView: View {
     @State private var isShowingAddEmployee = false
     
     var body: some View {
-        NavigationStack {
+        Group {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
                 
@@ -90,5 +90,7 @@ struct EmployeeRowView: View {
 }
 
 #Preview {
-    EmployeesView()
+    NavigationStack {
+        EmployeesView()
+    }
 }

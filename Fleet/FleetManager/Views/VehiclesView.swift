@@ -4,7 +4,7 @@ struct VehiclesView: View {
     @State private var viewModel = VehiclesViewModel()
     
     var body: some View {
-        NavigationStack {
+        Group {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
                 
@@ -86,5 +86,7 @@ struct VehicleRowView: View {
 }
 
 #Preview {
-    VehiclesView()
+    NavigationStack {
+        VehiclesView()
+    }
 }
