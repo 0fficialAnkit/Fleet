@@ -3,8 +3,6 @@ import Supabase
 import SwiftUI
 import Observation
 
-
-
 @MainActor
 @Observable
 class AuthViewModel {
@@ -13,7 +11,6 @@ class AuthViewModel {
     var errorMessage: String?
     var isLoading = false
     var isSessionChecked = false
-    
     var resolvedRoleName: String?
     
     struct UserRecord: Codable {
@@ -27,27 +24,25 @@ class AuthViewModel {
     func fetchRoleName() async {
         guard let userId = currentUser?.id else { return }
         do {
-            // First, get the role_id from the users table
-            let userResponse: [UserRecord] = try await supabase
+            let userRecord: UserRecord = try await supabase
                 .from("users")
                 .select("role_id")
                 .eq("id", value: userId)
+                .single()
                 .execute()
                 .value
             
-            guard let roleId = userResponse.first?.role_id else { return }
+            guard let roleId = userRecord.role_id else { return }
             
-            // Then, fetch the role_name from the roles table
-            let roleResponse: [RoleRecord] = try await supabase
+            let roleRecord: RoleRecord = try await supabase
                 .from("roles")
                 .select("role_name")
                 .eq("id", value: roleId)
+                .single()
                 .execute()
                 .value
             
-            if let roleName = roleResponse.first?.role_name {
-                self.resolvedRoleName = roleName
-            }
+            self.resolvedRoleName = roleRecord.role_name
         } catch {
             print("Failed to fetch role name: \(error)")
             self.errorMessage = "Failed to load user role."
@@ -73,20 +68,24 @@ class AuthViewModel {
         isLoading = true
         errorMessage = nil
         do {
-            // Map the human-readable UI role to the expected backend database key
-            var backendRole = "fleet_manager"
-            if role == "Driver" { backendRole = "driver" }
-            if role == "Maintenance" { backendRole = "maintenance" }
+            // Map the human-readable UI role to the expected backend database UUID
+            let roleId = switch role.lowercased() {
+            case "driver": "41d7aa4d-5ad4-4fda-82da-992b8ac14657"
+            case "maintenance": "7cb95205-1a35-4ffb-889a-3f8067f43cb9"
+            default: "cb66109f-e887-4586-baed-2761a9029c61" // fleet_manager
+            }
             
             let metadata: [String: AnyJSON] = [
                 "fullName": .string(fullName),
-                "role": .string(backendRole)
+                "role_id": .string(roleId)
             ]
-            let _ = try await supabase.auth.signUp(
+            
+            try await supabase.auth.signUp(
                 email: email,
                 password: password,
                 data: metadata
             )
+            
             // Ensure the user is not automatically logged in after creation
             try? await supabase.auth.signOut()
             self.isAuthenticated = false
@@ -117,6 +116,7 @@ class AuthViewModel {
             try await supabase.auth.signOut()
             self.isAuthenticated = false
             self.currentUser = nil
+            self.resolvedRoleName = nil
         } catch {
             self.errorMessage = error.localizedDescription
         }
