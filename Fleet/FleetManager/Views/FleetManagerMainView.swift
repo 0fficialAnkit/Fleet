@@ -2,69 +2,68 @@ import SwiftUI
 
 struct FleetManagerMainView: View {
     @State private var selectedTab = 0
-    
+
     init() {
-        // Customize TabBar appearance for a sleek, modern look
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = UIColor(themeModel.tabBar)
-        
+
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
         UITabBar.appearance().unselectedItemTintColor = UIColor(themeModel.unselectedTab)
-        
-        // Customize NavigationBar appearance to match the theme when using native NavigationStack
+
         let navAppearance = UINavigationBarAppearance()
         navAppearance.configureWithTransparentBackground()
         navAppearance.largeTitleTextAttributes = [.foregroundColor: UIColor(themeModel.textPrimary)]
         navAppearance.titleTextAttributes = [.foregroundColor: UIColor(themeModel.textPrimary)]
-        
+
         UINavigationBar.appearance().standardAppearance = navAppearance
         UINavigationBar.appearance().compactAppearance = navAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
     }
-    
+
     var body: some View {
         TabView(selection: $selectedTab) {
+
+            // MARK: Dashboard (profile access via toolbar)
             DashboardView()
                 .tabItem {
-                    Image(systemName: "square.grid.2x2")
+                    Image(systemName: "square.grid.2x2.fill")
                     Text("Dashboard")
                 }
                 .tag(0)
-            
-            VehiclesView()
+
+            // MARK: Fleet — Drivers + Maintenance
+            FleetView()
                 .tabItem {
-                    Image(systemName: "box.truck")
-                    Text("Vehicles")
+                    Image(systemName: "person.2.fill")
+                    Text("Fleet")
                 }
                 .tag(1)
-            
-            Text("Trips Placeholder")
+
+            // MARK: Vehicles
+            VehiclesRootView()
                 .tabItem {
-                    Image(systemName: "point.topleft.down.curvedto.point.bottomright.up")
-                    Text("Trips")
+                    Image(systemName: "truck.box.fill")
+                    Text("Vehicles")
                 }
                 .tag(2)
-            
-            Text("Service Placeholder")
+
+            // MARK: Reports
+            ReportsView()
                 .tabItem {
-                    Image(systemName: "wrench")
-                    Text("Service")
+                    Image(systemName: "exclamationmark.triangle.fill")
+                    Text("Reports")
                 }
                 .tag(3)
-                
-            Text("Alerts Placeholder")
-                .tabItem {
-                    Image(systemName: "exclamationmark.triangle")
-                    Text("Alerts")
-                }
-                .tag(4)
         }
-        .tint(Color(red: 0.2, green: 0.3, blue: 0.7))
+        .tint(themeModel.selectedTab)
     }
 }
 
+
 #Preview {
     FleetManagerMainView()
+        .environment(AuthViewModel())
 }
+
