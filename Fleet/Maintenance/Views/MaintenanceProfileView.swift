@@ -54,5 +54,4 @@ struct MaintenanceProfileView: View {
 
 #Preview {
     MaintenanceProfileView()
-        .environment(AuthViewModel())
 }

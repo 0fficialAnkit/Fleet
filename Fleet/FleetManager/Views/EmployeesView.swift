@@ -1,10 +1,11 @@
 import SwiftUI
 
 struct EmployeesView: View {
-    var viewModel: EmployeesViewModel
+    @State private var viewModel = EmployeesViewModel()
+    @State private var isShowingAddEmployee = false
     
     var body: some View {
-        Group {
+        NavigationStack {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
                 
@@ -14,7 +15,7 @@ struct EmployeesView: View {
                             let role = viewModel.getRole(for: user)
                             let roleName = role?.roleName ?? "Unknown Role"
                             
-                            NavigationLink(destination: EmployeeDetailView(user: user, viewModel: viewModel)) {
+                            NavigationLink(destination: EmployeeDetailView(user: user, roleName: roleName, viewModel: viewModel)) {
                                 EmployeeRowView(
                                     user: user,
                                     roleName: roleName,
@@ -29,10 +30,27 @@ struct EmployeesView: View {
                     .padding(.horizontal, themeModel.spacingMD)
                 }
             }
+            .navigationTitle("Employees")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: {
+                        isShowingAddEmployee = true
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(themeModel.textPrimary)
+                            .frame(width: 38, height: 38)
+                            .glassEffect(in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .sheet(isPresented: $isShowingAddEmployee) {
+                AddEmployeeView(viewModel: viewModel)
             }
         }
     }
-
+}
 
 struct EmployeeRowView: View {
     let user: User
@@ -72,7 +90,5 @@ struct EmployeeRowView: View {
 }
 
 #Preview {
-    NavigationStack {
-        EmployeesView(viewModel: EmployeesViewModel())
-    }
+    EmployeesView()
 }
