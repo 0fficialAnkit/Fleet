@@ -120,13 +120,8 @@ extension DriverDashboardView {
 
         VStack(spacing: themeModel.spacingMD) {
             HStack(spacing: themeModel.spacingMD) {
-                MetricCard(icon: "arrow.triangle.swap", value: "2", label: "Trips Today", color: themeModel.success)
                 MetricCard(icon: "point.topleft.down.to.point.bottomright.curvepath", value: "89", label: "KM Driven", color: themeModel.warning)
-            }
-            
-            HStack(spacing: themeModel.spacingMD) {
                 MetricCard(icon: "timer", value: "4.5", label: "Hours Active", color: themeModel.analyticsPurple)
-                MetricCard(icon: "heart.text.clipboard", value: "Good", label: "Vehicle Health", color: themeModel.danger)
             }
         }
     }
