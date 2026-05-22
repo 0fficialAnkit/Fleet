@@ -7,6 +7,14 @@ import SwiftUI
 struct MaintenanceSchedulerView: View {
     @State private var viewModel = MaintenanceSchedulerViewModel()
     @Namespace private var calendarNS
+    @State private var selectedTask: ScheduledTask? = nil
+    @State private var selectedWorkOrder: ScheduledWorkOrder? = nil
+
+    init() {
+        UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(themeModel.maintenancePrimary)
+        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
+        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor(themeModel.textSecondary)], for: .normal)
+    }
 
     var body: some View {
         NavigationStack {
@@ -20,32 +28,23 @@ struct MaintenanceSchedulerView: View {
 
                         // Segmented Control
                         SchedulerSegmentedControl(viewModel: viewModel)
-                            .padding(.horizontal, themeModel.spacingMD)
-                            .padding(.top, themeModel.spacingMD)
-                            .padding(.bottom, themeModel.spacingSM)
 
                         // Task / Work Order List
-                        TaskListSection(viewModel: viewModel)
+                        TaskListSection(
+                            viewModel: viewModel,
+                            selectedTask: $selectedTask,
+                            selectedWorkOrder: $selectedWorkOrder
+                        )
                     }
                 }
             }
             .navigationTitle("Schedule")
             .navigationBarTitleDisplayMode(.large)
-            .sheet(isPresented: $viewModel.showTaskDetail) {
-                if let task = viewModel.selectedTask {
-                    TaskDetailSheet(task: task, viewModel: viewModel)
-                        .presentationDetents([.large])
-                        .presentationDragIndicator(.visible)
-                        .presentationCornerRadius(32)
-                }
+            .navigationDestination(item: $selectedTask) { task in
+                TaskDetailSheet(task: task, viewModel: viewModel)
             }
-            .sheet(isPresented: $viewModel.showWorkOrderDetail) {
-                if let workOrder = viewModel.selectedWorkOrder {
-                    WorkOrderDetailSheet(workOrder: workOrder, viewModel: viewModel)
-                        .presentationDetents([.large])
-                        .presentationDragIndicator(.visible)
-                        .presentationCornerRadius(32)
-                }
+            .navigationDestination(item: $selectedWorkOrder) { wo in
+                WorkOrderDetailView(scheduledWorkOrder: wo)
             }
         }
     }
@@ -181,8 +180,8 @@ private struct SchedulerSegmentedControl: View {
             }
         }
         .pickerStyle(.segmented)
-        .padding(4)
-        .glassEffect(in: Capsule())
+        .padding(.horizontal, themeModel.spacingMD)
+        .padding(.vertical, themeModel.spacingMD)
     }
 }
 
@@ -192,6 +191,8 @@ private struct SchedulerSegmentedControl: View {
 
 private struct TaskListSection: View {
     let viewModel: MaintenanceSchedulerViewModel
+    @Binding var selectedTask: ScheduledTask?
+    @Binding var selectedWorkOrder: ScheduledWorkOrder?
 
     private var dateTitle: String {
         if Calendar.current.isDateInToday(viewModel.selectedDate) { return "Today" }
@@ -235,15 +236,13 @@ private struct TaskListSection: View {
                 } else {
                     ForEach(viewModel.tasksForSelectedDate) { task in
                         TaskCard(task: task)
+                            .contentShape(Rectangle())
+                            .onTapGesture { selectedTask = task }
                             .scrollTransition { content, phase in
                                 content
                                     .opacity(phase.isIdentity ? 1 : 0.7)
                                     .scaleEffect(phase.isIdentity ? 1 : 0.96)
                                     .offset(y: phase.isIdentity ? 0 : 8)
-                            }
-                            .onTapGesture {
-                                viewModel.selectedTask = task
-                                viewModel.showTaskDetail = true
                             }
                             .transition(.asymmetric(
                                 insertion: .opacity.combined(with: .move(edge: .bottom)),
@@ -262,15 +261,13 @@ private struct TaskListSection: View {
                 } else {
                     ForEach(viewModel.workOrdersForSelectedDate) { workOrder in
                         WorkOrderCard(workOrder: workOrder)
+                            .contentShape(Rectangle())
+                            .onTapGesture { selectedWorkOrder = workOrder }
                             .scrollTransition { content, phase in
                                 content
                                     .opacity(phase.isIdentity ? 1 : 0.7)
                                     .scaleEffect(phase.isIdentity ? 1 : 0.96)
                                     .offset(y: phase.isIdentity ? 0 : 8)
-                            }
-                            .onTapGesture {
-                                viewModel.selectedWorkOrder = workOrder
-                                viewModel.showWorkOrderDetail = true
                             }
                             .transition(.asymmetric(
                                 insertion: .opacity.combined(with: .move(edge: .bottom)),
@@ -369,9 +366,11 @@ private struct TaskCard: View {
         )
         .scaleEffect(isPressed ? 0.97 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: 50) { } onPressingChanged: { pressing in
-            isPressed = pressing
-        }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in isPressed = true }
+                .onEnded   { _ in isPressed = false }
+        )
     }
 }
 
@@ -441,9 +440,11 @@ private struct WorkOrderCard: View {
         )
         .scaleEffect(isPressed ? 0.97 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
-        .onLongPressGesture(minimumDuration: 0, maximumDistance: 50) { } onPressingChanged: { pressing in
-            isPressed = pressing
-        }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in isPressed = true }
+                .onEnded   { _ in isPressed = false }
+        )
     }
 
     func statusLabel(_ status: WorkOrderStatus) -> String {
@@ -552,11 +553,10 @@ struct TaskDetailSheet: View {
     @State private var confirmAction: TaskDisplayStatus? = nil
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+        ZStack {
+            themeModel.backgroundPrimary.ignoresSafeArea()
 
-                ScrollView {
+            ScrollView {
                     VStack(spacing: themeModel.spacingLG) {
 
                         // MARK: Status Banner
@@ -714,11 +714,10 @@ struct TaskDetailSheet: View {
                         .padding(.bottom, themeModel.spacingLG)
                     }
                     .padding(themeModel.spacingMD)
-                }
             }
-            .navigationTitle(task.vehicleName)
-            .navigationBarTitleDisplayMode(.inline)
         }
+        .navigationTitle(task.vehicleName)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -739,11 +738,10 @@ struct WorkOrderDetailSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+        ZStack {
+            themeModel.backgroundPrimary.ignoresSafeArea()
 
-                ScrollView {
+            ScrollView {
                     VStack(spacing: themeModel.spacingLG) {
 
                         // MARK: Status Banner
@@ -867,50 +865,47 @@ struct WorkOrderDetailSheet: View {
                         .padding(.bottom, themeModel.spacingLG)
                     }
                     .padding(themeModel.spacingMD)
-                }
             }
-            .navigationTitle("Work Order Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showAddPartSheet) {
-                NavigationStack {
-                    ZStack {
-                        themeModel.backgroundPrimary.ignoresSafeArea()
-                        VStack(spacing: 20) {
-                            Text("Add Spare Part")
+        }
+        .navigationTitle("Work Order Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showAddPartSheet) {
+                ZStack {
+                    themeModel.backgroundPrimary.ignoresSafeArea()
+                    VStack(spacing: 20) {
+                        Text("Add Spare Part")
+                            .font(themeModel.headline())
+                            .foregroundStyle(themeModel.textPrimary)
+                            .padding(.top, 20)
+
+                        TextField("Part Name (e.g. Air Filter)", text: $newPartName)
+                            .font(themeModel.body())
+                            .padding(12)
+                            .background(themeModel.surfaceTertiary)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .padding(.horizontal)
+
+                        Button(action: {
+                            if !newPartName.isEmpty {
+                                viewModel.addPartToWorkOrder(id: currentWO.id, part: newPartName)
+                                newPartName = ""
+                                showAddPartSheet = false
+                            }
+                        }) {
+                            Text("Add to Consumed Parts")
                                 .font(themeModel.headline())
                                 .foregroundStyle(themeModel.textPrimary)
-                                .padding(.top, 20)
-
-                            TextField("Part Name (e.g. Air Filter)", text: $newPartName)
-                                .font(themeModel.body())
-                                .padding(12)
-                                .background(themeModel.surfaceTertiary)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                                .background(themeModel.maintenancePrimary)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                                 .padding(.horizontal)
-
-                            Button(action: {
-                                if !newPartName.isEmpty {
-                                    viewModel.addPartToWorkOrder(id: currentWO.id, part: newPartName)
-                                    newPartName = ""
-                                    showAddPartSheet = false
-                                }
-                            }) {
-                                Text("Add to Consumed Parts")
-                                    .font(themeModel.headline())
-                                    .foregroundStyle(themeModel.textPrimary)
-                                    .padding()
-                                    .frame(maxWidth: .infinity)
-                                    .background(themeModel.maintenancePrimary)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    .padding(.horizontal)
-                            }
-                            
-                            Spacer()
                         }
+                        
+                        Spacer()
                     }
-                    .presentationDetents([.fraction(0.35)])
                 }
-            }
+                .presentationDetents([.fraction(0.35)])
         }
     }
 
