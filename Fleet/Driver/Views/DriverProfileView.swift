@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct DriverProfileView: View {
-    @Environment(AuthViewModel.self) private var authViewModel
 
     var body: some View {
 
@@ -32,13 +31,7 @@ struct DriverProfileView: View {
 
                         settingsRow(title: "Support", icon: "questionmark.circle")
 
-                        Button(action: {
-                            Task {
-                                await authViewModel.signOut()
-                            }
-                        }) {
-                            settingsRow(title: "Logout", icon: "rectangle.portrait.and.arrow.right")
-                        }
+                        settingsRow(title: "Logout", icon: "rectangle.portrait.and.arrow.right")
                     }
                 }
                 .padding()

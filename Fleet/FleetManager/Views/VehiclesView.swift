@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct VehiclesView: View {
-    @State private var viewModel = VehiclesViewModel()
+    var viewModel: VehiclesViewModel
     
     var body: some View {
-        NavigationStack {
+        Group {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
                 
@@ -24,24 +24,10 @@ struct VehiclesView: View {
                     .padding(.horizontal, themeModel.spacingMD)
                 }
             }
-            .navigationTitle("Vehicles")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        // Add vehicle action
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(themeModel.textPrimary)
-                            .frame(width: 38, height: 38)
-                            .glassEffect(in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                }
             }
         }
     }
-}
+
 
 struct VehicleRowView: View {
     let vehicle: Vehicle
@@ -86,5 +72,7 @@ struct VehicleRowView: View {
 }
 
 #Preview {
-    VehiclesView()
+    NavigationStack {
+        VehiclesView(viewModel: VehiclesViewModel())
+    }
 }
