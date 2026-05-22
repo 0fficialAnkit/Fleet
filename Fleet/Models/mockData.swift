@@ -159,7 +159,7 @@ enum MockData {
     ]
 
     // MARK: - Vehicles
-    static let vehicles: [Vehicle] = [
+    static var vehicles: [Vehicle] = [
         Vehicle(
             id: vTruck1,
             make: "Tata",
