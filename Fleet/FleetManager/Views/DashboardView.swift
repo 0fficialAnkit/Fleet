@@ -2,24 +2,25 @@ import SwiftUI
 
 struct DashboardView: View {
     @State private var viewModel = DashboardViewModel()
-    
+    @State private var isShowingProfile = false
+    @Environment(AuthViewModel.self) private var authViewModel
+
     var body: some View {
         NavigationStack {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
-                
+
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: themeModel.spacingLG) {
                         metricsGrid
                         recentOrdersSection
                         maintenanceSection
                     }
-//                    .padding(.vertical, themeModel.spacingMD)
                 }
             }
             .navigationTitle("Dashboard")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
                     Button(action: {
                         // Notification action
                     }) {
@@ -28,10 +29,21 @@ struct DashboardView: View {
                             .foregroundStyle(themeModel.textPrimary)
                             .frame(width: 38, height: 38)
                     }
+
+                    Button(action: { isShowingProfile = true }) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(themeModel.analyticsPurple)
+                    }
                 }
+            }
+            .sheet(isPresented: $isShowingProfile) {
+                ProfileView()
+                    .environment(authViewModel)
             }
         }
     }
+
     
     // MARK: - Metrics Grid
     private var metricsGrid: some View {
@@ -187,4 +199,5 @@ struct MaintenanceCardView: View {
 
 #Preview {
     DashboardView()
+        .environment(AuthViewModel())
 }
