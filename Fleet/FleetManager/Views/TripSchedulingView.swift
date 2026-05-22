@@ -1,0 +1,121 @@
+import SwiftUI
+
+struct TripSchedulingView: View {
+    @Environment(\.dismiss) private var dismiss
+    var orderType: OrderType
+    var selectedVehicle: Vehicle
+    var selectedDriver: User
+    var viewModel: OrdersViewModel
+    @Binding var selectedOrderType: OrderType?
+    
+    @State private var startTime = Date()
+    
+    var body: some View {
+        ZStack {
+            themeModel.backgroundPrimary.ignoresSafeArea()
+            
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: themeModel.spacingLG) {
+                    
+                    // Order Summary Card
+                    VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                        SectionHeader(title: "Order Summary")
+                            .padding(.horizontal, themeModel.spacingMD)
+                        
+                        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+                            SummaryRow(title: "Order Type", value: orderType.rawValue, icon: "shippingbox.fill")
+                            Divider().background(themeModel.divider)
+                            SummaryRow(title: "Vehicle", value: "\(selectedVehicle.make ?? "") \(selectedVehicle.model ?? "") (\(selectedVehicle.licensePlate ?? ""))", icon: "car.fill")
+                            Divider().background(themeModel.divider)
+                            SummaryRow(title: "Driver", value: selectedDriver.fullName, icon: "person.crop.circle.fill")
+                        }
+                        .padding(themeModel.spacingMD)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                        )
+                        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                        .padding(.horizontal, themeModel.spacingMD)
+                    }
+                    
+                    // Date & Time Picker Card
+                    VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                        SectionHeader(title: "Schedule Date & Time")
+                            .padding(.horizontal, themeModel.spacingMD)
+                        
+                        VStack(spacing: themeModel.spacingMD) {
+                            DatePicker("Start Time", selection: $startTime, in: Date()...)
+                                .datePickerStyle(.graphical)
+                                .tint(themeModel.accent)
+                                .padding(.vertical, 8)
+                        }
+                        .padding(themeModel.spacingMD)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                        )
+                        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                        .padding(.horizontal, themeModel.spacingMD)
+                    }
+                    
+                }
+                .padding(.vertical, themeModel.spacingMD)
+            }
+        }
+        .navigationTitle("Schedule Trip")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    let routeId = MockData.routes.first(where: { 
+                        if orderType == .bulkOrderShip {
+                            return $0.routeName?.contains("Downtown") ?? false
+                        } else if orderType == .pickUpAndDrop {
+                            return $0.routeName?.contains("Suburbs") ?? false
+                        } else {
+                            return $0.routeName?.contains("Express") ?? false
+                        }
+                    })?.id ?? MockData.routes.first?.id
+                    
+                    viewModel.addTrip(
+                        vehicleId: selectedVehicle.id,
+                        driverId: selectedDriver.id,
+                        routeId: routeId,
+                        startTime: startTime,
+                        orderType: orderType
+                    )
+                    selectedOrderType = nil // Dismisses the entire sheet flow directly to order list
+                }
+                .foregroundColor(themeModel.accent)
+                .bold()
+            }
+        }
+    }
+}
+
+struct SummaryRow: View {
+    let title: String
+    let value: String
+    let icon: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundColor(themeModel.accent)
+                .frame(width: 24)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(themeModel.caption(12))
+                    .foregroundColor(themeModel.textTertiary)
+                Text(value)
+                    .font(themeModel.bodyMedium(14))
+                    .foregroundColor(themeModel.textPrimary)
+            }
+            Spacer()
+        }
+    }
+}
