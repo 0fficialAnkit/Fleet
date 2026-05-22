@@ -95,7 +95,7 @@ enum MockData {
     ]
 
     // MARK: - Users
-    static let users: [User] = [
+    static var users: [User] = [
         User(
             id: uManager,
             fullName: "Ankit Kumar",
