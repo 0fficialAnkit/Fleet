@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct MaintenanceProfileView: View {
+    @Environment(AuthViewModel.self) private var authViewModel
+    
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -22,7 +24,13 @@ struct MaintenanceProfileView: View {
                         settingsRow(title: "Shift Schedule", icon: "calendar")
                         settingsRow(title: "Assigned Depot", icon: "building.2.fill")
                         settingsRow(title: "Notifications", icon: "bell")
-                        settingsRow(title: "Logout", icon: "rectangle.portrait.and.arrow.right")
+                        Button(action: {
+                            Task {
+                                await authViewModel.signOut()
+                            }
+                        }) {
+                            settingsRow(title: "Logout", icon: "rectangle.portrait.and.arrow.right")
+                        }
                     }
                 }
                 .padding()
@@ -46,4 +54,5 @@ struct MaintenanceProfileView: View {
 
 #Preview {
     MaintenanceProfileView()
+        .environment(AuthViewModel())
 }
