@@ -35,27 +35,33 @@ struct FleetManagerMainView: View {
             
             VehiclesView()
                 .tabItem {
-                    Image(systemName: "car")
+                    Image(systemName: "box.truck")
                     Text("Vehicles")
                 }
                 .tag(1)
             
-            EmployeesView()
+            Text("Trips Placeholder")
                 .tabItem {
-                    Image(systemName: "person.3")
-                    Text("Employees")
+                    Image(systemName: "point.topleft.down.curvedto.point.bottomright.up")
+                    Text("Trips")
                 }
                 .tag(2)
             
-
-            ProfileView()
+            Text("Service Placeholder")
                 .tabItem {
-                    Image(systemName: "person.crop.circle")
-                    Text("Profile")
+                    Image(systemName: "wrench")
+                    Text("Service")
                 }
                 .tag(3)
+                
+            Text("Alerts Placeholder")
+                .tabItem {
+                    Image(systemName: "exclamationmark.triangle")
+                    Text("Alerts")
+                }
+                .tag(4)
         }
-        .tint(themeModel.selectedTab)
+        .tint(Color(red: 0.2, green: 0.3, blue: 0.7))
     }
 }
 
