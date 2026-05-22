@@ -15,6 +15,19 @@ struct EmployeeDetailView: View {
         viewModel.getRole(for: currentUser)?.roleName ?? "Unknown Role"
     }
     
+    var credentialsShareText: String {
+        let pass = currentUser.passwordHash == "$2b$12$dummy" ? "[Ask Fleet Manager for Password]" : currentUser.passwordHash
+        return """
+        Welcome to the Fleet App, \(currentUser.fullName)!
+        
+        Your login credentials are:
+        Email: \(currentUser.email)
+        Password: \(pass)
+        
+        Please log in to access your portal.
+        """
+    }
+    
     var body: some View {
         ZStack {
             themeModel.backgroundPrimary.ignoresSafeArea()
@@ -92,6 +105,14 @@ struct EmployeeDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    ShareLink(
+                        item: credentialsShareText,
+                        subject: Text("Fleet App Login Credentials"),
+                        message: Text("Here are your login details:")
+                    ) {
+                        Label("Share Credentials", systemImage: "square.and.arrow.up")
+                    }
+                    
                     Button(action: {
                         isShowingEditSheet = true
                     }) {

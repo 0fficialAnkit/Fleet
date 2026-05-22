@@ -2,17 +2,15 @@ import SwiftUI
 
 enum FleetTab: String, CaseIterable {
     case drivers = "Drivers"
-    case maintenance = "Maintenance"
+    case maintenance = "Maintenance Staff"
 }
 
 struct FleetView: View {
     @State private var selectedTab: FleetTab = .drivers
 
     @State private var employeesViewModel = EmployeesViewModel()
-    @State private var maintenanceViewModel = MaintenanceViewModel()
 
-    @State private var isShowingAddDriver = false
-    @State private var isShowingAddMaintenance = false
+    @State private var isShowingAddEmployee = false
 
     init() {
         UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(themeModel.info)
@@ -37,9 +35,9 @@ struct FleetView: View {
 
                     switch selectedTab {
                     case .drivers:
-                        EmployeesView(viewModel: employeesViewModel)
+                        EmployeesView(viewModel: employeesViewModel, roleFilter: "driver")
                     case .maintenance:
-                        MaintenanceView(viewModel: maintenanceViewModel)
+                        EmployeesView(viewModel: employeesViewModel, roleFilter: "maintenance")
                     }
 
                     Spacer(minLength: 0)
@@ -49,27 +47,25 @@ struct FleetView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
-                        switch selectedTab {
-                        case .drivers:
-                            isShowingAddDriver = true
-                        case .maintenance:
-                            isShowingAddMaintenance = true
-                        }
+                        isShowingAddEmployee = true
                     }) {
                         Image(systemName: "plus")
                             .font(.system(size: 17, weight: .medium))
                             .foregroundStyle(themeModel.textPrimary)
                             .frame(width: 38, height: 38)
-                            .glassEffect(in: Circle())
+//                            .glassEffect(in: Circle())
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .sheet(isPresented: $isShowingAddDriver) {
-                AddEmployeeView(viewModel: employeesViewModel)
+            .sheet(isPresented: $isShowingAddEmployee) {
+                AddEmployeeView(
+                    viewModel: employeesViewModel,
+                    roleName: selectedTab == .drivers ? "driver" : "maintenance"
+                )
             }
-            .sheet(isPresented: $isShowingAddMaintenance) {
-                AddMaintenanceView(viewModel: maintenanceViewModel)
+            .onAppear {
+                employeesViewModel.refreshData()
             }
         }
     }

@@ -2,6 +2,14 @@ import SwiftUI
 
 struct EmployeesView: View {
     var viewModel: EmployeesViewModel
+    let roleFilter: String
+    
+    var filteredEmployees: [User] {
+        viewModel.employees.filter { user in
+            let role = viewModel.getRole(for: user)
+            return role?.roleName.lowercased() == roleFilter.lowercased()
+        }
+    }
     
     var body: some View {
         Group {
@@ -10,7 +18,7 @@ struct EmployeesView: View {
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: themeModel.spacingMD) {
-                        ForEach(viewModel.employees) { user in
+                        ForEach(filteredEmployees) { user in
                             let role = viewModel.getRole(for: user)
                             let roleName = role?.roleName ?? "Unknown Role"
                             
@@ -73,6 +81,6 @@ struct EmployeeRowView: View {
 
 #Preview {
     NavigationStack {
-        EmployeesView(viewModel: EmployeesViewModel())
+        EmployeesView(viewModel: EmployeesViewModel(), roleFilter: "driver")
     }
 }

@@ -4,6 +4,9 @@ struct VehicleDetailView: View {
     let vehicle: Vehicle
     let viewModel: VehiclesViewModel
     
+    @State private var isShowingEdit = false
+    @Environment(\.dismiss) private var dismiss
+    
     var driverName: String {
         viewModel.getDriver(for: vehicle.assignedDriverId)?.fullName ?? "Unassigned"
     }
@@ -112,6 +115,31 @@ struct VehicleDetailView: View {
         }
         .navigationTitle("Details")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button(action: {
+                        isShowingEdit = true
+                    }) {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                    
+                    Button(role: .destructive, action: {
+                        viewModel.deleteVehicle(vehicle)
+                        dismiss()
+                    }) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(themeModel.textPrimary)
+                }
+            }
+        }
+        .sheet(isPresented: $isShowingEdit) {
+            EditVehicleView(viewModel: viewModel, vehicle: vehicle)
+        }
     }
 }
 

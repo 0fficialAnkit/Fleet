@@ -7,6 +7,12 @@ final class DashboardViewModel {
     private(set) var trips: [Trip] = MockData.trips
     private(set) var workOrders: [WorkOrder] = MockData.workOrders
     
+    func refreshData() {
+        self.vehicles = MockData.vehicles
+        self.trips = MockData.trips
+        self.workOrders = MockData.workOrders
+    }
+    
     var totalVehicles: Int { 
         vehicles.count 
     }
