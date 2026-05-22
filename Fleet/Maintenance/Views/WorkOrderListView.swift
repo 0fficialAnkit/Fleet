@@ -2,66 +2,59 @@ import SwiftUI
 
 struct WorkOrderListView: View {
     @State private var selectedFilter: WorkOrderStatus? = nil
-
+    
+    // Dummy Data based on DataModel
     let workOrders = [
-        WorkOrder(id: UUID(), vehicleId: UUID(), createdBy: UUID(), assignedTo: UUID(), priority: .high,     status: .open,       createdAt: Date().addingTimeInterval(-86400)),
-        WorkOrder(id: UUID(), vehicleId: UUID(), createdBy: UUID(), assignedTo: UUID(), priority: .medium,   status: .inProgress, createdAt: Date().addingTimeInterval(-172800)),
-        WorkOrder(id: UUID(), vehicleId: UUID(), createdBy: UUID(), assignedTo: UUID(), priority: .critical, status: .completed,  createdAt: Date().addingTimeInterval(-259200)),
-        WorkOrder(id: UUID(), vehicleId: UUID(), createdBy: UUID(), assignedTo: UUID(), priority: .low,      status: .open,       createdAt: Date().addingTimeInterval(-43200)),
-        WorkOrder(id: UUID(), vehicleId: UUID(), createdBy: UUID(), assignedTo: UUID(), priority: .high,     status: .cancelled,  createdAt: Date().addingTimeInterval(-320000))
+        WorkOrder(id: UUID(), vehicleId: UUID(), createdBy: UUID(), assignedTo: UUID(), priority: .high, status: .open, createdAt: Date().addingTimeInterval(-86400)),
+        WorkOrder(id: UUID(), vehicleId: UUID(), createdBy: UUID(), assignedTo: UUID(), priority: .medium, status: .inProgress, createdAt: Date().addingTimeInterval(-172800)),
+        WorkOrder(id: UUID(), vehicleId: UUID(), createdBy: UUID(), assignedTo: UUID(), priority: .critical, status: .completed, createdAt: Date().addingTimeInterval(-259200))
     ]
-
+    
     var filteredOrders: [WorkOrder] {
-        guard let filter = selectedFilter else { return workOrders }
-        return workOrders.filter { $0.status == filter }
+        if let filter = selectedFilter {
+            return workOrders.filter { $0.status == filter }
+        }
+        return workOrders
     }
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
-                AmbientBackground().ignoresSafeArea()
-
-                VStack(spacing: 0) {
-                    // ── Filter Chips ──
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            WOFilterChip(label: "All",         tag: nil,           selected: selectedFilter == nil) { selectedFilter = nil }
-                            WOFilterChip(label: "Open",        tag: .open,         selected: selectedFilter == .open)       { selectedFilter = .open }
-                            WOFilterChip(label: "In Progress", tag: .inProgress,   selected: selectedFilter == .inProgress) { selectedFilter = .inProgress }
-                            WOFilterChip(label: "Completed",   tag: .completed,    selected: selectedFilter == .completed)  { selectedFilter = .completed }
-                            WOFilterChip(label: "Cancelled",   tag: .cancelled,    selected: selectedFilter == .cancelled)  { selectedFilter = .cancelled }
+                themeModel.backgroundPrimary.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: themeModel.spacingMD) {
+                        // Filter Picker
+                        Picker("Status Filter", selection: $selectedFilter) {
+                            Text("All").tag(WorkOrderStatus?.none)
+                            Text("Open").tag(WorkOrderStatus?.some(.open))
+                            Text("In Progress").tag(WorkOrderStatus?.some(.inProgress))
+                            Text("Completed").tag(WorkOrderStatus?.some(.completed))
                         }
-                        .padding(.horizontal)
-                        .padding(.vertical, 12)
-                    }
-
-                    Divider()
-
-                    // ── List ──
-                    ScrollView(showsIndicators: false) {
-                        LazyVStack(spacing: 12) {
+                        .pickerStyle(.segmented)
+                        .padding(.horizontal, themeModel.spacingMD)
+                        
+                        LazyVStack(spacing: themeModel.spacingMD) {
                             ForEach(filteredOrders) { order in
                                 NavigationLink(destination: WorkOrderDetailView(workOrder: order)) {
-                                    WOCard(workOrder: order)
+                                    WorkOrderRow(workOrder: order)
                                 }
                                 .buttonStyle(.plain)
                             }
                         }
-                        .padding(.horizontal)
-                        .padding(.top, 16)
-                        .padding(.bottom, 32)
+                        .padding(.horizontal, themeModel.spacingMD)
                     }
+                    .padding(.vertical, themeModel.spacingMD)
                 }
             }
             .navigationTitle("Work Orders")
-            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(MBlue.accentLight)
-                            .symbolRenderingMode(.hierarchical)
+                    Button(action: {
+                        // Action to create new work order
+                    }) {
+                        Image(systemName: "plus")
+                            .foregroundColor(themeModel.maintenancePrimary)
                     }
                 }
             }
@@ -69,145 +62,74 @@ struct WorkOrderListView: View {
     }
 }
 
-// MARK: - Filter Chip
-struct WOFilterChip: View {
-    let label: String
-    let tag: WorkOrderStatus?
-    let selected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                .foregroundStyle(selected ? .white : MBlue.textSecondary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
-                .background(selected ? Capsule().fill(MBlue.accent) : nil)
-                .glassEffect(.regular, in: Capsule())
-                .overlay(
-                    Capsule()
-                        .strokeBorder(
-                            selected ? MBlue.accent : MBlue.accentBorder.opacity(0.4),
-                            lineWidth: 0.8
-                        )
-                )
-        }
-    }
-}
-
-// MARK: - Work Order Card
-struct WOCard: View {
+struct WorkOrderRow: View {
     let workOrder: WorkOrder
-
-    private var statusConfig: (label: String, color: Color) {
-        switch workOrder.status {
-        case .open:       return ("Open",        MBlue.accent)
-        case .inProgress: return ("In Progress", MBlue.inProgress)
-        case .completed:  return ("Completed",   MBlue.completed)
-        case .cancelled:  return ("Cancelled",   MBlue.textMuted)
-        default:          return ("Unknown",     MBlue.textMuted)
-        }
-    }
-
-    private var priorityConfig: (label: String, color: Color) {
-        switch workOrder.priority {
-        case .critical: return ("Critical", MBlue.critical)
-        case .high:     return ("High",     MBlue.accentLight)
-        case .medium:   return ("Medium",   MBlue.inProgress)
-        case .low:      return ("Low",      MBlue.textSecondary)
-        default:        return ("—",        MBlue.textMuted)
-        }
-    }
-
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Top row
-            HStack {
-                Label {
-                    Text("WO-\(workOrder.id.uuidString.prefix(6).uppercased())")
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
-                        .foregroundStyle(MBlue.accentLight)
-                } icon: {
-                    Image(systemName: "wrench.and.screwdriver.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(MBlue.accent)
-                        .symbolRenderingMode(.hierarchical)
+        
+            VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+                HStack {
+                    Text("Order: \(workOrder.id.uuidString.prefix(6))")
+                        .font(themeModel.headline())
+                        .foregroundStyle(themeModel.textPrimary)
+                    Spacer()
+                    StatusBadge(text: workOrder.status?.rawValue.capitalized ?? "Open", color: statusColor(workOrder.status))
                 }
-
-                Spacer()
-
-                // Status pill
-                Text(statusConfig.label)
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundStyle(statusConfig.color)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule()
-                            .fill(statusConfig.color.opacity(0.13))
-                    )
+                
+                HStack {
+                    Label {
+                        Text("Priority: \(workOrder.priority?.rawValue.capitalized ?? "Unknown")")
+                            .font(themeModel.bodyMedium())
+                            .foregroundStyle(themeModel.textSecondary)
+                    } icon: {
+                        Image(systemName: priorityIcon(workOrder.priority))
+                            .foregroundColor(priorityColor(workOrder.priority))
+                    }
+                    
+                    Spacer()
+                    
+                    Text(workOrder.createdAt ?? Date(), style: .date)
+                        .font(themeModel.caption())
+                        .foregroundStyle(themeModel.textTertiary)
+                }
             }
-
-            Rectangle().fill(MBlue.divider).frame(height: 1)
-
-            // Bottom row
-            HStack {
-                HStack(spacing: 5) {
-                    Image(systemName: "flag.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(priorityConfig.color)
-                        .symbolRenderingMode(.hierarchical)
-                    Text(priorityConfig.label)
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundStyle(priorityConfig.color)
-                }
-                .padding(.horizontal, 9)
-                .padding(.vertical, 4)
-                .background(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(priorityConfig.color.opacity(0.12))
-                )
-
-                Spacer()
-
-                if let date = workOrder.createdAt {
-                    Text(date, style: .date)
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
-                        .foregroundStyle(MBlue.textSecondary)
-                }
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(MBlue.accentBright)
-                    .padding(.leading, 4)
-            }
-        }
-        .padding(12)
-        .mCard()
+            .padding(themeModel.spacingMD)
+            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+            )
+            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
-}
-
-// MARK: - Status Badge (kept for legacy compatibility)
-struct StatusBadge: View {
-    let status: WorkOrderStatus
-
-    private var config: (label: String, color: Color) {
+    
+    func statusColor(_ status: WorkOrderStatus?) -> Color {
         switch status {
-        case .open:       return ("Open",        MBlue.accent)
-        case .inProgress: return ("In Progress", MBlue.inProgress)
-        case .completed:  return ("Completed",   MBlue.completed)
-        case .cancelled:  return ("Cancelled",   MBlue.textMuted)
+        case .open: return themeModel.info
+        case .inProgress: return themeModel.warning
+        case .completed: return themeModel.success
+        case .cancelled: return themeModel.danger
+        case .none: return themeModel.textSecondary
+        }
+    }
+    
+    func priorityIcon(_ priority: WorkOrderPriority?) -> String {
+        switch priority {
+        case .low: return "arrow.down"
+        case .medium: return "minus"
+        case .high: return "arrow.up"
+        case .critical: return "exclamationmark.2"
+        case .none: return "minus"
         }
     }
 
-    var body: some View {
-        Text(config.label)
-            .font(.system(size: 11, weight: .bold, design: .rounded))
-            .foregroundColor(config.color)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(Capsule().fill(config.color.opacity(0.15)))
+    func priorityColor(_ priority: WorkOrderPriority?) -> Color {
+        switch priority {
+        case .critical: return themeModel.danger
+        case .high: return themeModel.warning
+        case .medium: return themeModel.info
+        case .low: return themeModel.success
+        case .none: return themeModel.textSecondary
+        }
     }
 }
 

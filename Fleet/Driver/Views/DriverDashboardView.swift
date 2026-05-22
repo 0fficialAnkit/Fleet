@@ -15,11 +15,14 @@ struct DriverDashboardView: View {
 
                 VStack(spacing: 20) {
 
-                    vehicleCard
+                    NavigationLink(destination: DriverVehicleDetailView(vehicle: vehicle)) {
+                        vehicleCard
+                    }
+                    .buttonStyle(.plain)
 
                     summaryCardsSection
 
-                    checklistBanner
+//                    checklistBanner
 
                     routesSection
                 }
@@ -29,12 +32,20 @@ struct DriverDashboardView: View {
             .navigationTitle("Driver Portal")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        // Action for notifications
-                    }) {
-                        Image(systemName: "bell")
-                            .font(.title3)
-                            .foregroundStyle(themeModel.textPrimary)
+                    HStack(spacing: themeModel.spacingMD) {
+                        Button(action: {
+                            // Action for notifications
+                        }) {
+                            Image(systemName: "bell")
+                                .font(.title3)
+                                .foregroundStyle(themeModel.textPrimary)
+                        }
+                        
+                        NavigationLink(destination: DriverProfileView()) {
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(themeModel.driverPrimary)
+                        }
                     }
                 }
             }
@@ -49,7 +60,6 @@ struct DriverDashboardView: View {
 extension DriverDashboardView {
 
     var vehicleCard: some View {
-
         VStack(alignment: .leading, spacing: themeModel.spacingMD) {
 
             HStack {
@@ -66,14 +76,24 @@ extension DriverDashboardView {
 
                     Text(vehicle.licensePlate ?? "")
                         .font(themeModel.bodyMedium())
-                        .foregroundStyle(themeModel.info)
+                        .foregroundStyle(themeModel.driverPrimary)
                 }
 
                 Spacer()
 
-                Image(systemName: "truck.box.fill")
-                    .font(.system(size: 40))
-                    .foregroundStyle(themeModel.info)
+                VStack(alignment: .trailing, spacing: themeModel.spacingSM) {
+                    Image(systemName: "truck.box.fill")
+                        .font(.system(size: 36))
+                        .foregroundStyle(themeModel.driverPrimary.opacity(0.7))
+                    HStack(spacing: 4) {
+                        Text("View Details")
+                            .font(themeModel.caption())
+                            .foregroundStyle(themeModel.driverPrimary)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(themeModel.driverPrimary)
+                    }
+                }
             }
 
             HStack(spacing: themeModel.spacingLG) {
@@ -84,138 +104,143 @@ extension DriverDashboardView {
 
                 Label("48.2k km", systemImage: "location.fill")
                     .font(themeModel.bodyMedium())
-                    .foregroundStyle(themeModel.info)
+                    .foregroundStyle(themeModel.driverPrimary)
             }
         }
         .padding(themeModel.spacingMD)
-        .frame(maxWidth: .infinity)
-        .background(
-            LinearGradient(
-                colors: [
-                    themeModel.info.opacity(0.4),
-                    themeModel.infoDark.opacity(0.3)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                .stroke(themeModel.driverPrimary.opacity(0.2), lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusXL))
+        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
-
-
 
     var summaryCardsSection: some View {
 
         VStack(spacing: themeModel.spacingMD) {
             HStack(spacing: themeModel.spacingMD) {
-                SummaryCard(title: "Trips Today", count: "2", icon: "paperplane.fill", color: themeModel.success)
-                SummaryCard(title: "KM Driven", count: "89", icon: "location.fill", color: themeModel.warning)
+                MetricCard(icon: "arrow.triangle.swap", value: "2", label: "Trips Today", color: themeModel.success)
+                MetricCard(icon: "point.topleft.down.to.point.bottomright.curvepath", value: "89", label: "KM Driven", color: themeModel.warning)
             }
             
             HStack(spacing: themeModel.spacingMD) {
-                SummaryCard(title: "Hours Active", count: "4.5", icon: "clock.fill", color: themeModel.analyticsPurple)
-                SummaryCard(title: "Vehicle Health", count: "Good", icon: "waveform.path.ecg", color: themeModel.danger)
+                MetricCard(icon: "timer", value: "4.5", label: "Hours Active", color: themeModel.analyticsPurple)
+                MetricCard(icon: "heart.text.clipboard", value: "Good", label: "Vehicle Health", color: themeModel.danger)
             }
         }
     }
 
     var checklistBanner: some View {
 
-        HStack {
+        
+            HStack {
 
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(themeModel.success)
-                .font(.title2)
+                Image(systemName: "checkmark.shield.fill")
+                    .foregroundStyle(themeModel.success)
+                    .font(.title2)
 
-            VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 4) {
 
-                Text("Pre-trip checklist complete")
-                    .font(themeModel.headline())
-                    .foregroundStyle(themeModel.textPrimary)
+                    Text("Pre-trip checklist complete")
+                        .font(themeModel.headline())
+                        .foregroundStyle(themeModel.textPrimary)
 
-                Text("8/8 items verified")
-                    .font(themeModel.caption())
-                    .foregroundStyle(themeModel.textSecondary)
+                    Text("8/8 items verified")
+                        .font(themeModel.caption())
+                        .foregroundStyle(themeModel.textSecondary)
+                }
+
+                Spacer()
             }
-
-            Spacer()
-        }
-        .padding(themeModel.spacingMD)
-        .background(themeModel.success.opacity(0.15))
-        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusLG))
+            .padding(themeModel.spacingMD)
+            .background(themeModel.success.opacity(0.15))
+            .padding(0)
+            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+            )
+            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
 
     var routesSection: some View {
 
         VStack(alignment: .leading, spacing: themeModel.spacingMD) {
 
-            Text("Today's Routes")
-                .font(themeModel.title(22))
-                .foregroundStyle(themeModel.textPrimary)
+            SectionHeader(title: "Today's Routes")
 
             ForEach(trips) { trip in
 
-                VStack(alignment: .leading, spacing: themeModel.spacingMD) {
-
-                    HStack {
-
-                        Text("T-4821")
-                            .font(themeModel.headline())
-                            .foregroundStyle(themeModel.info)
-
-                        Spacer()
-
-                        Label("09:00 AM", systemImage: "clock")
-                            .font(themeModel.bodyMedium())
-                            .foregroundStyle(themeModel.textSecondary)
-                    }
-
-                    VStack(alignment: .leading, spacing: 12) {
+                
+                    VStack(alignment: .leading, spacing: themeModel.spacingMD) {
 
                         HStack {
-                            Circle()
-                                .fill(themeModel.success)
-                                .frame(width: 10)
 
-                            Text("Warehouse A")
-                                .font(themeModel.body())
-                                .foregroundStyle(themeModel.textPrimary)
+                            Text("T-4821")
+                                .font(themeModel.headline())
+                                .foregroundStyle(themeModel.driverPrimary)
+
+                            Spacer()
+
+                            Label("09:00 AM", systemImage: "clock")
+                                .font(themeModel.bodyMedium())
+                                .foregroundStyle(themeModel.textSecondary)
                         }
 
-                        Rectangle()
-                            .fill(themeModel.divider)
-                            .frame(width: 1, height: 20)
-                            .padding(.leading, 4)
+                        VStack(alignment: .leading, spacing: 12) {
+
+                            HStack {
+                                Circle()
+                                    .fill(themeModel.success)
+                                    .frame(width: 10)
+
+                                Text("Warehouse A")
+                                    .font(themeModel.body())
+                                    .foregroundStyle(themeModel.textPrimary)
+                            }
+
+                            Rectangle()
+                                .fill(themeModel.divider)
+                                .frame(width: 1, height: 20)
+                                .padding(.leading, 4)
+
+                            HStack {
+                                Circle()
+                                    .fill(themeModel.danger)
+                                    .frame(width: 10)
+
+                                Text("Distribution Center")
+                                    .font(themeModel.body())
+                                    .foregroundStyle(themeModel.textPrimary)
+                            }
+                        }
 
                         HStack {
-                            Circle()
-                                .fill(themeModel.danger)
-                                .frame(width: 10)
 
-                            Text("Distribution Center")
-                                .font(themeModel.body())
-                                .foregroundStyle(themeModel.textPrimary)
+                            Text("42 km")
+                                .font(themeModel.bodyMedium())
+                                .foregroundStyle(themeModel.textSecondary)
+
+                            Spacer()
+
+                            Button(action: {
+                                // Navigation action
+                            }) {
+                                Text("Navigate")
+                                    .font(themeModel.bodyMedium())
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(themeModel.driverPrimary)
                         }
                     }
-
-                    HStack {
-
-                        Text("42 km")
-                            .font(themeModel.bodyMedium())
-                            .foregroundStyle(themeModel.textSecondary)
-
-                        Spacer()
-
-                        Button("Navigate") {
-
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(themeModel.info)
-                    }
-                }
-                .padding(themeModel.spacingMD)
-                .background(themeModel.backgroundElevated)
-                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusLG))
+                    .padding(themeModel.spacingMD)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                    )
+                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
             }
         }
     }
