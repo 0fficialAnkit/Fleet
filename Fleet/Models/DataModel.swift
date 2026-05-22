@@ -55,9 +55,10 @@ enum OrderType: String, Codable, CaseIterable, Sendable, Identifiable {
   var id: String { rawValue }
 }
 
-enum InspectionType: String, Codable, CaseIterable, Sendable {
+enum InspectionType: String, Codable, CaseIterable, Sendable, Identifiable {
   case preTrip = "pre_trip"
   case postTrip = "post_trip"
+  var id: String { rawValue }
 }
 
 enum DefectSeverity: String, Codable, CaseIterable, Sendable {
@@ -522,3 +523,4 @@ struct FuelLog: Codable, Identifiable, Hashable, Sendable {
       case recordedAt = "recorded_at"
   }
 }
+
