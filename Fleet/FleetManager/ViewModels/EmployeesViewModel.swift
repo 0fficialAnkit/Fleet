@@ -56,14 +56,4 @@ final class EmployeesViewModel {
         )
         users.append(newUser)
     }
-    
-    func deleteEmployee(_ user: User) {
-        users.removeAll { $0.id == user.id }
-    }
-    
-    func updateEmployee(_ updatedUser: User) {
-        if let index = users.firstIndex(where: { $0.id == updatedUser.id }) {
-            users[index] = updatedUser
-        }
-    }
 }

@@ -20,12 +20,15 @@ struct DashboardView: View {
             .navigationTitle("Dashboard")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(destination: ProfileView()) {
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(.white)
-                            .frame(width: 34, height: 34)
-//                            .background(Circle().fill(Color.white.opacity(0.18)))
+                    NavigationLink(destination: SupportInboxView(
+                        userRole: .fleetManager,
+                        userId: UUID(uuidString: "22000000-0000-0000-0000-000000000001")!
+                    )) {
+                        Image(systemName: "message.fill")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(themeModel.accent)
+                            .frame(width: 38, height: 38)
+                            .glassEffect(in: Circle())
                     }
                     .buttonStyle(.plain)
                 }

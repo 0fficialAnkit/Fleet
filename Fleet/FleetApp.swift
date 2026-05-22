@@ -11,8 +11,7 @@ import SwiftUI
 struct FleetApp: App {
     var body: some Scene {
         WindowGroup {
-//            DriverRootView()
-            FleetManagerMainView()
+            ContentView()
         }
     }
 }

@@ -1,33 +1,21 @@
 import SwiftUI
 
 struct EmployeesView: View {
-    var viewModel: EmployeesViewModel
-    var filterRole: String? = nil
-    
-    var filteredEmployees: [User] {
-        if let role = filterRole {
-            return viewModel.employees.filter { viewModel.getRole(for: $0)?.roleName.lowercased() == role.lowercased() }
-        }
-        return viewModel.employees
-    }
+    @State private var viewModel = EmployeesViewModel()
+    @State private var isShowingAddEmployee = false
     
     var body: some View {
-        Group {
+        NavigationStack {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: themeModel.spacingMD) {
-                        if filteredEmployees.isEmpty {
-                            Text("No employees found.")
-                                .foregroundColor(themeModel.textSecondary)
-                                .padding(.top, 40)
-                        } else {
-                            ForEach(filteredEmployees) { user in
+                        ForEach(viewModel.employees) { user in
                             let role = viewModel.getRole(for: user)
                             let roleName = role?.roleName ?? "Unknown Role"
                             
-                            NavigationLink(destination: EmployeeDetailView(user: user, viewModel: viewModel)) {
+                            NavigationLink(destination: EmployeeDetailView(user: user, roleName: roleName, viewModel: viewModel)) {
                                 EmployeeRowView(
                                     user: user,
                                     roleName: roleName,
@@ -36,17 +24,33 @@ struct EmployeesView: View {
                                 )
                             }
                             .buttonStyle(.plain)
-                            }
                         }
                     }
                     .padding(.vertical, themeModel.spacingMD)
                     .padding(.horizontal, themeModel.spacingMD)
                 }
             }
+            .navigationTitle("Employees")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: {
+                        isShowingAddEmployee = true
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(themeModel.textPrimary)
+                            .frame(width: 38, height: 38)
+                            .glassEffect(in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .sheet(isPresented: $isShowingAddEmployee) {
+                AddEmployeeView(viewModel: viewModel)
+            }
         }
     }
 }
-
 
 struct EmployeeRowView: View {
     let user: User
@@ -61,21 +65,9 @@ struct EmployeeRowView: View {
                     .font(themeModel.headline(18))
                     .foregroundColor(themeModel.textPrimary)
                 
-                HStack(spacing: 6) {
-                    Text(roleName)
-                        .font(themeModel.caption(14))
-                        .foregroundColor(themeModel.textSecondary)
-                    
-                    if let license = user.licenseNumber {
-                        Text("•")
-                            .font(themeModel.caption(14))
-                            .foregroundColor(themeModel.textTertiary)
-                        
-                        Text(license)
-                            .font(themeModel.caption(14))
-                            .foregroundColor(themeModel.textSecondary)
-                    }
-                }
+                Text(roleName)
+                    .font(themeModel.caption(14))
+                    .foregroundColor(themeModel.textSecondary)
             }
             
             Spacer()
@@ -98,7 +90,5 @@ struct EmployeeRowView: View {
 }
 
 #Preview {
-    NavigationStack {
-        EmployeesView(viewModel: EmployeesViewModel())
-    }
+    EmployeesView()
 }
