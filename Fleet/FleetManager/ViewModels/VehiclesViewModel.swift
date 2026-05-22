@@ -25,6 +25,10 @@ final class VehiclesViewModel {
         }
     }
     
+    func refreshData() {
+        self.vehicles = MockData.vehicles
+    }
+    
     func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, purchaseDate: Date?, licensePlate: String) {
         let newVehicle = Vehicle(
             id: UUID(),
@@ -39,6 +43,22 @@ final class VehiclesViewModel {
             assignedDriverId: nil,
             status: .active
         )
-        vehicles.append(newVehicle)
+        MockData.vehicles.append(newVehicle)
+        refreshData()
+        NotificationCenter.default.post(name: NSNotification.Name("VehiclesUpdated"), object: nil)
+    }
+    
+    func updateVehicle(_ updatedVehicle: Vehicle) {
+        if let index = MockData.vehicles.firstIndex(where: { $0.id == updatedVehicle.id }) {
+            MockData.vehicles[index] = updatedVehicle
+            refreshData()
+            NotificationCenter.default.post(name: NSNotification.Name("VehiclesUpdated"), object: nil)
+        }
+    }
+    
+    func deleteVehicle(_ vehicle: Vehicle) {
+        MockData.vehicles.removeAll { $0.id == vehicle.id }
+        refreshData()
+        NotificationCenter.default.post(name: NSNotification.Name("VehiclesUpdated"), object: nil)
     }
 }

@@ -1,19 +1,29 @@
 import SwiftUI
 
-struct AddVehicleView: View {
+struct EditVehicleView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: VehiclesViewModel
+    var vehicle: Vehicle
     
-    @State private var make = ""
-    @State private var model = ""
-    @State private var year = ""
-    @State private var licensePlate = ""
-    @State private var tankCapacity = ""
-    @State private var mileage = ""
-    @State private var purchaseDate = Date()
+    @State private var make: String
+    @State private var model: String
+    @State private var year: String
+    @State private var licensePlate: String
+    @State private var tankCapacity: String
+    @State private var mileage: String
+    @State private var purchaseDate: Date
     
-    var isFormValid: Bool {
-        !make.isEmpty && !model.isEmpty && !year.isEmpty && !licensePlate.isEmpty && Int(year) != nil
+    init(viewModel: VehiclesViewModel, vehicle: Vehicle) {
+        self.viewModel = viewModel
+        self.vehicle = vehicle
+        
+        _make = State(initialValue: vehicle.make ?? "")
+        _model = State(initialValue: vehicle.model ?? "")
+        _year = State(initialValue: vehicle.year != nil ? String(vehicle.year!) : "")
+        _licensePlate = State(initialValue: vehicle.licensePlate ?? "")
+        _tankCapacity = State(initialValue: vehicle.tankCapacity != nil ? String(vehicle.tankCapacity!) : "")
+        _mileage = State(initialValue: vehicle.mileage != nil ? String(vehicle.mileage!) : "")
+        _purchaseDate = State(initialValue: vehicle.purchaseDate ?? Date())
     }
     
     var body: some View {
@@ -48,7 +58,7 @@ struct AddVehicleView: View {
             }
             .scrollContentBackground(.hidden)
             .background(themeModel.backgroundPrimary)
-            .navigationTitle("Add Vehicle")
+            .navigationTitle("Edit Vehicle")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
@@ -67,15 +77,16 @@ struct AddVehicleView: View {
                         let cap = Double(tankCapacity.trimmingCharacters(in: .whitespacesAndNewlines))
                         let mil = Double(mileage.trimmingCharacters(in: .whitespacesAndNewlines))
                         
-                        viewModel.addVehicle(
-                            make: make.isEmpty ? "Unknown" : make,
-                            model: model.isEmpty ? "Unknown" : model,
-                            year: yearInt,
-                            tankCapacity: cap,
-                            mileage: mil,
-                            purchaseDate: purchaseDate,
-                            licensePlate: licensePlate.isEmpty ? "NO-PLATE" : licensePlate
-                        )
+                        var updatedVehicle = vehicle
+                        updatedVehicle.make = make.isEmpty ? "Unknown" : make
+                        updatedVehicle.model = model.isEmpty ? "Unknown" : model
+                        updatedVehicle.year = yearInt
+                        updatedVehicle.licensePlate = licensePlate.isEmpty ? "NO-PLATE" : licensePlate
+                        updatedVehicle.tankCapacity = cap
+                        updatedVehicle.mileage = mil
+                        updatedVehicle.purchaseDate = purchaseDate
+                        
+                        viewModel.updateVehicle(updatedVehicle)
                         dismiss()
                     }
                     .foregroundColor(themeModel.info)
@@ -85,8 +96,4 @@ struct AddVehicleView: View {
         }
         .preferredColorScheme(.dark)
     }
-}
-
-#Preview {
-    AddVehicleView(viewModel: VehiclesViewModel())
 }
