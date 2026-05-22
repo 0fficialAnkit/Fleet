@@ -2,13 +2,9 @@ import SwiftUI
 
 @Observable
 final class VehiclesViewModel {
-    private let vehiclesData: [Vehicle] = MockData.vehicles
+    var vehicles: [Vehicle] = MockData.vehicles
     private let users: [User] = MockData.users
     private let tripsData: [Trip] = MockData.trips
-    
-    var vehicles: [Vehicle] {
-        vehiclesData
-    }
     
     func getDriver(for driverId: UUID?) -> User? {
         guard let id = driverId else { return nil }
@@ -27,5 +23,22 @@ final class VehiclesViewModel {
         case .inactive: return themeModel.inactiveVehicle
         case nil: return themeModel.textTertiary
         }
+    }
+    
+    func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, purchaseDate: Date?, licensePlate: String) {
+        let newVehicle = Vehicle(
+            id: UUID(),
+            make: make,
+            model: model,
+            year: year,
+            vin: nil,
+            licensePlate: licensePlate,
+            tankCapacity: tankCapacity,
+            mileage: mileage,
+            purchaseDate: purchaseDate,
+            assignedDriverId: nil,
+            status: .active
+        )
+        vehicles.append(newVehicle)
     }
 }
