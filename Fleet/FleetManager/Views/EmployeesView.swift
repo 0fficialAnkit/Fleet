@@ -36,7 +36,7 @@ struct EmployeesView: View {
                     Button(action: {
                         isShowingAddEmployee = true
                     }) {
-                        Image(systemName: "plus")
+                        Image(systemName: "person.badge.plus")
                             .font(.system(size: 17, weight: .medium))
                             .foregroundStyle(themeModel.textPrimary)
                             .frame(width: 38, height: 38)
@@ -59,33 +59,39 @@ struct EmployeeRowView: View {
     let iconColor: Color
     
     var body: some View {
-        HStack(spacing: themeModel.spacingMD) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(user.fullName)
-                    .font(themeModel.headline(18))
-                    .foregroundColor(themeModel.textPrimary)
+        
+            HStack(spacing: themeModel.spacingMD) {
                 
-                Text(roleName)
-                    .font(themeModel.caption(14))
-                    .foregroundColor(themeModel.textSecondary)
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                    .foregroundColor(iconColor)
+                    .frame(width: 44, height: 44)
+                    .background(iconColor.opacity(0.15))
+                    .clipShape(Circle())
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(user.fullName)
+                        .font(themeModel.headline(18))
+                        .foregroundColor(themeModel.textPrimary)
+                    
+                    Text(roleName)
+                        .font(themeModel.caption(14))
+                        .foregroundColor(themeModel.textSecondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(themeModel.textTertiary)
             }
-            
-            Spacer()
-            
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundColor(iconColor)
-                .padding(10)
-                .background(iconColor.opacity(0.15))
-                .clipShape(Circle())
-            
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(themeModel.textTertiary)
-        }
-        .padding(themeModel.spacingMD)
-        .background(themeModel.backgroundElevated)
-        .cornerRadius(themeModel.radiusLG)
+            .padding(themeModel.spacingMD)
+            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+            )
+            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
 }
 
