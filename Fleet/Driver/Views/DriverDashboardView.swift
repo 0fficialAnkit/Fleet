@@ -24,7 +24,7 @@ struct DriverDashboardView: View {
 
 //                    checklistBanner
 
-                    routesSection
+                    tripsSection
                 }
                 .padding()
             }
@@ -40,7 +40,7 @@ struct DriverDashboardView: View {
                                 .font(.title3)
                                 .foregroundStyle(themeModel.textPrimary)
                         }
-                        
+
                         NavigationLink(destination: DriverProfileView()) {
                             Image(systemName: "person.crop.circle.fill")
                                 .font(.title2)
@@ -56,6 +56,8 @@ struct DriverDashboardView: View {
 #Preview {
     DriverDashboardView()
 }
+
+// MARK: - Subviews
 
 extension DriverDashboardView {
 
@@ -120,128 +122,146 @@ extension DriverDashboardView {
 
         VStack(spacing: themeModel.spacingMD) {
             HStack(spacing: themeModel.spacingMD) {
-                MetricCard(icon: "arrow.triangle.swap", value: "2", label: "Trips Today", color: themeModel.success)
                 MetricCard(icon: "point.topleft.down.to.point.bottomright.curvepath", value: "89", label: "KM Driven", color: themeModel.warning)
-            }
-            
-            HStack(spacing: themeModel.spacingMD) {
                 MetricCard(icon: "timer", value: "4.5", label: "Hours Active", color: themeModel.analyticsPurple)
-                MetricCard(icon: "heart.text.clipboard", value: "Good", label: "Vehicle Health", color: themeModel.danger)
             }
         }
     }
 
     var checklistBanner: some View {
 
-        
-            HStack {
+        HStack {
 
-                Image(systemName: "checkmark.shield.fill")
-                    .foregroundStyle(themeModel.success)
-                    .font(.title2)
+            Image(systemName: "checkmark.shield.fill")
+                .foregroundStyle(themeModel.success)
+                .font(.title2)
 
-                VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 4) {
 
-                    Text("Pre-trip checklist complete")
-                        .font(themeModel.headline())
-                        .foregroundStyle(themeModel.textPrimary)
+                Text("Pre-trip checklist complete")
+                    .font(themeModel.headline())
+                    .foregroundStyle(themeModel.textPrimary)
 
-                    Text("8/8 items verified")
-                        .font(themeModel.caption())
-                        .foregroundStyle(themeModel.textSecondary)
-                }
-
-                Spacer()
+                Text("8/8 items verified")
+                    .font(themeModel.caption())
+                    .foregroundStyle(themeModel.textSecondary)
             }
-            .padding(themeModel.spacingMD)
-            .background(themeModel.success.opacity(0.15))
-            .padding(0)
-            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-            )
-            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+
+            Spacer()
+        }
+        .padding(themeModel.spacingMD)
+        .background(themeModel.success.opacity(0.15))
+        .padding(0)
+        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+        )
+        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
 
-    var routesSection: some View {
+    var tripsSection: some View {
 
         VStack(alignment: .leading, spacing: themeModel.spacingMD) {
 
-            SectionHeader(title: "Today's Routes")
+            SectionHeader(title: "Today's Trips")
 
             ForEach(trips) { trip in
-
-                
-                    VStack(alignment: .leading, spacing: themeModel.spacingMD) {
-
-                        HStack {
-
-                            Text("T-4821")
-                                .font(themeModel.headline())
-                                .foregroundStyle(themeModel.driverPrimary)
-
-                            Spacer()
-
-                            Label("09:00 AM", systemImage: "clock")
-                                .font(themeModel.bodyMedium())
-                                .foregroundStyle(themeModel.textSecondary)
-                        }
-
-                        VStack(alignment: .leading, spacing: 12) {
-
-                            HStack {
-                                Circle()
-                                    .fill(themeModel.success)
-                                    .frame(width: 10)
-
-                                Text("Warehouse A")
-                                    .font(themeModel.body())
-                                    .foregroundStyle(themeModel.textPrimary)
-                            }
-
-                            Rectangle()
-                                .fill(themeModel.divider)
-                                .frame(width: 1, height: 20)
-                                .padding(.leading, 4)
-
-                            HStack {
-                                Circle()
-                                    .fill(themeModel.danger)
-                                    .frame(width: 10)
-
-                                Text("Distribution Center")
-                                    .font(themeModel.body())
-                                    .foregroundStyle(themeModel.textPrimary)
-                            }
-                        }
-
-                        HStack {
-
-                            Text("42 km")
-                                .font(themeModel.bodyMedium())
-                                .foregroundStyle(themeModel.textSecondary)
-
-                            Spacer()
-
-                            Button(action: {
-                                // Navigation action
-                            }) {
-                                Text("Navigate")
-                                    .font(themeModel.bodyMedium())
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(themeModel.driverPrimary)
-                        }
-                    }
-                    .padding(themeModel.spacingMD)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                NavigationLink {
+                    TripDetailView(
+                        trip: trip,
+                        onStart: { id in viewModel.startTrip(id: id) },
+                        onEnd:   { id in viewModel.endTrip(id: id) }
                     )
-                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                } label: {
+                    tripCard(trip)
+                }
+                .buttonStyle(.plain)
             }
         }
+    }
+
+    @ViewBuilder
+    func tripCard(_ trip: Trip) -> some View {
+        let statusColor: Color = {
+            switch trip.status {
+            case .scheduled: return themeModel.warning
+            case .active:    return themeModel.driverPrimary
+            case .completed: return themeModel.success
+            case .cancelled: return themeModel.danger
+            default:         return themeModel.textDisabled
+            }
+        }()
+
+        let statusText: String = {
+            switch trip.status {
+            case .scheduled: return "Pending"
+            case .active:    return "In Progress"
+            case .completed: return "Completed"
+            case .cancelled: return "Cancelled"
+            default:         return "Unknown"
+            }
+        }()
+
+        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+
+            HStack {
+                Text("Route #\(trip.id.uuidString.prefix(6).uppercased())")
+                    .font(themeModel.headline())
+                    .foregroundStyle(themeModel.driverPrimary)
+
+                Spacer()
+
+                StatusBadge(text: statusText, color: statusColor)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Circle().fill(themeModel.success).frame(width: 10)
+                    Text("Warehouse A, Sector 12")
+                        .font(themeModel.body())
+                        .foregroundStyle(themeModel.textPrimary)
+                }
+
+                Rectangle()
+                    .fill(themeModel.divider)
+                    .frame(width: 1, height: 18)
+                    .padding(.leading, 4)
+
+                HStack(spacing: 8) {
+                    Circle().fill(themeModel.danger).frame(width: 10)
+                    Text("Distribution Center, Zone B")
+                        .font(themeModel.body())
+                        .foregroundStyle(themeModel.textPrimary)
+                }
+            }
+
+            HStack {
+                Label(
+                    trip.startTime?.formatted(date: .omitted, time: .shortened) ?? "09:00 AM",
+                    systemImage: "clock"
+                )
+                .font(themeModel.caption())
+                .foregroundStyle(themeModel.textSecondary)
+
+                Spacer()
+
+                HStack(spacing: 4) {
+                    Text("View Details")
+                        .font(themeModel.caption())
+                        .foregroundStyle(themeModel.driverPrimary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(themeModel.driverPrimary)
+                }
+            }
+        }
+        .padding(themeModel.spacingMD)
+        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+        )
+        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
 }

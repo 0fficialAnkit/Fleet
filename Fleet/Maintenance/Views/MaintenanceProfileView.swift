@@ -2,53 +2,122 @@ import SwiftUI
 
 struct MaintenanceProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
-    
+
+    // Profile menu items
+    private let menuItems: [(title: String, icon: String, isDestructive: Bool)] = [
+        ("Certifications", "rosette", false),
+        ("Shift Schedule", "calendar", false),
+        ("Assigned Depot", "building.2.fill", false),
+        ("Notifications", "bell.badge", false),
+        ("Performance Report", "chart.bar.xaxis", false)
+    ]
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 24) {
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 100))
-                        .foregroundStyle(.blue)
+            ZStack {
+                themeModel.backgroundPrimary.ignoresSafeArea()
 
-                    VStack(spacing: 8) {
-                        Text("Mike Thompson")
-                            .font(.title.bold())
+                ScrollView {
+                    VStack(spacing: themeModel.spacingLG) {
 
-                        Text("Senior Mechanic")
-                            .foregroundStyle(.gray)
-                    }
+                        // MARK: - Profile Header
+                        ProfileHeader(
+                            icon: "person.crop.circle.fill",
+                            name: "Mike Thompson",
+                            role: "Senior Mechanic",
+                            accentColor: themeModel.maintenancePrimary
+                        )
+                        .padding(.top, themeModel.spacingMD)
 
-                    VStack(spacing: 16) {
-                        settingsRow(title: "Certifications", icon: "rosette")
-                        settingsRow(title: "Shift Schedule", icon: "calendar")
-                        settingsRow(title: "Assigned Depot", icon: "building.2.fill")
-                        settingsRow(title: "Notifications", icon: "bell")
-                        Button(action: {
-                            Task {
-                                await authViewModel.signOut()
-                            }
-                        }) {
-                            settingsRow(title: "Logout", icon: "rectangle.portrait.and.arrow.right")
+                        // MARK: - Stats Strip
+                        HStack(spacing: themeModel.spacingMD) {
+                            StatPill(value: "142", label: "Orders Done", color: themeModel.maintenancePrimary)
+                            StatPill(value: "98%", label: "Accuracy", color: themeModel.success)
+                            StatPill(value: "4.9★", label: "Rating", color: themeModel.warning)
                         }
+                        .padding(.horizontal, themeModel.spacingMD)
+
+                        // MARK: - Menu
+                        VStack(spacing: 0) {
+                            ForEach(menuItems, id: \.title) { item in
+                                Button(action: {}) {
+                                    ActionRow(
+                                        icon: item.icon,
+                                        title: item.title,
+                                        iconColor: themeModel.maintenancePrimary,
+                                        isDestructive: item.isDestructive
+                                    )
+                                }
+                                .buttonStyle(.plain)
+
+                                if item.title != menuItems.last?.title {
+                                    Divider()
+                                        .background(themeModel.divider)
+                                        .padding(.leading, 42)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, themeModel.spacingMD)
+                        .padding(.vertical, themeModel.spacingSM)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+                        )
+                        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                        .padding(.horizontal, themeModel.spacingMD)
+
+                        // MARK: - Logout
+                        Button(action: {
+                            Task { await authViewModel.signOut() }
+                        }) {
+                            HStack {
+                                Image(systemName: "rectangle.portrait.and.arrow.right")
+                                Text("Sign Out")
+                            }
+                            .font(themeModel.bodyMedium())
+                            .foregroundStyle(themeModel.danger)
+                            .frame(maxWidth: .infinity)
+                            .padding(themeModel.spacingMD)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                    .stroke(themeModel.danger.opacity(0.25), lineWidth: 0.8)
+                            )
+                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                        }
+                        .padding(.horizontal, themeModel.spacingMD)
+                        .padding(.bottom, themeModel.spacingLG)
                     }
                 }
-                .padding()
             }
-            .background(Color.black)
             .navigationTitle("Profile")
         }
     }
+}
 
-    func settingsRow(title: String, icon: String) -> some View {
-        HStack {
-            Image(systemName: icon)
-            Text(title)
-            Spacer()
+// MARK: - Stat Pill
+private struct StatPill: View {
+    let value: String
+    let label: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(themeModel.headline())
+                .foregroundStyle(color)
+            Text(label)
+                .font(themeModel.small())
+                .foregroundStyle(themeModel.textTertiary)
         }
-        .padding()
-        .background(Color.white.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, themeModel.spacingMD)
+        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
+                .stroke(color.opacity(0.2), lineWidth: 0.8)
+        )
     }
 }
 

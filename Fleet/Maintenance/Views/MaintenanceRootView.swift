@@ -7,17 +7,17 @@ struct MaintenanceRootView: View {
                 .tabItem {
                     Label("Dashboard", systemImage: "gauge.with.dots.needle.33percent")
                 }
-            
-            WorkOrderListView()
+
+            MaintenanceSchedulerView()
                 .tabItem {
-                    Label("Work Orders", systemImage: "wrench.and.screwdriver.fill")
+                    Label("Schedule", systemImage: "calendar.badge.clock")
                 }
-            
+
             InventoryView()
                 .tabItem {
                     Label("Inventory", systemImage: "archivebox.fill")
                 }
-            
+
             MaintenanceProfileView()
                 .tabItem {
                     Label("Profile", systemImage: "person.crop.circle.fill")
@@ -29,4 +29,5 @@ struct MaintenanceRootView: View {
 
 #Preview {
     MaintenanceRootView()
+        .environment(AuthViewModel())
 }
