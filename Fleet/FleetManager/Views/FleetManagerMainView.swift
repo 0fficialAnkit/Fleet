@@ -40,28 +40,21 @@ struct FleetManagerMainView: View {
                 }
                 .tag(1)
             
-            Text("Trips Placeholder")
+            Text("Tasks Placeholder")
                 .tabItem {
-                    Image(systemName: "point.topleft.down.curvedto.point.bottomright.up")
-                    Text("Trips")
+                    Image(systemName: "list.clipboard")
+                    Text("Tasks")
                 }
                 .tag(2)
             
-            Text("Service Placeholder")
+            ProfileView()
                 .tabItem {
-                    Image(systemName: "wrench")
-                    Text("Service")
+                    Image(systemName: "person")
+                    Text("Profile")
                 }
                 .tag(3)
-                
-            Text("Alerts Placeholder")
-                .tabItem {
-                    Image(systemName: "exclamationmark.triangle")
-                    Text("Alerts")
-                }
-                .tag(4)
         }
-        .tint(Color(red: 0.2, green: 0.3, blue: 0.7))
+        .tint(Color(red: 0.1, green: 0.2, blue: 0.6))
     }
 }
 

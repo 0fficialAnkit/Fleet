@@ -18,7 +18,7 @@ struct CreateAccountView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.98, green: 0.98, blue: 0.99)
+            Color(.systemGroupedBackground)
                 .ignoresSafeArea()
 
             ScrollView {
@@ -27,18 +27,18 @@ struct CreateAccountView: View {
                     
                     Text("Create Account")
                         .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.15))
+                        .foregroundColor(.primary)
                     
                     Text("Join FleetOps today")
                         .font(.system(size: 15))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                         .padding(.top, 4)
 
                     Spacer().frame(height: 32)
 
                     Text("SELECT YOUR ROLE")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                         .kerning(1.2)
                     
                     Spacer().frame(height: 16)
@@ -64,17 +64,17 @@ struct CreateAccountView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("FULL NAME")
                                 .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.gray)
+                                .foregroundColor(.secondary)
                             
                             HStack {
                                 Image(systemName: "person")
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.secondary)
                                 TextField("John Doe", text: $fullName)
-                                    .foregroundColor(.black)
+                                    .foregroundColor(.primary)
                             }
                             .padding(.horizontal, 16)
                             .frame(height: 52)
-                            .background(Color(red: 0.95, green: 0.95, blue: 0.97))
+                            .background(Color(.secondarySystemGroupedBackground))
                             .cornerRadius(12)
                         }
 
@@ -82,19 +82,19 @@ struct CreateAccountView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("EMAIL ADDRESS")
                                 .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.gray)
+                                .foregroundColor(.secondary)
                             
                             HStack {
                                 Image(systemName: "envelope")
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.secondary)
                                 TextField("name@fleetops.com", text: $email)
                                     .keyboardType(.emailAddress)
                                     .textInputAutocapitalization(.never)
-                                    .foregroundColor(.black)
+                                    .foregroundColor(.primary)
                             }
                             .padding(.horizontal, 16)
                             .frame(height: 52)
-                            .background(Color(red: 0.95, green: 0.95, blue: 0.97))
+                            .background(Color(.secondarySystemGroupedBackground))
                             .cornerRadius(12)
                         }
 
@@ -102,26 +102,26 @@ struct CreateAccountView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("PASSWORD")
                                 .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.gray)
+                                .foregroundColor(.secondary)
                                 
                             HStack {
                                 Image(systemName: "lock")
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.secondary)
                                 if isPasswordVisible {
                                     TextField("••••••••", text: $password)
-                                        .foregroundColor(.black)
+                                        .foregroundColor(.primary)
                                 } else {
                                     SecureField("••••••••", text: $password)
-                                        .foregroundColor(.black)
+                                        .foregroundColor(.primary)
                                 }
                                 Button(action: { isPasswordVisible.toggle() }) {
                                     Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(.secondary)
                                 }
                             }
                             .padding(.horizontal, 16)
                             .frame(height: 52)
-                            .background(Color(red: 0.95, green: 0.95, blue: 0.97))
+                            .background(Color(.secondarySystemGroupedBackground))
                             .cornerRadius(12)
                         }
 
@@ -148,16 +148,16 @@ struct CreateAccountView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
-                            .background(Color(red: 0.05, green: 0.15, blue: 0.55))
+                            .background(Color.blue)
                             .cornerRadius(12)
-                            .shadow(color: Color(red: 0.05, green: 0.15, blue: 0.55).opacity(0.3), radius: 10, y: 5)
+                            .shadow(color: Color.blue.opacity(0.3), radius: 10, y: 5)
                         }
                         .disabled(authViewModel.isLoading || email.isEmpty || password.isEmpty || fullName.isEmpty)
                     }
                     .padding(24)
-                    .background(Color.white)
+                    .background(Color(.systemBackground))
                     .cornerRadius(24)
-                    .shadow(color: Color.black.opacity(0.03), radius: 20, y: 10)
+                    .shadow(color: Color.black.opacity(0.05), radius: 20, y: 10)
 
                     Spacer().frame(height: 40)
                 }

@@ -29,7 +29,7 @@ struct LoginView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(red: 0.98, green: 0.98, blue: 0.99)
+                Color(.systemGroupedBackground)
                     .ignoresSafeArea()
 
                 ScrollView {
@@ -42,9 +42,9 @@ struct LoginView: View {
                         }) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 18)
-                                    .fill(Color(red: 0.05, green: 0.2, blue: 0.6))
+                                    .fill(Color.blue)
                                     .frame(width: 64, height: 64)
-                                    .shadow(color: Color.blue.opacity(0.2), radius: 10, y: 5)
+                                    .shadow(color: Color.blue.opacity(0.3), radius: 10, y: 5)
                                 Image(systemName: "box.truck.fill")
                                     .font(.system(size: 28))
                                     .foregroundColor(.white)
@@ -57,18 +57,18 @@ struct LoginView: View {
                         // Title
                         Text("FleetOps")
                             .font(.system(size: 32, weight: .bold))
-                            .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.15))
+                            .foregroundColor(.primary)
                         
                         Text("Precision logistics at your fingertips.")
                             .font(.system(size: 15))
-                            .foregroundColor(.gray)
+                            .foregroundColor(.secondary)
                             .padding(.top, 4)
 
                         Spacer().frame(height: 32)
 
                         Text("SELECT YOUR ROLE")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.gray)
+                            .foregroundColor(.secondary)
                             .kerning(1.2)
                         
                         Spacer().frame(height: 16)
@@ -96,19 +96,19 @@ struct LoginView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("EMAIL ADDRESS")
                                     .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.secondary)
                                 
                                 HStack {
                                     Image(systemName: "envelope")
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(.secondary)
                                     TextField("mail", text: $email)
                                         .keyboardType(.emailAddress)
                                         .textInputAutocapitalization(.never)
-                                        .foregroundColor(.black)
+                                        .foregroundColor(.primary)
                                 }
                                 .padding(.horizontal, 16)
                                 .frame(height: 52)
-                                .background(Color(red: 0.95, green: 0.95, blue: 0.97))
+                                .background(Color(.secondarySystemGroupedBackground))
                                 .cornerRadius(12)
                             }
 
@@ -117,32 +117,32 @@ struct LoginView: View {
                                 HStack {
                                     Text("PASSWORD")
                                         .font(.system(size: 11, weight: .bold))
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(.secondary)
                                     Spacer()
                                     Button("FORGOT?") {
                                     }
                                     .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(Color(red: 0.2, green: 0.3, blue: 0.8))
+                                    .foregroundColor(.blue)
                                 }
 
                                 HStack {
                                     Image(systemName: "lock")
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(.secondary)
                                     if isPasswordVisible {
                                         TextField("••••••••", text: $password)
-                                            .foregroundColor(.black)
+                                            .foregroundColor(.primary)
                                     } else {
                                         SecureField("••••••••", text: $password)
-                                            .foregroundColor(.black)
+                                            .foregroundColor(.primary)
                                     }
                                     Button(action: { isPasswordVisible.toggle() }) {
                                         Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
-                                            .foregroundColor(.gray)
+                                            .foregroundColor(.secondary)
                                     }
                                 }
                                 .padding(.horizontal, 16)
                                 .frame(height: 52)
-                                .background(Color(red: 0.95, green: 0.95, blue: 0.97))
+                                .background(Color(.secondarySystemGroupedBackground))
                                 .cornerRadius(12)
                             }
 
@@ -167,9 +167,9 @@ struct LoginView: View {
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 52)
-                                .background(Color(red: 0.05, green: 0.15, blue: 0.55))
+                                .background(Color.blue)
                                 .cornerRadius(12)
-                                .shadow(color: Color(red: 0.05, green: 0.15, blue: 0.55).opacity(0.3), radius: 10, y: 5)
+                                .shadow(color: Color.blue.opacity(0.3), radius: 10, y: 5)
                             }
                             .disabled(authViewModel.isLoading || email.isEmpty || password.isEmpty)
 
@@ -183,20 +183,20 @@ struct LoginView: View {
                                     Text("LOGIN WITH FACE ID")
                                         .font(.system(size: 12, weight: .semibold))
                                 }
-                                .foregroundColor(.gray)
+                                .foregroundColor(.secondary)
                                 .frame(width: 200, height: 44)
-                                .background(Color.white)
+                                .background(Color(.systemBackground))
                                 .cornerRadius(22)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 22)
-                                        .stroke(Color(red: 0.9, green: 0.9, blue: 0.92), lineWidth: 1)
+                                        .stroke(Color(.separator), lineWidth: 1)
                                 )
                             }
                         }
                         .padding(24)
-                        .background(Color.white)
+                        .background(Color(.systemBackground))
                         .cornerRadius(24)
-                        .shadow(color: Color.black.opacity(0.03), radius: 20, y: 10)
+                        .shadow(color: Color.black.opacity(0.05), radius: 20, y: 10)
 
                         Spacer().frame(height: 32)
 
@@ -220,11 +220,11 @@ struct RoleSelectionButton: View {
         VStack(spacing: 8) {
             Image(systemName: item.iconName)
                 .font(.system(size: 20))
-                .foregroundColor(isSelected ? Color(red: 0.2, green: 0.3, blue: 0.7) : .gray)
+                .foregroundColor(isSelected ? .blue : .secondary)
             
             Text(item.roleName)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isSelected ? Color(red: 0.2, green: 0.3, blue: 0.7) : .gray)
+                .foregroundColor(isSelected ? .blue : .secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
@@ -232,14 +232,14 @@ struct RoleSelectionButton: View {
         .frame(height: 80)
         .background(
             isSelected 
-            ? Color(red: 0.2, green: 0.3, blue: 0.7).opacity(0.1) 
-            : Color.white
+            ? Color.blue.opacity(0.1) 
+            : Color(.systemBackground)
         )
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color(red: 0.2, green: 0.3, blue: 0.7) : Color(red: 0.9, green: 0.9, blue: 0.95), lineWidth: 1.5)
+                .stroke(isSelected ? Color.blue : Color(.separator), lineWidth: 1.5)
         )
-        .shadow(color: Color.black.opacity(isSelected ? 0 : 0.02), radius: 5, y: 2)
+        .shadow(color: Color.black.opacity(isSelected ? 0 : 0.05), radius: 5, y: 2)
     }
 }

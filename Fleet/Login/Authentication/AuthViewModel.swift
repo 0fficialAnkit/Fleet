@@ -55,17 +55,40 @@ class AuthViewModel {
     }
     
     func checkUserSession() async {
+        defer {
+            self.isSessionChecked = true
+        }
+        
         do {
-            let session = try await supabase.auth.session
-            self.currentUser = session.user
-            await fetchRoleName()
-            self.isAuthenticated = true
+            // Add a timeout of 5 seconds to prevent simulator keychain or network hangs
+            let session = try await withThrowingTaskGroup(of: Session?.self) { group in
+                group.addTask {
+                    return try await supabase.auth.session
+                }
+                group.addTask {
+                    try await Task.sleep(nanoseconds: 5_000_000_000)
+                    throw URLError(.timedOut)
+                }
+                
+                if let result = try await group.next() {
+                    group.cancelAll()
+                    return result
+                }
+                
+                group.cancelAll()
+                return nil
+            }
+            
+            if let session = session {
+                self.currentUser = session.user
+                await fetchRoleName()
+                self.isAuthenticated = true
+            }
         } catch {
             self.isAuthenticated = false
             self.currentUser = nil
             self.resolvedRoleName = nil
         }
-        self.isSessionChecked = true
     }
     
     // Allows users to sign up with a specific role
