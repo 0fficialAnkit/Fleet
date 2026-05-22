@@ -6,27 +6,8 @@ struct VehicleSelectionView: View {
     var viewModel: OrdersViewModel
     @Binding var selectedOrderType: OrderType?
     
-    // Using existing fields: model and status
     var availableVehicles: [Vehicle] {
-        MockData.vehicles.filter { vehicle in
-            // 1. Availability Status
-            guard vehicle.status == .active else { return false }
-            
-            // 2. Supported Order Type / Vehicle Type logic using existing `model` strings
-            let model = (vehicle.model ?? "").lowercased()
-            
-            switch orderType {
-            case .bulkOrderShip:
-                // Heavy trucks for bulk ship
-                return model.contains("prima") || model.contains("boss") || model.contains("blazo")
-            case .pickUpAndDrop:
-                // Light delivery vehicles for pick up and drop
-                return model.contains("ace") || model.contains("traveller")
-            case .travel:
-                // Passenger vehicles for travel
-                return model.contains("traveller")
-            }
-        }
+        viewModel.availableVehicles(for: orderType)
     }
     
     var body: some View {

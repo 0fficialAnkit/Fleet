@@ -9,8 +9,6 @@ struct AddMaintenanceView: View {
     @State private var description = ""
     @State private var scheduledDate = Date()
     
-    private let vehicles = MockData.vehicles
-    
     var isFormValid: Bool {
         selectedVehicleId != nil && !description.isEmpty
     }
@@ -21,7 +19,7 @@ struct AddMaintenanceView: View {
                 Section(header: Text("Vehicle").foregroundColor(themeModel.textSecondary)) {
                     Picker("Select Vehicle", selection: $selectedVehicleId) {
                         Text("Select a vehicle").tag(UUID?.none)
-                        ForEach(vehicles) { vehicle in
+                        ForEach(viewModel.vehicles) { vehicle in
                             Text("\(vehicle.make ?? "") \(vehicle.model ?? "") (\(vehicle.licensePlate ?? ""))")
                                 .tag(UUID?.some(vehicle.id))
                         }

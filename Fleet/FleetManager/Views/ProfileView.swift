@@ -109,6 +109,9 @@ VStack(spacing: 0) {
                 }
             }
         }
+        .task {
+            await viewModel.loadProfile()
+        }
     }
 }
 

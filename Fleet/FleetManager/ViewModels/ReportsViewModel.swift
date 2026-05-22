@@ -52,70 +52,90 @@ struct StatusHistoryEntry: Identifiable {
 }
 
 // MARK: - Reports ViewModel
+@MainActor
 @Observable
 final class ReportsViewModel {
 
-    // All maintenance staff
-    private let allUsers: [User] = MockData.users
-    private let allRoles: [Role] = MockData.roles
-    private let allVehicles: [Vehicle] = MockData.vehicles
+    private(set) var allUsers: [User] = []
+    private(set) var allRoles: [Role] = []
+    private(set) var allVehicles: [Vehicle] = []
 
-    // In-memory issue reports built from DefectReport mock data
-    var reports: [IssueReport]
+    var reports: [IssueReport] = []
+    var isLoading = false
+    var errorMessage: String?
 
-    init() {
-        let users    = MockData.users
-        let _ = MockData.roles
-        let vehicles = MockData.vehicles
-        let inspections = MockData.vehicleInspections
-        let defects  = MockData.defectReports
+    func loadData() async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            async let u = UserService.fetchAllUsers()
+            async let r = UserService.fetchAllRoles()
+            async let v = VehicleService.fetchAllVehicles()
+            async let insp = InspectionService.fetchAllInspections()
+            async let defects = DefectReportService.fetchAllDefectReports()
 
-        // Resolve role IDs for maintenance
-        func userName(_ id: UUID?) -> String {
-            guard let id else { return "Unknown" }
-            return users.first { $0.id == id }?.fullName ?? "Unknown"
-        }
+            allUsers = try await u
+            allRoles = try await r
+            allVehicles = try await v
+            let inspections = try await insp
+            let defectReports = try await defects
 
-        func vehicleFor(_ inspectionId: UUID) -> Vehicle? {
-            guard let insp = inspections.first(where: { $0.id == inspectionId }) else { return nil }
-            return vehicles.first { $0.id == insp.vehicleId }
-        }
+            // Build issue reports from defect reports
+            self.reports = defectReports.enumerated().map { idx, defect in
+                let vehicle = vehicleForInspection(defect.inspectionId, inspections: inspections)
+                let make = vehicle?.make ?? "Vehicle"
+                let model = vehicle?.model ?? ""
+                let plate = vehicle?.licensePlate ?? "—"
+                let driver = userName(defect.reportedBy)
 
-        self.reports = defects.enumerated().map { idx, defect in
-            let vehicle = vehicleFor(defect.inspectionId)
-            let make    = vehicle?.make ?? "Vehicle"
-            let model   = vehicle?.model ?? ""
-            let plate   = vehicle?.licensePlate ?? "—"
-            let driver  = userName(defect.reportedBy)
+                let categories = ["Engine Problem", "Tire Issue", "Brake Issue",
+                                  "Electrical Fault", "Fuel Leak", "Body Damage", "Other"]
+                let category = categories[idx % categories.count]
 
-            // Assign category from index cycling through IssueCategory
-            let categories = ["Engine Problem", "Tire Issue", "Brake Issue",
-                              "Electrical Fault", "Fuel Leak", "Body Damage", "Other"]
-            let category = categories[idx % categories.count]
+                let status: IssueReportStatus
+                switch defect.status {
+                case .open:     status = .open
+                case .resolved: status = .resolved
+                case .closed:   status = .resolved
+                case .none:     status = .open
+                }
 
-            // Derive initial status from defect status
-            let status: IssueReportStatus
-            switch defect.status {
-            case .open:     status = .open
-            case .resolved: status = .resolved
-            case .closed:   status = .resolved
-            case .none:     status = .open
+                return IssueReport(
+                    id: defect.id,
+                    vehicleId: vehicle?.id ?? UUID(),
+                    vehicleName: "\(make) \(model)",
+                    licensePlate: plate,
+                    driverName: driver,
+                    issueCategory: category,
+                    severity: defect.severity ?? .medium,
+                    description: defect.description ?? "No description provided.",
+                    submittedAt: Calendar.current.date(byAdding: .hour, value: -(idx + 1) * 4, to: Date())!,
+                    assignedTo: nil,
+                    status: status
+                )
             }
-
-            return IssueReport(
-                id: defect.id,
-                vehicleId: vehicle?.id ?? UUID(),
-                vehicleName: "\(make) \(model)",
-                licensePlate: plate,
-                driverName: driver,
-                issueCategory: category,
-                severity: defect.severity ?? .medium,
-                description: defect.description ?? "No description provided.",
-                submittedAt: Calendar.current.date(byAdding: .hour, value: -(idx + 1) * 4, to: Date())!,
-                assignedTo: nil,
-                status: status
-            )
+        } catch {
+            errorMessage = error.localizedDescription
         }
+        isLoading = false
+    }
+
+    func setupRealtime() {
+        RealtimeManager.shared.onDefectReportsChange = { [weak self] in
+            Task { await self?.loadData() }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func userName(_ id: UUID?) -> String {
+        guard let id else { return "Unknown" }
+        return allUsers.first { $0.id == id }?.fullName ?? "Unknown"
+    }
+
+    private func vehicleForInspection(_ inspectionId: UUID, inspections: [VehicleInspection]) -> Vehicle? {
+        guard let insp = inspections.first(where: { $0.id == inspectionId }) else { return nil }
+        return allVehicles.first { $0.id == insp.vehicleId }
     }
 
     // MARK: - Computed Counts

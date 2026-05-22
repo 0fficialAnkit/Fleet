@@ -1,34 +1,44 @@
 import SwiftUI
+import Auth
 
 struct DriverDashboardView: View {
 
     @State private var viewModel = DriverDashboardViewModel()
-
-    var vehicle: Vehicle { viewModel.vehicle }
-    var trips: [Trip] { viewModel.todaysTrips }
+    @Environment(AuthViewModel.self) private var authViewModel
 
     var body: some View {
 
         NavigationStack {
 
-            ScrollView(showsIndicators: false) {
+            ZStack {
+                themeModel.backgroundPrimary.ignoresSafeArea()
 
-                VStack(spacing: 20) {
+                if viewModel.isLoading && viewModel.vehicle == nil {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 20) {
+                            if let vehicle = viewModel.vehicle {
+                                NavigationLink(destination: DriverVehicleDetailView(vehicle: vehicle)) {
+                                    vehicleCard(vehicle)
+                                }
+                                .buttonStyle(.plain)
+                            } else {
+                                Text("No vehicle assigned.")
+                                    .font(themeModel.body())
+                                    .foregroundStyle(themeModel.textSecondary)
+                                    .padding()
+                            }
 
-                    NavigationLink(destination: DriverVehicleDetailView(vehicle: vehicle)) {
-                        vehicleCard
+                            summaryCardsSection
+
+                            tripsSection
+                        }
+                        .padding()
                     }
-                    .buttonStyle(.plain)
-
-                    summaryCardsSection
-
-//                    checklistBanner
-
-                    tripsSection
                 }
-                .padding()
             }
-            .background(themeModel.backgroundPrimary.ignoresSafeArea())
             .navigationTitle("Driver Portal")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -50,18 +60,24 @@ struct DriverDashboardView: View {
                 }
             }
         }
+        .task {
+            viewModel.currentUserId = authViewModel.currentUser?.id
+            await viewModel.loadData()
+            viewModel.setupRealtime()
+        }
     }
 }
 
 #Preview {
     DriverDashboardView()
+        .environment(AuthViewModel())
 }
 
 // MARK: - Subviews
 
 extension DriverDashboardView {
 
-    var vehicleCard: some View {
+    func vehicleCard(_ vehicle: Vehicle) -> some View {
         VStack(alignment: .leading, spacing: themeModel.spacingMD) {
 
             HStack {
@@ -100,11 +116,7 @@ extension DriverDashboardView {
 
             HStack(spacing: themeModel.spacingLG) {
 
-                Label("72% Fuel", systemImage: "fuelpump.fill")
-                    .font(themeModel.bodyMedium())
-                    .foregroundStyle(themeModel.success)
-
-                Label("48.2k km", systemImage: "location.fill")
+                Label("\(Int(vehicle.mileage ?? 0))km", systemImage: "location.fill")
                     .font(themeModel.bodyMedium())
                     .foregroundStyle(themeModel.driverPrimary)
             }
@@ -122,42 +134,10 @@ extension DriverDashboardView {
 
         VStack(spacing: themeModel.spacingMD) {
             HStack(spacing: themeModel.spacingMD) {
-                MetricCard(icon: "point.topleft.down.to.point.bottomright.curvepath", value: "89", label: "KM Driven", color: themeModel.warning)
-                MetricCard(icon: "timer", value: "4.5", label: "Hours Active", color: themeModel.analyticsPurple)
+                MetricCard(icon: "point.topleft.down.to.point.bottomright.curvepath", value: "\(viewModel.todaysTrips.count)", label: "Today's Trips", color: themeModel.warning)
+                MetricCard(icon: "timer", value: "\(viewModel.trips.filter { $0.status == .completed }.count)", label: "Completed", color: themeModel.analyticsPurple)
             }
         }
-    }
-
-    var checklistBanner: some View {
-
-        HStack {
-
-            Image(systemName: "checkmark.shield.fill")
-                .foregroundStyle(themeModel.success)
-                .font(.title2)
-
-            VStack(alignment: .leading, spacing: 4) {
-
-                Text("Pre-trip checklist complete")
-                    .font(themeModel.headline())
-                    .foregroundStyle(themeModel.textPrimary)
-
-                Text("8/8 items verified")
-                    .font(themeModel.caption())
-                    .foregroundStyle(themeModel.textSecondary)
-            }
-
-            Spacer()
-        }
-        .padding(themeModel.spacingMD)
-        .background(themeModel.success.opacity(0.15))
-        .padding(0)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-        )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
 
     var tripsSection: some View {
@@ -166,17 +146,23 @@ extension DriverDashboardView {
 
             SectionHeader(title: "Today's Trips")
 
-            ForEach(trips) { trip in
-                NavigationLink {
-                    TripDetailView(
-                        trip: trip,
-                        onStart: { id in viewModel.startTrip(id: id) },
-                        onEnd:   { id in viewModel.endTrip(id: id) }
-                    )
-                } label: {
-                    tripCard(trip)
+            if viewModel.todaysTrips.isEmpty {
+                Text("No trips scheduled for today.")
+                    .font(themeModel.body())
+                    .foregroundStyle(themeModel.textSecondary)
+            } else {
+                ForEach(viewModel.todaysTrips) { trip in
+                    NavigationLink {
+                        TripDetailView(
+                            trip: trip,
+                            onStart: { id in viewModel.startTrip(id: id) },
+                            onEnd:   { id in viewModel.endTrip(id: id) }
+                        )
+                    } label: {
+                        tripCard(trip)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
     }
@@ -215,30 +201,9 @@ extension DriverDashboardView {
                 StatusBadge(text: statusText, color: statusColor)
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    Circle().fill(themeModel.success).frame(width: 10)
-                    Text("Warehouse A, Sector 12")
-                        .font(themeModel.body())
-                        .foregroundStyle(themeModel.textPrimary)
-                }
-
-                Rectangle()
-                    .fill(themeModel.divider)
-                    .frame(width: 1, height: 18)
-                    .padding(.leading, 4)
-
-                HStack(spacing: 8) {
-                    Circle().fill(themeModel.danger).frame(width: 10)
-                    Text("Distribution Center, Zone B")
-                        .font(themeModel.body())
-                        .foregroundStyle(themeModel.textPrimary)
-                }
-            }
-
             HStack {
                 Label(
-                    trip.startTime?.formatted(date: .omitted, time: .shortened) ?? "09:00 AM",
+                    trip.startTime?.formatted(date: .omitted, time: .shortened) ?? "N/A",
                     systemImage: "clock"
                 )
                 .font(themeModel.caption())

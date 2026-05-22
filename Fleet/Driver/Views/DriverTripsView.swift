@@ -1,9 +1,11 @@
 import SwiftUI
+import Auth
 
 struct DriverTripsView: View {
 
     @State private var viewModel = DriverTripsViewModel()
     @State private var selectedFilter: TripFilter = .all
+    @Environment(AuthViewModel.self) private var authViewModel
 
     enum TripFilter: String, CaseIterable {
         case all = "All"
@@ -52,26 +54,44 @@ struct DriverTripsView: View {
             VStack(spacing: 0) {
                 filterBubbles
 
-                ScrollView {
-                    VStack(spacing: 20) {
-                        ForEach(filteredTrips) { trip in
-                            NavigationLink {
-                                TripDetailView(
-                                    trip: trip,
-                                    onStart: { id in viewModel.startTrip(id: id) },
-                                    onEnd:   { id in viewModel.endTrip(id: id) }
-                                )
-                            } label: {
-                                DriverTripCardView(trip: trip)
+                if viewModel.isLoading && viewModel.trips.isEmpty {
+                    Spacer()
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    Spacer()
+                } else if filteredTrips.isEmpty {
+                    Spacer()
+                    Text("No trips found.")
+                        .font(themeModel.body())
+                        .foregroundStyle(themeModel.textSecondary)
+                    Spacer()
+                } else {
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            ForEach(filteredTrips) { trip in
+                                NavigationLink {
+                                    TripDetailView(
+                                        trip: trip,
+                                        onStart: { id in viewModel.startTrip(id: id) },
+                                        onEnd:   { id in viewModel.endTrip(id: id) }
+                                    )
+                                } label: {
+                                    DriverTripCardView(trip: trip)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
+                        .padding()
                     }
-                    .padding()
                 }
             }
             .background(themeModel.backgroundPrimary.ignoresSafeArea())
             .navigationTitle("Assigned Routes")
+        }
+        .task {
+            viewModel.currentUserId = authViewModel.currentUser?.id
+            await viewModel.loadData()
+            viewModel.setupRealtime()
         }
     }
 }
@@ -114,32 +134,6 @@ struct DriverTripCardView: View {
                 StatusBadge(text: statusText, color: statusColor)
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    Image(systemName: "circle.fill")
-                        .font(.system(size: 8))
-                        .foregroundStyle(themeModel.success)
-                    Text("Warehouse A, Sector 12")
-                        .font(themeModel.bodyMedium())
-                        .foregroundStyle(themeModel.textSecondary)
-                }
-
-                Rectangle()
-                    .fill(themeModel.divider)
-                    .frame(width: 2, height: 16)
-                    .padding(.leading, 3)
-
-                HStack(spacing: 8) {
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(themeModel.danger)
-                    Text("Distribution Center, Zone B")
-                        .font(themeModel.bodyMedium())
-                        .foregroundStyle(themeModel.textPrimary)
-                }
-            }
-            .padding(.vertical, 2)
-
             HStack {
                 Label(
                     trip.startTime?.formatted(date: .omitted, time: .shortened) ?? "N/A",
@@ -172,4 +166,5 @@ struct DriverTripCardView: View {
 
 #Preview {
     DriverTripsView()
+        .environment(AuthViewModel())
 }

@@ -6,19 +6,15 @@ struct OrderDetailView: View {
     @Environment(\.dismiss) private var dismiss
     
     var route: Route? {
-        MockData.routes.first { $0.id == trip.routeId }
+        viewModel.route(for: trip.routeId)
     }
     
     var driverName: String {
-        MockData.users.first { $0.id == trip.driverId }?.fullName ?? "Unassigned"
+        viewModel.driverName(for: trip.driverId)
     }
     
     var vehicleInfo: String {
-        guard let vehicle = MockData.vehicles.first(where: { $0.id == trip.vehicleId }) else { return "Unknown Vehicle" }
-        let make = vehicle.make ?? ""
-        let model = vehicle.model ?? ""
-        let plate = vehicle.licensePlate ?? ""
-        return "\(make) \(model) (\(plate))".trimmingCharacters(in: .whitespacesAndNewlines)
+        viewModel.vehicleName(for: trip.vehicleId)
     }
     
     var formattedDate: String {

@@ -64,8 +64,8 @@ struct FleetView: View {
                     roleName: selectedTab == .drivers ? "driver" : "maintenance"
                 )
             }
-            .onAppear {
-                employeesViewModel.refreshData()
+            .task {
+                await employeesViewModel.loadData()
             }
         }
     }

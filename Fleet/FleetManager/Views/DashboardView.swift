@@ -10,11 +10,16 @@ struct DashboardView: View {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: themeModel.spacingLG) {
-                        metricsGrid
-                        recentOrdersSection
-                        maintenanceSection
+                if viewModel.isLoading && viewModel.vehicles.isEmpty {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: themeModel.spacingLG) {
+                            metricsGrid
+                            recentOrdersSection
+                            maintenanceSection
+                        }
                     }
                 }
             }
@@ -42,11 +47,9 @@ struct DashboardView: View {
                     .environment(authViewModel)
             }
         }
-        .onAppear {
-            viewModel.refreshData()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("VehiclesUpdated"))) { _ in
-            viewModel.refreshData()
+        .task {
+            await viewModel.loadData()
+            viewModel.setupRealtime()
         }
     }
 
@@ -75,9 +78,16 @@ struct DashboardView: View {
             }
             .padding(.horizontal, themeModel.spacingMD)
             
-            ForEach(viewModel.recentOrders) { trip in
-                TripCardView(trip: trip)
+            if viewModel.recentOrders.isEmpty {
+                Text("No orders yet.")
+                    .font(themeModel.body(16))
+                    .foregroundColor(themeModel.textSecondary)
                     .padding(.horizontal, themeModel.spacingMD)
+            } else {
+                ForEach(viewModel.recentOrders) { trip in
+                    TripCardView(trip: trip, viewModel: viewModel)
+                        .padding(.horizontal, themeModel.spacingMD)
+                }
             }
         }
     }
@@ -88,9 +98,16 @@ struct DashboardView: View {
             SectionHeader(title: "Need Maintenance")
                 .padding(.horizontal, themeModel.spacingMD)
             
-            ForEach(viewModel.maintenanceVehicles) { vehicle in
-                MaintenanceCardView(vehicle: vehicle)
+            if viewModel.maintenanceVehicles.isEmpty {
+                Text("All vehicles operational.")
+                    .font(themeModel.body(16))
+                    .foregroundColor(themeModel.textSecondary)
                     .padding(.horizontal, themeModel.spacingMD)
+            } else {
+                ForEach(viewModel.maintenanceVehicles) { vehicle in
+                    MaintenanceCardView(vehicle: vehicle, viewModel: viewModel)
+                        .padding(.horizontal, themeModel.spacingMD)
+                }
             }
         }
     }
@@ -100,13 +117,14 @@ struct DashboardView: View {
 
 struct TripCardView: View {
     let trip: Trip
+    let viewModel: DashboardViewModel
     
     var routeName: String {
-        MockData.routes.first(where: { $0.id == trip.routeId })?.routeName ?? "Unknown Route"
+        viewModel.routeName(for: trip.routeId)
     }
     
     var driverName: String {
-        MockData.users.first(where: { $0.id == trip.driverId })?.fullName ?? "Unassigned"
+        viewModel.driverName(for: trip.driverId)
     }
     
     var statusColor: Color {
@@ -165,9 +183,10 @@ struct TripCardView: View {
 
 struct MaintenanceCardView: View {
     let vehicle: Vehicle
+    let viewModel: DashboardViewModel
     
     var maintenanceTask: MaintenanceTask? {
-        MockData.maintenanceTasks.first(where: { $0.vehicleId == vehicle.id && $0.status != .completed })
+        viewModel.maintenanceTask(for: vehicle.id)
     }
     
     var body: some View {

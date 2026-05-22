@@ -7,15 +7,12 @@ struct DriverSelectionView: View {
     var viewModel: OrdersViewModel
     @Binding var selectedOrderType: OrderType?
     
-    // Fetch drivers from existing mock data
+    // Fetch drivers from ViewModel data
     var availableDrivers: [User] {
-        MockData.users.filter { user in
-            // Filter by driver role using the known driver role ID from MockData
-            user.roleId == MockData.roles.first(where: { $0.roleName == "Driver" })?.id
-        }
+        viewModel.driversWithRole()
     }
     
-    // Map existing UserStatus to UI strings requested by user
+    // Map existing UserStatus to UI strings
     func driverStatusText(for status: UserStatus?) -> String {
         switch status {
         case .active: return "Available"

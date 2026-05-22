@@ -25,8 +25,8 @@ struct VehiclesRootView: View {
         .sheet(isPresented: $isShowingAddVehicle) {
             AddVehicleView(viewModel: vehiclesViewModel)
         }
-        .onAppear {
-            vehiclesViewModel.refreshData()
+        .task {
+            await vehiclesViewModel.loadData()
         }
     }
 }

@@ -9,6 +9,7 @@ struct TripSchedulingView: View {
     @Binding var selectedOrderType: OrderType?
     
     @State private var startTime = Date()
+    @State private var selectedRouteId: UUID?
     
     var body: some View {
         ZStack {
@@ -39,6 +40,33 @@ struct TripSchedulingView: View {
                         .padding(.horizontal, themeModel.spacingMD)
                     }
                     
+                    // Route Selection
+                    if !viewModel.routes.isEmpty {
+                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                            SectionHeader(title: "Select Route")
+                                .padding(.horizontal, themeModel.spacingMD)
+                            
+                            VStack(spacing: themeModel.spacingMD) {
+                                Picker("Route", selection: $selectedRouteId) {
+                                    Text("Select a route").tag(UUID?.none)
+                                    ForEach(viewModel.routes) { route in
+                                        Text(route.routeName ?? "Unknown Route")
+                                            .tag(UUID?.some(route.id))
+                                    }
+                                }
+                                .foregroundColor(themeModel.textPrimary)
+                            }
+                            .padding(themeModel.spacingMD)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                            )
+                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                            .padding(.horizontal, themeModel.spacingMD)
+                        }
+                    }
+                    
                     // Date & Time Picker Card
                     VStack(alignment: .leading, spacing: themeModel.spacingSM) {
                         SectionHeader(title: "Schedule Date & Time")
@@ -66,23 +94,19 @@ struct TripSchedulingView: View {
         }
         .navigationTitle("Schedule Trip")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            // Default to the first route
+            if selectedRouteId == nil {
+                selectedRouteId = viewModel.routes.first?.id
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") {
-                    let routeId = MockData.routes.first(where: { 
-                        if orderType == .bulkOrderShip {
-                            return $0.routeName?.contains("Downtown") ?? false
-                        } else if orderType == .pickUpAndDrop {
-                            return $0.routeName?.contains("Suburbs") ?? false
-                        } else {
-                            return $0.routeName?.contains("Express") ?? false
-                        }
-                    })?.id ?? MockData.routes.first?.id
-                    
                     viewModel.addTrip(
                         vehicleId: selectedVehicle.id,
                         driverId: selectedDriver.id,
-                        routeId: routeId,
+                        routeId: selectedRouteId,
                         startTime: startTime,
                         orderType: orderType
                     )
