@@ -885,31 +885,4 @@ enum MockData {
             recordedAt: daysAgo(3)
         ),
     ]
-
-    // MARK: - Support Tickets
-
-    static let supportTicket1 = UUID(uuidString: "DD000000-0000-0000-0000-000000000001")!
-    static let supportTicket2 = UUID(uuidString: "DD000000-0000-0000-0000-000000000002")!
-    static let supportTicket3 = UUID(uuidString: "DD000000-0000-0000-0000-000000000003")!
-
-    static let supportTickets: [SupportTicket] = [
-        SupportTicket(id: supportTicket1, driverId: uDriver1, managerId: uManager, category: .vehicleIssue, subject: "Engine warning light on MH-04-BT-7821", status: .inProgress, createdAt: hoursAgo(6), updatedAt: hoursAgo(2)),
-        SupportTicket(id: supportTicket2, driverId: uDriver2, managerId: uManager, category: .routeProblem, subject: "Road blocked near Surat bypass — need alternate route", status: .open, createdAt: hoursAgo(3), updatedAt: hoursAgo(3)),
-        SupportTicket(id: supportTicket3, driverId: uDriver1, managerId: uManager, category: .documentRequest, subject: "License renewal — expiring next week", status: .resolved, createdAt: daysAgo(5), updatedAt: daysAgo(3)),
-    ]
-
-    // MARK: - Ticket Messages
-
-    static let ticketMessages: [TicketMessage] = [
-        TicketMessage(id: UUID(), ticketId: supportTicket1, senderId: uDriver1, message: "Engine warning light came on about 20 km before Vadodara. Vehicle is still running but power seems reduced.", sentAt: hoursAgo(6)),
-        TicketMessage(id: UUID(), ticketId: supportTicket1, senderId: uManager, message: "Acknowledged. Can you pull over safely and send a photo of the dashboard? I'll alert the workshop.", sentAt: hoursAgo(5)),
-        TicketMessage(id: UUID(), ticketId: supportTicket1, senderId: uDriver1, message: "Pulled over at a fuel station. The light is amber, not red. OBD code shows P0420.", sentAt: hoursAgo(4)),
-        TicketMessage(id: UUID(), ticketId: supportTicket1, senderId: uManager, message: "P0420 is not critical. Continue at reduced speed. We'll schedule repair when you reach Mumbai.", sentAt: hoursAgo(2)),
-        TicketMessage(id: UUID(), ticketId: supportTicket2, senderId: uDriver2, message: "The main highway near Surat bypass is completely blocked due to an accident.", sentAt: hoursAgo(3)),
-        TicketMessage(id: UUID(), ticketId: supportTicket2, senderId: uManager, message: "Checking alternate routes. Can you take the service road via Kamrej? Adds 15 km but should be clear.", sentAt: hoursAgo(2)),
-        TicketMessage(id: UUID(), ticketId: supportTicket3, senderId: uDriver1, message: "My driving license expires next Thursday. Need to apply for renewal.", sentAt: daysAgo(5)),
-        TicketMessage(id: UUID(), ticketId: supportTicket3, senderId: uManager, message: "I'll send Form 9 to your email. Get a medical certificate and submit both at Pune RTO.", sentAt: daysAgo(4)),
-        TicketMessage(id: UUID(), ticketId: supportTicket3, senderId: uDriver1, message: "Got the medical certificate done. Submitted at RTO. They said 3 days for processing.", sentAt: daysAgo(3)),
-        TicketMessage(id: UUID(), ticketId: supportTicket3, senderId: uManager, message: "Great — marking this as resolved. Let me know once you receive the renewed license.", sentAt: daysAgo(3)),
-    ]
 }
