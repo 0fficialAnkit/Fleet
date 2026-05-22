@@ -8,20 +8,31 @@ struct DriverRootView: View {
 
             DriverDashboardView()
                 .tabItem {
-                    Label("Dashboard", systemImage: "house.fill")
+                    Label("Dashboard", systemImage: "chart.bar.doc.horizontal.fill")
                 }
 
             DriverTripsView()
                 .tabItem {
-                    Label("Trips", systemImage: "road.lanes")
+                    Label("Trips", systemImage: "map.fill")
+                }
+
+            DriverChecklistView()
+                .tabItem {
+                    Label("Checklist", systemImage: "checklist")
                 }
 
             DriverFuelView()
                 .tabItem {
                     Label("Fuel", systemImage: "fuelpump.fill")
                 }
+
+            DriverProfileView()
+                .tabItem {
+                    Label("Profile", systemImage: "person.crop.circle.fill")
+                }
         }
-        .tint(themeModel.driverPrimary)
+        .tint(.blue)
+        .preferredColorScheme(.dark)
     }
 }
 
