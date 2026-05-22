@@ -11,14 +11,14 @@ struct CreateAccountView: View {
     @Environment(\.dismiss) private var dismiss
 
     let roleItems: [RoleDisplayItem] = [
-        RoleDisplayItem(id: 1, roleName: "Fleet Manager", description: "", iconName: "shield.fill", iconColor: .blue, iconBackground: .clear),
-        RoleDisplayItem(id: 2, roleName: "Driver", description: "", iconName: "box.truck.fill", iconColor: .blue, iconBackground: .clear),
-        RoleDisplayItem(id: 3, roleName: "Maintenance", description: "", iconName: "wrench.and.screwdriver.fill", iconColor: .blue, iconBackground: .clear)
+        RoleDisplayItem(id: 1, roleName: "Fleet Manager", description: "Manage fleet, drivers & analytics", iconName: "shield.fill", iconColor: .blue, iconBackground: Color.blue.opacity(0.25)),
+        RoleDisplayItem(id: 2, roleName: "Driver", description: "View routes, log trips & fuel", iconName: "truck.box.fill", iconColor: Color(red: 0.2, green: 0.85, blue: 0.45), iconBackground: Color.green.opacity(0.2)),
+        RoleDisplayItem(id: 3, roleName: "Maintenance", description: "Schedule repairs & manage parts", iconName: "wrench.and.screwdriver.fill", iconColor: .orange, iconBackground: Color.orange.opacity(0.2))
     ]
 
     var body: some View {
         ZStack {
-            Color(red: 0.98, green: 0.98, blue: 0.99)
+            Color(red: 0.07, green: 0.09, blue: 0.13)
                 .ignoresSafeArea()
 
             ScrollView {
@@ -27,25 +27,26 @@ struct CreateAccountView: View {
                     
                     Text("Create Account")
                         .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(Color(red: 0.1, green: 0.1, blue: 0.15))
+                        .foregroundColor(.white)
                     
-                    Text("Join FleetOps today")
+                    Text("Join FleetOS today")
                         .font(.system(size: 15))
-                        .foregroundColor(.gray)
+                        .foregroundColor(Color.white.opacity(0.5))
                         .padding(.top, 4)
 
                     Spacer().frame(height: 32)
 
                     Text("SELECT YOUR ROLE")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.gray)
+                        .foregroundColor(Color.white.opacity(0.5))
                         .kerning(1.2)
                     
                     Spacer().frame(height: 16)
 
+                    // Role Card List (horizontal squares without descriptions)
                     HStack(spacing: 12) {
                         ForEach(roleItems) { item in
-                            RoleSelectionButton(
+                            SquareRoleCardView(
                                 item: item,
                                 isSelected: selectedRoleId == item.id
                             )
@@ -59,73 +60,45 @@ struct CreateAccountView: View {
 
                     Spacer().frame(height: 32)
 
-                    VStack(spacing: 20) {
+                    VStack(spacing: 14) {
                         // Full Name
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("FULL NAME")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.gray)
-                            
-                            HStack {
-                                Image(systemName: "person")
-                                    .foregroundColor(.gray)
-                                TextField("John Doe", text: $fullName)
-                                    .foregroundColor(.black)
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(height: 52)
-                            .background(Color(red: 0.95, green: 0.95, blue: 0.97))
-                            .cornerRadius(12)
-                        }
+                        TextField("", text: $fullName, prompt: Text("Full Name").foregroundColor(.white.opacity(0.45)))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 18)
+                            .frame(height: 56)
+                            .background(Color(red: 0.12, green: 0.14, blue: 0.18))
+                            .cornerRadius(14)
 
                         // Email
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("EMAIL ADDRESS")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.gray)
-                            
-                            HStack {
-                                Image(systemName: "envelope")
-                                    .foregroundColor(.gray)
-                                TextField("name@fleetops.com", text: $email)
-                                    .keyboardType(.emailAddress)
-                                    .textInputAutocapitalization(.never)
-                                    .foregroundColor(.black)
-                            }
-                            .padding(.horizontal, 16)
-                            .frame(height: 52)
-                            .background(Color(red: 0.95, green: 0.95, blue: 0.97))
-                            .cornerRadius(12)
-                        }
+                        TextField("", text: $email, prompt: Text("Email address").foregroundColor(.white.opacity(0.45)))
+                            .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 18)
+                            .frame(height: 56)
+                            .background(Color(red: 0.12, green: 0.14, blue: 0.18))
+                            .cornerRadius(14)
 
                         // Password
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("PASSWORD")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.gray)
-                                
-                            HStack {
-                                Image(systemName: "lock")
-                                    .foregroundColor(.gray)
-                                if isPasswordVisible {
-                                    TextField("••••••••", text: $password)
-                                        .foregroundColor(.black)
-                                } else {
-                                    SecureField("••••••••", text: $password)
-                                        .foregroundColor(.black)
-                                }
-                                Button(action: { isPasswordVisible.toggle() }) {
-                                    Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
-                                        .foregroundColor(.gray)
-                                }
+                        HStack {
+                            if isPasswordVisible {
+                                TextField("", text: $password, prompt: Text("Password").foregroundColor(.white.opacity(0.45)))
+                                    .foregroundColor(.white)
+                            } else {
+                                SecureField("", text: $password, prompt: Text("Password").foregroundColor(.white.opacity(0.45)))
+                                    .foregroundColor(.white)
                             }
-                            .padding(.horizontal, 16)
-                            .frame(height: 52)
-                            .background(Color(red: 0.95, green: 0.95, blue: 0.97))
-                            .cornerRadius(12)
+                            Button(action: { isPasswordVisible.toggle() }) {
+                                Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
+                                    .foregroundColor(.white.opacity(0.5))
+                            }
                         }
+                        .padding(.horizontal, 18)
+                        .frame(height: 56)
+                        .background(Color(red: 0.12, green: 0.14, blue: 0.18))
+                        .cornerRadius(14)
 
-                        Spacer().frame(height: 4)
+                        Spacer().frame(height: 14)
 
                         // Sign Up Button
                         Button(action: {
@@ -142,22 +115,17 @@ struct CreateAccountView: View {
                                     ProgressView().tint(.white)
                                 } else {
                                     Text("Create Account")
-                                        .font(.system(size: 16, weight: .semibold))
+                                        .font(.system(size: 18, weight: .semibold))
                                 }
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(Color(red: 0.05, green: 0.15, blue: 0.55))
-                            .cornerRadius(12)
-                            .shadow(color: Color(red: 0.05, green: 0.15, blue: 0.55).opacity(0.3), radius: 10, y: 5)
+                            .frame(height: 56)
+                            .background(Color.blue)
+                            .cornerRadius(16)
                         }
                         .disabled(authViewModel.isLoading || email.isEmpty || password.isEmpty || fullName.isEmpty)
                     }
-                    .padding(24)
-                    .background(Color.white)
-                    .cornerRadius(24)
-                    .shadow(color: Color.black.opacity(0.03), radius: 20, y: 10)
 
                     Spacer().frame(height: 40)
                 }
@@ -165,5 +133,37 @@ struct CreateAccountView: View {
             }
         }
         .navigationTitle("")
+    }
+}
+
+// MARK: - SquareRoleCardView
+struct SquareRoleCardView: View {
+    let item: RoleDisplayItem
+    let isSelected: Bool
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: item.iconName)
+                .font(.system(size: 20))
+                .foregroundColor(isSelected ? .blue : .gray)
+            
+            Text(item.roleName)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(isSelected ? .blue : .gray)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 80)
+        .background(
+            isSelected 
+            ? Color.blue.opacity(0.15) 
+            : Color(red: 0.12, green: 0.14, blue: 0.18)
+        )
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? Color.blue : Color(red: 0.2, green: 0.22, blue: 0.28), lineWidth: 1.5)
+        )
     }
 }
