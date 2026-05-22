@@ -15,7 +15,10 @@ struct DriverDashboardView: View {
 
                 VStack(spacing: 20) {
 
-                    vehicleCard
+                    NavigationLink(destination: DriverVehicleDetailView(vehicle: vehicle)) {
+                        vehicleCard
+                    }
+                    .buttonStyle(.plain)
 
                     summaryCardsSection
 
@@ -57,62 +60,60 @@ struct DriverDashboardView: View {
 extension DriverDashboardView {
 
     var vehicleCard: some View {
-        
-            VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
 
-                HStack {
+            HStack {
 
-                    VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                VStack(alignment: .leading, spacing: themeModel.spacingSM) {
 
-                        Text("Assigned Vehicle")
-                            .font(themeModel.bodyMedium())
-                            .foregroundStyle(themeModel.textSecondary)
-
-                        Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
-                            .font(themeModel.title())
-                            .foregroundStyle(themeModel.textPrimary)
-
-                        Text(vehicle.licensePlate ?? "")
-                            .font(themeModel.bodyMedium())
-                            .foregroundStyle(themeModel.driverPrimary)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "truck.box.fill")
-                        .font(.system(size: 40))
-//                        .foregroundStyle(themeModel.driverPrimary)
-                }
-
-                HStack(spacing: themeModel.spacingLG) {
-
-                    Label("72% Fuel", systemImage: "fuelpump.fill")
+                    Text("Assigned Vehicle")
                         .font(themeModel.bodyMedium())
-                        .foregroundStyle(themeModel.success)
+                        .foregroundStyle(themeModel.textSecondary)
 
-                    Label("48.2k km", systemImage: "location.fill")
+                    Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
+                        .font(themeModel.title())
+                        .foregroundStyle(themeModel.textPrimary)
+
+                    Text(vehicle.licensePlate ?? "")
                         .font(themeModel.bodyMedium())
                         .foregroundStyle(themeModel.driverPrimary)
                 }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: themeModel.spacingSM) {
+                    Image(systemName: "truck.box.fill")
+                        .font(.system(size: 36))
+                        .foregroundStyle(themeModel.driverPrimary.opacity(0.7))
+                    HStack(spacing: 4) {
+                        Text("View Details")
+                            .font(themeModel.caption())
+                            .foregroundStyle(themeModel.driverPrimary)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(themeModel.driverPrimary)
+                    }
+                }
             }
-            .padding(themeModel.spacingMD)
-//            .background(
-//                LinearGradient(
-//                    colors: [
-//                        themeModel.driverPrimary.opacity(0.35),
-//                        themeModel.driverPrimary.opacity(0.15)
-//                    ],
-//                    startPoint: .topLeading,
-//                    endPoint: .bottomTrailing
-//                )
-//            )
-            .padding(0)
-            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-            )
-            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+
+            HStack(spacing: themeModel.spacingLG) {
+
+                Label("72% Fuel", systemImage: "fuelpump.fill")
+                    .font(themeModel.bodyMedium())
+                    .foregroundStyle(themeModel.success)
+
+                Label("48.2k km", systemImage: "location.fill")
+                    .font(themeModel.bodyMedium())
+                    .foregroundStyle(themeModel.driverPrimary)
+            }
+        }
+        .padding(themeModel.spacingMD)
+        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                .stroke(themeModel.driverPrimary.opacity(0.2), lineWidth: 1)
+        )
+        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
 
     var summaryCardsSection: some View {

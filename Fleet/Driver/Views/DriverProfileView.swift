@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct DriverProfileView: View {
+    @Environment(AuthViewModel.self) private var authViewModel
 
     var body: some View {
 
@@ -32,8 +33,13 @@ struct DriverProfileView: View {
 
                         
 VStack(spacing: 0) {
-                            ActionRow(icon: "door.left.hand.open", title: "Logout", isDestructive: true)
-                        
+                            Button(action: {
+                                Task {
+                                    await authViewModel.signOut()
+                                }
+                            }) {
+                                ActionRow(icon: "door.left.hand.open", title: "Logout", isDestructive: true)
+                            }
                         }
                         .padding(themeModel.spacingMD)
                         .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
@@ -54,4 +60,5 @@ VStack(spacing: 0) {
 
 #Preview {
     DriverProfileView()
+        .environment(AuthViewModel())
 }

@@ -155,5 +155,6 @@ struct SignInView: View {
 #Preview {
     NavigationStack {
         SignInView()
+            .environment(AuthViewModel())
     }
 }
