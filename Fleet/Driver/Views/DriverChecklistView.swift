@@ -2,7 +2,10 @@ import SwiftUI
 
 struct DriverChecklistView: View {
 
-    @State private var checklistType: InspectionType = .preTrip
+    let checklistType: InspectionType
+    let onSubmit: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
     @State private var checkedItems: Set<String> = []
     @State private var isSubmitted = false
     
@@ -29,22 +32,34 @@ struct DriverChecklistView: View {
         checkedItems.count == currentItems.count
     }
 
+    func iconFor(item: String) -> String {
+        switch item {
+        case "Tire Pressure & Condition": return "tire"
+        case "Brake System Test": return "pedal.brake"
+        case "Fluid Levels (Oil, Coolant)": return "drop.fill"
+        case "Lights & Signals": return "headlight.high.beam"
+        case "Mirrors & Windshield": return "mirror.side.right"
+        case "Vehicle Cleanliness": return "sparkles"
+        case "New Damage Inspection": return "exclamationmark.triangle"
+        case "Fuel Level Check": return "fuelpump"
+        case "Cargo Area Secured": return "shippingbox"
+        default: return "circle"
+        }
+    }
+
     var body: some View {
         NavigationStack {
-            VStack {
-                Picker("Checklist Type", selection: $checklistType) {
-                    Text("Pre-Trip").tag(InspectionType.preTrip)
-                    Text("Post-Trip").tag(InspectionType.postTrip)
-                }
-                .pickerStyle(.segmented)
-                .padding()
-                .onChange(of: checklistType) { _ in
-                    checkedItems.removeAll()
-                    isSubmitted = false
-                }
-                
-                List {
-                    Section(header: Text("Mandatory Safety Checks")) {
+            VStack(spacing: 0) {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+                        SectionHeader(title: checklistType == .preTrip ? "Pre-Trip Inspection" : "Post-Trip Inspection")
+                            .padding(.top)
+                            
+                        Text("Mandatory Safety Checks")
+                            .font(themeModel.headline())
+                            .foregroundStyle(themeModel.textSecondary)
+                            .padding(.horizontal, 4)
+                        
                         ForEach(currentItems, id: \.self) { item in
                             Button(action: {
                                 if checkedItems.contains(item) {
@@ -53,44 +68,68 @@ struct DriverChecklistView: View {
                                     checkedItems.insert(item)
                                 }
                             }) {
-                                HStack {
-                                    Image(systemName: checkedItems.contains(item) ? "checkmark.circle.fill" : "circle")
-                                        .foregroundColor(checkedItems.contains(item) ? .green : .gray)
-                                        .font(.title3)
-                                    
-                                    Text(item)
-                                        .foregroundColor(.primary)
-                                        .padding(.leading, 8)
-                                }
-                                .padding(.vertical, 4)
+                                
+                                    HStack {
+                                        Image(systemName: iconFor(item: item))
+                                            .font(.system(size: 20))
+                                            .foregroundColor(themeModel.driverPrimary)
+                                            .frame(width: 30)
+
+                                        Text(item)
+                                            .font(themeModel.body())
+                                            .foregroundColor(themeModel.textPrimary)
+                                            .padding(.leading, 8)
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: checkedItems.contains(item) ? "checkmark.circle.fill" : "circle")
+                                            .foregroundColor(checkedItems.contains(item) ? themeModel.success : themeModel.textTertiary)
+                                            .font(.title3)
+                                    }
+                                    .padding(themeModel.spacingMD)
+                                    .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                                    )
+                                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
                             }
                         }
                     }
+                    .padding(.horizontal)
                 }
-                .listStyle(.insetGrouped)
                 
                 Button(action: {
                     isSubmitted = true
-                    // In a real app, this would update the server and unlock the "Start Trip" or "End Trip" button
-                    checkedItems.removeAll()
+                    onSubmit()
+                    dismiss()
                 }) {
                     Text(isSubmitted ? "Submitted Successfully" : "Submit Checklist")
-                        .font(.headline)
-                        .foregroundColor(.white)
+                        .font(themeModel.headline())
+                        .foregroundColor(isFormValid && !isSubmitted ? themeModel.buttonPrimaryText : themeModel.buttonDisabledText)
                         .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(isFormValid ? Color.blue : Color.gray)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .padding(themeModel.spacingMD)
+                        .background(isFormValid && !isSubmitted ? themeModel.driverPrimary : themeModel.buttonDisabled)
+                        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusSM))
                 }
                 .disabled(!isFormValid || isSubmitted)
                 .padding()
             }
-            .navigationTitle("Vehicle Checklist")
-            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle(checklistType == .preTrip ? "Pre-Trip Safety" : "Post-Trip Safety")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundStyle(themeModel.textSecondary)
+                }
+            }
+            .background(themeModel.backgroundPrimary.ignoresSafeArea())
         }
     }
 }
 
 #Preview {
-    DriverChecklistView()
+    DriverChecklistView(checklistType: .preTrip, onSubmit: {})
 }

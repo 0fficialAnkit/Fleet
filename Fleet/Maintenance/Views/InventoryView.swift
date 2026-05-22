@@ -21,10 +21,21 @@ struct InventoryView: View {
     
     var body: some View {
         NavigationStack {
-            List(searchResults) { item in
-                InventoryRow(item: item)
+            ZStack {
+                themeModel.backgroundPrimary.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: themeModel.spacingMD) {
+                        LazyVStack(spacing: themeModel.spacingMD) {
+                            ForEach(searchResults) { item in
+                                InventoryRow(item: item)
+                            }
+                        }
+                        .padding(.horizontal, themeModel.spacingMD)
+                    }
+                    .padding(.vertical, themeModel.spacingMD)
+                }
             }
-            .listStyle(.plain)
             .navigationTitle("Inventory")
             .searchable(text: $searchText, prompt: "Search parts...")
             .toolbar {
@@ -33,22 +44,30 @@ struct InventoryView: View {
                         // Action to add new inventory item
                     }) {
                         Image(systemName: "plus")
+                            .foregroundColor(themeModel.maintenancePrimary)
                     }
                 }
             }
             // AI Forecast Alert Banner
             .safeAreaInset(edge: .top) {
-                HStack {
-                    Image(systemName: "sparkles")
-                        .foregroundColor(.yellow)
-                    Text("AI Forecast: High demand for **Oil Filters** expected next week.")
-                        .font(.subheadline)
-                    Spacer()
-                }
-                .padding()
-                .background(Color.blue.opacity(0.1))
-                .cornerRadius(8)
-                .padding(.horizontal)
+                
+                    HStack(alignment: .top) {
+                        Image(systemName: "sparkles")
+                            .foregroundColor(themeModel.warning)
+                        Text("AI Forecast: High demand for **Oil Filters** expected next week.")
+                            .font(themeModel.bodyMedium())
+                            .foregroundStyle(themeModel.textPrimary)
+                        Spacer()
+                    }
+                    .padding(themeModel.spacingMD)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                    )
+                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                .padding(.horizontal, themeModel.spacingMD)
+                .padding(.bottom, themeModel.spacingMD)
             }
         }
     }
@@ -62,35 +81,37 @@ struct InventoryRow: View {
     }
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.partName ?? "Unknown Part")
-                    .font(.headline)
+        
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.partName ?? "Unknown Part")
+                        .font(themeModel.headline())
+                        .foregroundStyle(themeModel.textPrimary)
+                    
+                    Text("Cost: $\(String(format: "%.2f", item.unitCost ?? 0.0))")
+                        .font(themeModel.bodyMedium())
+                        .foregroundColor(themeModel.textSecondary)
+                }
                 
-                Text("Cost: $\(String(format: "%.2f", item.unitCost ?? 0.0))")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            VStack(alignment: .trailing, spacing: 4) {
-                Text("Stock: \(item.stockQuantity ?? 0)")
-                    .font(.headline)
-                    .foregroundColor(isLowStock ? .red : .primary)
+                Spacer()
                 
-                if isLowStock {
-                    Text("Reorder!")
-                        .font(.caption)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.red)
-                        .cornerRadius(4)
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("Stock: \(item.stockQuantity ?? 0)")
+                        .font(themeModel.headline())
+                        .foregroundColor(isLowStock ? themeModel.danger : themeModel.textPrimary)
+                    
+                    if isLowStock {
+                        StatusBadge(text: "Reorder!", color: themeModel.danger, icon: "exclamationmark.triangle.fill")
+                    }
                 }
             }
-        }
-        .padding(.vertical, 4)
+            .padding(themeModel.spacingMD)
+            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+            )
+            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
 }
 

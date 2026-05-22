@@ -4,16 +4,6 @@ struct DriverDashboardView: View {
 
     @State private var viewModel = DriverDashboardViewModel()
 
-    @State private var showCalendar = false
-
-    private let workedDays: Set<Int> = [
-        1, 2, 3, 5, 6, 8, 10, 11, 14, 15, 17
-    ]
-
-    private let absentDays: Set<Int> = [
-        4, 7, 9, 12
-    ]
-
     var vehicle: Vehicle { viewModel.vehicle }
     var trips: [Trip] { viewModel.todaysTrips }
 
@@ -23,43 +13,35 @@ struct DriverDashboardView: View {
 
             ScrollView(showsIndicators: false) {
 
-                VStack(spacing: 28) {
-
-                    headerSection
+                VStack(spacing: 20) {
 
                     vehicleCard
 
                     summaryCardsSection
 
-                    checklistBanner
+//                    checklistBanner
 
                     routesSection
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 10)
-                .padding(.bottom, 100)
+                .padding()
             }
-            .background(
-                themeModel.backgroundPrimary
-                    .ignoresSafeArea()
-            )
+            .background(themeModel.backgroundPrimary.ignoresSafeArea())
+            .navigationTitle("Driver Portal")
             .toolbar {
-
-                ToolbarItem(placement: .topBarTrailing) {
-
-                    Button(action: {
-
-                    }) {
-
-                        ZStack {
-
-                            Circle()
-                                .fill(themeModel.backgroundElevated.opacity(0.9))
-                                .frame(width: 38, height: 38)
-
-                            Image(systemName: "bell.fill")
-                                .font(.system(size: 16, weight: .medium))
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack(spacing: themeModel.spacingMD) {
+                        Button(action: {
+                            // Action for notifications
+                        }) {
+                            Image(systemName: "bell")
+                                .font(.title3)
                                 .foregroundStyle(themeModel.textPrimary)
+                        }
+                        
+                        NavigationLink(destination: DriverProfileView()) {
+                            Image(systemName: "person.crop.circle.fill")
+                                .font(.title2)
+                                .foregroundStyle(themeModel.driverPrimary)
                         }
                     }
                 }
@@ -72,296 +54,192 @@ struct DriverDashboardView: View {
     DriverDashboardView()
 }
 
-// MARK: - Header Section
-
-extension DriverDashboardView {
-
-    var headerSection: some View {
-
-        VStack(alignment: .leading, spacing: 6) {
-
-            Text("Good Morning")
-                .font(.system(size: 16, weight: .regular))
-                .foregroundStyle(themeModel.textSecondary)
-
-            Text("Driver Portal")
-                .font(.system(size: 34, weight: .semibold))
-                .foregroundStyle(themeModel.textPrimary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-// MARK: - Vehicle Card
-
 extension DriverDashboardView {
 
     var vehicleCard: some View {
+        
+            VStack(alignment: .leading, spacing: themeModel.spacingMD) {
 
-        VStack(alignment: .leading, spacing: 22) {
+                HStack {
 
-            HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: themeModel.spacingSM) {
 
-                VStack(alignment: .leading, spacing: 8) {
+                        Text("Assigned Vehicle")
+                            .font(themeModel.bodyMedium())
+                            .foregroundStyle(themeModel.textSecondary)
 
-                    Text("Assigned Vehicle")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(themeModel.textSecondary)
+                        Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
+                            .font(themeModel.title())
+                            .foregroundStyle(themeModel.textPrimary)
 
-                    Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundStyle(themeModel.textPrimary)
+                        Text(vehicle.licensePlate ?? "")
+                            .font(themeModel.bodyMedium())
+                            .foregroundStyle(themeModel.driverPrimary)
+                    }
 
-                    Text(vehicle.licensePlate ?? "")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(themeModel.info.opacity(0.9))
+                    Spacer()
+
+                    Image(systemName: "truck.box.fill")
+                        .font(.system(size: 40))
+//                        .foregroundStyle(themeModel.driverPrimary)
                 }
 
-                Spacer()
+                HStack(spacing: themeModel.spacingLG) {
 
-                Image(systemName: "box.truck.2.fill")
-                    .font(.system(size: 34, weight: .medium))
-                    .foregroundStyle(themeModel.info.opacity(0.85))
+                    Label("72% Fuel", systemImage: "fuelpump.fill")
+                        .font(themeModel.bodyMedium())
+                        .foregroundStyle(themeModel.success)
+
+                    Label("48.2k km", systemImage: "location.fill")
+                        .font(themeModel.bodyMedium())
+                        .foregroundStyle(themeModel.driverPrimary)
+                }
             }
-
-            Divider()
-                .overlay(themeModel.divider.opacity(0.4))
-
-            HStack {
-
-                vehicleInfoItem(
-                    title: "Fuel",
-                    value: "72%",
-                    icon: "fuelpump.circle"
-                )
-
-                Spacer()
-
-                vehicleInfoItem(
-                    title: "Range",
-                    value: "48.2 km",
-                    icon: "road.lanes"
-                )
-
-                Spacer()
-
-                vehicleInfoItem(
-                    title: "Health",
-                    value: "Excellent",
-                    icon: "checkmark.shield"
-                )
-            }
-        }
-        .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: 28)
-                .fill(themeModel.backgroundElevated.opacity(0.9))
-        )
+            .padding(themeModel.spacingMD)
+//            .background(
+//                LinearGradient(
+//                    colors: [
+//                        themeModel.driverPrimary.opacity(0.35),
+//                        themeModel.driverPrimary.opacity(0.15)
+//                    ],
+//                    startPoint: .topLeading,
+//                    endPoint: .bottomTrailing
+//                )
+//            )
+            .padding(0)
+            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+            )
+            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
-
-    func vehicleInfoItem(
-        title: String,
-        value: String,
-        icon: String
-    ) -> some View {
-
-        VStack(alignment: .leading, spacing: 6) {
-
-            Label(title, systemImage: icon)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(themeModel.textSecondary)
-
-            Text(value)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(themeModel.textPrimary)
-        }
-    }
-}
-
-// MARK: - Summary Cards
-
-extension DriverDashboardView {
 
     var summaryCardsSection: some View {
 
-        LazyVGrid(
-            columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ],
-            spacing: 16
-        ) {
-
-            refinedSummaryCard(
-                title: "Trips Today",
-                value: "2",
-                icon: "steeringwheel"
-            )
-
-            refinedSummaryCard(
-                title: "Distance",
-                value: "89 km",
-                icon: "point.topleft.down.curvedto.point.bottomright.up"
-            )
-
-            refinedSummaryCard(
-                title: "Hours Active",
-                value: "4.5 hrs",
-                icon: "timer"
-            )
-
-            refinedSummaryCard(
-                title: "Vehicle Health",
-                value: "Excellent",
-                icon: "checkmark.shield.fill"
-            )
-        }
-    }
-
-    func refinedSummaryCard(
-        title: String,
-        value: String,
-        icon: String
-    ) -> some View {
-
-        VStack(alignment: .leading, spacing: 18) {
-
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundStyle(themeModel.info.opacity(0.85))
-
-            VStack(alignment: .leading, spacing: 4) {
-
-                Text(value)
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundStyle(themeModel.textPrimary)
-
-                Text(title)
-                    .font(.system(size: 14))
-                    .foregroundStyle(themeModel.textSecondary)
+        VStack(spacing: themeModel.spacingMD) {
+            HStack(spacing: themeModel.spacingMD) {
+                MetricCard(icon: "arrow.triangle.swap", value: "2", label: "Trips Today", color: themeModel.success)
+                MetricCard(icon: "point.topleft.down.to.point.bottomright.curvepath", value: "89", label: "KM Driven", color: themeModel.warning)
+            }
+            
+            HStack(spacing: themeModel.spacingMD) {
+                MetricCard(icon: "timer", value: "4.5", label: "Hours Active", color: themeModel.analyticsPurple)
+                MetricCard(icon: "heart.text.clipboard", value: "Good", label: "Vehicle Health", color: themeModel.danger)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(themeModel.backgroundElevated.opacity(0.85))
-        )
     }
-}
-
-// MARK: - Checklist Banner
-
-extension DriverDashboardView {
 
     var checklistBanner: some View {
 
-        HStack(spacing: 14) {
+        
+            HStack {
 
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 24))
-                .foregroundStyle(Color.green)
+                Image(systemName: "checkmark.shield.fill")
+                    .foregroundStyle(themeModel.success)
+                    .font(.title2)
 
-            VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 4) {
 
-                Text("Pre-trip checklist completed")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(themeModel.textPrimary)
+                    Text("Pre-trip checklist complete")
+                        .font(themeModel.headline())
+                        .foregroundStyle(themeModel.textPrimary)
 
-                Text("8/8 items verified • Updated just now")
-                    .font(.system(size: 13))
-                    .foregroundStyle(themeModel.textSecondary)
+                    Text("8/8 items verified")
+                        .font(themeModel.caption())
+                        .foregroundStyle(themeModel.textSecondary)
+                }
+
+                Spacer()
             }
-
-            Spacer()
-        }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color.green.opacity(0.12))
-        )
+            .padding(themeModel.spacingMD)
+            .background(themeModel.success.opacity(0.15))
+            .padding(0)
+            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+            )
+            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
-}
-
-
-// MARK: - Routes Section
-
-extension DriverDashboardView {
 
     var routesSection: some View {
 
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
 
-            Text("Today's Routes")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(themeModel.textPrimary)
+            SectionHeader(title: "Today's Routes")
 
             ForEach(trips) { trip in
 
-                VStack(alignment: .leading, spacing: 18) {
+                
+                    VStack(alignment: .leading, spacing: themeModel.spacingMD) {
 
-                    HStack {
+                        HStack {
 
-                        Text("T-4821")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(themeModel.info)
+                            Text("T-4821")
+                                .font(themeModel.headline())
+                                .foregroundStyle(themeModel.driverPrimary)
 
-                        Spacer()
+                            Spacer()
 
-                        Label("09:00 AM", systemImage: "calendar.badge.clock")
-                            .font(.system(size: 14))
-                            .foregroundStyle(themeModel.textSecondary)
-                    }
-
-                    VStack(alignment: .leading, spacing: 12) {
-
-                        HStack(spacing: 12) {
-
-                            Circle()
-                                .fill(Color.green)
-                                .frame(width: 10, height: 10)
-
-                            Text("Warehouse A")
-                                .font(.system(size: 16))
-                                .foregroundStyle(themeModel.textPrimary)
+                            Label("09:00 AM", systemImage: "clock")
+                                .font(themeModel.bodyMedium())
+                                .foregroundStyle(themeModel.textSecondary)
                         }
 
-                        HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 12) {
 
-                            Circle()
-                                .fill(Color.red.opacity(0.85))
-                                .frame(width: 10, height: 10)
+                            HStack {
+                                Circle()
+                                    .fill(themeModel.success)
+                                    .frame(width: 10)
 
-                            Text("Distribution Center")
-                                .font(.system(size: 16))
-                                .foregroundStyle(themeModel.textPrimary)
+                                Text("Warehouse A")
+                                    .font(themeModel.body())
+                                    .foregroundStyle(themeModel.textPrimary)
+                            }
+
+                            Rectangle()
+                                .fill(themeModel.divider)
+                                .frame(width: 1, height: 20)
+                                .padding(.leading, 4)
+
+                            HStack {
+                                Circle()
+                                    .fill(themeModel.danger)
+                                    .frame(width: 10)
+
+                                Text("Distribution Center")
+                                    .font(themeModel.body())
+                                    .foregroundStyle(themeModel.textPrimary)
+                            }
+                        }
+
+                        HStack {
+
+                            Text("42 km")
+                                .font(themeModel.bodyMedium())
+                                .foregroundStyle(themeModel.textSecondary)
+
+                            Spacer()
+
+                            Button(action: {
+                                // Navigation action
+                            }) {
+                                Text("Navigate")
+                                    .font(themeModel.bodyMedium())
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(themeModel.driverPrimary)
                         }
                     }
-
-                    HStack {
-
-                        Text("42 km • 58 mins")
-                            .font(.system(size: 14))
-                            .foregroundStyle(themeModel.textSecondary)
-
-                        Spacer()
-
-                        Button(action: {
-
-                        }) {
-
-                            Label("Start Trip", systemImage: "arrow.triangle.turn.up.right.diamond.fill")
-                                .font(.system(size: 15, weight: .semibold))
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(themeModel.info.opacity(0.9))
-                    }
-                }
-                .padding(22)
-                .background(
-                    RoundedRectangle(cornerRadius: 26)
-                        .fill(themeModel.backgroundElevated.opacity(0.88))
-                )
+                    .padding(themeModel.spacingMD)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                    )
+                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
             }
         }
     }
