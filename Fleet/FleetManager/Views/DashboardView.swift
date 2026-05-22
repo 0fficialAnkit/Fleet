@@ -20,14 +20,13 @@ struct DashboardView: View {
             .navigationTitle("Dashboard")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-
-                    Button(action: {
-                        // Notification action
-                    }) {
-
-                        Image(systemName: "bell")
+                    NavigationLink(destination: SupportInboxView(
+                        userRole: .fleetManager,
+                        userId: UUID(uuidString: "22000000-0000-0000-0000-000000000001")!
+                    )) {
+                        Image(systemName: "message.fill")
                             .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(themeModel.textPrimary)
+                            .foregroundStyle(themeModel.accent)
                             .frame(width: 38, height: 38)
                             .glassEffect(in: Circle())
                     }

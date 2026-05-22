@@ -44,22 +44,19 @@ struct DriverDashboardView: View {
                     .ignoresSafeArea()
             )
             .toolbar {
-
                 ToolbarItem(placement: .topBarTrailing) {
-
-                    Button(action: {
-
-                    }) {
-
+                    NavigationLink(destination: SupportInboxView(
+                        userRole: .driver,
+                        userId: UUID(uuidString: "22000000-0000-0000-0000-000000000002")!
+                    )) {
                         ZStack {
-
                             Circle()
                                 .fill(themeModel.backgroundElevated.opacity(0.9))
                                 .frame(width: 38, height: 38)
 
-                            Image(systemName: "bell.fill")
+                            Image(systemName: "message.fill")
                                 .font(.system(size: 16, weight: .medium))
-                                .foregroundStyle(themeModel.textPrimary)
+                                .foregroundStyle(themeModel.accent)
                         }
                     }
                 }
