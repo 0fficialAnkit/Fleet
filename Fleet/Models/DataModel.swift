@@ -47,9 +47,11 @@ enum TripStatus: String, Codable, CaseIterable, Sendable {
   case cancelled = "cancelled"
 }
 
-enum InspectionType: String, Codable, CaseIterable, Sendable {
+enum InspectionType: String, Codable, CaseIterable, Sendable, Identifiable {
   case preTrip = "pre_trip"
   case postTrip = "post_trip"
+
+  var id: String { rawValue }
 }
 
 enum DefectSeverity: String, Codable, CaseIterable, Sendable {
