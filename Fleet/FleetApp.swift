@@ -9,10 +9,12 @@ import SwiftUI
 
 @main
 struct FleetApp: App {
+    @State private var authViewModel = AuthViewModel()
+
     var body: some Scene {
         WindowGroup {
-//            DriverRootView()
             FleetManagerMainView()
+                .environment(authViewModel)
         }
     }
 }
