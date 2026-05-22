@@ -17,11 +17,6 @@ struct MaintenanceRootView: View {
                 .tabItem {
                     Label("Inventory", systemImage: "archivebox.fill")
                 }
-
-            MaintenanceProfileView()
-                .tabItem {
-                    Label("Profile", systemImage: "person.crop.circle.fill")
-                }
         }
         .tint(themeModel.maintenancePrimary)
     }

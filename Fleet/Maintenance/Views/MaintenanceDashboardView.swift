@@ -2,6 +2,8 @@ import SwiftUI
 
 struct MaintenanceDashboardView: View {
     @State private var viewModel = MaintenanceDashboardViewModel()
+    @State private var isShowingProfile = false
+    @Environment(AuthViewModel.self) private var authViewModel
 
     var body: some View {
         NavigationStack {
@@ -109,6 +111,19 @@ struct MaintenanceDashboardView: View {
                 }
             }
             .navigationTitle("Dashboard")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { isShowingProfile = true }) {
+                        Image(systemName: "person.crop.circle")
+                            .font(.system(size: 28, weight: .medium))
+//                            .foregroundStyle(themeModel.maintenancePrimary)
+                    }
+                }
+            }
+            .sheet(isPresented: $isShowingProfile) {
+                MaintenanceProfileView()
+                    .environment(authViewModel)
+            }
         }
     }
 }
@@ -217,4 +232,5 @@ struct TaskRow: View {
 
 #Preview {
     MaintenanceDashboardView()
+        .environment(AuthViewModel())
 }
