@@ -47,6 +47,14 @@ enum TripStatus: String, Codable, CaseIterable, Sendable {
   case cancelled = "cancelled"
 }
 
+enum OrderType: String, Codable, CaseIterable, Sendable, Identifiable {
+  case pickUpAndDrop = "Pick Up & Drop"
+  case bulkOrderShip = "Bulk Order Ship"
+  case travel = "Travel"
+  
+  var id: String { rawValue }
+}
+
 enum InspectionType: String, Codable, CaseIterable, Sendable {
   case preTrip = "pre_trip"
   case postTrip = "post_trip"
@@ -329,6 +337,7 @@ struct Trip: Codable, Identifiable, Hashable, Sendable {
   var endTime: Date?
   var distance: Double?
   var status: TripStatus?
+  var orderType: OrderType?
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -338,6 +347,7 @@ struct Trip: Codable, Identifiable, Hashable, Sendable {
       case startTime = "start_time"
       case endTime = "end_time"
       case distance, status
+      case orderType = "order_type"
   }
 }
 

@@ -3,20 +3,16 @@ import SwiftUI
 struct AddEmployeeView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: EmployeesViewModel
+    let roleName: String
     
     @State private var fullName = ""
     @State private var email = ""
+    @State private var password = ""
     @State private var phone = ""
     @State private var licenseNumber = ""
-    @State private var selectedRoleId: UUID?
     
     var isDriverSelected: Bool {
-        guard let id = selectedRoleId, let role = viewModel.roles.first(where: { $0.id == id }) else { return false }
-        return role.roleName.lowercased() == "driver"
-    }
-    
-    var assignableRoles: [Role] {
-        viewModel.roles.filter { $0.roleName.lowercased() != "fleet manager" }
+        return roleName.lowercased() == "driver"
     }
     
     var body: some View {
@@ -31,7 +27,6 @@ struct AddEmployeeView: View {
                             SectionHeader(title: "Personal Details")
                                 .padding(.horizontal, themeModel.spacingMD)
                             
-                            
                                 VStack(spacing: 0) {
                                     TextField("Full Name", text: $fullName)
                                         .padding(.vertical, 12)
@@ -44,6 +39,12 @@ struct AddEmployeeView: View {
                                         .autocapitalization(.none)
                                         .padding(.vertical, 12)
                                         .foregroundColor(themeModel.textPrimary)
+                                        
+                                    Divider().background(themeModel.divider)
+                                    
+                                    SecureField("Password", text: $password)
+                                        .padding(.vertical, 12)
+                                        .foregroundColor(themeModel.textPrimary)
                                     
                                     Divider().background(themeModel.divider)
                                     
@@ -52,12 +53,13 @@ struct AddEmployeeView: View {
                                         .padding(.vertical, 12)
                                         .foregroundColor(themeModel.textPrimary)
                                     
-                                    Divider().background(themeModel.divider)
-                                    
-                                    TextField("Driver License Number", text: $licenseNumber)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(isDriverSelected ? themeModel.textPrimary : themeModel.textDisabled)
-                                        .disabled(!isDriverSelected)
+                                    if isDriverSelected {
+                                        Divider().background(themeModel.divider)
+                                        
+                                        TextField("Driver License Number", text: $licenseNumber)
+                                            .padding(.vertical, 12)
+                                            .foregroundColor(themeModel.textPrimary)
+                                    }
                                 }
                                 .padding(themeModel.spacingMD)
                                 .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
@@ -68,39 +70,11 @@ struct AddEmployeeView: View {
                                 .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
                             .padding(.horizontal, themeModel.spacingMD)
                         }
-                        
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
-                            SectionHeader(title: "Role & Access")
-                                .padding(.horizontal, themeModel.spacingMD)
-                            
-                            
-VStack(spacing: 0) {
-                                Picker("Select Role", selection: $selectedRoleId) {
-                                    Text("Select a role").tag(UUID?.none)
-                                    ForEach(assignableRoles) { role in
-                                        Text(role.roleName).tag(UUID?.some(role.id))
-                                    }
-                                }
-                                .pickerStyle(.menu)
-                                .tint(themeModel.textPrimary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 8)
-                            
-                            }
-                            .padding(themeModel.spacingMD)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                            )
-                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
-                        }
                     }
                     .padding(.vertical, themeModel.spacingMD)
                 }
             }
-            .navigationTitle("Add Employee")
+            .navigationTitle(isDriverSelected ? "Add Driver" : "Add Maintenance Staff")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -112,20 +86,21 @@ VStack(spacing: 0) {
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        if let roleId = selectedRoleId, !fullName.isEmpty {
+                        if let role = viewModel.roles.first(where: { $0.roleName.lowercased() == roleName.lowercased() }), !fullName.isEmpty {
                             viewModel.addEmployee(
                                 fullName: fullName,
                                 email: email,
                                 phone: phone,
                                 licenseNumber: isDriverSelected && !licenseNumber.isEmpty ? licenseNumber : nil,
-                                roleId: roleId
+                                roleId: role.id,
+                                passwordHash: password // Mocking hashing
                             )
                             dismiss()
                         }
                     }
                     .foregroundColor(themeModel.accent)
                     .bold()
-                    .disabled(fullName.isEmpty || selectedRoleId == nil)
+                    .disabled(fullName.isEmpty)
                 }
             }
         }
@@ -133,5 +108,5 @@ VStack(spacing: 0) {
 }
 
 #Preview {
-    AddEmployeeView(viewModel: EmployeesViewModel())
+    AddEmployeeView(viewModel: EmployeesViewModel(), roleName: "driver")
 }

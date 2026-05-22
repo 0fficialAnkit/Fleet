@@ -95,7 +95,7 @@ enum MockData {
     ]
 
     // MARK: - Users
-    static let users: [User] = [
+    static var users: [User] = [
         User(
             id: uManager,
             fullName: "Ankit Kumar",
@@ -159,7 +159,7 @@ enum MockData {
     ]
 
     // MARK: - Vehicles
-    static let vehicles: [Vehicle] = [
+    static var vehicles: [Vehicle] = [
         Vehicle(
             id: vTruck1,
             make: "Tata",
@@ -318,7 +318,7 @@ enum MockData {
     ]
 
     // MARK: - Trips
-    static let trips: [Trip] = [
+    static var trips: [Trip] = [
         Trip(
             id: trip1,
             vehicleId: vTruck1,

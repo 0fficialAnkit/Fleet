@@ -7,9 +7,11 @@ struct EditEmployeeView: View {
     @State private var user: User
     @State private var fullName: String
     @State private var email: String
+    @State private var password = "" // Blank unless they want to change it
     @State private var phone: String
     @State private var licenseNumber: String
-    @State private var selectedRoleId: UUID?
+    
+    let isDriverSelected: Bool
     
     init(user: User, viewModel: EmployeesViewModel) {
         self.viewModel = viewModel
@@ -18,85 +20,104 @@ struct EditEmployeeView: View {
         _email = State(initialValue: user.email)
         _phone = State(initialValue: user.phone ?? "")
         _licenseNumber = State(initialValue: user.licenseNumber ?? "")
-        _selectedRoleId = State(initialValue: user.roleId)
-    }
-    
-    var isDriverSelected: Bool {
-        guard let id = selectedRoleId, let role = viewModel.roles.first(where: { $0.id == id }) else { return false }
-        return role.roleName.lowercased() == "driver"
-    }
-    
-    var assignableRoles: [Role] {
-        viewModel.roles.filter { $0.roleName.lowercased() != "fleet manager" }
+        
+        let roleName = viewModel.getRole(for: user)?.roleName.lowercased() ?? ""
+        self.isDriverSelected = (roleName == "driver")
     }
     
     var body: some View {
         NavigationStack {
-            Form {
-                Section(header: Text("Personal Details").foregroundColor(themeModel.textSecondary)) {
-                    TextField("Full Name", text: $fullName)
-                        .foregroundColor(themeModel.textPrimary)
-                    TextField("Email", text: $email)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                        .foregroundColor(themeModel.textPrimary)
-                    TextField("Phone", text: $phone)
-                        .keyboardType(.phonePad)
-                        .foregroundColor(themeModel.textPrimary)
-                    
-                    TextField("Driver License Number", text: $licenseNumber)
-                        .foregroundColor(isDriverSelected ? themeModel.textPrimary : themeModel.textDisabled)
-                        .disabled(!isDriverSelected)
-                }
-                .listRowBackground(themeModel.backgroundElevated)
+            ZStack {
+                themeModel.backgroundPrimary.ignoresSafeArea()
                 
-                Section(header: Text("Role & Access").foregroundColor(themeModel.textSecondary)) {
-                    Picker("Select Role", selection: $selectedRoleId) {
-                        Text("Select a role").tag(UUID?.none)
-                        ForEach(assignableRoles) { role in
-                            Text(role.roleName).tag(UUID?.some(role.id))
+                ScrollView {
+                    VStack(spacing: themeModel.spacingLG) {
+                        
+                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                            SectionHeader(title: "Personal Details")
+                                .padding(.horizontal, themeModel.spacingMD)
+                            
+                                VStack(spacing: 0) {
+                                    TextField("Full Name", text: $fullName)
+                                        .padding(.vertical, 12)
+                                        .foregroundColor(themeModel.textPrimary)
+                                    
+                                    Divider().background(themeModel.divider)
+                                    
+                                    TextField("Email", text: $email)
+                                        .keyboardType(.emailAddress)
+                                        .autocapitalization(.none)
+                                        .padding(.vertical, 12)
+                                        .foregroundColor(themeModel.textPrimary)
+                                        
+                                    Divider().background(themeModel.divider)
+                                    
+                                    SecureField("New Password (optional)", text: $password)
+                                        .padding(.vertical, 12)
+                                        .foregroundColor(themeModel.textPrimary)
+                                    
+                                    Divider().background(themeModel.divider)
+                                    
+                                    TextField("Phone", text: $phone)
+                                        .keyboardType(.phonePad)
+                                        .padding(.vertical, 12)
+                                        .foregroundColor(themeModel.textPrimary)
+                                    
+                                    if isDriverSelected {
+                                        Divider().background(themeModel.divider)
+                                        
+                                        TextField("Driver License Number", text: $licenseNumber)
+                                            .padding(.vertical, 12)
+                                            .foregroundColor(themeModel.textPrimary)
+                                    }
+                                }
+                                .padding(themeModel.spacingMD)
+                                .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                        .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                                )
+                                .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                            .padding(.horizontal, themeModel.spacingMD)
                         }
                     }
-                    .foregroundColor(themeModel.textPrimary)
+                    .padding(.vertical, themeModel.spacingMD)
                 }
-                .listRowBackground(themeModel.backgroundElevated)
             }
-            .scrollContentBackground(.hidden)
-            .background(themeModel.backgroundPrimary)
-            .navigationTitle("Edit Employee")
+            .navigationTitle(isDriverSelected ? "Edit Driver" : "Edit Maintenance Staff")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(themeModel.info)
+                    .foregroundColor(themeModel.accent)
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        if let roleId = selectedRoleId, !fullName.isEmpty {
+                        if !fullName.isEmpty {
                             var updatedUser = user
                             updatedUser.fullName = fullName
                             updatedUser.email = email
                             updatedUser.phone = phone.isEmpty ? nil : phone
                             updatedUser.licenseNumber = isDriverSelected && !licenseNumber.isEmpty ? licenseNumber : nil
-                            updatedUser.roleId = roleId
+                            
+                            // Only update password if they typed a new one
+                            if !password.isEmpty {
+                                updatedUser.passwordHash = password // Mocking hashing
+                            }
                             
                             viewModel.updateEmployee(updatedUser)
                             dismiss()
                         }
                     }
-                    .foregroundColor(themeModel.info)
+                    .foregroundColor(themeModel.accent)
                     .bold()
-                    .disabled(fullName.isEmpty || selectedRoleId == nil)
+                    .disabled(fullName.isEmpty)
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 }
 

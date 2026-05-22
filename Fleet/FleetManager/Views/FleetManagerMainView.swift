@@ -41,18 +41,18 @@ struct FleetManagerMainView: View {
                 }
                 .tag(1)
 
-            // MARK: Vehicles
-            VehiclesRootView()
+            // MARK: Orders
+            OrdersView()
                 .tabItem {
-                    Image(systemName: "truck.box.fill")
-                    Text("Vehicles")
+                    Image(systemName: "shippingbox.fill")
+                    Text("Orders")
                 }
                 .tag(2)
 
             // MARK: Reports
             ReportsView()
                 .tabItem {
-                    Image(systemName: "exclamationmark.triangle.fill")
+                    Image(systemName: "chart.bar.fill")
                     Text("Reports")
                 }
                 .tag(3)

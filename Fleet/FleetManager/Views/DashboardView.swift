@@ -42,13 +42,24 @@ struct DashboardView: View {
                     .environment(authViewModel)
             }
         }
+        .onAppear {
+            viewModel.refreshData()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("VehiclesUpdated"))) { _ in
+            viewModel.refreshData()
+        }
     }
 
     
     // MARK: - Metrics Grid
     private var metricsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: themeModel.spacingMD) {
-            MetricCard(icon: "truck.box.fill", value: "\(viewModel.totalVehicles)", label: "Total Vehicles", color: themeModel.accent)
+            NavigationLink(destination: VehiclesRootView()) {
+                MetricCard(icon: "truck.box.fill", value: "\(viewModel.totalVehicles)", label: "Total Vehicles", color: themeModel.accent)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            
             MetricCard(icon: "location.north.line.fill", value: "\(viewModel.activeTrips)", label: "Active Trips", color: themeModel.success)
             MetricCard(icon: "tray.full.fill", value: "\(viewModel.pendingOrders)", label: "Pending Orders", color: themeModel.warning)
             MetricCard(icon: "steeringwheel", value: "\(viewModel.driversOnTrip)", label: "Drivers on Trip", color: themeModel.analyticsPurple)

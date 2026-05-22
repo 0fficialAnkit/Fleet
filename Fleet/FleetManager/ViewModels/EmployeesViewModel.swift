@@ -35,28 +35,35 @@ final class EmployeesViewModel {
         }
     }
     
-    func addEmployee(fullName: String, email: String, phone: String, licenseNumber: String?, roleId: UUID) {
+    func refreshData() {
+        self.users = MockData.users
+    }
+
+    func addEmployee(fullName: String, email: String, phone: String, licenseNumber: String?, roleId: UUID, passwordHash: String) {
         let newUser = User(
             id: UUID(),
             fullName: fullName,
             email: email,
-            passwordHash: "$2b$12$dummy",
+            passwordHash: passwordHash.isEmpty ? "$2b$12$dummy" : passwordHash,
             phone: phone,
             licenseNumber: licenseNumber,
             roleId: roleId,
             status: .active,
             createdAt: Date()
         )
-        users.append(newUser)
+        MockData.users.append(newUser)
+        refreshData()
     }
     
     func deleteEmployee(_ user: User) {
-        users.removeAll { $0.id == user.id }
+        MockData.users.removeAll { $0.id == user.id }
+        refreshData()
     }
     
     func updateEmployee(_ updatedUser: User) {
-        if let index = users.firstIndex(where: { $0.id == updatedUser.id }) {
-            users[index] = updatedUser
+        if let index = MockData.users.firstIndex(where: { $0.id == updatedUser.id }) {
+            MockData.users[index] = updatedUser
+            refreshData()
         }
     }
 }
