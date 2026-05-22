@@ -53,7 +53,7 @@ struct FleetView: View {
                             .font(.system(size: 17, weight: .medium))
                             .foregroundStyle(themeModel.textPrimary)
                             .frame(width: 38, height: 38)
-                            .glassEffect(in: Circle())
+//                            .glassEffect(in: Circle())
                     }
                     .buttonStyle(.plain)
                 }

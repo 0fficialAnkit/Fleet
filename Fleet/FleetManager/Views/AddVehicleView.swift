@@ -12,42 +12,92 @@ struct AddVehicleView: View {
     @State private var mileage = ""
     @State private var purchaseDate = Date()
     
-    var isFormValid: Bool {
-        !make.isEmpty && !model.isEmpty && !year.isEmpty && !licensePlate.isEmpty && Int(year) != nil
-    }
-    
     var body: some View {
         NavigationStack {
-            Form {
-                Section(header: Text("Basic Details").foregroundColor(themeModel.textSecondary)) {
-                    TextField("Manufacturer (e.g. Ford)", text: $make)
-                        .foregroundColor(themeModel.textPrimary)
-                    TextField("Model (e.g. Transit)", text: $model)
-                        .foregroundColor(themeModel.textPrimary)
-                    TextField("Year (e.g. 2024)", text: $year)
-                        .keyboardType(.numberPad)
-                        .foregroundColor(themeModel.textPrimary)
-                    TextField("License Plate", text: $licensePlate)
-                        .textInputAutocapitalization(.characters)
-                        .foregroundColor(themeModel.textPrimary)
-                }
-                .listRowBackground(themeModel.backgroundElevated)
+            ZStack {
+                themeModel.backgroundPrimary.ignoresSafeArea()
                 
-                Section(header: Text("Specifications").foregroundColor(themeModel.textSecondary)) {
-                    TextField("Tank Capacity (L)", text: $tankCapacity)
-                        .keyboardType(.decimalPad)
-                        .foregroundColor(themeModel.textPrimary)
-                    TextField("Mileage (km/l)", text: $mileage)
-                        .keyboardType(.decimalPad)
-                        .foregroundColor(themeModel.textPrimary)
-                    DatePicker("Purchase Date", selection: $purchaseDate, displayedComponents: .date)
-                        .foregroundColor(themeModel.textPrimary)
-                        .tint(themeModel.info)
+                ScrollView {
+                    VStack(spacing: themeModel.spacingLG) {
+                        
+                        // Basic Details Section
+                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                            SectionHeader(title: "Basic Details")
+                                .padding(.horizontal, themeModel.spacingMD)
+                            
+                            VStack(spacing: 0) {
+                                TextField("Manufacturer (e.g. Ford)", text: $make)
+                                    .padding(.vertical, 12)
+                                    .foregroundColor(themeModel.textPrimary)
+                                
+                                Divider().background(themeModel.divider)
+                                
+                                TextField("Model (e.g. Transit)", text: $model)
+                                    .padding(.vertical, 12)
+                                    .foregroundColor(themeModel.textPrimary)
+                                    
+                                Divider().background(themeModel.divider)
+                                
+                                TextField("Year (e.g. 2024)", text: $year)
+                                    .keyboardType(.numberPad)
+                                    .padding(.vertical, 12)
+                                    .foregroundColor(themeModel.textPrimary)
+                                
+                                Divider().background(themeModel.divider)
+                                
+                                TextField("License Plate", text: $licensePlate)
+                                    .textInputAutocapitalization(.characters)
+                                    .padding(.vertical, 12)
+                                    .foregroundColor(themeModel.textPrimary)
+                            }
+                            .padding(themeModel.spacingMD)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                            )
+                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                            .padding(.horizontal, themeModel.spacingMD)
+                        }
+                        
+                        // Specifications Section
+                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                            SectionHeader(title: "Specifications")
+                                .padding(.horizontal, themeModel.spacingMD)
+                            
+                            VStack(spacing: 0) {
+                                TextField("Tank Capacity (L)", text: $tankCapacity)
+                                    .keyboardType(.decimalPad)
+                                    .padding(.vertical, 12)
+                                    .foregroundColor(themeModel.textPrimary)
+                                
+                                Divider().background(themeModel.divider)
+                                
+                                TextField("Mileage (km/l)", text: $mileage)
+                                    .keyboardType(.decimalPad)
+                                    .padding(.vertical, 12)
+                                    .foregroundColor(themeModel.textPrimary)
+                                
+                                Divider().background(themeModel.divider)
+                                
+                                DatePicker("Purchase Date", selection: $purchaseDate, displayedComponents: .date)
+                                    .padding(.vertical, 12)
+                                    .foregroundColor(themeModel.textPrimary)
+                                    .tint(themeModel.info)
+                            }
+                            .padding(themeModel.spacingMD)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                            )
+                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                            .padding(.horizontal, themeModel.spacingMD)
+                        }
+                    }
+                    .padding(.vertical, themeModel.spacingMD)
                 }
-                .listRowBackground(themeModel.backgroundElevated)
             }
-            .scrollContentBackground(.hidden)
-            .background(themeModel.backgroundPrimary)
             .navigationTitle("Add Vehicle")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
