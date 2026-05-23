@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct AddEmployeeView: View {
     @Environment(\.dismiss) private var dismiss
@@ -10,6 +11,7 @@ struct AddEmployeeView: View {
     @State private var password = ""
     @State private var phone = ""
     @State private var licenseNumber = ""
+    @State private var isPasswordVisible = false
     
     var isDriverSelected: Bool {
         return roleName.lowercased() == "driver"
@@ -55,9 +57,23 @@ struct AddEmployeeView: View {
                                         
                                     Divider().background(themeModel.divider)
                                     
-                                    SecureField("Password", text: $password)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
+                                    HStack {
+                                        if isPasswordVisible {
+                                            TextField("Password", text: $password)
+                                                .foregroundColor(themeModel.textPrimary)
+                                        } else {
+                                            SecureField("Password", text: $password)
+                                                .foregroundColor(themeModel.textPrimary)
+                                        }
+                                        
+                                        Button(action: {
+                                            isPasswordVisible.toggle()
+                                        }) {
+                                            Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                                                .foregroundColor(themeModel.textSecondary)
+                                        }
+                                    }
+                                    .padding(.vertical, 12)
                                     
                                     Divider().background(themeModel.divider)
                                     
@@ -111,8 +127,25 @@ struct AddEmployeeView: View {
                                     role: dbRole
                                 )
                                 dismiss()
-                            } catch {
+                            } catch let error as NSError where error.domain == "ProfileService" {
                                 viewModel.errorMessage = error.localizedDescription
+                            } catch {
+                                // Supabase functions error might contain a body
+                                if let functionsError = error as? FunctionsError {
+                                    switch functionsError {
+                                    case .httpError(let code, let data):
+                                        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                                           let serverError = json["error"] as? String {
+                                            viewModel.errorMessage = "Server Error (\(code)): \(serverError)"
+                                        } else {
+                                            viewModel.errorMessage = "HTTP Error \(code)"
+                                        }
+                                    case .relayError:
+                                        viewModel.errorMessage = "Network relay error"
+                                    }
+                                } else {
+                                    viewModel.errorMessage = error.localizedDescription
+                                }
                             }
                         }
                     }

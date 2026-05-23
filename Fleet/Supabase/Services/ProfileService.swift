@@ -134,7 +134,7 @@ enum ProfileService {
 
     // MARK: - Create user via Edge Function (manager only)
 
-    static func createUserViaEdgeFunction(
+    static func createUserLocally(
         email: String,
         password: String,
         fullName: String,
@@ -142,45 +142,64 @@ enum ProfileService {
         licenseNumber: String?,
         role: String
     ) async throws -> UUID {
-        struct CreateUserRequest: Encodable {
-            let email: String
-            let password: String
-            let fullName: String
-            let phone: String?
-            let licenseNumber: String?
-            let role: String
+        
+        // 1. Fetch role_id
+        let roles = try await allRoles()
+        let normalizedRole = normalizeRoleName(role)
+        guard let roleId = roles.first(where: { normalizeRoleName($0.roleName) == normalizedRole })?.id else {
+            throw NSError(domain: "ProfileService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Role not found"])
         }
-
-        struct CreateUserResponse: Decodable {
-            let success: Bool?
-            let userId: UUID?
-            let message: String?
-            let error: String?
+        
+        // 2. Prepare user metadata
+        var userData: [String: Any] = [
+            "full_name": fullName,
+            "fullName": fullName,
+            "role": normalizedRole,
+            "role_id": roleId.uuidString
+        ]
+        if let phone = phone, !phone.isEmpty { userData["phone"] = phone }
+        if let license = licenseNumber, !license.isEmpty { userData["license_number"] = license }
+        
+        // 3. Make direct REST API call to /auth/v1/signup to bypass Edge Function 
+        // and avoid overriding the local SupabaseClient session.
+        let url = supabaseURL.appendingPathComponent("auth/v1/signup")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.addValue(supabaseKey, forHTTPHeaderField: "apikey")
+        request.addValue("Bearer \(supabaseKey)", forHTTPHeaderField: "Authorization")
+        
+        let body: [String: Any] = [
+            "email": email,
+            "password": password,
+            "data": userData
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "ProfileService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
         }
-
-        let body = CreateUserRequest(
-            email: email,
-            password: password,
-            fullName: fullName,
-            phone: phone,
-            licenseNumber: licenseNumber,
-            role: role
-        )
-
-        let response: CreateUserResponse = try await supabase.functions
-            .invoke(
-                "create-user",
-                options: .init(body: body)
-            )
-
-        if let error = response.error {
-            throw NSError(domain: "ProfileService", code: 400, userInfo: [NSLocalizedDescriptionKey: error])
+        
+        if !(200...299).contains(httpResponse.statusCode) {
+            let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            let msg = errorJson?["msg"] as? String ?? "Unknown database error"
+            throw NSError(domain: "ProfileService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
         }
-
-        guard let userId = response.userId else {
-            throw NSError(domain: "ProfileService", code: 500, userInfo: [NSLocalizedDescriptionKey: "No user ID returned"])
+        
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        guard let userDict = json?["user"] as? [String: Any],
+              let idString = userDict["id"] as? String,
+              let newUserId = UUID(uuidString: idString) else {
+            
+            // Sometimes signup returns the user object directly at root if email confirmation is disabled
+            if let idString = json?["id"] as? String, let newUserId = UUID(uuidString: idString) {
+                return newUserId
+            }
+            throw NSError(domain: "ProfileService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Could not parse new user ID"])
         }
-
-        return userId
+        
+        return newUserId
     }
 }

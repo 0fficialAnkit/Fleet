@@ -9,7 +9,7 @@ struct MaintenanceProfileView: View {
         ("Certifications", "rosette", false),
         ("Shift Schedule", "calendar", false),
         ("Assigned Depot", "building.2.fill", false),
-        ("Notifications", "bell.badge", false),
+        ("Notifications", "bell", false),
         ("Performance Report", "chart.bar.xaxis", false)
     ]
 

@@ -158,6 +158,4 @@ struct EditVehicleView: View {
     }
 }
 
-#Preview {
-    EditVehicleView(viewModel: VehiclesViewModel(), vehicle: MockData.vehicles.first!)
-}
+

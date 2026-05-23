@@ -84,3 +84,10 @@ final class DashboardViewModel {
         maintenanceTasks.first { $0.vehicleId == vehicleId && $0.status != .completed }
     }
 }
+
+enum FleetManagerDestination: Hashable {
+    case vehiclesRoot
+    case employeeDetail(Profile)
+    case orderDetail(Trip)
+    case vehicleDetail(Vehicle)
+}

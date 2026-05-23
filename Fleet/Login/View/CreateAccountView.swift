@@ -6,6 +6,8 @@ struct CreateAccountView: View {
     @State private var password = ""
     @State private var selectedRoleId: Int = 1
     @State private var isPasswordVisible = false
+    
+    var onSuccess: (() -> Void)? = nil
 
     @Environment(AuthViewModel.self) private var authViewModel
     @Environment(\.dismiss) private var dismiss
@@ -106,7 +108,11 @@ struct CreateAccountView: View {
                                 let selectedRoleName = roleItems.first(where: { $0.id == selectedRoleId })?.roleName ?? "Fleet Manager"
                                 await authViewModel.signUp(email: email, password: password, fullName: fullName, role: selectedRoleName)
                                 if authViewModel.errorMessage == nil {
-                                    dismiss()
+                                    if let onSuccess = onSuccess {
+                                        onSuccess()
+                                    } else {
+                                        dismiss()
+                                    }
                                 }
                             }
                         }) {

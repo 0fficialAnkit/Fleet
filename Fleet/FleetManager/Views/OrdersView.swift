@@ -4,6 +4,7 @@ struct OrdersView: View {
     @State private var viewModel = OrdersViewModel()
     @State private var selectedFilter: TripStatus? = nil
     @State private var selectedOrderType: OrderType? = nil
+    @State private var navigationPath = [FleetManagerDestination]()
     
     var filteredTrips: [Trip] {
         if let status = selectedFilter {
@@ -13,7 +14,7 @@ struct OrdersView: View {
     }
     
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
                 
@@ -51,7 +52,7 @@ struct OrdersView: View {
                                     .padding(.top, 40)
                             } else {
                                 ForEach(filteredTrips) { trip in
-                                    NavigationLink(destination: OrderDetailView(trip: trip, viewModel: viewModel)) {
+                                    NavigationLink(value: FleetManagerDestination.orderDetail(trip)) {
                                         OrderCardView(trip: trip, viewModel: viewModel)
                                     }
                                     .buttonStyle(.plain)
@@ -87,6 +88,14 @@ struct OrdersView: View {
             .onChange(of: selectedOrderType) { _, newValue in
                 if newValue == nil {
                     selectedFilter = nil
+                }
+            }
+            .navigationDestination(for: FleetManagerDestination.self) { destination in
+                switch destination {
+                case .orderDetail(let trip):
+                    OrderDetailView(trip: trip, viewModel: viewModel)
+                default:
+                    EmptyView()
                 }
             }
             .task {

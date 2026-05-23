@@ -5,9 +5,10 @@ struct DashboardView: View {
     @State private var isShowingProfile = false
     @State private var showingNotifications = false
     @Environment(AuthViewModel.self) private var authViewModel
+    @State private var navigationPath = [FleetManagerDestination]()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
 
@@ -30,7 +31,7 @@ struct DashboardView: View {
                     Button(action: {
                         showingNotifications = true
                     }) {
-                        Image(systemName: "bell.badge")
+                        Image(systemName: "bell")
                             .font(.system(size: 17, weight: .medium))
                             .foregroundStyle(themeModel.textPrimary)
                             .frame(width: 38, height: 38)
@@ -50,6 +51,14 @@ struct DashboardView: View {
             .sheet(isPresented: $showingNotifications) {
                 NotificationsView()
             }
+            .navigationDestination(for: FleetManagerDestination.self) { destination in
+                switch destination {
+                case .vehiclesRoot:
+                    VehiclesRootView()
+                default:
+                    EmptyView()
+                }
+            }
         }
         .task {
             await viewModel.loadData()
@@ -61,7 +70,7 @@ struct DashboardView: View {
     // MARK: - Metrics Grid
     private var metricsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: themeModel.spacingMD) {
-            NavigationLink(destination: VehiclesRootView()) {
+            NavigationLink(value: FleetManagerDestination.vehiclesRoot) {
                 MetricCard(icon: "truck.box.fill", value: "\(viewModel.totalVehicles)", label: "Total Vehicles", color: themeModel.accent)
                     .contentShape(Rectangle())
             }

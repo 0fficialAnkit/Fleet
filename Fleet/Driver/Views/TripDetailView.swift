@@ -322,8 +322,4 @@ struct TripDetailView: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        TripDetailView(trip: MockData.trips[0], onStart: { _,_,_ in }, onEnd: { _,_,_ in })
-    }
-}
+

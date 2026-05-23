@@ -191,8 +191,4 @@ struct TripHistoryRow: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        VehicleDetailView(vehicle: MockData.vehicles.first!, viewModel: VehiclesViewModel())
-    }
-}
+

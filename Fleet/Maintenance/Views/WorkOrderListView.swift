@@ -6,6 +6,7 @@ struct WorkOrderListView: View {
     @State private var workOrders: [WorkOrder] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var navigationPath = [MaintenanceDestination]()
 
     var filteredOrders: [WorkOrder] {
         guard let filter = selectedFilter else { return workOrders }
@@ -13,7 +14,7 @@ struct WorkOrderListView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
 
@@ -71,7 +72,7 @@ struct WorkOrderListView: View {
                             } else {
                                 LazyVStack(spacing: themeModel.spacingMD) {
                                     ForEach(filteredOrders) { order in
-                                        NavigationLink(destination: WorkOrderDetailView(workOrder: order)) {
+                                        NavigationLink(value: MaintenanceDestination.workOrderDetail(order)) {
                                             WorkOrderRow(workOrder: order)
                                         }
                                         .buttonStyle(.plain)
@@ -92,6 +93,12 @@ struct WorkOrderListView: View {
                             .foregroundStyle(themeModel.maintenancePrimary)
                             .font(.system(size: 20))
                     }
+                }
+            }
+            .navigationDestination(for: MaintenanceDestination.self) { destination in
+                switch destination {
+                case .workOrderDetail(let order):
+                    WorkOrderDetailView(workOrder: order)
                 }
             }
             .task {

@@ -6,6 +6,7 @@ struct DriverTripsView: View {
     @State private var viewModel = DriverTripsViewModel()
     @State private var selectedFilter: TripFilter = .all
     @Environment(AuthViewModel.self) private var authViewModel
+    @State private var navigationPath = [DriverDestination]()
 
     enum TripFilter: String, CaseIterable {
         case all = "All"
@@ -50,7 +51,7 @@ struct DriverTripsView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             VStack(spacing: 0) {
                 filterBubbles
 
@@ -69,13 +70,7 @@ struct DriverTripsView: View {
                     ScrollView {
                         VStack(spacing: 20) {
                             ForEach(filteredTrips) { trip in
-                                NavigationLink {
-                                    TripDetailView(
-                                        trip: trip,
-                                        onStart: { id, vId, notes in viewModel.startTrip(id: id, vehicleId: vId, notes: notes) },
-                                        onEnd:   { id, vId, notes in viewModel.endTrip(id: id, vehicleId: vId, notes: notes) }
-                                    )
-                                } label: {
+                                NavigationLink(value: DriverDestination.tripDetail(trip)) {
                                     DriverTripCardView(trip: trip)
                                 }
                                 .buttonStyle(.plain)
@@ -87,6 +82,18 @@ struct DriverTripsView: View {
             }
             .background(themeModel.backgroundPrimary.ignoresSafeArea())
             .navigationTitle("Assigned Routes")
+            .navigationDestination(for: DriverDestination.self) { destination in
+                switch destination {
+                case .tripDetail(let t):
+                    TripDetailView(
+                        trip: t,
+                        onStart: { id, vId, notes in viewModel.startTrip(id: id, vehicleId: vId, notes: notes) },
+                        onEnd:   { id, vId, notes in viewModel.endTrip(id: id, vehicleId: vId, notes: notes) }
+                    )
+                default:
+                    EmptyView()
+                }
+            }
         }
         .task {
             viewModel.currentUserId = authViewModel.currentUser?.id

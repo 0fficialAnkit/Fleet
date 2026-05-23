@@ -154,8 +154,4 @@ struct OrderDetailInfoRow: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        OrderDetailView(trip: MockData.trips.first!, viewModel: OrdersViewModel())
-    }
-}
+

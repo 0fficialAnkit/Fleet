@@ -61,18 +61,20 @@ final class EmployeesViewModel {
         }
     }
 
-    /// NOTE: User creation via Edge Function is disabled for this sprint.
-    /// New users (drivers/maintenance staff) must be created directly in Supabase.
-    /// Use existing users from public.users for assignment dropdowns.
     func addEmployee(fullName: String, email: String, password: String, phone: String, licenseNumber: String?, role: String) async throws {
-        // Edge Function is temporarily disabled per sprint requirements.
-        // Existing users in auth.users/public.users are sufficient for demo.
-        print("[EmployeesViewModel] addEmployee: Edge Function disabled for this sprint.")
-        throw NSError(
-            domain: "EmployeesViewModel",
-            code: 503,
-            userInfo: [NSLocalizedDescriptionKey: "User creation is temporarily disabled. Please add users directly in Supabase dashboard. Existing users are available for assignment."]
+        isCreatingUser = true
+        defer { isCreatingUser = false }
+        
+        _ = try await ProfileService.createUserLocally(
+            email: email,
+            password: password,
+            fullName: fullName,
+            phone: phone,
+            licenseNumber: licenseNumber,
+            role: role
         )
+        
+        await loadData()
     }
 
     func deleteEmployee(_ profile: Profile) {

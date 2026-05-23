@@ -31,4 +31,20 @@ final class ProfileViewModel {
         }
         isLoading = false
     }
+
+    func updateProfile(fullName: String, phone: String) async {
+        guard var profile = currentUser else { return }
+        profile.fullName = fullName
+        profile.phone = phone.isEmpty ? nil : phone
+        
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await ProfileService.updateProfile(profile)
+            self.currentUser = profile
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
 }

@@ -22,6 +22,14 @@ struct VehiclesRootView: View {
                 .buttonStyle(.plain)
             }
         }
+        .navigationDestination(for: FleetManagerDestination.self) { destination in
+            switch destination {
+            case .vehicleDetail(let vehicle):
+                VehicleDetailView(vehicle: vehicle, viewModel: vehiclesViewModel)
+            default:
+                EmptyView()
+            }
+        }
         .sheet(isPresented: $isShowingAddVehicle) {
             AddVehicleView(viewModel: vehiclesViewModel)
         }

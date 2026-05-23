@@ -82,8 +82,14 @@ class AuthViewModel {
             self.currentUser = session.user
             print("[AuthViewModel] checkUserSession: session found for userId=\(session.user.id)")
             await fetchProfile()
-            self.isAuthenticated = true
-            print("[AuthViewModel] checkUserSession: authenticated, role=\(self.resolvedRoleName ?? "nil")")
+            if self.currentProfile != nil {
+                self.isAuthenticated = true
+                print("[AuthViewModel] checkUserSession: authenticated, role=\(self.resolvedRoleName ?? "nil")")
+            } else {
+                try? await supabase.auth.signOut()
+                self.isAuthenticated = false
+                self.currentUser = nil
+            }
         } catch {
             print("[AuthViewModel] checkUserSession: no active session — \(error)")
             self.isAuthenticated = false
@@ -102,8 +108,14 @@ class AuthViewModel {
             self.currentUser = response.user
             print("[AuthViewModel] signIn: auth OK userId=\(response.user.id)")
             await fetchProfile()
-            self.isAuthenticated = true
-            print("[AuthViewModel] signIn: complete, role=\(self.resolvedRoleName ?? "nil")")
+            if self.currentProfile != nil {
+                self.isAuthenticated = true
+                print("[AuthViewModel] signIn: complete, role=\(self.resolvedRoleName ?? "nil")")
+            } else {
+                try? await supabase.auth.signOut()
+                self.isAuthenticated = false
+                self.currentUser = nil
+            }
         } catch {
             print("[AuthViewModel] signIn ERROR: \(error)")
             self.errorMessage = error.localizedDescription
@@ -115,13 +127,22 @@ class AuthViewModel {
         isLoading = true
         errorMessage = nil
         do {
-            // Map display role name to database role string
+            // Map display role name to database role string and exact UUID from Supabase
             let dbRole: String
+            let roleIdStr: String
             switch role.lowercased() {
-            case "fleet manager": dbRole = "fleet_manager"
-            case "driver": dbRole = "driver"
-            case "maintenance": dbRole = "maintenance"
-            default: dbRole = "fleet_manager"
+            case "fleet manager": 
+                dbRole = "fleet_manager"
+                roleIdStr = "cb66109f-e887-4586-baed-2761a9029c61"
+            case "driver": 
+                dbRole = "driver"
+                roleIdStr = "41d7aa4d-5ad4-4fda-82da-992b8ac14657"
+            case "maintenance": 
+                dbRole = "maintenance"
+                roleIdStr = "7cb95205-1a35-4ffb-889a-3f8067f43cb9"
+            default: 
+                dbRole = "fleet_manager"
+                roleIdStr = "cb66109f-e887-4586-baed-2761a9029c61"
             }
             
             let response = try await supabase.auth.signUp(
@@ -129,12 +150,33 @@ class AuthViewModel {
                 password: password,
                 data: [
                     "fullName": .string(fullName),
-                    "role": .string(dbRole)
+                    "role": .string(dbRole),
+                    "role_id": .string(roleIdStr)
                 ]
             )
-            self.currentUser = response.user
-            await fetchProfile()
-            self.isAuthenticated = true
+            
+            // Explicitly insert into the public.users table just in case there is no database trigger
+            let user = response.user
+            if let roleUUID = UUID(uuidString: roleIdStr) {
+                struct UserInsert: Codable {
+                    let id: UUID
+                    let full_name: String
+                    let email: String
+                    let role_id: UUID
+                    let status: String
+                }
+                let newUser = UserInsert(id: user.id, full_name: fullName, email: email, role_id: roleUUID, status: "active")
+                do {
+                    try await supabase.from("users").insert(newUser).execute()
+                    print("[AuthViewModel] Successfully inserted new user into public.users table.")
+                } catch {
+                    print("[AuthViewModel] Insert into users table failed (a trigger might have already done it): \(error)")
+                }
+            }
+            
+            // Ensure we don't automatically log in after sign up
+            try? await supabase.auth.signOut()
+            self.isAuthenticated = false
         } catch {
             self.errorMessage = error.localizedDescription
         }

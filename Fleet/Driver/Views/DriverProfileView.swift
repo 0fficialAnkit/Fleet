@@ -6,12 +6,8 @@ struct DriverProfileView: View {
 
     var body: some View {
 
-        NavigationStack {
-
             ScrollView {
-
                 VStack(spacing: 32) {
-
                     ProfileHeader(
                         icon: "person.crop.circle.fill",
                         name: profileVM.currentUser?.fullName ?? "Driver",
@@ -20,10 +16,8 @@ struct DriverProfileView: View {
                     )
 
                     VStack(spacing: 16) {
-                        
-                        
                             VStack(spacing: 12) {
-                                InfoRow(icon: "bell.badge", label: "Notifications", value: "Enabled")
+                                InfoRow(icon: "bell", label: "Notifications", value: "Enabled")
                                 Divider()
                                 InfoRow(icon: "doc.text.fill", label: "Documents", value: "Verified")
                                 Divider()
@@ -37,8 +31,7 @@ struct DriverProfileView: View {
                             )
                             .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
 
-                        
-VStack(spacing: 0) {
+                        VStack(spacing: 0) {
                             Button(action: {
                                 Task {
                                     await authViewModel.signOut()
@@ -60,7 +53,6 @@ VStack(spacing: 0) {
             }
             .background(themeModel.backgroundPrimary.ignoresSafeArea())
             .navigationTitle("Profile")
-        }
         .task {
             await profileVM.loadProfile()
         }

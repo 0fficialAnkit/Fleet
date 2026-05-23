@@ -14,8 +14,8 @@ enum UserStatus: String, Codable, CaseIterable, Sendable {
 }
 
 enum VehicleStatus: String, Codable, CaseIterable, Sendable {
-  case active = "active"
-  case inactive = "inactive"
+  case active = "available"
+  case inactive = "unavailable"
   case maintenance = "maintenance"
 }
 

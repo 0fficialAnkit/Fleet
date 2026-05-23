@@ -11,6 +11,7 @@ struct FleetView: View {
     @State private var employeesViewModel = EmployeesViewModel()
 
     @State private var isShowingAddEmployee = false
+    @State private var navigationPath = [FleetManagerDestination]()
 
     init() {
         UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(themeModel.info)
@@ -19,7 +20,7 @@ struct FleetView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
 
@@ -63,6 +64,14 @@ struct FleetView: View {
                     viewModel: employeesViewModel,
                     roleName: selectedTab == .drivers ? "driver" : "maintenance"
                 )
+            }
+            .navigationDestination(for: FleetManagerDestination.self) { destination in
+                switch destination {
+                case .employeeDetail(let profile):
+                    EmployeeDetailView(profile: profile, viewModel: employeesViewModel)
+                default:
+                    EmptyView()
+                }
             }
             .task {
                 await employeesViewModel.loadData()

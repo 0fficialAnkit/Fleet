@@ -6,10 +6,11 @@ struct DriverDashboardView: View {
     @State private var viewModel = DriverDashboardViewModel()
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var showingNotifications = false
+    @State private var navigationPath = [DriverDestination]()
 
     var body: some View {
 
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
 
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
@@ -21,7 +22,7 @@ struct DriverDashboardView: View {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 20) {
                             if let vehicle = viewModel.vehicle {
-                                NavigationLink(destination: DriverVehicleDetailView(vehicle: vehicle)) {
+                                NavigationLink(value: DriverDestination.vehicleDetail(vehicle)) {
                                     vehicleCard(vehicle)
                                 }
                                 .buttonStyle(.plain)
@@ -52,7 +53,7 @@ struct DriverDashboardView: View {
                                 .foregroundStyle(themeModel.textPrimary)
                         }
 
-                        NavigationLink(destination: DriverProfileView()) {
+                        NavigationLink(value: DriverDestination.profile) {
                             Image(systemName: "person.crop.circle.fill")
                                 .font(.title2)
                                 .foregroundStyle(themeModel.driverPrimary)
@@ -62,6 +63,20 @@ struct DriverDashboardView: View {
             }
             .sheet(isPresented: $showingNotifications) {
                 NotificationsView()
+            }
+            .navigationDestination(for: DriverDestination.self) { destination in
+                switch destination {
+                case .profile:
+                    DriverProfileView()
+                case .vehicleDetail(let v):
+                    DriverVehicleDetailView(vehicle: v)
+                case .tripDetail(let t):
+                    TripDetailView(
+                        trip: t,
+                        onStart: { id, vId, notes in viewModel.startTrip(id: id, vehicleId: vId, notes: notes) },
+                        onEnd:   { id, vId, notes in viewModel.endTrip(id: id, vehicleId: vId, notes: notes) }
+                    )
+                }
             }
         }
         .task {
@@ -156,13 +171,7 @@ extension DriverDashboardView {
                     .foregroundStyle(themeModel.textSecondary)
             } else {
                 ForEach(viewModel.todaysTrips) { trip in
-                    NavigationLink {
-                        TripDetailView(
-                            trip: trip,
-                            onStart: { id, vId, notes in viewModel.startTrip(id: id, vehicleId: vId, notes: notes) },
-                            onEnd:   { id, vId, notes in viewModel.endTrip(id: id, vehicleId: vId, notes: notes) }
-                        )
-                    } label: {
+                    NavigationLink(value: DriverDestination.tripDetail(trip)) {
                         tripCard(trip)
                     }
                     .buttonStyle(.plain)

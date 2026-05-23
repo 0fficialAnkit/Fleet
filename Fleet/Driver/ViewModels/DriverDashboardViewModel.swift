@@ -62,3 +62,9 @@ final class DriverDashboardViewModel {
         }
     }
 }
+
+enum DriverDestination: Hashable {
+    case profile
+    case vehicleDetail(Vehicle)
+    case tripDetail(Trip)
+}

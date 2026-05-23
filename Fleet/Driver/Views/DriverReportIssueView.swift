@@ -382,8 +382,4 @@ struct DriverReportIssueView: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        DriverReportIssueView(vehicle: MockData.vehicles.first!)
-    }
-}
+

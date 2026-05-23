@@ -90,3 +90,7 @@ final class MaintenanceDashboardViewModel {
         return formatter.string(from: date)
     }
 }
+
+enum MaintenanceDestination: Hashable {
+    case workOrderDetail(WorkOrder)
+}

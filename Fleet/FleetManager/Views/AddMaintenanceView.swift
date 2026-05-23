@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct AddMaintenanceView: View {
     @Environment(\.dismiss) private var dismiss
