@@ -3,7 +3,7 @@ import SwiftUI
 struct DriverChecklistView: View {
 
     let checklistType: InspectionType
-    let onSubmit: () -> Void
+    let onSubmit: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var checkedItems: Set<String> = []
@@ -101,7 +101,8 @@ struct DriverChecklistView: View {
                 
                 Button(action: {
                     isSubmitted = true
-                    onSubmit()
+                    let notes = "Checked items: " + checkedItems.joined(separator: ", ")
+                    onSubmit(notes)
                     dismiss()
                 }) {
                     Text(isSubmitted ? "Submitted Successfully" : "Submit Checklist")
@@ -131,5 +132,5 @@ struct DriverChecklistView: View {
 }
 
 #Preview {
-    DriverChecklistView(checklistType: .preTrip, onSubmit: {})
+    DriverChecklistView(checklistType: .preTrip, onSubmit: { _ in })
 }

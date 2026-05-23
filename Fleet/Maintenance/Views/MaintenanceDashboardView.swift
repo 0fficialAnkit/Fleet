@@ -1,5 +1,5 @@
 import SwiftUI
-import Auth
+import Supabase
 
 struct MaintenanceDashboardView: View {
     @State private var viewModel = MaintenanceDashboardViewModel()

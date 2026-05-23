@@ -26,9 +26,28 @@ enum IssueReportStatus: String, CaseIterable, Identifiable {
         case .resolved:   return "checkmark.circle.fill"
         }
     }
+
+    var dbValue: String {
+        switch self {
+        case .open:       return "open"
+        case .assigned:   return "assigned"
+        case .inProgress: return "in_progress"
+        case .resolved:   return "resolved"
+        }
+    }
+
+    static func from(dbValue: String) -> IssueReportStatus {
+        switch dbValue {
+        case "open":        return .open
+        case "assigned":    return .assigned
+        case "in_progress": return .inProgress
+        case "resolved":    return .resolved
+        default:            return .open
+        }
+    }
 }
 
-// MARK: - Issue Report Model
+// MARK: - Issue Report Model (view model for display)
 struct IssueReport: Identifiable {
     let id: UUID
     let vehicleId: UUID
@@ -56,8 +75,7 @@ struct StatusHistoryEntry: Identifiable {
 @Observable
 final class ReportsViewModel {
 
-    private(set) var allUsers: [User] = []
-    private(set) var allRoles: [Role] = []
+    private(set) var profiles: [Profile] = []
     private(set) var allVehicles: [Vehicle] = []
 
     var reports: [IssueReport] = []
@@ -68,50 +86,43 @@ final class ReportsViewModel {
         isLoading = true
         errorMessage = nil
         do {
-            async let u = UserService.fetchAllUsers()
-            async let r = UserService.fetchAllRoles()
+            async let p = ProfileService.fetchAllProfiles()
             async let v = VehicleService.fetchAllVehicles()
-            async let insp = InspectionService.fetchAllInspections()
-            async let defects = DefectReportService.fetchAllDefectReports()
+            async let ir = IssueReportService.fetchAllIssueReports()
 
-            allUsers = try await u
-            allRoles = try await r
+            profiles = try await p
             allVehicles = try await v
-            let inspections = try await insp
-            let defectReports = try await defects
+            let issueRecords = try await ir
 
-            // Build issue reports from defect reports
-            self.reports = defectReports.enumerated().map { idx, defect in
-                let vehicle = vehicleForInspection(defect.inspectionId, inspections: inspections)
+            // Build display reports from issue_reports table
+            self.reports = issueRecords.map { record in
+                let vehicle = allVehicles.first { $0.id == record.vehicleId }
                 let make = vehicle?.make ?? "Vehicle"
                 let model = vehicle?.model ?? ""
                 let plate = vehicle?.licensePlate ?? "—"
-                let driver = userName(defect.reportedBy)
+                let driver = profileName(record.reportedBy)
 
-                let categories = ["Engine Problem", "Tire Issue", "Brake Issue",
-                                  "Electrical Fault", "Fuel Leak", "Body Damage", "Other"]
-                let category = categories[idx % categories.count]
-
-                let status: IssueReportStatus
-                switch defect.status {
-                case .open:     status = .open
-                case .resolved: status = .resolved
-                case .closed:   status = .resolved
-                case .none:     status = .open
+                let severity: DefectSeverity
+                switch record.severity {
+                case "low": severity = .low
+                case "medium": severity = .medium
+                case "high": severity = .high
+                case "critical": severity = .critical
+                default: severity = .medium
                 }
 
                 return IssueReport(
-                    id: defect.id,
-                    vehicleId: vehicle?.id ?? UUID(),
+                    id: record.id,
+                    vehicleId: record.vehicleId,
                     vehicleName: "\(make) \(model)",
                     licensePlate: plate,
                     driverName: driver,
-                    issueCategory: category,
-                    severity: defect.severity ?? .medium,
-                    description: defect.description ?? "No description provided.",
-                    submittedAt: Calendar.current.date(byAdding: .hour, value: -(idx + 1) * 4, to: Date())!,
-                    assignedTo: nil,
-                    status: status
+                    issueCategory: record.category,
+                    severity: severity,
+                    description: record.description ?? "No description provided.",
+                    submittedAt: record.createdAt ?? Date(),
+                    assignedTo: record.assignedTo,
+                    status: IssueReportStatus.from(dbValue: record.status)
                 )
             }
         } catch {
@@ -121,21 +132,20 @@ final class ReportsViewModel {
     }
 
     func setupRealtime() {
-        RealtimeManager.shared.onDefectReportsChange = { [weak self] in
+        let rt = RealtimeManager.shared
+        rt.addDefectReportsChangeHandler { [weak self] in
+            Task { await self?.loadData() }
+        }
+        rt.addIssueReportsChangeHandler { [weak self] in
             Task { await self?.loadData() }
         }
     }
 
     // MARK: - Helpers
 
-    private func userName(_ id: UUID?) -> String {
+    private func profileName(_ id: UUID?) -> String {
         guard let id else { return "Unknown" }
-        return allUsers.first { $0.id == id }?.fullName ?? "Unknown"
-    }
-
-    private func vehicleForInspection(_ inspectionId: UUID, inspections: [VehicleInspection]) -> Vehicle? {
-        guard let insp = inspections.first(where: { $0.id == inspectionId }) else { return nil }
-        return allVehicles.first { $0.id == insp.vehicleId }
+        return profiles.first { $0.id == id }?.fullName ?? "Unknown"
     }
 
     // MARK: - Computed Counts
@@ -144,23 +154,46 @@ final class ReportsViewModel {
     var resolvedCount: Int   { reports.filter { $0.status == .resolved }.count }
 
     // MARK: - Maintenance Staff
-    var maintenanceStaff: [User] {
-        allUsers.filter { user in
-            let role = allRoles.first { $0.id == user.roleId }
-            return role?.roleName.lowercased() == "maintenance"
-        }
+    var maintenanceStaff: [Profile] {
+        profiles.filter { $0.role == "maintenance" }
     }
 
     func staffName(_ id: UUID?) -> String {
         guard let id else { return "Unassigned" }
-        return allUsers.first { $0.id == id }?.fullName ?? "Unknown"
+        return profiles.first { $0.id == id }?.fullName ?? "Unknown"
     }
 
-    // MARK: - Mutating Actions
+    // MARK: - Mutating Actions (now persists to Supabase)
     func update(reportId: UUID, assignedTo: UUID?, status: IssueReportStatus) {
         guard let idx = reports.firstIndex(where: { $0.id == reportId }) else { return }
         reports[idx].assignedTo = assignedTo
         reports[idx].status = status
+
+        // Persist to Supabase
+        Task {
+            do {
+                try await IssueReportService.updateIssueReport(
+                    id: reportId,
+                    assignedTo: assignedTo,
+                    status: status.dbValue
+                )
+                // Notify assigned maintenance staff
+                if let staffId = assignedTo {
+                    let notification = Notification(
+                        id: UUID(),
+                        userId: staffId,
+                        title: "Issue Assigned",
+                        message: "A new issue report has been assigned to you: \(reports[idx].issueCategory) on \(reports[idx].vehicleName)",
+                        type: .maintenance,
+                        isRead: false,
+                        createdAt: Date()
+                    )
+                    try? await NotificationService.createNotification(notification)
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     // MARK: - Severity helpers

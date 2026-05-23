@@ -77,7 +77,7 @@ struct OrderDetailView: View {
                         OrderDetailInfoRow(icon: "number", title: "Order ID", value: "#\(trip.id.uuidString.prefix(8).uppercased())")
                         
                         Divider().background(themeModel.divider)
-                        OrderDetailInfoRow(icon: "shippingbox.fill", title: "Order Type", value: trip.orderType?.rawValue ?? "N/A")
+                        OrderDetailInfoRow(icon: "shippingbox.fill", title: "Order Type", value: trip.orderType?.displayName ?? "N/A")
                         
                         Divider().background(themeModel.divider)
                         OrderDetailInfoRow(icon: "mappin.and.ellipse", title: "Destination", value: route?.endLocation ?? "N/A")
@@ -104,8 +104,15 @@ struct OrderDetailView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button(role: .destructive, action: {
-                        viewModel.deleteTrip(trip)
-                        dismiss()
+                        Task {
+                            do {
+                                try await viewModel.deleteTrip(trip)
+                                await MainActor.run { dismiss() }
+                            } catch {
+                                // You may want to surface this error to the user in the future
+                                print("Failed to delete trip: \(error)")
+                            }
+                        }
                     }) {
                         Label("Delete Order", systemImage: "trash")
                     }

@@ -1,5 +1,5 @@
 import SwiftUI
-import Auth
+import Supabase
 
 struct DriverTripsView: View {
 
@@ -72,8 +72,8 @@ struct DriverTripsView: View {
                                 NavigationLink {
                                     TripDetailView(
                                         trip: trip,
-                                        onStart: { id in viewModel.startTrip(id: id) },
-                                        onEnd:   { id in viewModel.endTrip(id: id) }
+                                        onStart: { id, vId, notes in viewModel.startTrip(id: id, vehicleId: vId, notes: notes) },
+                                        onEnd:   { id, vId, notes in viewModel.endTrip(id: id, vehicleId: vId, notes: notes) }
                                     )
                                 } label: {
                                     DriverTripCardView(trip: trip)

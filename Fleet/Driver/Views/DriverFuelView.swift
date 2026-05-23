@@ -1,5 +1,5 @@
 import SwiftUI
-import Auth
+import Supabase
 
 struct DriverFuelView: View {
 
@@ -163,6 +163,7 @@ struct DriverFuelView: View {
         .task {
             viewModel.currentUserId = authViewModel.currentUser?.id
             await viewModel.loadData()
+            viewModel.setupRealtime()
             // Fetch assigned vehicle
             if let userId = authViewModel.currentUser?.id {
                 let vehicle = try? await VehicleService.fetchVehicleForDriver(driverId: userId)

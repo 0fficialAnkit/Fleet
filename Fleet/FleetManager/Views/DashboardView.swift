@@ -3,6 +3,7 @@ import SwiftUI
 struct DashboardView: View {
     @State private var viewModel = DashboardViewModel()
     @State private var isShowingProfile = false
+    @State private var showingNotifications = false
     @Environment(AuthViewModel.self) private var authViewModel
 
     var body: some View {
@@ -27,7 +28,7 @@ struct DashboardView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button(action: {
-                        // Notification action
+                        showingNotifications = true
                     }) {
                         Image(systemName: "bell.badge")
                             .font(.system(size: 17, weight: .medium))
@@ -45,6 +46,9 @@ struct DashboardView: View {
             .sheet(isPresented: $isShowingProfile) {
                 ProfileView()
                     .environment(authViewModel)
+            }
+            .sheet(isPresented: $showingNotifications) {
+                NotificationsView()
             }
         }
         .task {

@@ -8,26 +8,26 @@ struct DriverSelectionView: View {
     @Binding var selectedOrderType: OrderType?
     
     // Fetch drivers from ViewModel data
-    var availableDrivers: [User] {
+    var availableDrivers: [Profile] {
         viewModel.driversWithRole()
     }
     
-    // Map existing UserStatus to UI strings
-    func driverStatusText(for status: UserStatus?) -> String {
+    // Map profile status to UI strings
+    func driverStatusText(for status: String?) -> String {
         switch status {
-        case .active: return "Available"
-        case .suspended: return "Busy"
-        case .inactive: return "Offline"
-        case .none: return "Unknown"
+        case "active": return "Available"
+        case "suspended": return "Busy"
+        case "inactive": return "Offline"
+        default: return "Unknown"
         }
     }
     
-    func driverStatusColor(for status: UserStatus?) -> Color {
+    func driverStatusColor(for status: String?) -> Color {
         switch status {
-        case .active: return themeModel.success
-        case .suspended: return themeModel.warning
-        case .inactive: return themeModel.textDisabled
-        case .none: return themeModel.textDisabled
+        case "active": return themeModel.success
+        case "suspended": return themeModel.warning
+        case "inactive": return themeModel.textDisabled
+        default: return themeModel.textDisabled
         }
     }
     

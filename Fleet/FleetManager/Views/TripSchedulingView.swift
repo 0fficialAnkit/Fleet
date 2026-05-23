@@ -4,7 +4,7 @@ struct TripSchedulingView: View {
     @Environment(\.dismiss) private var dismiss
     var orderType: OrderType
     var selectedVehicle: Vehicle
-    var selectedDriver: User
+    var selectedDriver: Profile
     var viewModel: OrdersViewModel
     @Binding var selectedOrderType: OrderType?
     
@@ -24,7 +24,7 @@ struct TripSchedulingView: View {
                             .padding(.horizontal, themeModel.spacingMD)
                         
                         VStack(alignment: .leading, spacing: themeModel.spacingMD) {
-                            SummaryRow(title: "Order Type", value: orderType.rawValue, icon: "shippingbox.fill")
+                            SummaryRow(title: "Order Type", value: orderType.displayName, icon: "shippingbox.fill")
                             Divider().background(themeModel.divider)
                             SummaryRow(title: "Vehicle", value: "\(selectedVehicle.make ?? "") \(selectedVehicle.model ?? "") (\(selectedVehicle.licensePlate ?? ""))", icon: "car.fill")
                             Divider().background(themeModel.divider)
@@ -103,14 +103,20 @@ struct TripSchedulingView: View {
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") {
-                    viewModel.addTrip(
-                        vehicleId: selectedVehicle.id,
-                        driverId: selectedDriver.id,
-                        routeId: selectedRouteId,
-                        startTime: startTime,
-                        orderType: orderType
-                    )
-                    selectedOrderType = nil // Dismisses the entire sheet flow directly to order list
+                    Task {
+                        do {
+                            try await viewModel.addTrip(
+                                vehicleId: selectedVehicle.id,
+                                driverId: selectedDriver.id,
+                                routeId: selectedRouteId,
+                                startTime: startTime,
+                                orderType: orderType
+                            )
+                            selectedOrderType = nil // Dismisses the entire sheet flow directly to order list
+                        } catch {
+                            viewModel.errorMessage = error.localizedDescription
+                        }
+                    }
                 }
                 .foregroundColor(themeModel.accent)
                 .bold()

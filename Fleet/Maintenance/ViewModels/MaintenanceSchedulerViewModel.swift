@@ -99,7 +99,8 @@ final class MaintenanceSchedulerViewModel {
     private var rawTasks: [MaintenanceTask] = []
     private var rawWorkOrders: [WorkOrder] = []
     private var vehicles: [Vehicle] = []
-    private var users: [User] = []
+    private var profiles: [Profile] = []
+    private(set) var inventory: [Inventory] = []
 
     // MARK: - Load Data
 
@@ -111,12 +112,14 @@ final class MaintenanceSchedulerViewModel {
             async let t = MaintenanceTaskService.fetchTasksForUser(assignedTo: userId)
             async let w = WorkOrderService.fetchWorkOrdersForUser(assignedTo: userId)
             async let v = VehicleService.fetchAllVehicles()
-            async let u = UserService.fetchAllUsers()
+            async let p = ProfileService.fetchAllProfiles()
+            async let i = InventoryService.fetchAllInventory()
 
             rawTasks = try await t
             rawWorkOrders = try await w
             vehicles = try await v
-            users = try await u
+            profiles = try await p
+            inventory = try await i
 
             buildDisplayModels()
         } catch {
@@ -127,8 +130,8 @@ final class MaintenanceSchedulerViewModel {
 
     func setupRealtime() {
         let rt = RealtimeManager.shared
-        rt.onMaintenanceTasksChange = { [weak self] in Task { await self?.loadData() } }
-        rt.onWorkOrdersChange = { [weak self] in Task { await self?.loadData() } }
+        rt.addMaintenanceTasksChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addWorkOrdersChangeHandler { [weak self] in Task { await self?.loadData() } }
     }
 
     // MARK: - Build UI display models from Supabase data
@@ -139,7 +142,7 @@ final class MaintenanceSchedulerViewModel {
 
         allTasks = rawTasks.map { task in
             let vehicle = vehicles.first { $0.id == task.vehicleId }
-            let scheduledBy = users.first { $0.id == task.scheduledBy }
+            let scheduledBy = profiles.first { $0.id == task.scheduledBy }
 
             let displayStatus: TaskDisplayStatus
             switch task.status {
@@ -182,7 +185,7 @@ final class MaintenanceSchedulerViewModel {
 
         allWorkOrders = rawWorkOrders.map { wo in
             let vehicle = vehicles.first { $0.id == wo.vehicleId }
-            let createdBy = users.first { $0.id == wo.createdBy }
+            let createdBy = profiles.first { $0.id == wo.createdBy }
 
             return ScheduledWorkOrder(
                 id: UUID(),
@@ -354,6 +357,31 @@ final class MaintenanceSchedulerViewModel {
         }
         if selectedWorkOrder?.id == id {
             selectedWorkOrder?.partsUsed.append(part)
+        }
+        
+        // Find matching inventory item
+        if let inventoryItem = inventory.first(where: { $0.partName?.lowercased() == part.lowercased() }) {
+            let itemId = inventoryItem.id
+            let stock = inventoryItem.stockQuantity ?? 0
+            
+            Task {
+                // Update stock if greater than 0
+                if stock > 0 {
+                    try? await InventoryService.updateStock(id: itemId, newQuantity: stock - 1)
+                }
+                
+                // Add WorkOrderPart record
+                if let sourceId = allWorkOrders.first(where: { $0.id == id })?.sourceWorkOrderId {
+                    let wop = WorkOrderPart(
+                        id: UUID(),
+                        workOrderId: sourceId,
+                        inventoryItemId: itemId,
+                        quantityUsed: 1,
+                        hoursSpent: nil
+                    )
+                    try? await WorkOrderPartService.addPart(wop)
+                }
+            }
         }
     }
 }

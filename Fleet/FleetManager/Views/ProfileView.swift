@@ -31,7 +31,7 @@ struct ProfileView: View {
                                         InfoRow(icon: "phone.fill", label: "Phone", value: phone)
                                     }
                                     
-                                    if let status = user.status {
+                                    if let status = user.userStatus {
                                         Divider().background(themeModel.divider)
                                         InfoRow(
                                             icon: status == .active ? "checkmark.seal.fill" : "xmark.seal.fill",

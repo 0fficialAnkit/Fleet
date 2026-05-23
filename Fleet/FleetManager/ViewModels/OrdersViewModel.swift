@@ -5,7 +5,7 @@ import SwiftUI
 final class OrdersViewModel {
     private(set) var trips: [Trip] = []
     private(set) var routes: [Route] = []
-    private(set) var users: [User] = []
+    private(set) var profiles: [Profile] = []
     private(set) var vehicles: [Vehicle] = []
 
     var isLoading = false
@@ -17,11 +17,11 @@ final class OrdersViewModel {
         do {
             async let t = TripService.fetchAllTrips()
             async let r = RouteService.fetchAllRoutes()
-            async let u = UserService.fetchAllUsers()
+            async let p = ProfileService.fetchAllProfiles()
             async let v = VehicleService.fetchAllVehicles()
             trips = try await t
             routes = try await r
-            users = try await u
+            profiles = try await p
             vehicles = try await v
         } catch {
             errorMessage = error.localizedDescription
@@ -30,7 +30,7 @@ final class OrdersViewModel {
     }
 
     func setupRealtime() {
-        RealtimeManager.shared.onTripsChange = { [weak self] in
+        RealtimeManager.shared.addTripsChangeHandler { [weak self] in
             Task { await self?.loadData() }
         }
     }
@@ -54,7 +54,7 @@ final class OrdersViewModel {
 
     func driverName(for driverId: UUID?) -> String {
         guard let id = driverId else { return "Unassigned" }
-        return users.first { $0.id == id }?.fullName ?? "Unassigned"
+        return profiles.first { $0.id == id }?.fullName ?? "Unassigned"
     }
 
     func vehicleName(for vehicleId: UUID) -> String {
@@ -62,16 +62,9 @@ final class OrdersViewModel {
         return "\(v.make ?? "") \(v.model ?? "")"
     }
 
-    func driversWithRole() -> [User] {
-        let driverRoleId = roles().first { $0.roleName.lowercased() == "driver" }?.id
-        guard let roleId = driverRoleId else { return [] }
-        return users.filter { $0.roleId == roleId }
-    }
-
-    func roles() -> [Role] {
-        // We can't easily fetch roles separately in a computed, so we rely on them being pre-loaded
-        // The OrdersViewModel loads users; roles can be fetched alongside
-        return []
+    /// Returns all profiles with role == "driver"
+    func driversWithRole() -> [Profile] {
+        profiles.filter { $0.role == "driver" }
     }
 
     func availableVehicles(for orderType: OrderType) -> [Vehicle] {
@@ -89,7 +82,7 @@ final class OrdersViewModel {
         }
     }
 
-    func addTrip(vehicleId: UUID, driverId: UUID, routeId: UUID?, startTime: Date, orderType: OrderType) {
+    func addTrip(vehicleId: UUID, driverId: UUID, routeId: UUID?, startTime: Date, orderType: OrderType) async throws {
         let newTrip = Trip(
             id: UUID(),
             vehicleId: vehicleId,
@@ -101,35 +94,27 @@ final class OrdersViewModel {
             status: .scheduled,
             orderType: orderType
         )
-        Task {
-            do {
-                try await TripService.createTrip(newTrip)
-                // Send notification to driver
-                let notification = Notification(
-                    id: UUID(),
-                    userId: driverId,
-                    title: "Trip Scheduled",
-                    message: "A new \(orderType.rawValue) trip has been assigned to you.",
-                    type: .info,
-                    isRead: false,
-                    createdAt: Date()
-                )
-                try? await NotificationService.createNotification(notification)
-                await loadData()
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
+        try await TripService.createTrip(newTrip)
+        // Send notification to driver
+        let notification = Notification(
+            id: UUID(),
+            userId: driverId,
+            title: "Trip Scheduled",
+            message: "A new \(orderType.displayName) trip has been assigned to you.",
+            type: .info,
+            isRead: false,
+            createdAt: Date()
+        )
+        try? await NotificationService.createNotification(notification)
+        
+        // Assign driver to vehicle
+        try? await VehicleService.assignDriver(vehicleId: vehicleId, driverId: driverId)
+        
+        await loadData()
     }
 
-    func deleteTrip(_ trip: Trip) {
-        Task {
-            do {
-                try await TripService.deleteTrip(id: trip.id)
-                await loadData()
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
+    func deleteTrip(_ trip: Trip) async throws {
+        try await TripService.deleteTrip(id: trip.id)
+        await loadData()
     }
 }

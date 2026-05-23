@@ -4,25 +4,22 @@ struct EditEmployeeView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: EmployeesViewModel
     
-    @State private var user: User
+    @State private var originalProfile: Profile
     @State private var fullName: String
     @State private var email: String
-    @State private var password = "" // Blank unless they want to change it
     @State private var phone: String
     @State private var licenseNumber: String
     
     let isDriverSelected: Bool
     
-    init(user: User, viewModel: EmployeesViewModel) {
+    init(profile: Profile, viewModel: EmployeesViewModel) {
         self.viewModel = viewModel
-        _user = State(initialValue: user)
-        _fullName = State(initialValue: user.fullName)
-        _email = State(initialValue: user.email)
-        _phone = State(initialValue: user.phone ?? "")
-        _licenseNumber = State(initialValue: user.licenseNumber ?? "")
-        
-        let roleName = viewModel.getRole(for: user)?.roleName.lowercased() ?? ""
-        self.isDriverSelected = (roleName == "driver")
+        _originalProfile = State(initialValue: profile)
+        _fullName = State(initialValue: profile.fullName)
+        _email = State(initialValue: profile.email)
+        _phone = State(initialValue: profile.phone ?? "")
+        _licenseNumber = State(initialValue: profile.licenseNumber ?? "")
+        self.isDriverSelected = (profile.role == "driver")
     }
     
     var body: some View {
@@ -47,12 +44,6 @@ struct EditEmployeeView: View {
                                     TextField("Email", text: $email)
                                         .keyboardType(.emailAddress)
                                         .autocapitalization(.none)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
-                                        
-                                    Divider().background(themeModel.divider)
-                                    
-                                    SecureField("New Password (optional)", text: $password)
                                         .padding(.vertical, 12)
                                         .foregroundColor(themeModel.textPrimary)
                                     
@@ -96,20 +87,21 @@ struct EditEmployeeView: View {
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        if !fullName.isEmpty {
-                            var updatedUser = user
-                            updatedUser.fullName = fullName
-                            updatedUser.email = email
-                            updatedUser.phone = phone.isEmpty ? nil : phone
-                            updatedUser.licenseNumber = isDriverSelected && !licenseNumber.isEmpty ? licenseNumber : nil
-                            
-                            // Only update password if they typed a new one
-                            if !password.isEmpty {
-                                updatedUser.passwordHash = password // Mocking hashing
+                        guard !fullName.isEmpty else { return }
+                        var updatedProfile = originalProfile
+                        updatedProfile.fullName = fullName
+                        updatedProfile.email = email
+                        updatedProfile.phone = phone.isEmpty ? nil : phone
+                        updatedProfile.licenseNumber = isDriverSelected && !licenseNumber.isEmpty ? licenseNumber : nil
+                        
+                        Task {
+                            do {
+                                try await ProfileService.updateProfile(updatedProfile)
+                                await viewModel.loadData()
+                                dismiss()
+                            } catch {
+                                print("Error updating profile: \(error)")
                             }
-                            
-                            viewModel.updateEmployee(updatedUser)
-                            dismiss()
                         }
                     }
                     .foregroundColor(themeModel.accent)
@@ -122,5 +114,5 @@ struct EditEmployeeView: View {
 }
 
 #Preview {
-    EditEmployeeView(user: MockData.users.first!, viewModel: EmployeesViewModel())
+    EditEmployeeView(profile: Profile(id: UUID(), fullName: "Test User", email: "test@fleet.in", role: "driver"), viewModel: EmployeesViewModel())
 }

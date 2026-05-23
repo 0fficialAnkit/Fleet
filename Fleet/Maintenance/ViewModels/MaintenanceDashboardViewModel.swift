@@ -57,9 +57,10 @@ final class MaintenanceDashboardViewModel {
 
     func setupRealtime() {
         let rt = RealtimeManager.shared
-        rt.onMaintenanceTasksChange = { [weak self] in Task { await self?.loadData() } }
-        rt.onWorkOrdersChange = { [weak self] in Task { await self?.loadData() } }
-        rt.onInventoryChange = { [weak self] in Task { await self?.loadData() } }
+        rt.addMaintenanceTasksChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addWorkOrdersChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addInventoryChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData() } }
     }
 
     func vehiclePlate(for vehicleId: UUID) -> String {

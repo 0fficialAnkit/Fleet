@@ -7,7 +7,7 @@ final class DashboardViewModel {
     private(set) var trips: [Trip] = []
     private(set) var workOrders: [WorkOrder] = []
     private(set) var routes: [Route] = []
-    private(set) var users: [User] = []
+    private(set) var profiles: [Profile] = []
     private(set) var maintenanceTasks: [MaintenanceTask] = []
 
     var isLoading = false
@@ -21,13 +21,13 @@ final class DashboardViewModel {
             async let t = TripService.fetchAllTrips()
             async let w = WorkOrderService.fetchAllWorkOrders()
             async let r = RouteService.fetchAllRoutes()
-            async let u = UserService.fetchAllUsers()
+            async let p = ProfileService.fetchAllProfiles()
             async let m = MaintenanceTaskService.fetchAllTasks()
             vehicles = try await v
             trips = try await t
             workOrders = try await w
             routes = try await r
-            users = try await u
+            profiles = try await p
             maintenanceTasks = try await m
         } catch {
             errorMessage = error.localizedDescription
@@ -37,9 +37,11 @@ final class DashboardViewModel {
 
     func setupRealtime() {
         let rt = RealtimeManager.shared
-        rt.onTripsChange = { [weak self] in Task { await self?.loadData() } }
-        rt.onWorkOrdersChange = { [weak self] in Task { await self?.loadData() } }
-        rt.onVehiclesChange = { [weak self] in Task { await self?.loadData() } }
+        rt.addTripsChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addWorkOrdersChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addMaintenanceTasksChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addProfilesChangeHandler { [weak self] in Task { await self?.loadData() } }
     }
 
     // MARK: - Computed
@@ -75,7 +77,7 @@ final class DashboardViewModel {
 
     func driverName(for driverId: UUID?) -> String {
         guard let id = driverId else { return "Unassigned" }
-        return users.first { $0.id == id }?.fullName ?? "Unassigned"
+        return profiles.first { $0.id == id }?.fullName ?? "Unassigned"
     }
 
     func maintenanceTask(for vehicleId: UUID) -> MaintenanceTask? {

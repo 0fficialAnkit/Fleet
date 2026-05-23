@@ -1,5 +1,5 @@
 import SwiftUI
-import Auth
+import Supabase
 
 // ═══════════════════════════════════════════════════════════════
 // MARK: - Main Screen

@@ -27,6 +27,7 @@ struct VehiclesRootView: View {
         }
         .task {
             await vehiclesViewModel.loadData()
+            vehiclesViewModel.setupRealtime()
         }
     }
 }

@@ -26,15 +26,17 @@ final class DriverTripsViewModel {
     }
 
     func setupRealtime() {
-        RealtimeManager.shared.onTripsChange = { [weak self] in
+        RealtimeManager.shared.addTripsChangeHandler { [weak self] in
             Task { await self?.loadData() }
         }
     }
 
-    func startTrip(id: UUID) {
+    func startTrip(id: UUID, vehicleId: UUID, notes: String) {
         Task {
             do {
                 try await TripService.startTrip(id: id)
+                let inspection = VehicleInspection(id: UUID(), vehicleId: vehicleId, driverId: currentUserId, tripId: id, inspectionType: .preTrip, notes: notes, createdAt: Date())
+                try? await InspectionService.createInspection(inspection)
                 await loadData()
             } catch {
                 errorMessage = error.localizedDescription
@@ -42,10 +44,12 @@ final class DriverTripsViewModel {
         }
     }
 
-    func endTrip(id: UUID) {
+    func endTrip(id: UUID, vehicleId: UUID, notes: String) {
         Task {
             do {
                 try await TripService.endTrip(id: id)
+                let inspection = VehicleInspection(id: UUID(), vehicleId: vehicleId, driverId: currentUserId, tripId: id, inspectionType: .postTrip, notes: notes, createdAt: Date())
+                try? await InspectionService.createInspection(inspection)
                 await loadData()
             } catch {
                 errorMessage = error.localizedDescription

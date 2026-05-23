@@ -1,10 +1,11 @@
 import SwiftUI
-import Auth
+import Supabase
 
 struct DriverDashboardView: View {
 
     @State private var viewModel = DriverDashboardViewModel()
     @Environment(AuthViewModel.self) private var authViewModel
+    @State private var showingNotifications = false
 
     var body: some View {
 
@@ -44,7 +45,7 @@ struct DriverDashboardView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: themeModel.spacingMD) {
                         Button(action: {
-                            // Action for notifications
+                            showingNotifications = true
                         }) {
                             Image(systemName: "bell")
                                 .font(.title3)
@@ -58,6 +59,9 @@ struct DriverDashboardView: View {
                         }
                     }
                 }
+            }
+            .sheet(isPresented: $showingNotifications) {
+                NotificationsView()
             }
         }
         .task {
@@ -155,8 +159,8 @@ extension DriverDashboardView {
                     NavigationLink {
                         TripDetailView(
                             trip: trip,
-                            onStart: { id in viewModel.startTrip(id: id) },
-                            onEnd:   { id in viewModel.endTrip(id: id) }
+                            onStart: { id, vId, notes in viewModel.startTrip(id: id, vehicleId: vId, notes: notes) },
+                            onEnd:   { id, vId, notes in viewModel.endTrip(id: id, vehicleId: vId, notes: notes) }
                         )
                     } label: {
                         tripCard(trip)

@@ -23,6 +23,12 @@ final class DriverFuelViewModel {
         return fuelLogs.reduce(0) { $0 + ($1.litersUsed ?? 0) }
     }
 
+    func setupRealtime() {
+        RealtimeManager.shared.addFuelLogsChangeHandler { [weak self] in
+            Task { await self?.loadData() }
+        }
+    }
+
     func loadData() async {
         guard let userId = currentUserId else { return }
         isLoading = true

@@ -66,6 +66,7 @@ struct FleetView: View {
             }
             .task {
                 await employeesViewModel.loadData()
+                employeesViewModel.setupRealtime()
             }
         }
     }

@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 // MARK: - Issue Category
 enum IssueCategory: String, CaseIterable, Identifiable {
@@ -47,6 +48,7 @@ struct DriverReportIssueView: View {
     @State private var isSubmitted = false
     @State private var isSubmitting = false
     @Environment(\.dismiss) private var dismiss
+    @Environment(AuthViewModel.self) private var authViewModel
 
     private let maxDescriptionLength = 200
 
@@ -330,11 +332,51 @@ struct DriverReportIssueView: View {
         withAnimation(.easeInOut) {
             isSubmitting = true
         }
-        // Simulate network delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                isSubmitting = false
-                isSubmitted = true
+        Task {
+            do {
+                guard let userId = authViewModel.currentUser?.id else {
+                    isSubmitting = false
+                    return
+                }
+                let report = IssueReportRecord(
+                    id: UUID(),
+                    vehicleId: vehicle.id,
+                    reportedBy: userId,
+                    category: selectedCategory.rawValue,
+                    severity: selectedSeverity.rawValue,
+                    description: description.trimmingCharacters(in: .whitespacesAndNewlines),
+                    status: "open",
+                    assignedTo: nil,
+                    createdAt: Date()
+                )
+                try await IssueReportService.createIssueReport(report)
+                
+                // Notify all fleet managers
+                let managers = try await ProfileService.fetchProfilesByRole(role: "fleet_manager")
+                for manager in managers {
+                    let notification = Notification(
+                        id: UUID(),
+                        userId: manager.id,
+                        title: "New Issue Report",
+                        message: "\(selectedCategory.rawValue) reported on \(vehicle.make ?? "") \(vehicle.model ?? "")",
+                        type: .maintenance,
+                        isRead: false,
+                        createdAt: Date()
+                    )
+                    try? await NotificationService.createNotification(notification)
+                }
+                
+                await MainActor.run {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                        isSubmitting = false
+                        isSubmitted = true
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isSubmitting = false
+                }
+                print("Error submitting report: \(error)")
             }
         }
     }

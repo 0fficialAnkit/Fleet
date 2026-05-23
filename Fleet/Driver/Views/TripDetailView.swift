@@ -3,14 +3,14 @@ import SwiftUI
 struct TripDetailView: View {
 
     let trip: Trip
-    let onStart: (UUID) -> Void
-    let onEnd: (UUID) -> Void
+    let onStart: (UUID, UUID, String) -> Void
+    let onEnd: (UUID, UUID, String) -> Void
 
     // Local status so UI reacts immediately after start/end
     @State private var currentStatus: TripStatus?
     @State private var showingChecklist: InspectionType? = nil
 
-    init(trip: Trip, onStart: @escaping (UUID) -> Void, onEnd: @escaping (UUID) -> Void) {
+    init(trip: Trip, onStart: @escaping (UUID, UUID, String) -> Void, onEnd: @escaping (UUID, UUID, String) -> Void) {
         self.trip = trip
         self.onStart = onStart
         self.onEnd = onEnd
@@ -202,12 +202,12 @@ struct TripDetailView: View {
         .navigationTitle("Trip Details")
         .navigationBarTitleDisplayMode(.large)
         .sheet(item: $showingChecklist) { type in
-            DriverChecklistView(checklistType: type) {
+            DriverChecklistView(checklistType: type) { notes in
                 if type == .preTrip {
-                    onStart(trip.id)
+                    onStart(trip.id, trip.vehicleId, notes)
                     withAnimation { currentStatus = .active }
                 } else {
-                    onEnd(trip.id)
+                    onEnd(trip.id, trip.vehicleId, notes)
                     withAnimation { currentStatus = .completed }
                 }
                 showingChecklist = nil
@@ -324,6 +324,6 @@ struct TripDetailView: View {
 
 #Preview {
     NavigationStack {
-        TripDetailView(trip: MockData.trips[0], onStart: { _ in }, onEnd: { _ in })
+        TripDetailView(trip: MockData.trips[0], onStart: { _,_,_ in }, onEnd: { _,_,_ in })
     }
 }

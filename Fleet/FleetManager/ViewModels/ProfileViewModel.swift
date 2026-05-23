@@ -3,7 +3,7 @@ import SwiftUI
 @MainActor
 @Observable
 final class ProfileViewModel {
-    var currentUser: User?
+    var currentUser: Profile?
     var roleName: String = "Unknown Role"
 
     var isLoading = false
@@ -18,10 +18,14 @@ final class ProfileViewModel {
                 isLoading = false
                 return
             }
-            let user = try await UserService.fetchUser(id: userId)
-            self.currentUser = user
-            let role = try await UserService.fetchRole(id: user.roleId)
-            self.roleName = role.roleName
+            let profile = try await ProfileService.fetchProfile(id: userId)
+            self.currentUser = profile
+            switch profile.role {
+            case "fleet_manager": self.roleName = "Fleet Manager"
+            case "driver": self.roleName = "Driver"
+            case "maintenance": self.roleName = "Maintenance"
+            default: self.roleName = profile.role.capitalized
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
