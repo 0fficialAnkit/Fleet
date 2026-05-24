@@ -4,7 +4,7 @@ struct OrdersView: View {
     @State private var viewModel = OrdersViewModel()
     @State private var selectedFilter: TripStatus? = nil
     @State private var selectedOrderType: OrderType? = nil
-    @State private var navigationPath = [FleetManagerDestination]()
+    @State private var navigationPath = [Trip]()
     
     var filteredTrips: [Trip] {
         if let status = selectedFilter {
@@ -52,7 +52,7 @@ struct OrdersView: View {
                                     .padding(.top, 40)
                             } else {
                                 ForEach(filteredTrips) { trip in
-                                    NavigationLink(value: FleetManagerDestination.orderDetail(trip)) {
+                                    NavigationLink(value: trip) {
                                         OrderCardView(trip: trip, viewModel: viewModel)
                                     }
                                     .buttonStyle(.plain)
@@ -90,13 +90,8 @@ struct OrdersView: View {
                     selectedFilter = nil
                 }
             }
-            .navigationDestination(for: FleetManagerDestination.self) { destination in
-                switch destination {
-                case .orderDetail(let trip):
-                    OrderDetailView(trip: trip, viewModel: viewModel)
-                default:
-                    EmptyView()
-                }
+            .navigationDestination(for: Trip.self) { trip in
+                OrderDetailView(trip: trip, viewModel: viewModel)
             }
             .task {
                 await viewModel.loadData()

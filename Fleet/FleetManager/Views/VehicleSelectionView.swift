@@ -45,6 +45,11 @@ struct VehicleSelectionView: View {
                     .foregroundColor(themeModel.accent)
                 }
             }
+            .onChange(of: selectedOrderType) { _, newValue in
+                if newValue == nil {
+                    dismiss()
+                }
+            }
         }
     }
 }

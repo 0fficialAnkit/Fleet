@@ -5,7 +5,7 @@ struct DashboardView: View {
     @State private var isShowingProfile = false
     @State private var showingNotifications = false
     @Environment(AuthViewModel.self) private var authViewModel
-    @State private var navigationPath = [FleetManagerDestination]()
+    @State private var navigationPath = [DashboardDestination]()
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -51,12 +51,10 @@ struct DashboardView: View {
             .sheet(isPresented: $showingNotifications) {
                 NotificationsView()
             }
-            .navigationDestination(for: FleetManagerDestination.self) { destination in
+            .navigationDestination(for: DashboardDestination.self) { destination in
                 switch destination {
                 case .vehiclesRoot:
                     VehiclesRootView()
-                default:
-                    EmptyView()
                 }
             }
         }
@@ -70,7 +68,7 @@ struct DashboardView: View {
     // MARK: - Metrics Grid
     private var metricsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: themeModel.spacingMD) {
-            NavigationLink(value: FleetManagerDestination.vehiclesRoot) {
+            NavigationLink(value: DashboardDestination.vehiclesRoot) {
                 MetricCard(icon: "truck.box.fill", value: "\(viewModel.totalVehicles)", label: "Total Vehicles", color: themeModel.accent)
                     .contentShape(Rectangle())
             }

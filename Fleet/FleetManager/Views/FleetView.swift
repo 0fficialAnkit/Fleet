@@ -11,7 +11,7 @@ struct FleetView: View {
     @State private var employeesViewModel = EmployeesViewModel()
 
     @State private var isShowingAddEmployee = false
-    @State private var navigationPath = [FleetManagerDestination]()
+    @State private var navigationPath = NavigationPath()
 
     init() {
         UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(themeModel.info)
@@ -65,14 +65,7 @@ struct FleetView: View {
                     roleName: selectedTab == .drivers ? "driver" : "maintenance"
                 )
             }
-            .navigationDestination(for: FleetManagerDestination.self) { destination in
-                switch destination {
-                case .employeeDetail(let profile):
-                    EmployeeDetailView(profile: profile, viewModel: employeesViewModel)
-                default:
-                    EmptyView()
-                }
-            }
+
             .task {
                 await employeesViewModel.loadData()
                 employeesViewModel.setupRealtime()

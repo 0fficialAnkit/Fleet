@@ -85,9 +85,6 @@ final class DashboardViewModel {
     }
 }
 
-enum FleetManagerDestination: Hashable {
+enum DashboardDestination: Hashable {
     case vehiclesRoot
-    case employeeDetail(Profile)
-    case orderDetail(Trip)
-    case vehicleDetail(Vehicle)
 }

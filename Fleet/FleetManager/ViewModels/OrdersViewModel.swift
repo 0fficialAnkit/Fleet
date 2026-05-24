@@ -68,18 +68,7 @@ final class OrdersViewModel {
     }
 
     func availableVehicles(for orderType: OrderType) -> [Vehicle] {
-        vehicles.filter { vehicle in
-            guard vehicle.status == .active else { return false }
-            let model = (vehicle.model ?? "").lowercased()
-            switch orderType {
-            case .bulkOrderShip:
-                return model.contains("prima") || model.contains("boss") || model.contains("blazo")
-            case .pickUpAndDrop:
-                return model.contains("ace") || model.contains("traveller")
-            case .travel:
-                return model.contains("traveller")
-            }
-        }
+        vehicles.filter { $0.status == .active }
     }
 
     func addTrip(vehicleId: UUID, driverId: UUID, routeId: UUID?, startTime: Date, orderType: OrderType) async throws {
