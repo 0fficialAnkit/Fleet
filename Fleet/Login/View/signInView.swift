@@ -62,7 +62,9 @@ struct SignInView: View {
             Text("FleetOS")
                 .font(.system(size: 34, weight: .bold))
                 .foregroundColor(.white)
-            Text("Sign in to FleetOS")
+
+
+            Text("Sign in to PrimeFleet")
             .font(.system(size: 16))
             .foregroundColor(.white.opacity(0.5))
         }

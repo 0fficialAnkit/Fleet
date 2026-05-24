@@ -14,8 +14,8 @@ enum UserStatus: String, Codable, CaseIterable, Sendable {
 }
 
 enum VehicleStatus: String, Codable, CaseIterable, Sendable {
-  case active = "active"
-  case inactive = "inactive"
+  case active = "available"
+  case inactive = "unavailable"
   case maintenance = "maintenance"
 }
 
@@ -47,9 +47,26 @@ enum TripStatus: String, Codable, CaseIterable, Sendable {
   case cancelled = "cancelled"
 }
 
-enum InspectionType: String, Codable, CaseIterable, Sendable {
+enum OrderType: String, Codable, CaseIterable, Sendable, Identifiable {
+  case pickUpAndDrop = "pick_up_and_drop"
+  case bulkOrderShip = "bulk_order_ship"
+  case travel = "travel"
+  
+  var id: String { rawValue }
+  
+  var displayName: String {
+      switch self {
+      case .pickUpAndDrop: return "Pick Up & Drop"
+      case .bulkOrderShip: return "Bulk Order Ship"
+      case .travel: return "Travel"
+      }
+  }
+}
+
+enum InspectionType: String, Codable, CaseIterable, Sendable, Identifiable {
   case preTrip = "pre_trip"
   case postTrip = "post_trip"
+  var id: String { rawValue }
 }
 
 enum DefectSeverity: String, Codable, CaseIterable, Sendable {
@@ -130,7 +147,7 @@ struct User: Codable, Identifiable, Hashable, Sendable {
   let id: UUID
   var fullName: String
   var email: String
-  var passwordHash: String
+  var passwordHash: String?   // Optional — DB may not return this column
   var phone: String?
   var licenseNumber: String?
   var roleId: UUID //FK
@@ -211,6 +228,7 @@ struct VehicleLocation: Codable, Identifiable, Hashable, Sendable {
 //  MARK: - MaintenanceTask
 struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
   let id: UUID
+  var workOrderId: UUID? // FK — optional, tasks can exist without a work order
   var vehicleId: UUID // FK
   var scheduledBy: UUID? // FK
   var assignedTo: UUID? // FK
@@ -221,6 +239,7 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
 
   enum CodingKeys: String, CodingKey {
       case id
+      case workOrderId = "work_order_id"
       case vehicleId = "vehicle_id"
       case scheduledBy = "scheduled_by"
       case assignedTo = "assigned_to"
@@ -329,6 +348,7 @@ struct Trip: Codable, Identifiable, Hashable, Sendable {
   var endTime: Date?
   var distance: Double?
   var status: TripStatus?
+  var orderType: OrderType?
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -338,6 +358,7 @@ struct Trip: Codable, Identifiable, Hashable, Sendable {
       case startTime = "start_time"
       case endTime = "end_time"
       case distance, status
+      case orderType = "order_type"
   }
 }
 
@@ -395,17 +416,19 @@ struct InspectionPhoto: Codable, Identifiable, Hashable, Sendable {
 //  MARK: - DefectReport
 struct DefectReport: Codable, Identifiable, Hashable, Sendable {
   let id: UUID
-  var inspectionId: UUID // FK
+  var inspectionId: UUID? // FK — optional, defects can be reported without a linked inspection
   var reportedBy: UUID? // FK
   var description: String?
   var severity: DefectSeverity?
   var status: DefectStatus?
+  var createdAt: Date?
 
   enum CodingKeys: String, CodingKey {
       case id
       case inspectionId = "inspection_id"
       case reportedBy = "reported_by"
       case description, severity, status
+      case createdAt = "created_at"
   }
 }
 
@@ -512,3 +535,87 @@ struct FuelLog: Codable, Identifiable, Hashable, Sendable {
       case recordedAt = "recorded_at"
   }
 }
+
+// MARK: - Profile (linked to auth.users via Supabase Auth)
+struct Profile: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var fullName: String
+    var email: String
+    var phone: String?
+    var licenseNumber: String?
+    var role: String // "fleet_manager", "driver", "maintenance"
+    var status: String?
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case fullName = "full_name"
+        case email
+        case phone
+        case licenseNumber = "license_number"
+        case role
+        case status
+        case createdAt = "created_at"
+    }
+
+    var userStatus: UserStatus? {
+        guard let status else { return nil }
+        return UserStatus(rawValue: status)
+    }
+}
+
+// MARK: - IssueReportRecord (maps to issue_reports table)
+struct IssueReportRecord: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var vehicleId: UUID
+    var reportedBy: UUID
+    var category: String
+    var severity: String
+    var description: String?
+    var status: String
+    var assignedTo: UUID?
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vehicleId = "vehicle_id"
+        case reportedBy = "reported_by"
+        case category
+        case severity
+        case description
+        case status
+        case assignedTo = "assigned_to"
+        case createdAt = "created_at"
+    }
+}
+
+// MARK: - DriverRecord (maps to drivers table)
+struct DriverRecord: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var profileId: UUID
+    var licenseNumber: String?
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case profileId = "profile_id"
+        case licenseNumber = "license_number"
+        case createdAt = "created_at"
+    }
+}
+
+// MARK: - MaintenanceStaffRecord (maps to maintenance_staff table)
+struct MaintenanceStaffRecord: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var profileId: UUID
+    var specialization: String?
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case profileId = "profile_id"
+        case specialization
+        case createdAt = "created_at"
+    }
+}
+

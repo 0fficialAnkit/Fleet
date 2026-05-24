@@ -1,150 +1,177 @@
 import SwiftUI
-
-struct ActiveTripChecklist: Identifiable {
-    let id: UUID
-    let type: InspectionType
-}
+import Supabase
 
 struct DriverTripsView: View {
 
     @State private var viewModel = DriverTripsViewModel()
-    @State private var activeChecklist: ActiveTripChecklist? = nil
+    @State private var selectedFilter: TripFilter = .all
+    @Environment(AuthViewModel.self) private var authViewModel
+    @State private var navigationPath = [DriverDestination]()
+
+    enum TripFilter: String, CaseIterable {
+        case all = "All"
+        case remaining = "Remaining"
+        case completed = "Completed"
+    }
+
+    var filteredTrips: [Trip] {
+        switch selectedFilter {
+        case .all:
+            return viewModel.sortedTrips
+        case .remaining:
+            return viewModel.sortedTrips.filter { $0.status == .scheduled || $0.status == .active }
+        case .completed:
+            return viewModel.sortedTrips.filter { $0.status == .completed }
+        }
+    }
+
+    var filterBubbles: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(TripFilter.allCases, id: \.self) { filter in
+                    Text(filter.rawValue)
+                        .font(themeModel.bodyMedium())
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            Capsule()
+                                .fill(selectedFilter == filter ? themeModel.driverPrimary : Color.gray.opacity(0.15))
+                        )
+                        .foregroundStyle(selectedFilter == filter ? .white : themeModel.textPrimary)
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                selectedFilter = filter
+                            }
+                        }
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+        }
+    }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    ForEach(viewModel.sortedTrips) { trip in
-                        DriverTripCardView(trip: trip, onStart: {
-                            activeChecklist = ActiveTripChecklist(id: trip.id, type: .preTrip)
-                        }, onEnd: {
-                            activeChecklist = ActiveTripChecklist(id: trip.id, type: .postTrip)
-                        })
+        NavigationStack(path: $navigationPath) {
+            VStack(spacing: 0) {
+                filterBubbles
+
+                if viewModel.isLoading && viewModel.trips.isEmpty {
+                    Spacer()
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    Spacer()
+                } else if filteredTrips.isEmpty {
+                    Spacer()
+                    Text("No trips found.")
+                        .font(themeModel.body())
+                        .foregroundStyle(themeModel.textSecondary)
+                    Spacer()
+                } else {
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            ForEach(filteredTrips) { trip in
+                                NavigationLink(value: DriverDestination.tripDetail(trip)) {
+                                    DriverTripCardView(trip: trip)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding()
                     }
                 }
-                .padding()
             }
             .background(themeModel.backgroundPrimary.ignoresSafeArea())
             .navigationTitle("Assigned Routes")
-            .sheet(item: $activeChecklist) { checklist in
-                DriverChecklistView(checklistType: checklist.type) {
-                    if checklist.type == .preTrip {
-                        viewModel.startTrip(id: checklist.id)
-                    } else {
-                        viewModel.endTrip(id: checklist.id)
-                    }
+            .navigationDestination(for: DriverDestination.self) { destination in
+                switch destination {
+                case .tripDetail(let t):
+                    TripDetailView(
+                        trip: t,
+                        onStart: { id, vId, notes in viewModel.startTrip(id: id, vehicleId: vId, notes: notes) },
+                        onEnd:   { id, vId, notes in viewModel.endTrip(id: id, vehicleId: vId, notes: notes) }
+                    )
+                default:
+                    EmptyView()
                 }
             }
+        }
+        .task {
+            viewModel.currentUserId = authViewModel.currentUser?.id
+            await viewModel.loadData()
+            viewModel.setupRealtime()
         }
     }
 }
 
+// MARK: - Card (display only, no state)
+
 struct DriverTripCardView: View {
     let trip: Trip
-    let onStart: () -> Void
-    let onEnd: () -> Void
 
     var statusColor: Color {
         switch trip.status {
         case .scheduled: return themeModel.warning
-        case .active: return themeModel.driverPrimary
+        case .active:    return themeModel.driverPrimary
         case .completed: return themeModel.success
         case .cancelled: return themeModel.danger
-        case .none: return themeModel.textDisabled
+        case .none:      return themeModel.textDisabled
         }
     }
 
     var statusText: String {
         switch trip.status {
         case .scheduled: return "Pending"
-        case .active: return "In Progress"
+        case .active:    return "In Progress"
         case .completed: return "Completed"
         case .cancelled: return "Cancelled"
-        case .none: return "Unknown"
+        case .none:      return "Unknown"
         }
     }
 
     var body: some View {
-        
-            VStack(alignment: .leading, spacing: themeModel.spacingMD) {
-                HStack {
-                    Text("Route #\(trip.id.uuidString.prefix(4))")
-                        .font(themeModel.headline())
-                        .foregroundStyle(themeModel.textPrimary)
-                    
-                    Spacer()
-                    
-                    StatusBadge(text: statusText, color: statusColor)
-                }
+        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
 
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "circle.fill")
-                            .font(.system(size: 8))
-                            .foregroundStyle(themeModel.success)
-                        Text("Start: Warehouse")
-                            .font(themeModel.bodyMedium())
-                            .foregroundStyle(themeModel.textSecondary)
-                    }
-                    
-                    Rectangle()
-                        .fill(themeModel.divider)
-                        .frame(width: 2, height: 16)
-                        .padding(.leading, 3)
-                    
-                    HStack {
-                        Image(systemName: "mappin.circle.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(themeModel.danger)
-                        Text("Destination: Drop-off Zone")
-                            .font(themeModel.bodyMedium())
-                            .foregroundStyle(themeModel.textPrimary)
-                    }
-                }
-                .padding(.vertical, 4)
+            HStack {
+                Text("Route #\(trip.id.uuidString.prefix(6).uppercased())")
+                    .font(themeModel.headline())
+                    .foregroundStyle(themeModel.textPrimary)
 
-                HStack {
-                    Label(trip.startTime?.formatted(date: .omitted, time: .shortened) ?? "N/A", systemImage: "clock")
+                Spacer()
+
+                StatusBadge(text: statusText, color: statusColor)
+            }
+
+            HStack {
+                Label(
+                    trip.startTime?.formatted(date: .omitted, time: .shortened) ?? "N/A",
+                    systemImage: "clock"
+                )
+                .font(themeModel.caption())
+                .foregroundStyle(themeModel.textTertiary)
+
+                Spacer()
+
+                HStack(spacing: 4) {
+                    Text("Tap for details")
                         .font(themeModel.caption())
-                        .foregroundStyle(themeModel.textTertiary)
-                    
-                    Spacer()
-                    
-                    if trip.status == .scheduled {
-                        Button(action: onStart) {
-                            HStack {
-                                Image(systemName: "play.fill")
-                                Text("Start Trip")
-                            }
-                            .font(themeModel.bodyMedium())
-                            .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(themeModel.driverPrimary)
-                    } else if trip.status == .active {
-                        Button(action: onEnd) {
-                            HStack {
-                                Image(systemName: "stop.fill")
-                                Text("End Trip")
-                            }
-                            .font(themeModel.bodyMedium())
-                            .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(themeModel.success)
-                    }
+                        .foregroundStyle(themeModel.driverPrimary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(themeModel.driverPrimary)
                 }
             }
-            .padding(themeModel.spacingMD)
-            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-            )
-            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+        }
+        .padding(themeModel.spacingMD)
+        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+        )
+        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
 }
 
 #Preview {
     DriverTripsView()
+        .environment(AuthViewModel())
 }
