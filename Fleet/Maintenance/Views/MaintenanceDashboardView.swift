@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct MaintenanceDashboardView: View {
     @State private var viewModel = MaintenanceDashboardViewModel()
@@ -123,6 +124,11 @@ struct MaintenanceDashboardView: View {
             .sheet(isPresented: $isShowingProfile) {
                 MaintenanceProfileView()
                     .environment(authViewModel)
+            }
+            .task {
+                viewModel.currentUserId = authViewModel.currentUser?.id
+                await viewModel.loadData()
+                viewModel.setupRealtime()
             }
         }
     }

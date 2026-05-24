@@ -1,28 +1,27 @@
 import SwiftUI
 
 struct EmployeeDetailView: View {
-    let user: User
+    let profile: Profile
     let viewModel: EmployeesViewModel
     
     @Environment(\.dismiss) private var dismiss
     @State private var isShowingEditSheet = false
     
-    var currentUser: User {
-        viewModel.users.first { $0.id == user.id } ?? user
+    var currentProfile: Profile {
+        viewModel.profiles.first { $0.id == profile.id } ?? profile
     }
     
     var currentRoleName: String {
-        viewModel.getRole(for: currentUser)?.roleName ?? "Unknown Role"
+        viewModel.getRole(for: currentProfile)
     }
     
     var credentialsShareText: String {
-        let pass = currentUser.passwordHash == "$2b$12$dummy" ? "[Ask Fleet Manager for Password]" : currentUser.passwordHash
-        return """
-        Welcome to the Fleet App, \(currentUser.fullName)!
+        """
+        Welcome to the Fleet App, \(currentProfile.fullName)!
         
         Your login credentials are:
-        Email: \(currentUser.email)
-        Password: \(pass)
+        Email: \(currentProfile.email)
+        Password: [Set during account creation]
         
         Please log in to access your portal.
         """
@@ -47,7 +46,7 @@ struct EmployeeDetailView: View {
                         }
                         .padding(.bottom, 8)
                         
-                        Text(currentUser.fullName)
+                        Text(currentProfile.fullName)
                             .font(themeModel.largeTitle(28))
                             .foregroundColor(themeModel.textPrimary)
                         
@@ -63,19 +62,19 @@ struct EmployeeDetailView: View {
                     
                     // Information Cards
                     VStack(spacing: themeModel.spacingMD) {
-                        InfoRowView(icon: "envelope.fill", title: "Email", value: currentUser.email)
+                        InfoRowView(icon: "envelope.fill", title: "Email", value: currentProfile.email)
                         
-                        if let phone = currentUser.phone {
+                        if let phone = currentProfile.phone {
                             Divider().background(themeModel.divider)
                             InfoRowView(icon: "phone.fill", title: "Phone", value: phone)
                         }
                         
-                        if currentRoleName.lowercased() == "driver", let license = currentUser.licenseNumber, !license.isEmpty {
+                        if currentProfile.role == "driver", let license = currentProfile.licenseNumber, !license.isEmpty {
                             Divider().background(themeModel.divider)
                             InfoRowView(icon: "lanyardcard.fill", title: "License", value: license)
                         }
                         
-                        if let status = currentUser.status {
+                        if let status = currentProfile.userStatus {
                             Divider().background(themeModel.divider)
                             InfoRowView(
                                 icon: status == .active ? "checkmark.circle.fill" : "xmark.circle.fill",
@@ -85,7 +84,7 @@ struct EmployeeDetailView: View {
                             )
                         }
                         
-                        if let date = currentUser.createdAt {
+                        if let date = currentProfile.createdAt {
                             Divider().background(themeModel.divider)
                             InfoRowView(icon: "calendar", title: "Joined", value: date.formatted(date: .abbreviated, time: .omitted))
                         }
@@ -119,7 +118,7 @@ struct EmployeeDetailView: View {
                     }
                     
                     Button(role: .destructive, action: {
-                        viewModel.deleteEmployee(currentUser)
+                        viewModel.deleteEmployee(currentProfile)
                         dismiss()
                     }) {
                         Label("Delete", systemImage: "trash")
@@ -133,7 +132,7 @@ struct EmployeeDetailView: View {
             }
         }
         .sheet(isPresented: $isShowingEditSheet) {
-            EditEmployeeView(user: currentUser, viewModel: viewModel)
+            EditEmployeeView(profile: currentProfile, viewModel: viewModel)
         }
     }
 }
@@ -168,7 +167,7 @@ struct InfoRowView: View {
 #Preview {
     NavigationStack {
         EmployeeDetailView(
-            user: MockData.users.first(where: { $0.fullName == "Ravi Kumar" }) ?? MockData.users.first!,
+            profile: Profile(id: UUID(), fullName: "Ravi Kumar", email: "ravi@fleet.in", role: "driver"),
             viewModel: EmployeesViewModel()
         )
         .preferredColorScheme(.dark)

@@ -3,16 +3,9 @@ import SwiftUI
 struct InventoryView: View {
     @State private var searchText = ""
     @State private var showLowStockOnly = false
-
-    let inventoryItems = [
-        Inventory(id: UUID(), partName: "Brake Pads (Front)",   stockQuantity: 12, reorderLevel: 5,  unitCost: 45.0),
-        Inventory(id: UUID(), partName: "Oil Filter",           stockQuantity: 3,  reorderLevel: 10, unitCost: 12.5),
-        Inventory(id: UUID(), partName: "Windshield Wipers",    stockQuantity: 25, reorderLevel: 8,  unitCost: 18.0),
-        Inventory(id: UUID(), partName: "Headlight Bulb (H7)",  stockQuantity: 4,  reorderLevel: 5,  unitCost: 22.0),
-        Inventory(id: UUID(), partName: "Air Filter",           stockQuantity: 8,  reorderLevel: 6,  unitCost: 16.5),
-        Inventory(id: UUID(), partName: "Spark Plugs (Set/4)",  stockQuantity: 2,  reorderLevel: 4,  unitCost: 34.0),
-        Inventory(id: UUID(), partName: "Coolant (1L)",         stockQuantity: 14, reorderLevel: 8,  unitCost: 9.0)
-    ]
+    @State private var inventoryItems: [Inventory] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
 
     var lowStockCount: Int {
         inventoryItems.filter { ($0.stockQuantity ?? 0) <= ($0.reorderLevel ?? 0) }.count
@@ -34,98 +27,103 @@ struct InventoryView: View {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: themeModel.spacingMD) {
+                if isLoading && inventoryItems.isEmpty {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    ScrollView {
+                        VStack(spacing: themeModel.spacingMD) {
 
-                        // MARK: - Summary Strip
-                        HStack(spacing: themeModel.spacingMD) {
-                            InventoryStat(
-                                value: "\(inventoryItems.count)",
-                                label: "Total Parts",
-                                color: themeModel.maintenancePrimary
-                            )
-                            InventoryStat(
-                                value: "\(lowStockCount)",
-                                label: "Low Stock",
-                                color: themeModel.danger
-                            )
-                            InventoryStat(
-                                value: "$\(String(format: "%.0f", inventoryItems.compactMap(\.unitCost).reduce(0, +)))",
-                                label: "Est. Value",
-                                color: themeModel.success
-                            )
-                        }
-                        .padding(.horizontal, themeModel.spacingMD)
-
-                        // MARK: - AI Forecast Banner
-                        HStack(alignment: .top, spacing: themeModel.spacingMD) {
-                            Image(systemName: "sparkles")
-                                .foregroundStyle(themeModel.warning)
-                                .font(.system(size: 18, weight: .semibold))
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("AI Forecast")
-                                    .font(themeModel.bodyMedium())
-                                    .foregroundStyle(themeModel.warning)
-                                Text("High demand for **Oil Filters** expected next week. Consider restocking soon.")
-                                    .font(themeModel.caption())
-                                    .foregroundStyle(themeModel.textSecondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            Spacer(minLength: 0)
-                        }
-                        .padding(themeModel.spacingMD)
-                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                                .stroke(themeModel.warning.opacity(0.25), lineWidth: 0.8)
-                        )
-                        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                        .padding(.horizontal, themeModel.spacingMD)
-
-                        // MARK: - Low Stock Filter Toggle
-                        if lowStockCount > 0 {
-                            Button(action: { withAnimation { showLowStockOnly.toggle() } }) {
-                                HStack {
-                                    Image(systemName: showLowStockOnly ? "checkmark.circle.fill" : "exclamationmark.triangle")
-                                        .foregroundStyle(themeModel.danger)
-                                    Text(showLowStockOnly ? "Showing Low Stock Only" : "Show Low Stock Only (\(lowStockCount))")
-                                        .font(themeModel.bodyMedium())
-                                        .foregroundStyle(themeModel.danger)
-                                    Spacer()
-                                }
-                                .padding(themeModel.spacingMD)
-                                .background(themeModel.danger.opacity(showLowStockOnly ? 0.15 : 0.07))
-                                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
-                                        .stroke(themeModel.danger.opacity(0.3), lineWidth: showLowStockOnly ? 1 : 0.5)
+                            // MARK: - Summary Strip
+                            HStack(spacing: themeModel.spacingMD) {
+                                InventoryStat(
+                                    value: "\(inventoryItems.count)",
+                                    label: "Total Parts",
+                                    color: themeModel.maintenancePrimary
+                                )
+                                InventoryStat(
+                                    value: "\(lowStockCount)",
+                                    label: "Low Stock",
+                                    color: themeModel.danger
+                                )
+                                InventoryStat(
+                                    value: "$\(String(format: "%.0f", inventoryItems.compactMap(\.unitCost).reduce(0, +)))",
+                                    label: "Est. Value",
+                                    color: themeModel.success
                                 )
                             }
                             .padding(.horizontal, themeModel.spacingMD)
-                        }
 
-                        // MARK: - Items List
-                        if searchResults.isEmpty {
-                            VStack(spacing: themeModel.spacingMD) {
-                                Image(systemName: "magnifyingglass")
-                                    .font(.system(size: 40))
-                                    .foregroundStyle(themeModel.textTertiary)
-                                Text("No parts found")
-                                    .font(themeModel.bodyMedium())
-                                    .foregroundStyle(themeModel.textSecondary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, themeModel.spacingXXL)
-                        } else {
-                            LazyVStack(spacing: themeModel.spacingMD) {
-                                ForEach(searchResults) { item in
-                                    InventoryRow(item: item)
+                            // MARK: - AI Forecast Banner
+                            HStack(alignment: .top, spacing: themeModel.spacingMD) {
+                                Image(systemName: "sparkles")
+                                    .foregroundStyle(themeModel.warning)
+                                    .font(.system(size: 18, weight: .semibold))
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("AI Forecast")
+                                        .font(themeModel.bodyMedium())
+                                        .foregroundStyle(themeModel.warning)
+                                    Text("High demand for **Oil Filters** expected next week. Consider restocking soon.")
+                                        .font(themeModel.caption())
+                                        .foregroundStyle(themeModel.textSecondary)
+                                        .fixedSize(horizontal: false, vertical: true)
                                 }
+                                Spacer(minLength: 0)
                             }
+                            .padding(themeModel.spacingMD)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                    .stroke(themeModel.warning.opacity(0.25), lineWidth: 0.8)
+                            )
+                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
                             .padding(.horizontal, themeModel.spacingMD)
+
+                            // MARK: - Low Stock Filter Toggle
+                            if lowStockCount > 0 {
+                                Button(action: { withAnimation { showLowStockOnly.toggle() } }) {
+                                    HStack {
+                                        Image(systemName: showLowStockOnly ? "checkmark.circle.fill" : "exclamationmark.triangle")
+                                            .foregroundStyle(themeModel.danger)
+                                        Text(showLowStockOnly ? "Showing Low Stock Only" : "Show Low Stock Only (\(lowStockCount))")
+                                            .font(themeModel.bodyMedium())
+                                            .foregroundStyle(themeModel.danger)
+                                        Spacer()
+                                    }
+                                    .padding(themeModel.spacingMD)
+                                    .background(themeModel.danger.opacity(showLowStockOnly ? 0.15 : 0.07))
+                                    .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
+                                            .stroke(themeModel.danger.opacity(0.3), lineWidth: showLowStockOnly ? 1 : 0.5)
+                                    )
+                                }
+                                .padding(.horizontal, themeModel.spacingMD)
+                            }
+
+                            // MARK: - Items List
+                            if searchResults.isEmpty {
+                                VStack(spacing: themeModel.spacingMD) {
+                                    Image(systemName: "magnifyingglass")
+                                        .font(.system(size: 40))
+                                        .foregroundStyle(themeModel.textTertiary)
+                                    Text("No parts found")
+                                        .font(themeModel.bodyMedium())
+                                        .foregroundStyle(themeModel.textSecondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, themeModel.spacingXXL)
+                            } else {
+                                LazyVStack(spacing: themeModel.spacingMD) {
+                                    ForEach(searchResults) { item in
+                                        InventoryRow(item: item)
+                                    }
+                                }
+                                .padding(.horizontal, themeModel.spacingMD)
+                            }
                         }
+                        .padding(.vertical, themeModel.spacingMD)
                     }
-                    .padding(.vertical, themeModel.spacingMD)
                 }
             }
             .navigationTitle("Inventory")
@@ -139,7 +137,20 @@ struct InventoryView: View {
                     }
                 }
             }
+            .task {
+                await loadInventory()
+            }
         }
+    }
+
+    private func loadInventory() async {
+        isLoading = true
+        do {
+            inventoryItems = try await InventoryService.fetchAllInventory()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
     }
 }
 

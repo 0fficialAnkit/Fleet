@@ -140,8 +140,14 @@ struct EditVehicleView: View {
                         updatedVehicle.mileage = mil
                         updatedVehicle.purchaseDate = purchaseDate
                         
-                        viewModel.updateVehicle(updatedVehicle)
-                        dismiss()
+                        Task {
+                            do {
+                                try await viewModel.updateVehicle(updatedVehicle)
+                                dismiss()
+                            } catch {
+                                viewModel.errorMessage = error.localizedDescription
+                            }
+                        }
                     }
                     .foregroundColor(themeModel.info)
                     .bold()
@@ -152,6 +158,4 @@ struct EditVehicleView: View {
     }
 }
 
-#Preview {
-    EditVehicleView(viewModel: VehiclesViewModel(), vehicle: MockData.vehicles.first!)
-}
+

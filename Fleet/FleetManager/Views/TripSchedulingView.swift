@@ -4,11 +4,12 @@ struct TripSchedulingView: View {
     @Environment(\.dismiss) private var dismiss
     var orderType: OrderType
     var selectedVehicle: Vehicle
-    var selectedDriver: User
+    var selectedDriver: Profile
     var viewModel: OrdersViewModel
     @Binding var selectedOrderType: OrderType?
     
     @State private var startTime = Date()
+    @State private var selectedRouteId: UUID?
     
     var body: some View {
         ZStack {
@@ -23,7 +24,7 @@ struct TripSchedulingView: View {
                             .padding(.horizontal, themeModel.spacingMD)
                         
                         VStack(alignment: .leading, spacing: themeModel.spacingMD) {
-                            SummaryRow(title: "Order Type", value: orderType.rawValue, icon: "shippingbox.fill")
+                            SummaryRow(title: "Order Type", value: orderType.displayName, icon: "shippingbox.fill")
                             Divider().background(themeModel.divider)
                             SummaryRow(title: "Vehicle", value: "\(selectedVehicle.make ?? "") \(selectedVehicle.model ?? "") (\(selectedVehicle.licensePlate ?? ""))", icon: "car.fill")
                             Divider().background(themeModel.divider)
@@ -37,6 +38,33 @@ struct TripSchedulingView: View {
                         )
                         .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
                         .padding(.horizontal, themeModel.spacingMD)
+                    }
+                    
+                    // Route Selection
+                    if !viewModel.routes.isEmpty {
+                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                            SectionHeader(title: "Select Route")
+                                .padding(.horizontal, themeModel.spacingMD)
+                            
+                            VStack(spacing: themeModel.spacingMD) {
+                                Picker("Route", selection: $selectedRouteId) {
+                                    Text("Select a route").tag(UUID?.none)
+                                    ForEach(viewModel.routes) { route in
+                                        Text(route.routeName ?? "Unknown Route")
+                                            .tag(UUID?.some(route.id))
+                                    }
+                                }
+                                .foregroundColor(themeModel.textPrimary)
+                            }
+                            .padding(themeModel.spacingMD)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                            )
+                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                            .padding(.horizontal, themeModel.spacingMD)
+                        }
                     }
                     
                     // Date & Time Picker Card
@@ -66,31 +94,44 @@ struct TripSchedulingView: View {
         }
         .navigationTitle("Schedule Trip")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            // Default to the first route
+            if selectedRouteId == nil {
+                selectedRouteId = viewModel.routes.first?.id
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") {
-                    let routeId = MockData.routes.first(where: { 
-                        if orderType == .bulkOrderShip {
-                            return $0.routeName?.contains("Downtown") ?? false
-                        } else if orderType == .pickUpAndDrop {
-                            return $0.routeName?.contains("Suburbs") ?? false
-                        } else {
-                            return $0.routeName?.contains("Express") ?? false
+                    Task {
+                        do {
+                            try await viewModel.addTrip(
+                                vehicleId: selectedVehicle.id,
+                                driverId: selectedDriver.id,
+                                routeId: selectedRouteId,
+                                startTime: startTime,
+                                orderType: orderType
+                            )
+                            selectedOrderType = nil // Dismisses the entire sheet flow directly to order list
+                        } catch {
+                            viewModel.errorMessage = error.localizedDescription
                         }
-                    })?.id ?? MockData.routes.first?.id
-                    
-                    viewModel.addTrip(
-                        vehicleId: selectedVehicle.id,
-                        driverId: selectedDriver.id,
-                        routeId: routeId,
-                        startTime: startTime,
-                        orderType: orderType
-                    )
-                    selectedOrderType = nil // Dismisses the entire sheet flow directly to order list
+                    }
                 }
                 .foregroundColor(themeModel.accent)
                 .bold()
             }
+        }
+        .alert(
+            "Error",
+            isPresented: Binding(
+                get: { viewModel.errorMessage != nil },
+                set: { if !$0 { viewModel.errorMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage ?? "Unknown error")
         }
     }
 }

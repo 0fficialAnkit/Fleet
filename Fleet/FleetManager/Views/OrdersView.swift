@@ -4,6 +4,7 @@ struct OrdersView: View {
     @State private var viewModel = OrdersViewModel()
     @State private var selectedFilter: TripStatus? = nil
     @State private var selectedOrderType: OrderType? = nil
+    @State private var navigationPath = [Trip]()
     
     var filteredTrips: [Trip] {
         if let status = selectedFilter {
@@ -13,49 +14,54 @@ struct OrdersView: View {
     }
     
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
                 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: themeModel.spacingMD) {
-                        
-                        // Filters
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                FilterButton(title: "All", isSelected: selectedFilter == nil) {
-                                    selectedFilter = nil
-                                }
-                                ForEach(TripStatus.allCases, id: \.self) { status in
-                                    FilterButton(
-                                        title: status.rawValue.capitalized,
-                                        isSelected: selectedFilter == status
-                                    ) {
-                                        selectedFilter = status
+                if viewModel.isLoading && viewModel.trips.isEmpty {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: themeModel.spacingMD) {
+                            
+                            // Filters
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    FilterButton(title: "All", isSelected: selectedFilter == nil) {
+                                        selectedFilter = nil
+                                    }
+                                    ForEach(TripStatus.allCases, id: \.self) { status in
+                                        FilterButton(
+                                            title: status.rawValue.capitalized,
+                                            isSelected: selectedFilter == status
+                                        ) {
+                                            selectedFilter = status
+                                        }
                                     }
                                 }
+                                .padding(.horizontal, themeModel.spacingMD)
                             }
-                            .padding(.horizontal, themeModel.spacingMD)
-                        }
-                        .padding(.vertical, themeModel.spacingSM)
-                        
-                        // Orders List
-                        if filteredTrips.isEmpty {
-                            Text("No orders found.")
-                                .font(themeModel.body(16))
-                                .foregroundColor(themeModel.textSecondary)
-                                .padding(.top, 40)
-                        } else {
-                            ForEach(filteredTrips) { trip in
-                                NavigationLink(destination: OrderDetailView(trip: trip, viewModel: viewModel)) {
-                                    OrderCardView(trip: trip, viewModel: viewModel)
+                            .padding(.vertical, themeModel.spacingSM)
+                            
+                            // Orders List
+                            if filteredTrips.isEmpty {
+                                Text("No orders found.")
+                                    .font(themeModel.body(16))
+                                    .foregroundColor(themeModel.textSecondary)
+                                    .padding(.top, 40)
+                            } else {
+                                ForEach(filteredTrips) { trip in
+                                    NavigationLink(value: trip) {
+                                        OrderCardView(trip: trip, viewModel: viewModel)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
+                                .padding(.horizontal, themeModel.spacingMD)
                             }
-                            .padding(.horizontal, themeModel.spacingMD)
                         }
+                        .padding(.bottom, themeModel.spacingXXL)
                     }
-                    .padding(.bottom, themeModel.spacingXXL)
                 }
             }
             .navigationTitle("Orders")
@@ -73,8 +79,6 @@ struct OrdersView: View {
                         Image(systemName: "plus")
                             .font(.system(size: 17, weight: .medium))
                             .foregroundStyle(themeModel.textPrimary)
-//                            .frame(width: 38, height: 38)
-//                            .glassEffect(in: Circle())
                     }
                 }
             }
@@ -86,8 +90,12 @@ struct OrdersView: View {
                     selectedFilter = nil
                 }
             }
-            .onAppear {
-                viewModel.refreshData()
+            .navigationDestination(for: Trip.self) { trip in
+                OrderDetailView(trip: trip, viewModel: viewModel)
+            }
+            .task {
+                await viewModel.loadData()
+                viewModel.setupRealtime()
             }
         }
     }
@@ -117,7 +125,7 @@ struct OrderCardView: View {
     let viewModel: OrdersViewModel
     
     var route: Route? {
-        MockData.routes.first { $0.id == trip.routeId }
+        viewModel.route(for: trip.routeId)
     }
     
     var formattedDate: String {

@@ -7,30 +7,27 @@ struct DriverSelectionView: View {
     var viewModel: OrdersViewModel
     @Binding var selectedOrderType: OrderType?
     
-    // Fetch drivers from existing mock data
-    var availableDrivers: [User] {
-        MockData.users.filter { user in
-            // Filter by driver role using the known driver role ID from MockData
-            user.roleId == MockData.roles.first(where: { $0.roleName == "Driver" })?.id
+    // Fetch drivers from ViewModel data
+    var availableDrivers: [Profile] {
+        viewModel.driversWithRole()
+    }
+    
+    // Map profile status to UI strings
+    func driverStatusText(for status: String?) -> String {
+        switch status {
+        case "active": return "Available"
+        case "suspended": return "Busy"
+        case "inactive": return "Offline"
+        default: return "Unknown"
         }
     }
     
-    // Map existing UserStatus to UI strings requested by user
-    func driverStatusText(for status: UserStatus?) -> String {
+    func driverStatusColor(for status: String?) -> Color {
         switch status {
-        case .active: return "Available"
-        case .suspended: return "Busy"
-        case .inactive: return "Offline"
-        case .none: return "Unknown"
-        }
-    }
-    
-    func driverStatusColor(for status: UserStatus?) -> Color {
-        switch status {
-        case .active: return themeModel.success
-        case .suspended: return themeModel.warning
-        case .inactive: return themeModel.textDisabled
-        case .none: return themeModel.textDisabled
+        case "active": return themeModel.success
+        case "suspended": return themeModel.warning
+        case "inactive": return themeModel.textDisabled
+        default: return themeModel.textDisabled
         }
     }
     

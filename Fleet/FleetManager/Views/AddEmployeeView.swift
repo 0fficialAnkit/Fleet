@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct AddEmployeeView: View {
     @Environment(\.dismiss) private var dismiss
@@ -10,9 +11,15 @@ struct AddEmployeeView: View {
     @State private var password = ""
     @State private var phone = ""
     @State private var licenseNumber = ""
+    @State private var isPasswordVisible = false
     
     var isDriverSelected: Bool {
         return roleName.lowercased() == "driver"
+    }
+    
+    /// Map display role to database role string
+    var dbRole: String {
+        isDriverSelected ? "driver" : "maintenance"
     }
     
     var body: some View {
@@ -22,6 +29,14 @@ struct AddEmployeeView: View {
                 
                 ScrollView {
                     VStack(spacing: themeModel.spacingLG) {
+                        
+                        // Error message
+                        if let error = viewModel.errorMessage {
+                            Text(error)
+                                .font(themeModel.caption(14))
+                                .foregroundColor(themeModel.danger)
+                                .padding(.horizontal, themeModel.spacingMD)
+                        }
                         
                         VStack(alignment: .leading, spacing: themeModel.spacingSM) {
                             SectionHeader(title: "Personal Details")
@@ -42,9 +57,23 @@ struct AddEmployeeView: View {
                                         
                                     Divider().background(themeModel.divider)
                                     
-                                    SecureField("Password", text: $password)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
+                                    HStack {
+                                        if isPasswordVisible {
+                                            TextField("Password", text: $password)
+                                                .foregroundColor(themeModel.textPrimary)
+                                        } else {
+                                            SecureField("Password", text: $password)
+                                                .foregroundColor(themeModel.textPrimary)
+                                        }
+                                        
+                                        Button(action: {
+                                            isPasswordVisible.toggle()
+                                        }) {
+                                            Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                                                .foregroundColor(themeModel.textSecondary)
+                                        }
+                                    }
+                                    .padding(.vertical, 12)
                                     
                                     Divider().background(themeModel.divider)
                                     
@@ -86,21 +115,60 @@ struct AddEmployeeView: View {
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        if let role = viewModel.roles.first(where: { $0.roleName.lowercased() == roleName.lowercased() }), !fullName.isEmpty {
-                            viewModel.addEmployee(
-                                fullName: fullName,
-                                email: email,
-                                phone: phone,
-                                licenseNumber: isDriverSelected && !licenseNumber.isEmpty ? licenseNumber : nil,
-                                roleId: role.id,
-                                passwordHash: password // Mocking hashing
-                            )
-                            dismiss()
+                        guard !fullName.isEmpty, !email.isEmpty, !password.isEmpty else { return }
+                        Task {
+                            do {
+                                try await viewModel.addEmployee(
+                                    fullName: fullName,
+                                    email: email,
+                                    password: password,
+                                    phone: phone,
+                                    licenseNumber: isDriverSelected && !licenseNumber.isEmpty ? licenseNumber : nil,
+                                    role: dbRole
+                                )
+                                dismiss()
+                            } catch let error as NSError where error.domain == "ProfileService" {
+                                viewModel.errorMessage = error.localizedDescription
+                            } catch {
+                                // Supabase functions error might contain a body
+                                if let functionsError = error as? FunctionsError {
+                                    switch functionsError {
+                                    case .httpError(let code, let data):
+                                        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                                           let serverError = json["error"] as? String {
+                                            viewModel.errorMessage = "Server Error (\(code)): \(serverError)"
+                                        } else {
+                                            viewModel.errorMessage = "HTTP Error \(code)"
+                                        }
+                                    case .relayError:
+                                        viewModel.errorMessage = "Network relay error"
+                                    }
+                                } else {
+                                    viewModel.errorMessage = error.localizedDescription
+                                }
+                            }
                         }
                     }
                     .foregroundColor(themeModel.accent)
                     .bold()
-                    .disabled(fullName.isEmpty)
+                    .disabled(fullName.isEmpty || email.isEmpty || password.isEmpty || viewModel.isCreatingUser)
+                }
+            }
+            .overlay {
+                if viewModel.isCreatingUser {
+                    ZStack {
+                        Color.black.opacity(0.4).ignoresSafeArea()
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(1.2)
+                            Text("Creating user...")
+                                .font(themeModel.bodyMedium())
+                                .foregroundColor(.white)
+                        }
+                        .padding(32)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                    }
                 }
             }
         }

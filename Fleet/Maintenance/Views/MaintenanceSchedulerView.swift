@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 // ═══════════════════════════════════════════════════════════════
 // MARK: - Main Screen
@@ -9,6 +10,7 @@ struct MaintenanceSchedulerView: View {
     @Namespace private var calendarNS
     @State private var selectedTask: ScheduledTask? = nil
     @State private var selectedWorkOrder: ScheduledWorkOrder? = nil
+    @Environment(AuthViewModel.self) private var authViewModel
 
     init() {
         UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(themeModel.maintenancePrimary)
@@ -45,6 +47,11 @@ struct MaintenanceSchedulerView: View {
             }
             .navigationDestination(item: $selectedWorkOrder) { wo in
                 WorkOrderDetailView(scheduledWorkOrder: wo)
+            }
+            .task {
+                viewModel.currentUserId = authViewModel.currentUser?.id
+                await viewModel.loadData()
+                viewModel.setupRealtime()
             }
         }
     }

@@ -2,13 +2,14 @@ import SwiftUI
 
 struct MaintenanceProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
+    @State private var profileVM = ProfileViewModel()
 
     // Profile menu items
     private let menuItems: [(title: String, icon: String, isDestructive: Bool)] = [
         ("Certifications", "rosette", false),
         ("Shift Schedule", "calendar", false),
         ("Assigned Depot", "building.2.fill", false),
-        ("Notifications", "bell.badge", false),
+        ("Notifications", "bell", false),
         ("Performance Report", "chart.bar.xaxis", false)
     ]
 
@@ -23,7 +24,7 @@ struct MaintenanceProfileView: View {
                         // MARK: - Profile Header
                         ProfileHeader(
                             icon: "person.crop.circle.fill",
-                            name: "Mike Thompson",
+                            name: profileVM.currentUser?.fullName ?? "Mechanic",
                             role: "Senior Mechanic",
                             accentColor: themeModel.maintenancePrimary
                         )
@@ -31,9 +32,9 @@ struct MaintenanceProfileView: View {
 
                         // MARK: - Stats Strip
                         HStack(spacing: themeModel.spacingMD) {
-                            StatPill(value: "142", label: "Orders Done", color: themeModel.maintenancePrimary)
-                            StatPill(value: "98%", label: "Accuracy", color: themeModel.success)
-                            StatPill(value: "4.9★", label: "Rating", color: themeModel.warning)
+                            StatPill(value: "—", label: "Orders Done", color: themeModel.maintenancePrimary)
+                            StatPill(value: "—", label: "Accuracy", color: themeModel.success)
+                            StatPill(value: "—", label: "Rating", color: themeModel.warning)
                         }
                         .padding(.horizontal, themeModel.spacingMD)
 
@@ -92,6 +93,9 @@ struct MaintenanceProfileView: View {
                 }
             }
             .navigationTitle("Profile")
+        }
+        .task {
+            await profileVM.loadProfile()
         }
     }
 }

@@ -125,8 +125,14 @@ struct VehicleDetailView: View {
                     }
                     
                     Button(role: .destructive, action: {
-                        viewModel.deleteVehicle(vehicle)
-                        dismiss()
+                        Task {
+                            do {
+                                try await viewModel.deleteVehicle(vehicle)
+                                dismiss()
+                            } catch {
+                                viewModel.errorMessage = error.localizedDescription
+                            }
+                        }
                     }) {
                         Label("Delete", systemImage: "trash")
                     }
@@ -185,8 +191,4 @@ struct TripHistoryRow: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        VehicleDetailView(vehicle: MockData.vehicles.first!, viewModel: VehiclesViewModel())
-    }
-}
+

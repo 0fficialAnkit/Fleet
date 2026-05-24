@@ -13,9 +13,13 @@ struct RoleDisplayItem: Identifiable {
 // MARK: - LoginView
 struct LoginView: View {
 
+    enum Destination: Hashable {
+        case signIn
+        case createAccount
+    }
+
     @State private var selectedRoleId: Int = 1
-    @State private var navigateToSignIn: Bool = false
-    @State private var navigateToCreateAccount: Bool = false
+    @State private var navigationPath = [Destination]()
 
     let roleItems: [RoleDisplayItem] = [
         RoleDisplayItem(
@@ -45,7 +49,7 @@ struct LoginView: View {
     ]
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 Color(red: 0.07, green: 0.09, blue: 0.13)
                     .ignoresSafeArea()
@@ -63,18 +67,22 @@ struct LoginView: View {
                 }
                 .padding(.horizontal, 24)
             }
-            .navigationDestination(isPresented: $navigateToSignIn) {
-                SignInView()
-            }
-            .navigationDestination(isPresented: $navigateToCreateAccount) {
-                CreateAccountView()
+            .navigationDestination(for: Destination.self) { destination in
+                switch destination {
+                case .signIn:
+                    SignInView()
+                case .createAccount:
+                    CreateAccountView(onSuccess: {
+                        navigationPath = [.signIn]
+                    })
+                }
             }
         }
     }
     // MARK: - App Icon (blue truck)
     var appIconView: some View {
         Button(action: {
-            navigateToCreateAccount = true
+            navigationPath.append(.createAccount)
         }) {
             ZStack {
                 RoundedRectangle(cornerRadius: 22)
@@ -132,7 +140,7 @@ struct LoginView: View {
 
     // MARK: - Continue Action
     func handleContinue() {
-        navigateToSignIn = true
+        navigationPath.append(.signIn)
     }
 }
 

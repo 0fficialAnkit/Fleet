@@ -22,11 +22,15 @@ struct VehiclesRootView: View {
                 .buttonStyle(.plain)
             }
         }
+        .navigationDestination(for: Vehicle.self) { vehicle in
+            VehicleDetailView(vehicle: vehicle, viewModel: vehiclesViewModel)
+        }
         .sheet(isPresented: $isShowingAddVehicle) {
             AddVehicleView(viewModel: vehiclesViewModel)
         }
-        .onAppear {
-            vehiclesViewModel.refreshData()
+        .task {
+            await vehiclesViewModel.loadData()
+            vehiclesViewModel.setupRealtime()
         }
     }
 }

@@ -10,7 +10,8 @@ struct AddVehicleView: View {
     @State private var licensePlate = ""
     @State private var tankCapacity = ""
     @State private var mileage = ""
-    @State private var purchaseDate = Date()
+    @State private var isSaving = false
+    @State private var errorMessage: String?
     
     var body: some View {
         NavigationStack {
@@ -19,6 +20,14 @@ struct AddVehicleView: View {
                 
                 ScrollView {
                     VStack(spacing: themeModel.spacingLG) {
+                        
+                        // Error message
+                        if let error = errorMessage {
+                            Text(error)
+                                .font(themeModel.caption(14))
+                                .foregroundColor(themeModel.danger)
+                                .padding(.horizontal, themeModel.spacingMD)
+                        }
                         
                         // Basic Details Section
                         VStack(alignment: .leading, spacing: themeModel.spacingSM) {
@@ -77,13 +86,6 @@ struct AddVehicleView: View {
                                     .keyboardType(.decimalPad)
                                     .padding(.vertical, 12)
                                     .foregroundColor(themeModel.textPrimary)
-                                
-                                Divider().background(themeModel.divider)
-                                
-                                DatePicker("Purchase Date", selection: $purchaseDate, displayedComponents: .date)
-                                    .padding(.vertical, 12)
-                                    .foregroundColor(themeModel.textPrimary)
-                                    .tint(themeModel.info)
                             }
                             .padding(themeModel.spacingMD)
                             .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
@@ -113,23 +115,59 @@ struct AddVehicleView: View {
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        let yearInt = Int(year.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 2024
-                        let cap = Double(tankCapacity.trimmingCharacters(in: .whitespacesAndNewlines))
-                        let mil = Double(mileage.trimmingCharacters(in: .whitespacesAndNewlines))
-                        
-                        viewModel.addVehicle(
-                            make: make.isEmpty ? "Unknown" : make,
-                            model: model.isEmpty ? "Unknown" : model,
-                            year: yearInt,
-                            tankCapacity: cap,
-                            mileage: mil,
-                            purchaseDate: purchaseDate,
-                            licensePlate: licensePlate.isEmpty ? "NO-PLATE" : licensePlate
-                        )
-                        dismiss()
+                        Task {
+                            isSaving = true
+                            errorMessage = nil
+                            let yearInt = Int(year.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 2024
+                            let cap = Double(tankCapacity.trimmingCharacters(in: .whitespacesAndNewlines))
+                            let mil = Double(mileage.trimmingCharacters(in: .whitespacesAndNewlines))
+                            
+                            let makeTrimmed = make.trimmingCharacters(in: .whitespacesAndNewlines)
+                            let modelTrimmed = model.trimmingCharacters(in: .whitespacesAndNewlines)
+                            let plateTrimmed = licensePlate.trimmingCharacters(in: .whitespacesAndNewlines)
+                            
+                            guard !makeTrimmed.isEmpty, !modelTrimmed.isEmpty, !plateTrimmed.isEmpty else {
+                                errorMessage = "Make, model, and license plate are required."
+                                isSaving = false
+                                return
+                            }
+                            
+                            do {
+                                try await viewModel.addVehicle(
+                                    make: makeTrimmed,
+                                    model: modelTrimmed,
+                                    year: yearInt,
+                                    tankCapacity: cap,
+                                    mileage: mil,
+                                    licensePlate: plateTrimmed
+                                )
+                                dismiss()
+                            } catch {
+                                errorMessage = error.localizedDescription
+                            }
+                            isSaving = false
+                        }
                     }
                     .foregroundColor(themeModel.info)
                     .bold()
+                    .disabled(isSaving)
+                }
+            }
+            .overlay {
+                if isSaving {
+                    ZStack {
+                        Color.black.opacity(0.4).ignoresSafeArea()
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(1.2)
+                            Text("Adding vehicle...")
+                                .font(themeModel.bodyMedium())
+                                .foregroundColor(.white)
+                        }
+                        .padding(32)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                    }
                 }
             }
         }
@@ -140,3 +178,4 @@ struct AddVehicleView: View {
 #Preview {
     AddVehicleView(viewModel: VehiclesViewModel())
 }
+
