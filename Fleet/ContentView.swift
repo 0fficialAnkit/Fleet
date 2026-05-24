@@ -20,8 +20,8 @@ struct ContentView: View {
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 }
             } else if authViewModel.isAuthenticated {
-                if let role = authViewModel.userRole {
-                    switch role {
+                if let roleName = authViewModel.resolvedRoleName {
+                    switch roleName.lowercased() {
                     case "fleet_manager":
                         FleetManagerMainView()
                     case "driver":
@@ -55,6 +55,9 @@ struct ContentView: View {
         .environment(authViewModel)
         .task {
             await authViewModel.checkUserSession()
+            if authViewModel.isAuthenticated {
+                await RealtimeManager.shared.subscribeAll()
+            }
         }
     }
 }

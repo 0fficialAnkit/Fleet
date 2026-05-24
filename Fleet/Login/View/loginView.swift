@@ -1,9 +1,3 @@
-//
-//  loginView.swift
-//  Fleet
-//
-//  Created by Harshita Jiaswal on 19/05/26.
-//
 import SwiftUI
 
 // MARK: - RoleDisplayItem
@@ -19,8 +13,13 @@ struct RoleDisplayItem: Identifiable {
 // MARK: - LoginView
 struct LoginView: View {
 
+    enum Destination: Hashable {
+        case signIn
+        case createAccount
+    }
+
     @State private var selectedRoleId: Int = 1
-    @State private var navigateToSignIn: Bool = false
+    @State private var navigationPath = [Destination]()
 
     let roleItems: [RoleDisplayItem] = [
         RoleDisplayItem(
@@ -50,7 +49,7 @@ struct LoginView: View {
     ]
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 Color(red: 0.07, green: 0.09, blue: 0.13)
                     .ignoresSafeArea()
@@ -68,27 +67,39 @@ struct LoginView: View {
                 }
                 .padding(.horizontal, 24)
             }
-            .navigationDestination(isPresented: $navigateToSignIn) {
-                SignInView()
+            .navigationDestination(for: Destination.self) { destination in
+                switch destination {
+                case .signIn:
+                    SignInView()
+                case .createAccount:
+                    CreateAccountView(onSuccess: {
+                        navigationPath = [.signIn]
+                    })
+                }
             }
         }
     }
     // MARK: - App Icon (blue truck)
     var appIconView: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 22)
-                .fill(Color.blue)
-                .frame(width: 80, height: 80)
-            Image(systemName: "truck.box.fill")
-                .font(.system(size: 36))
-                .foregroundColor(.white)
+        Button(action: {
+            navigationPath.append(.createAccount)
+        }) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(Color.blue)
+                    .frame(width: 80, height: 80)
+                Image(systemName: "truck.box.fill")
+                    .font(.system(size: 36))
+                    .foregroundColor(.white)
+            }
         }
+        .buttonStyle(PlainButtonStyle())
     }
 
     // MARK: - Title + Subtitle
     var titleSection: some View {
         VStack(spacing: 8) {
-            Text("PrimeFleet")
+            Text("FleetOS")
                 .font(.system(size: 34, weight: .bold))
                 .foregroundColor(.white)
             Text("Select your role to continue")
@@ -129,12 +140,9 @@ struct LoginView: View {
 
     // MARK: - Continue Action
     func handleContinue() {
-//        navigateToSignIn = false
-//        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            navigateToSignIn = true
-        }
+        navigationPath.append(.signIn)
     }
-
+}
 
 // MARK: - RoleCardView
 struct RoleCardView: View {
@@ -207,4 +215,3 @@ struct RoleCardView: View {
     LoginView()
         .environment(AuthViewModel())
 }
-

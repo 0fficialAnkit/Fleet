@@ -207,8 +207,4 @@ struct DriverVehicleDetailView: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        DriverVehicleDetailView(vehicle: MockData.vehicles.first!)
-    }
-}
+
