@@ -10,20 +10,20 @@ final class RealtimeManager {
 
     static let shared = RealtimeManager()
 
-    // MARK: - Multi-listener handler arrays (nonisolated to avoid Sendable issues)
-    nonisolated private var tripsHandlers: [() -> Void] = []
-    nonisolated private var workOrdersHandlers: [() -> Void] = []
-    nonisolated private var maintenanceTasksHandlers: [() -> Void] = []
-    nonisolated private var defectReportsHandlers: [() -> Void] = []
-    nonisolated private var notificationsHandlers: [() -> Void] = []
-    nonisolated private var messagesHandlers: [() -> Void] = []
-    nonisolated private var vehicleLocationsHandlers: [() -> Void] = []
-    nonisolated private var vehiclesHandlers: [() -> Void] = []
-    nonisolated private var inventoryHandlers: [() -> Void] = []
-    nonisolated private var issueReportsHandlers: [() -> Void] = []
-    nonisolated private var profilesHandlers: [() -> Void] = []
-    nonisolated private var usersHandlers: [() -> Void] = []
-    nonisolated private var fuelLogsHandlers: [() -> Void] = []
+    // MARK: - Multi-listener handler arrays
+    private var tripsHandlers: [() -> Void] = []
+    private var workOrdersHandlers: [() -> Void] = []
+    private var maintenanceTasksHandlers: [() -> Void] = []
+    private var defectReportsHandlers: [() -> Void] = []
+    private var notificationsHandlers: [() -> Void] = []
+    private var messagesHandlers: [() -> Void] = []
+    private var vehicleLocationsHandlers: [() -> Void] = []
+    private var vehiclesHandlers: [() -> Void] = []
+    private var inventoryHandlers: [() -> Void] = []
+    private var issueReportsHandlers: [() -> Void] = []
+    private var profilesHandlers: [() -> Void] = []
+    private var usersHandlers: [() -> Void] = []
+    private var fuelLogsHandlers: [() -> Void] = []
 
     private var channels: [RealtimeChannelV2] = []
 
@@ -103,7 +103,7 @@ final class RealtimeManager {
 
     // MARK: - Subscribe to a single table
 
-    private func subscribe(table: String, onChange: @escaping @Sendable () -> Void) async {
+    private func subscribe(table: String, onChange: @escaping @MainActor @Sendable () -> Void) async {
         let channel = supabase.realtimeV2.channel("public:\(table)")
 
         let changes = channel.postgresChange(
