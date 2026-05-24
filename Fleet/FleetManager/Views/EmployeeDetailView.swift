@@ -101,7 +101,6 @@ struct EmployeeDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
