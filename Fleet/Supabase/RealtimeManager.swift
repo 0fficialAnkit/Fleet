@@ -11,20 +11,19 @@ final class RealtimeManager {
     static let shared = RealtimeManager()
 
     // MARK: - Multi-listener handler arrays (nonisolated to avoid Sendable issues)
-
-    nonisolated(unsafe) private var tripsHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var workOrdersHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var maintenanceTasksHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var defectReportsHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var notificationsHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var messagesHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var vehicleLocationsHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var vehiclesHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var inventoryHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var issueReportsHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var profilesHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var usersHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var fuelLogsHandlers: [() -> Void] = []
+    nonisolated private var tripsHandlers: [() -> Void] = []
+    nonisolated private var workOrdersHandlers: [() -> Void] = []
+    nonisolated private var maintenanceTasksHandlers: [() -> Void] = []
+    nonisolated private var defectReportsHandlers: [() -> Void] = []
+    nonisolated private var notificationsHandlers: [() -> Void] = []
+    nonisolated private var messagesHandlers: [() -> Void] = []
+    nonisolated private var vehicleLocationsHandlers: [() -> Void] = []
+    nonisolated private var vehiclesHandlers: [() -> Void] = []
+    nonisolated private var inventoryHandlers: [() -> Void] = []
+    nonisolated private var issueReportsHandlers: [() -> Void] = []
+    nonisolated private var profilesHandlers: [() -> Void] = []
+    nonisolated private var usersHandlers: [() -> Void] = []
+    nonisolated private var fuelLogsHandlers: [() -> Void] = []
 
     private var channels: [RealtimeChannelV2] = []
 

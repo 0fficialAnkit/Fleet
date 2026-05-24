@@ -47,6 +47,7 @@ struct DriverReportIssueView: View {
     @State private var description: String = ""
     @State private var isSubmitted = false
     @State private var isSubmitting = false
+    @State private var errorMessage: String?
     @Environment(\.dismiss) private var dismiss
     @Environment(AuthViewModel.self) private var authViewModel
 
@@ -74,6 +75,14 @@ struct DriverReportIssueView: View {
         }
         .navigationTitle("Report Issue")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Error", isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage ?? "Unknown error occurred")
+        }
     }
 
     // MARK: - Vehicle Header
@@ -375,6 +384,7 @@ struct DriverReportIssueView: View {
             } catch {
                 await MainActor.run {
                     isSubmitting = false
+                    errorMessage = error.localizedDescription
                 }
                 print("Error submitting report: \(error)")
             }
