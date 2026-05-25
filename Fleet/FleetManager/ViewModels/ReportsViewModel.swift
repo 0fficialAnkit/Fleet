@@ -51,6 +51,7 @@ enum IssueReportStatus: String, CaseIterable, Identifiable {
 struct IssueReport: Identifiable {
     let id: UUID
     let vehicleId: UUID
+    let reportedBy: UUID
     let vehicleName: String
     let licensePlate: String
     let driverName: String
@@ -77,6 +78,7 @@ final class ReportsViewModel {
 
     private(set) var profiles: [Profile] = []
     private(set) var allVehicles: [Vehicle] = []
+    var maintenanceTasks: [MaintenanceTask] = []
 
     var reports: [IssueReport] = []
     var isLoading = false
@@ -89,10 +91,12 @@ final class ReportsViewModel {
             async let p = ProfileService.fetchAllProfiles()
             async let v = VehicleService.fetchAllVehicles()
             async let ir = IssueReportService.fetchAllIssueReports()
+            async let t = MaintenanceTaskService.fetchAllTasks()
 
             profiles = try await p
             allVehicles = try await v
             let issueRecords = try await ir
+            maintenanceTasks = (try? await t) ?? []
 
             // Build display reports from issue_reports table
             self.reports = issueRecords.map { record in
@@ -114,6 +118,7 @@ final class ReportsViewModel {
                 return IssueReport(
                     id: record.id,
                     vehicleId: record.vehicleId,
+                    reportedBy: record.reportedBy,
                     vehicleName: "\(make) \(model)",
                     licensePlate: plate,
                     driverName: driver,
@@ -139,7 +144,11 @@ final class ReportsViewModel {
         rt.addIssueReportsChangeHandler { [weak self] in
             Task { await self?.loadData() }
         }
+        rt.addMaintenanceTasksChangeHandler { [weak self] in
+            Task { await self?.loadData() }
+        }
     }
+
 
     // MARK: - Helpers
 
@@ -161,6 +170,35 @@ final class ReportsViewModel {
     func staffName(_ id: UUID?) -> String {
         guard let id else { return "Unassigned" }
         return profiles.first { $0.id == id }?.fullName ?? "Unknown"
+    }
+
+    func staffWorkloadStatus(_ staffId: UUID) -> String {
+        let activeTasks = maintenanceTasks.filter { $0.assignedTo == staffId && $0.status == .inProgress }
+        if let activeTask = activeTasks.first {
+            if let vehicle = allVehicles.first(where: { $0.id == activeTask.vehicleId }) {
+                return "Working on \(vehicle.make ?? "") \(vehicle.model ?? "")"
+            }
+            return "Working on vehicle"
+        }
+        
+        let pendingTasks = maintenanceTasks.filter { $0.assignedTo == staffId && $0.status == .pending }
+        if !pendingTasks.isEmpty {
+            return "Assigned (Pending)"
+        }
+        
+        return "Available"
+    }
+
+    func staffWorkloadColor(_ staffId: UUID) -> Color {
+        let activeTasks = maintenanceTasks.filter { $0.assignedTo == staffId && $0.status == .inProgress }
+        if !activeTasks.isEmpty {
+            return themeModel.info
+        }
+        let pendingTasks = maintenanceTasks.filter { $0.assignedTo == staffId && $0.status == .pending }
+        if !pendingTasks.isEmpty {
+            return themeModel.warning
+        }
+        return themeModel.success
     }
 
     // MARK: - Mutating Actions (now persists to Supabase)

@@ -73,6 +73,7 @@ struct ScheduledWorkOrder: Identifiable, Hashable {
     var notes: String
     var partsUsed: [String]
     let sourceWorkOrderId: UUID? // link to Supabase WorkOrder.id
+    var sourceIssueReportId: UUID? = nil // link to Supabase IssueReportRecord.id
 }
 
 // MARK: - ViewModel
@@ -98,6 +99,7 @@ final class MaintenanceSchedulerViewModel {
 
     private var rawTasks: [MaintenanceTask] = []
     private var rawWorkOrders: [WorkOrder] = []
+    private var rawIssueReports: [IssueReportRecord] = []
     private var vehicles: [Vehicle] = []
     private var profiles: [Profile] = []
     private(set) var inventory: [Inventory] = []
@@ -111,12 +113,14 @@ final class MaintenanceSchedulerViewModel {
         do {
             async let t = MaintenanceTaskService.fetchTasksForUser(assignedTo: userId)
             async let w = WorkOrderService.fetchWorkOrdersForUser(assignedTo: userId)
+            async let ir = IssueReportService.fetchIssueReportsAssignedTo(userId: userId)
             async let v = VehicleService.fetchAllVehicles()
             async let p = ProfileService.fetchAllProfiles()
             async let i = InventoryService.fetchAllInventory()
 
             rawTasks = try await t
             rawWorkOrders = try await w
+            rawIssueReports = try await ir
             vehicles = try await v
             profiles = try await p
             inventory = try await i
@@ -132,6 +136,7 @@ final class MaintenanceSchedulerViewModel {
         let rt = RealtimeManager.shared
         rt.addMaintenanceTasksChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addWorkOrdersChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addIssueReportsChangeHandler { [weak self] in Task { await self?.loadData() } }
     }
 
     // MARK: - Build UI display models from Supabase data
@@ -183,7 +188,7 @@ final class MaintenanceSchedulerViewModel {
             )
         }
 
-        allWorkOrders = rawWorkOrders.map { wo in
+        var mappedWorkOrders = rawWorkOrders.map { wo in
             let vehicle = vehicles.first { $0.id == wo.vehicleId }
             let createdBy = profiles.first { $0.id == wo.createdBy }
 
@@ -202,6 +207,47 @@ final class MaintenanceSchedulerViewModel {
                 sourceWorkOrderId: wo.id
             )
         }
+        
+        let mappedIssueReports = rawIssueReports.map { ir in
+            let vehicle = vehicles.first { $0.id == ir.vehicleId }
+            let reportedBy = profiles.first { $0.id == ir.reportedBy }
+            
+            let priority: WorkOrderPriority
+            switch ir.severity.lowercased() {
+            case "critical": priority = .critical
+            case "high": priority = .high
+            case "medium": priority = .medium
+            case "low": priority = .low
+            default: priority = .medium
+            }
+            
+            let status: WorkOrderStatus
+            switch ir.status.lowercased() {
+            case "open", "assigned": status = .open
+            case "in_progress": status = .inProgress
+            case "resolved", "closed": status = .completed
+            default: status = .open
+            }
+            
+            return ScheduledWorkOrder(
+                id: UUID(),
+                vehicleNumber: vehicle?.licensePlate ?? "Unknown",
+                vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
+                priority: priority,
+                status: status,
+                createdAt: ir.createdAt ?? Date(),
+                assignedBy: reportedBy?.fullName ?? "Driver",
+                laborHours: "—",
+                laborCost: "—",
+                notes: ir.description ?? "",
+                partsUsed: [],
+                sourceWorkOrderId: nil,
+                sourceIssueReportId: ir.id
+            )
+        }
+        
+        mappedWorkOrders.append(contentsOf: mappedIssueReports)
+        allWorkOrders = mappedWorkOrders
     }
 
     private func defaultChecklist(for type: MaintenanceTaskType?) -> [ChecklistItem] {
@@ -334,6 +380,17 @@ final class MaintenanceSchedulerViewModel {
                             try? await MaintenanceHistoryService.createHistory(history)
                         }
                     }
+                }
+            } else if let sourceIrId = allWorkOrders[i].sourceIssueReportId, let uid = currentUserId {
+                Task {
+                    let statusStr: String
+                    switch status {
+                    case .open: statusStr = "open"
+                    case .inProgress: statusStr = "in_progress"
+                    case .completed: statusStr = "resolved"
+                    case .cancelled: statusStr = "closed"
+                    }
+                    try? await IssueReportService.updateIssueReport(id: sourceIrId, assignedTo: uid, status: statusStr)
                 }
             }
         }
