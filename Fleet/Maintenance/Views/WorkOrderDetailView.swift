@@ -112,7 +112,7 @@ struct WorkOrderDetailView: View {
                     GlassSection(title: "Labor & Financials") {
                         HStack(spacing: themeModel.spacingMD) {
                             LaborStat(label: "Est. Hours", value: data.laborHours, icon: "clock.fill",           color: themeModel.info)
-                            LaborStat(label: "Labor Cost",  value: data.laborCost,  icon: "dollarsign.circle.fill", color: themeModel.success)
+                            LaborStat(label: "Labor Cost",  value: data.laborCost,  icon: "indianrupeesign.circle.fill", color: themeModel.success)
                         }
                     }
 

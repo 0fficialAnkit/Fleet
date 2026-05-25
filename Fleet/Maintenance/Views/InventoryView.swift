@@ -6,6 +6,8 @@ struct InventoryView: View {
     @State private var inventoryItems: [Inventory] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var selectedItem: Inventory? = nil
+    @State private var isShowingSheet = false
 
     var lowStockCount: Int {
         inventoryItems.filter { ($0.stockQuantity ?? 0) <= ($0.reorderLevel ?? 0) }.count
@@ -47,7 +49,7 @@ struct InventoryView: View {
                                     color: themeModel.danger
                                 )
                                 InventoryStat(
-                                    value: "$\(String(format: "%.0f", inventoryItems.compactMap(\.unitCost).reduce(0, +)))",
+                                    value: "₹\(String(format: "%.0f", inventoryItems.compactMap(\.unitCost).reduce(0, +)))",
                                     label: "Est. Value",
                                     color: themeModel.success
                                 )
@@ -116,7 +118,13 @@ struct InventoryView: View {
                             } else {
                                 LazyVStack(spacing: themeModel.spacingMD) {
                                     ForEach(searchResults) { item in
-                                        InventoryRow(item: item)
+                                        Button(action: {
+                                            selectedItem = item
+                                            isShowingSheet = true
+                                        }) {
+                                            InventoryRow(item: item)
+                                        }
+                                        .buttonStyle(.plain)
                                     }
                                 }
                                 .padding(.horizontal, themeModel.spacingMD)
@@ -130,10 +138,18 @@ struct InventoryView: View {
             .searchable(text: $searchText, prompt: "Search parts...")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {}) {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundStyle(themeModel.maintenancePrimary)
-                            .font(.system(size: 20))
+                    Button(action: {
+                        selectedItem = nil
+                        isShowingSheet = true
+                    }) {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+            .sheet(isPresented: $isShowingSheet) {
+                InventoryItemSheet(editingItem: selectedItem) {
+                    Task {
+                        await loadInventory()
                     }
                 }
             }
@@ -200,7 +216,7 @@ struct InventoryRow: View {
                     Text(item.partName ?? "Unknown Part")
                         .font(themeModel.headline())
                         .foregroundStyle(themeModel.textPrimary)
-                    Text("Unit Cost: $\(String(format: "%.2f", item.unitCost ?? 0.0))")
+                    Text("Unit Cost: ₹\(String(format: "%.2f", item.unitCost ?? 0.0))")
                         .font(themeModel.caption())
                         .foregroundStyle(themeModel.textSecondary)
                 }
@@ -252,4 +268,267 @@ struct InventoryRow: View {
 
 #Preview {
     InventoryView()
+}
+
+// MARK: - InventoryItemSheet
+struct InventoryItemSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    
+    let editingItem: Inventory?
+    let onSave: () -> Void
+    
+    @State private var partName: String = ""
+    @State private var stockQuantity: String = ""
+    @State private var reorderLevel: String = ""
+    @State private var unitCost: String = ""
+    
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+    
+    @State private var showingDeleteAlert = false
+    @State private var isDeleting = false
+    
+    var isFormValid: Bool {
+        !partName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                themeModel.backgroundPrimary.ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 20) {
+                        
+                        if let errorMessage {
+                            HStack(spacing: 10) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(themeModel.danger)
+                                Text(errorMessage)
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(themeModel.danger)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(themeModel.danger.opacity(0.1))
+                            .cornerRadius(12)
+                            .padding(.horizontal, 24)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 16) {
+                            // Part Name
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("PART NAME")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(themeModel.textSecondary)
+                                    .kerning(1.2)
+                                
+                                TextField("", text: $partName, prompt: Text("e.g. Brake Pads").foregroundColor(themeModel.placeholder))
+                                    .foregroundColor(themeModel.textPrimary)
+                                    .padding(.horizontal, 18)
+                                    .frame(height: 56)
+                                    .background(themeModel.inputBackground)
+                                    .cornerRadius(14)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .stroke(themeModel.divider, lineWidth: 1)
+                                    )
+                            }
+                            
+                            // Stock Quantity & Reorder Level (Side by Side)
+                            HStack(spacing: 16) {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("STOCK QUANTITY")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(themeModel.textSecondary)
+                                        .kerning(1.2)
+                                    
+                                    TextField("", text: $stockQuantity, prompt: Text("0").foregroundColor(themeModel.placeholder))
+                                        .keyboardType(.numberPad)
+                                        .foregroundColor(themeModel.textPrimary)
+                                        .padding(.horizontal, 18)
+                                        .frame(height: 56)
+                                        .background(themeModel.inputBackground)
+                                        .cornerRadius(14)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 14)
+                                                .stroke(themeModel.divider, lineWidth: 1)
+                                        )
+                                }
+                                
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("REORDER LEVEL")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(themeModel.textSecondary)
+                                        .kerning(1.2)
+                                    
+                                    TextField("", text: $reorderLevel, prompt: Text("0").foregroundColor(themeModel.placeholder))
+                                        .keyboardType(.numberPad)
+                                        .foregroundColor(themeModel.textPrimary)
+                                        .padding(.horizontal, 18)
+                                        .frame(height: 56)
+                                        .background(themeModel.inputBackground)
+                                        .cornerRadius(14)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 14)
+                                                .stroke(themeModel.divider, lineWidth: 1)
+                                        )
+                                }
+                            }
+                            
+                            // Unit Cost
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("UNIT COST (₹)")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(themeModel.textSecondary)
+                                    .kerning(1.2)
+                                
+                                TextField("", text: $unitCost, prompt: Text("0.00").foregroundColor(themeModel.placeholder))
+                                    .keyboardType(.decimalPad)
+                                    .foregroundColor(themeModel.textPrimary)
+                                    .padding(.horizontal, 18)
+                                    .frame(height: 56)
+                                    .background(themeModel.inputBackground)
+                                    .cornerRadius(14)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .stroke(themeModel.divider, lineWidth: 1)
+                                    )
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        
+                        Spacer().frame(height: 20)
+                        
+                        // Action Buttons
+                        VStack(spacing: 14) {
+                            let isButtonDisabled = !isFormValid || isSaving
+                            
+                            Button(action: saveAction) {
+                                HStack {
+                                    if isSaving {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    } else {
+                                        Text(editingItem == nil ? "Add Item" : "Update Item")
+                                            .font(.system(size: 18, weight: .semibold))
+                                    }
+                                }
+                                .foregroundColor(isButtonDisabled ? themeModel.buttonDisabledText : .white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(isButtonDisabled ? themeModel.buttonDisabled : themeModel.maintenancePrimary)
+                                .cornerRadius(16)
+                            }
+                            .disabled(isButtonDisabled)
+                            
+                            if editingItem != nil {
+                                Button(action: { showingDeleteAlert = true }) {
+                                    HStack {
+                                        if isDeleting {
+                                            ProgressView()
+                                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        } else {
+                                            Text("Delete Item")
+                                                .font(.system(size: 18, weight: .semibold))
+                                        }
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 56)
+                                    .background(themeModel.danger)
+                                    .cornerRadius(16)
+                                }
+                                .disabled(isDeleting)
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                    }
+                    .padding(.vertical, 24)
+                }
+            }
+            .navigationTitle(editingItem == nil ? "New Inventory Item" : "Edit Inventory Item")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundStyle(themeModel.textSecondary)
+                }
+            }
+            .alert("Delete Item?", isPresented: $showingDeleteAlert) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete", role: .destructive) {
+                    deleteAction()
+                }
+            } message: {
+                Text("Are you sure you want to delete this inventory item? This action cannot be undone.")
+            }
+            .onAppear {
+                if let item = editingItem {
+                    partName = item.partName ?? ""
+                    stockQuantity = "\(item.stockQuantity ?? 0)"
+                    reorderLevel = "\(item.reorderLevel ?? 0)"
+                    unitCost = item.unitCost != nil ? String(format: "%.2f", item.unitCost!) : ""
+                }
+            }
+        }
+    }
+    
+    private func saveAction() {
+        guard isFormValid else { return }
+        isSaving = true
+        errorMessage = nil
+        
+        let qty = Int(stockQuantity) ?? 0
+        let reorder = Int(reorderLevel) ?? 0
+        let cost = Double(unitCost) ?? 0.0
+        
+        Task {
+            do {
+                if let item = editingItem {
+                    let updated = Inventory(
+                        id: item.id,
+                        partName: partName,
+                        stockQuantity: qty,
+                        reorderLevel: reorder,
+                        unitCost: cost
+                    )
+                    try await InventoryService.updateItem(updated)
+                } else {
+                    let new = Inventory(
+                        id: UUID(),
+                        partName: partName,
+                        stockQuantity: qty,
+                        reorderLevel: reorder,
+                        unitCost: cost
+                    )
+                    try await InventoryService.createItem(new)
+                }
+                onSave()
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            isSaving = false
+        }
+    }
+    
+    private func deleteAction() {
+        guard let item = editingItem else { return }
+        isDeleting = true
+        errorMessage = nil
+        
+        Task {
+            do {
+                try await InventoryService.deleteItem(id: item.id)
+                onSave()
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            isDeleting = false
+        }
+    }
 }

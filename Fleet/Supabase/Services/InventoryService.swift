@@ -38,4 +38,20 @@ enum InventoryService {
             .insert(item)
             .execute()
     }
+
+    static func updateItem(_ item: Inventory) async throws {
+        try await supabase
+            .from("inventory")
+            .update(item)
+            .eq("id", value: item.id)
+            .execute()
+    }
+
+    static func deleteItem(id: UUID) async throws {
+        try await supabase
+            .from("inventory")
+            .delete()
+            .eq("id", value: id)
+            .execute()
+    }
 }
