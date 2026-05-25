@@ -1,9 +1,3 @@
-//
-//  loginView.swift
-//  Fleet
-//
-//  Created by Harshita Jiaswal on 19/05/26.
-//
 import SwiftUI
 
 // MARK: - RoleDisplayItem
@@ -21,6 +15,7 @@ struct LoginView: View {
 
     @State private var selectedRoleId: Int = 1
     @State private var navigateToSignIn: Bool = false
+    @State private var navigateToCreateAccount: Bool = false
 
     let roleItems: [RoleDisplayItem] = [
         RoleDisplayItem(
@@ -71,18 +66,26 @@ struct LoginView: View {
             .navigationDestination(isPresented: $navigateToSignIn) {
                 SignInView()
             }
+            .navigationDestination(isPresented: $navigateToCreateAccount) {
+                CreateAccountView()
+            }
         }
     }
     // MARK: - App Icon (blue truck)
     var appIconView: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 22)
-                .fill(Color.blue)
-                .frame(width: 80, height: 80)
-            Image(systemName: "truck.box.fill")
-                .font(.system(size: 36))
-                .foregroundColor(.white)
+        Button(action: {
+            navigateToCreateAccount = true
+        }) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(Color.blue)
+                    .frame(width: 80, height: 80)
+                Image(systemName: "truck.box.fill")
+                    .font(.system(size: 36))
+                    .foregroundColor(.white)
+            }
         }
+        .buttonStyle(PlainButtonStyle())
     }
 
     // MARK: - Title + Subtitle
@@ -129,12 +132,9 @@ struct LoginView: View {
 
     // MARK: - Continue Action
     func handleContinue() {
-//        navigateToSignIn = false
-//        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            navigateToSignIn = true
-        }
+        navigateToSignIn = true
     }
-
+}
 
 // MARK: - RoleCardView
 struct RoleCardView: View {
@@ -205,4 +205,5 @@ struct RoleCardView: View {
 // MARK: - Preview
 #Preview {
     LoginView()
+        .environment(AuthViewModel())
 }

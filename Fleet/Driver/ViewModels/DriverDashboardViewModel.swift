@@ -15,4 +15,18 @@ final class DriverDashboardViewModel {
     var todaysTrips: [Trip] {
         trips.filter { $0.status == .active || $0.status == .scheduled }
     }
+
+    func startTrip(id: UUID) {
+        if let index = trips.firstIndex(where: { $0.id == id }) {
+            trips[index].status = .active
+            trips[index].startTime = Date()
+        }
+    }
+
+    func endTrip(id: UUID) {
+        if let index = trips.firstIndex(where: { $0.id == id }) {
+            trips[index].status = .completed
+            trips[index].endTime = Date()
+        }
+    }
 }
