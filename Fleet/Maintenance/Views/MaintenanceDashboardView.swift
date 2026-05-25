@@ -80,33 +80,6 @@ struct MaintenanceDashboardView: View {
                             }
                         }
 
-                        // MARK: - AI Insight Card
-                        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
-                            SectionHeader(title: "AI Insights")
-                                .padding(.horizontal, themeModel.spacingMD)
-
-                            VStack(spacing: themeModel.spacingMD) {
-                                AIInsightRow(
-                                    message: "Vehicle MH-12-CX-4490 likely needs brake pad replacement in the next 3 days.",
-                                    confidence: 92,
-                                    severity: .warning
-                                )
-                                Divider().background(themeModel.divider)
-                                AIInsightRow(
-                                    message: "Oil Filter stock will deplete within 5 days at current consumption rate.",
-                                    confidence: 87,
-                                    severity: .danger
-                                )
-                            }
-                            .padding(themeModel.spacingMD)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                                    .stroke(themeModel.warning.opacity(0.2), lineWidth: 0.8)
-                            )
-                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
-                        }
                     }
                     .padding(.vertical, themeModel.spacingMD)
                 }
@@ -129,54 +102,6 @@ struct MaintenanceDashboardView: View {
                 viewModel.currentUserId = authViewModel.currentUser?.id
                 await viewModel.loadData()
                 viewModel.setupRealtime()
-            }
-        }
-    }
-}
-
-// MARK: - AI Insight Row
-private struct AIInsightRow: View {
-    enum Severity { case warning, danger }
-
-    let message: String
-    let confidence: Int
-    let severity: Severity
-
-    var color: Color { severity == .warning ? themeModel.warning : themeModel.danger }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: themeModel.spacingMD) {
-            Image(systemName: "sparkles")
-                .foregroundStyle(color)
-                .font(.system(size: 18, weight: .semibold))
-
-            VStack(alignment: .leading, spacing: 6) {
-                // Text(message)
-                //     .font(themeModel.body())
-                //     .foregroundStyle(themeModel.textPrimary)
-                //     .fixedSize(horizontal: false, vertical: true)
-
-                HStack(spacing: 6) {
-                    Text("Confidence")
-                        .font(themeModel.caption())
-                        .foregroundStyle(themeModel.textTertiary)
-
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(themeModel.surfaceTertiary)
-                                .frame(height: 5)
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(color)
-                                .frame(width: geo.size.width * Double(confidence) / 100, height: 5)
-                        }
-                    }
-                    .frame(height: 5)
-
-                    Text("\(confidence)%")
-                        .font(themeModel.small())
-                        .foregroundStyle(color)
-                }
             }
         }
     }
