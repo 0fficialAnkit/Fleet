@@ -81,12 +81,12 @@ struct AddMaintenanceView: View {
                         }
                         .foregroundColor(themeModel.textPrimary)
 
-                        TextField("Description", text: $description)
+                        TextField("", text: $description, prompt: Text("Description").foregroundColor(themeModel.placeholder))
                             .foregroundColor(themeModel.textPrimary)
 
                         DatePicker("Scheduled Date", selection: $scheduledDate, displayedComponents: .date)
                             .foregroundColor(themeModel.textPrimary)
-                            .tint(themeModel.info)
+                            .tint(themeModel.accent)
                     }
                     .listRowBackground(themeModel.backgroundElevated)
 
@@ -105,13 +105,10 @@ struct AddMaintenanceView: View {
             }
             .navigationTitle("Add Maintenance Task")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(themeModel.info)
+                        .foregroundColor(themeModel.accent)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -138,7 +135,7 @@ struct AddMaintenanceView: View {
                             isSaving = false
                         }
                     }
-                    .foregroundColor(themeModel.info)
+                    .foregroundColor(themeModel.accent)
                     .bold()
                     .disabled(!isFormValid || isSaving)
                 }
@@ -156,7 +153,6 @@ struct AddMaintenanceView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 }
 

@@ -40,26 +40,26 @@ struct EditVehicleView: View {
                                 .padding(.horizontal, themeModel.spacingMD)
                             
                             VStack(spacing: 0) {
-                                TextField("Manufacturer (e.g. Ford)", text: $make)
+                                TextField("", text: $make, prompt: Text("Manufacturer (e.g. Ford)").foregroundColor(themeModel.placeholder))
                                     .padding(.vertical, 12)
                                     .foregroundColor(themeModel.textPrimary)
                                 
                                 Divider().background(themeModel.divider)
                                 
-                                TextField("Model (e.g. Transit)", text: $model)
+                                TextField("", text: $model, prompt: Text("Model (e.g. Transit)").foregroundColor(themeModel.placeholder))
                                     .padding(.vertical, 12)
                                     .foregroundColor(themeModel.textPrimary)
                                     
                                 Divider().background(themeModel.divider)
                                 
-                                TextField("Year (e.g. 2024)", text: $year)
+                                TextField("", text: $year, prompt: Text("Year (e.g. 2024)").foregroundColor(themeModel.placeholder))
                                     .keyboardType(.numberPad)
                                     .padding(.vertical, 12)
                                     .foregroundColor(themeModel.textPrimary)
                                 
                                 Divider().background(themeModel.divider)
                                 
-                                TextField("License Plate", text: $licensePlate)
+                                TextField("", text: $licensePlate, prompt: Text("License Plate").foregroundColor(themeModel.placeholder))
                                     .textInputAutocapitalization(.characters)
                                     .padding(.vertical, 12)
                                     .foregroundColor(themeModel.textPrimary)
@@ -80,14 +80,14 @@ struct EditVehicleView: View {
                                 .padding(.horizontal, themeModel.spacingMD)
                             
                             VStack(spacing: 0) {
-                                TextField("Tank Capacity (L)", text: $tankCapacity)
+                                TextField("", text: $tankCapacity, prompt: Text("Tank Capacity (L)").foregroundColor(themeModel.placeholder))
                                     .keyboardType(.decimalPad)
                                     .padding(.vertical, 12)
                                     .foregroundColor(themeModel.textPrimary)
                                 
                                 Divider().background(themeModel.divider)
                                 
-                                TextField("Mileage (km/l)", text: $mileage)
+                                TextField("", text: $mileage, prompt: Text("Mileage (km/l)").foregroundColor(themeModel.placeholder))
                                     .keyboardType(.decimalPad)
                                     .padding(.vertical, 12)
                                     .foregroundColor(themeModel.textPrimary)
@@ -97,7 +97,7 @@ struct EditVehicleView: View {
                                 DatePicker("Purchase Date", selection: $purchaseDate, displayedComponents: .date)
                                     .padding(.vertical, 12)
                                     .foregroundColor(themeModel.textPrimary)
-                                    .tint(themeModel.info)
+                                    .tint(themeModel.accent)
                             }
                             .padding(themeModel.spacingMD)
                             .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
@@ -114,15 +114,12 @@ struct EditVehicleView: View {
             }
             .navigationTitle("Edit Vehicle")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(themeModel.info)
+                    .foregroundColor(themeModel.accent)
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
@@ -149,13 +146,29 @@ struct EditVehicleView: View {
                             }
                         }
                     }
-                    .foregroundColor(themeModel.info)
+                    .foregroundColor(themeModel.accent)
                     .bold()
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 }
 
-
+#Preview {
+    EditVehicleView(
+        viewModel: VehiclesViewModel(),
+        vehicle: Vehicle(
+            id: UUID(),
+            make: "Ford",
+            model: "Transit",
+            year: 2024,
+            vin: "123456789",
+            licensePlate: "FL-99-TR",
+            tankCapacity: 80.0,
+            mileage: 12.4,
+            purchaseDate: Date(),
+            assignedDriverId: nil,
+            status: .active
+        )
+    )
+}

@@ -13,14 +13,14 @@ struct CreateAccountView: View {
     @Environment(\.dismiss) private var dismiss
 
     let roleItems: [RoleDisplayItem] = [
-        RoleDisplayItem(id: 1, roleName: "Fleet Manager", description: "Manage fleet, drivers & analytics", iconName: "shield.fill", iconColor: .blue, iconBackground: Color.blue.opacity(0.25)),
-        RoleDisplayItem(id: 2, roleName: "Driver", description: "View routes, log trips & fuel", iconName: "truck.box.fill", iconColor: Color(red: 0.2, green: 0.85, blue: 0.45), iconBackground: Color.green.opacity(0.2)),
-        RoleDisplayItem(id: 3, roleName: "Maintenance", description: "Schedule repairs & manage parts", iconName: "wrench.and.screwdriver.fill", iconColor: .orange, iconBackground: Color.orange.opacity(0.2))
+        RoleDisplayItem(id: 1, roleName: "Fleet Manager", description: "Manage fleet, drivers & analytics", iconName: "shield.fill", iconColor: themeModel.accent, iconBackground: themeModel.accent.opacity(0.15)),
+        RoleDisplayItem(id: 2, roleName: "Driver", description: "View routes, log trips & fuel", iconName: "truck.box.fill", iconColor: themeModel.driverPrimary, iconBackground: themeModel.driverPrimary.opacity(0.15)),
+        RoleDisplayItem(id: 3, roleName: "Maintenance", description: "Schedule repairs & manage parts", iconName: "wrench.and.screwdriver.fill", iconColor: themeModel.maintenancePrimary, iconBackground: themeModel.maintenancePrimary.opacity(0.15))
     ]
 
     var body: some View {
         ZStack {
-            Color(red: 0.07, green: 0.09, blue: 0.13)
+            themeModel.backgroundPrimary
                 .ignoresSafeArea()
 
             ScrollView {
@@ -29,18 +29,18 @@ struct CreateAccountView: View {
                     
                     Text("Create Account")
                         .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(themeModel.textPrimary)
                     
-                    Text("Join FleetOS today")
+                    Text("Join GoFleet today")
                         .font(.system(size: 15))
-                        .foregroundColor(Color.white.opacity(0.5))
+                        .foregroundColor(themeModel.textSecondary)
                         .padding(.top, 4)
 
                     Spacer().frame(height: 32)
 
                     Text("SELECT YOUR ROLE")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(Color.white.opacity(0.5))
+                        .foregroundColor(themeModel.textSecondary)
                         .kerning(1.2)
                     
                     Spacer().frame(height: 16)
@@ -64,45 +64,58 @@ struct CreateAccountView: View {
 
                     VStack(spacing: 14) {
                         // Full Name
-                        TextField("", text: $fullName, prompt: Text("Full Name").foregroundColor(.white.opacity(0.45)))
-                            .foregroundColor(.white)
+                        TextField("", text: $fullName, prompt: Text("Full Name").foregroundColor(themeModel.placeholder))
+                            .foregroundColor(themeModel.textPrimary)
                             .padding(.horizontal, 18)
                             .frame(height: 56)
-                            .background(Color(red: 0.12, green: 0.14, blue: 0.18))
+                            .background(themeModel.inputBackground)
                             .cornerRadius(14)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(themeModel.divider, lineWidth: 1)
+                            )
 
                         // Email
-                        TextField("", text: $email, prompt: Text("Email address").foregroundColor(.white.opacity(0.45)))
+                        TextField("", text: $email, prompt: Text("Email address").foregroundColor(themeModel.placeholder))
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
-                            .foregroundColor(.white)
+                            .foregroundColor(themeModel.textPrimary)
                             .padding(.horizontal, 18)
                             .frame(height: 56)
-                            .background(Color(red: 0.12, green: 0.14, blue: 0.18))
+                            .background(themeModel.inputBackground)
                             .cornerRadius(14)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(themeModel.divider, lineWidth: 1)
+                            )
 
                         // Password
                         HStack {
                             if isPasswordVisible {
-                                TextField("", text: $password, prompt: Text("Password").foregroundColor(.white.opacity(0.45)))
-                                    .foregroundColor(.white)
+                                TextField("", text: $password, prompt: Text("Password").foregroundColor(themeModel.placeholder))
+                                    .foregroundColor(themeModel.textPrimary)
                             } else {
-                                SecureField("", text: $password, prompt: Text("Password").foregroundColor(.white.opacity(0.45)))
-                                    .foregroundColor(.white)
+                                SecureField("", text: $password, prompt: Text("Password").foregroundColor(themeModel.placeholder))
+                                    .foregroundColor(themeModel.textPrimary)
                             }
                             Button(action: { isPasswordVisible.toggle() }) {
                                 Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
-                                    .foregroundColor(.white.opacity(0.5))
+                                    .foregroundColor(themeModel.textSecondary)
                             }
                         }
                         .padding(.horizontal, 18)
                         .frame(height: 56)
-                        .background(Color(red: 0.12, green: 0.14, blue: 0.18))
+                        .background(themeModel.inputBackground)
                         .cornerRadius(14)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(themeModel.divider, lineWidth: 1)
+                        )
 
                         Spacer().frame(height: 14)
 
                         // Sign Up Button
+                        let isButtonDisabled = email.isEmpty || password.isEmpty || fullName.isEmpty
                         Button(action: {
                             Task {
                                 let selectedRoleName = roleItems.first(where: { $0.id == selectedRoleId })?.roleName ?? "Fleet Manager"
@@ -118,19 +131,19 @@ struct CreateAccountView: View {
                         }) {
                             HStack {
                                 if authViewModel.isLoading {
-                                    ProgressView().tint(.white)
+                                    ProgressView().tint(isButtonDisabled ? themeModel.buttonDisabledText : themeModel.accentForeground)
                                 } else {
                                     Text("Create Account")
                                         .font(.system(size: 18, weight: .semibold))
                                 }
                             }
-                            .foregroundColor(.white)
+                            .foregroundColor(isButtonDisabled ? themeModel.buttonDisabledText : themeModel.accentForeground)
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
-                            .background(Color.blue)
+                            .background(isButtonDisabled ? themeModel.buttonDisabled : themeModel.accent)
                             .cornerRadius(16)
                         }
-                        .disabled(authViewModel.isLoading || email.isEmpty || password.isEmpty || fullName.isEmpty)
+                        .disabled(authViewModel.isLoading || isButtonDisabled)
                     }
 
                     Spacer().frame(height: 40)
@@ -151,11 +164,11 @@ struct SquareRoleCardView: View {
         VStack(spacing: 8) {
             Image(systemName: item.iconName)
                 .font(.system(size: 20))
-                .foregroundColor(isSelected ? .blue : .gray)
+                .foregroundColor(isSelected ? themeModel.accent : themeModel.textSecondary)
             
             Text(item.roleName)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isSelected ? .blue : .gray)
+                .foregroundColor(isSelected ? themeModel.accent : themeModel.textSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
@@ -163,13 +176,13 @@ struct SquareRoleCardView: View {
         .frame(height: 80)
         .background(
             isSelected 
-            ? Color.blue.opacity(0.15) 
-            : Color(red: 0.12, green: 0.14, blue: 0.18)
+            ? themeModel.accent.opacity(0.12) 
+            : themeModel.backgroundElevated
         )
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color.blue : Color(red: 0.2, green: 0.22, blue: 0.28), lineWidth: 1.5)
+                .stroke(isSelected ? themeModel.accent : themeModel.border, lineWidth: 1.5)
         )
     }
 }
