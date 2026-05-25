@@ -6,6 +6,8 @@ struct DriverFuelView: View {
     @State private var volume: String = ""
     @State private var price: String = ""
     @State private var showSuccess: Bool = false
+    @State private var isSubmitting: Bool = false
+    @State private var errorMessage: String?
     
     @State private var viewModel = DriverFuelViewModel()
     @State private var assignedVehicleId: UUID?
@@ -64,17 +66,22 @@ struct DriverFuelView: View {
                             
                             Button(action: submitFuelLog) {
                                 HStack {
-                                    Image(systemName: "arrow.up.doc")
-                                    Text("Submit")
+                                    if isSubmitting {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    } else {
+                                        Image(systemName: "arrow.up.doc")
+                                        Text("Submit")
+                                    }
                                 }
                                     .font(themeModel.bodyMedium())
                                     .frame(maxWidth: .infinity)
                                     .padding(themeModel.spacingMD)
-                                    .background(volume.isEmpty || price.isEmpty ? themeModel.buttonDisabled : themeModel.driverPrimary)
-                                    .foregroundColor(volume.isEmpty || price.isEmpty ? themeModel.buttonDisabledText : themeModel.buttonPrimaryText)
+                                    .background(volume.isEmpty || price.isEmpty || isSubmitting ? themeModel.buttonDisabled : themeModel.driverPrimary)
+                                    .foregroundColor(volume.isEmpty || price.isEmpty || isSubmitting ? themeModel.buttonDisabledText : themeModel.buttonPrimaryText)
                                     .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusSM))
                             }
-                            .disabled(volume.isEmpty || price.isEmpty)
+                            .disabled(volume.isEmpty || price.isEmpty || isSubmitting)
                         }
                         .padding(themeModel.spacingMD)
                         .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
@@ -160,6 +167,14 @@ struct DriverFuelView: View {
             .background(themeModel.backgroundPrimary.ignoresSafeArea())
             .navigationTitle("Fuel")
         }
+        .alert("Error", isPresented: Binding(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(errorMessage ?? "Unknown error occurred")
+        }
         .task {
             viewModel.currentUserId = authViewModel.currentUser?.id
             await viewModel.loadData()
@@ -177,13 +192,27 @@ struct DriverFuelView: View {
         let cost = Double(price) ?? 0.0
         let vehicleId = assignedVehicleId ?? UUID()
         
-        viewModel.addFuelLog(liters: liters, cost: cost, vehicleId: vehicleId)
+        isSubmitting = true
+        showSuccess = false
+        errorMessage = nil
         
-        // Clear form
-        volume = ""
-        price = ""
-        
-        showSuccess = true
+        Task {
+            do {
+                try await viewModel.addFuelLog(liters: liters, cost: cost, vehicleId: vehicleId)
+                
+                await MainActor.run {
+                    isSubmitting = false
+                    showSuccess = true
+                    volume = ""
+                    price = ""
+                }
+            } catch {
+                await MainActor.run {
+                    isSubmitting = false
+                    errorMessage = error.localizedDescription
+                }
+            }
+        }
     }
 }
 

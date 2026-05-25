@@ -10,21 +10,20 @@ final class RealtimeManager {
 
     static let shared = RealtimeManager()
 
-    // MARK: - Multi-listener handler arrays (nonisolated to avoid Sendable issues)
-
-    nonisolated(unsafe) private var tripsHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var workOrdersHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var maintenanceTasksHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var defectReportsHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var notificationsHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var messagesHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var vehicleLocationsHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var vehiclesHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var inventoryHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var issueReportsHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var profilesHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var usersHandlers: [() -> Void] = []
-    nonisolated(unsafe) private var fuelLogsHandlers: [() -> Void] = []
+    // MARK: - Multi-listener handler arrays
+    private var tripsHandlers: [() -> Void] = []
+    private var workOrdersHandlers: [() -> Void] = []
+    private var maintenanceTasksHandlers: [() -> Void] = []
+    private var defectReportsHandlers: [() -> Void] = []
+    private var notificationsHandlers: [() -> Void] = []
+    private var messagesHandlers: [() -> Void] = []
+    private var vehicleLocationsHandlers: [() -> Void] = []
+    private var vehiclesHandlers: [() -> Void] = []
+    private var inventoryHandlers: [() -> Void] = []
+    private var issueReportsHandlers: [() -> Void] = []
+    private var profilesHandlers: [() -> Void] = []
+    private var usersHandlers: [() -> Void] = []
+    private var fuelLogsHandlers: [() -> Void] = []
 
     private var channels: [RealtimeChannelV2] = []
 
@@ -104,7 +103,7 @@ final class RealtimeManager {
 
     // MARK: - Subscribe to a single table
 
-    private func subscribe(table: String, onChange: @escaping @Sendable () -> Void) async {
+    private func subscribe(table: String, onChange: @escaping @MainActor @Sendable () -> Void) async {
         let channel = supabase.realtimeV2.channel("public:\(table)")
 
         let changes = channel.postgresChange(

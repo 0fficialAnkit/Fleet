@@ -41,7 +41,7 @@ final class DriverFuelViewModel {
         isLoading = false
     }
 
-    func addFuelLog(liters: Double, cost: Double, vehicleId: UUID) {
+    func addFuelLog(liters: Double, cost: Double, vehicleId: UUID) async throws {
         guard let userId = currentUserId else { return }
         let newLog = FuelLog(
             id: UUID(),
@@ -51,13 +51,8 @@ final class DriverFuelViewModel {
             fuelCost: cost,
             recordedAt: Date()
         )
-        Task {
-            do {
-                try await FuelLogService.createFuelLog(newLog)
-                await loadData()
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
+        
+        try await FuelLogService.createFuelLog(newLog)
+        await loadData()
     }
 }
