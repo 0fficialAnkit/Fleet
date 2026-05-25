@@ -310,105 +310,67 @@ struct DashboardView: View {
     // MARK: - Fleet Overview Card (Idea 3)
     
     private var fleetOverviewCard: some View {
-        VStack(spacing: 0) {
-            
-            // Header: icon badge + cou?nt
-            HStack(alignment: .top, spacing: themeModel.spacingMD) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: themeModel.radiusSM, style: .continuous)
-                        .fill(themeModel.accent.opacity(0.12))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "truck.box.fill")
-                        .font(.system(size: 22, weight: .medium))
-                        .foregroundStyle(themeModel.accent)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-//                    Text("Fleet Overview")
-//                        .font(themeModel.caption(13))
-//                        .foregroundStyle(themeModel.textSecondary)
-                    Text("Total Vehicle \(viewModel.totalVehicles)")
-                        .font(themeModel.title(26))
-                        .foregroundStyle(themeModel.textPrimary)
-                }
-                
-                Spacer()
-            }
-            
-            Divider()
-                .background(themeModel.divider)
-                .padding(.vertical, themeModel.spacingMD)
-            
-            // Status breakdown row
-            HStack(spacing: themeModel.spacingSM) {
-                FleetStatPill(
-                    value: viewModel.driversOnTrip,
-                    label: "Active",
-                    color: themeModel.success
-                )
-                FleetStatPill(
-                    value: max(0, viewModel.totalVehicles - viewModel.driversOnTrip - viewModel.maintenanceVehicles.count),
-                    label: "Idle",
-                    color: themeModel.warning
-                )
-                FleetStatPill(
-                    value: viewModel.maintenanceVehicles.count,
-                    label: "Service",
-                    color: themeModel.danger
-                )
-            }
-            
-            // Manage Fleet CTA
-            //            NavigationLink(value: DashboardDestination.vehiclesRoot) {
-            //                HStack {
-            //                    Text("Manage Fleet")
-            //                        .font(themeModel.headline(15))
-            //                        .foregroundStyle(themeModel.buttonPrimaryText)
-            //                    Spacer()
-            //                    Image(systemName: "arrow.right")
-            //                        .font(.system(size: 14, weight: .semibold))
-            //                        .foregroundStyle(themeModel.buttonPrimaryText)
-            //                }
-            //                .padding(.horizontal, themeModel.spacingMD)
-            //                .padding(.vertical, 13)
-            //                .background(themeModel.buttonPrimary)
-            //                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
-            //            }
-            //            .buttonStyle(.plain)
-            //            .padding(.top, themeModel.spacingMD)
-            //        }
-            //        .padding(themeModel.spacingMD)
-            //        .background(themeModel.cardBackground)
-            //        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-            //        .overlay(
-            //            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-            //                .stroke(themeModel.border.opacity(0.6), lineWidth: 0.5)
-            //        )
-            //        .shadow(color: themeModel.shadowSoft, radius: 12, y: 4)
-            //        .padding(.horizontal, themeModel.spacingMD)
-            //    }
-            HStack {
-                Spacer()
-                NavigationLink(value: DashboardDestination.vehiclesRoot) {
+        NavigationLink(value: DashboardDestination.vehiclesRoot) {
+            VStack(spacing: 0) {
+                // Header: icon badge + count + chevron on top trailing
+                HStack(alignment: .top, spacing: themeModel.spacingMD) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: themeModel.radiusSM, style: .continuous)
+                            .fill(themeModel.accent.opacity(0.12))
+                            .frame(width: 48, height: 48)
+                        Image(systemName: "truck.box.fill")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(themeModel.accent)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Total Vehicle \(viewModel.totalVehicles)")
+                            .font(themeModel.title(26))
+                            .foregroundStyle(themeModel.textPrimary)
+                    }
+                    
+                    Spacer()
+                    
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(themeModel.accent)
-//                        .frame(width: 32, height: 32)
-//                        .background(themeModel.accent.opacity(0.1))
-//                        .clipShape(Circle())
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(themeModel.textSecondary)
+                        .padding(.top, 4)
                 }
-                .buttonStyle(.plain)
+                
+                Divider()
+                    .background(themeModel.divider)
+                    .padding(.vertical, themeModel.spacingMD)
+                
+                // Status breakdown row
+                HStack(spacing: themeModel.spacingSM) {
+                    FleetStatPill(
+                        value: viewModel.driversOnTrip,
+                        label: "Active",
+                        color: themeModel.success
+                    )
+                    FleetStatPill(
+                        value: max(0, viewModel.totalVehicles - viewModel.driversOnTrip - viewModel.maintenanceVehicles.count),
+                        label: "Idle",
+                        color: themeModel.warning
+                    )
+                    FleetStatPill(
+                        value: viewModel.maintenanceVehicles.count,
+                        label: "Service",
+                        color: themeModel.danger
+                    )
+                }
             }
-            .padding(.top, themeModel.spacingSM)
+            .padding(themeModel.spacingMD)
+            .background(themeModel.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                    .stroke(themeModel.border.opacity(0.6), lineWidth: 0.5)
+            )
+            .shadow(color: themeModel.shadowSoft, radius: 12, y: 4)
+            .contentShape(Rectangle())
         }
-        .padding(themeModel.spacingMD)
-        .background(themeModel.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                .stroke(themeModel.border.opacity(0.6), lineWidth: 0.5)
-        )
-        .shadow(color: themeModel.shadowSoft, radius: 12, y: 4)
+        .buttonStyle(.plain)
         .padding(.horizontal, themeModel.spacingMD)
     }
     
