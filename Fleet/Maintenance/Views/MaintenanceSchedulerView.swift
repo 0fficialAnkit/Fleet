@@ -414,7 +414,7 @@ private struct WorkOrderCard: View {
                     HStack(spacing: themeModel.spacingMD) {
                         InfoPill(icon: "person.fill", text: "By: \(workOrder.assignedBy)")
                         InfoPill(icon: "clock.fill",  text: workOrder.laborHours)
-                        InfoPill(icon: "dollarsign.circle.fill", text: workOrder.laborCost, color: themeModel.success)
+                        InfoPill(icon: "indianrupeesign.circle.fill", text: workOrder.laborCost, color: themeModel.success)
                     }
 
                     // Spare parts consumed (if any)
@@ -828,7 +828,7 @@ struct WorkOrderDetailSheet: View {
                         SheetSection(title: "Labor & Financials") {
                             HStack(spacing: themeModel.spacingMD) {
                                 LaborStatBox(label: "Est. Hours", value: currentWO.laborHours, icon: "clock.fill",  color: themeModel.info)
-                                LaborStatBox(label: "Labor Cost",  value: currentWO.laborCost,   icon: "dollarsign.circle.fill",  color: themeModel.success)
+                                LaborStatBox(label: "Labor Cost",  value: currentWO.laborCost,   icon: "indianrupeesign.circle.fill",  color: themeModel.success)
                             }
                         }
 
