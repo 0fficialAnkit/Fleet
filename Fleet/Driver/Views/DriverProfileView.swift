@@ -2,22 +2,22 @@ import SwiftUI
 
 struct DriverProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
+    @State private var profileVM = ProfileViewModel()
 
     var body: some View {
 
-        NavigationStack {
-
             ScrollView {
-
                 VStack(spacing: 32) {
-
-                    ProfileHeader(icon: "person.crop.circle.fill", name: "Alex Johnson", role: "Fleet Driver", accentColor: themeModel.driverPrimary)
+                    ProfileHeader(
+                        icon: "person.crop.circle.fill",
+                        name: profileVM.currentUser?.fullName ?? "Driver",
+                        role: "Fleet Driver",
+                        accentColor: themeModel.driverPrimary
+                    )
 
                     VStack(spacing: 16) {
-                        
-                        
                             VStack(spacing: 12) {
-                                InfoRow(icon: "bell.badge", label: "Notifications", value: "Enabled")
+                                InfoRow(icon: "bell", label: "Notifications", value: "Enabled")
                                 Divider()
                                 InfoRow(icon: "doc.text.fill", label: "Documents", value: "Verified")
                                 Divider()
@@ -31,8 +31,7 @@ struct DriverProfileView: View {
                             )
                             .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
 
-                        
-VStack(spacing: 0) {
+                        VStack(spacing: 0) {
                             Button(action: {
                                 Task {
                                     await authViewModel.signOut()
@@ -54,6 +53,8 @@ VStack(spacing: 0) {
             }
             .background(themeModel.backgroundPrimary.ignoresSafeArea())
             .navigationTitle("Profile")
+        .task {
+            await profileVM.loadProfile()
         }
     }
 }

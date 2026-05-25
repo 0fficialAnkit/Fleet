@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 // ═══════════════════════════════════════════════════════════════
 // MARK: - Main Screen
@@ -9,6 +10,7 @@ struct MaintenanceSchedulerView: View {
     @Namespace private var calendarNS
     @State private var selectedTask: ScheduledTask? = nil
     @State private var selectedWorkOrder: ScheduledWorkOrder? = nil
+    @Environment(AuthViewModel.self) private var authViewModel
 
     init() {
         UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(themeModel.maintenancePrimary)
@@ -45,6 +47,11 @@ struct MaintenanceSchedulerView: View {
             }
             .navigationDestination(item: $selectedWorkOrder) { wo in
                 WorkOrderDetailView(scheduledWorkOrder: wo)
+            }
+            .task {
+                viewModel.currentUserId = authViewModel.currentUser?.id
+                await viewModel.loadData()
+                viewModel.setupRealtime()
             }
         }
     }
@@ -407,7 +414,7 @@ private struct WorkOrderCard: View {
                     HStack(spacing: themeModel.spacingMD) {
                         InfoPill(icon: "person.fill", text: "By: \(workOrder.assignedBy)")
                         InfoPill(icon: "clock.fill",  text: workOrder.laborHours)
-                        InfoPill(icon: "dollarsign.circle.fill", text: workOrder.laborCost, color: themeModel.success)
+                        InfoPill(icon: "indianrupeesign.circle.fill", text: workOrder.laborCost, color: themeModel.success)
                     }
 
                     // Spare parts consumed (if any)
@@ -821,7 +828,7 @@ struct WorkOrderDetailSheet: View {
                         SheetSection(title: "Labor & Financials") {
                             HStack(spacing: themeModel.spacingMD) {
                                 LaborStatBox(label: "Est. Hours", value: currentWO.laborHours, icon: "clock.fill",  color: themeModel.info)
-                                LaborStatBox(label: "Labor Cost",  value: currentWO.laborCost,   icon: "dollarsign.circle.fill",  color: themeModel.success)
+                                LaborStatBox(label: "Labor Cost",  value: currentWO.laborCost,   icon: "indianrupeesign.circle.fill",  color: themeModel.success)
                             }
                         }
 

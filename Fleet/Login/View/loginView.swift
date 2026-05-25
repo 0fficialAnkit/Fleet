@@ -13,9 +13,13 @@ struct RoleDisplayItem: Identifiable {
 // MARK: - LoginView
 struct LoginView: View {
 
+    enum Destination: Hashable {
+        case signIn
+        case createAccount
+    }
+
     @State private var selectedRoleId: Int = 1
-    @State private var navigateToSignIn: Bool = false
-    @State private var navigateToCreateAccount: Bool = false
+    @State private var navigationPath = [Destination]()
 
     let roleItems: [RoleDisplayItem] = [
         RoleDisplayItem(
@@ -23,31 +27,31 @@ struct LoginView: View {
             roleName: "Fleet Manager",
             description: "Manage fleet, drivers & analytics",
             iconName: "shield.fill",
-            iconColor: .blue,
-            iconBackground: Color.blue.opacity(0.25)
+            iconColor: themeModel.accent,
+            iconBackground: themeModel.accent.opacity(0.15)
         ),
         RoleDisplayItem(
             id: 2,
             roleName: "Driver",
             description: "View routes, log trips & fuel",
             iconName: "truck.box.fill",
-            iconColor: Color(red: 0.2, green: 0.85, blue: 0.45),
-            iconBackground: Color.green.opacity(0.2)
+            iconColor: themeModel.driverPrimary,
+            iconBackground: themeModel.driverPrimary.opacity(0.15)
         ),
         RoleDisplayItem(
             id: 3,
             roleName: "Maintenance",
             description: "Schedule repairs & manage parts",
             iconName: "wrench.and.screwdriver.fill",
-            iconColor: .orange,
-            iconBackground: Color.orange.opacity(0.2)
+            iconColor: themeModel.maintenancePrimary,
+            iconBackground: themeModel.maintenancePrimary.opacity(0.15)
         )
     ]
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
-                Color(red: 0.07, green: 0.09, blue: 0.13)
+                themeModel.backgroundPrimary
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
@@ -63,26 +67,30 @@ struct LoginView: View {
                 }
                 .padding(.horizontal, 24)
             }
-            .navigationDestination(isPresented: $navigateToSignIn) {
-                SignInView()
-            }
-            .navigationDestination(isPresented: $navigateToCreateAccount) {
-                CreateAccountView()
+            .navigationDestination(for: Destination.self) { destination in
+                switch destination {
+                case .signIn:
+                    SignInView()
+                case .createAccount:
+                    CreateAccountView(onSuccess: {
+                        navigationPath = [.signIn]
+                    })
+                }
             }
         }
     }
     // MARK: - App Icon (blue truck)
     var appIconView: some View {
         Button(action: {
-            navigateToCreateAccount = true
+            navigationPath.append(.createAccount)
         }) {
             ZStack {
                 RoundedRectangle(cornerRadius: 22)
-                    .fill(Color.blue)
+                    .fill(themeModel.accent)
                     .frame(width: 80, height: 80)
                 Image(systemName: "truck.box.fill")
                     .font(.system(size: 36))
-                    .foregroundColor(.white)
+                    .foregroundColor(themeModel.accentForeground)
             }
         }
         .buttonStyle(PlainButtonStyle())
@@ -91,12 +99,12 @@ struct LoginView: View {
     // MARK: - Title + Subtitle
     var titleSection: some View {
         VStack(spacing: 8) {
-            Text("FleetOS")
+            Text("GoFleet")
                 .font(.system(size: 34, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundColor(themeModel.textPrimary)
             Text("Select your role to continue")
                 .font(.system(size: 16))
-                .foregroundColor(Color.white.opacity(0.5))
+                .foregroundColor(themeModel.textSecondary)
         }
     }
 
@@ -122,17 +130,17 @@ struct LoginView: View {
         Button(action: handleContinue) {
             Text("Continue")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.white)
+                .foregroundColor(themeModel.accentForeground)
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
-                .background(Color.blue)
+                .background(themeModel.accent)
                 .cornerRadius(16)
         }
     }
 
     // MARK: - Continue Action
     func handleContinue() {
-        navigateToSignIn = true
+        navigationPath.append(.signIn)
     }
 }
 
@@ -168,19 +176,19 @@ struct RoleCardView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(item.roleName)
                 .font(.system(size: 17, weight: .bold))
-                .foregroundColor(.white)
+                .foregroundColor(themeModel.textPrimary)
             Text(item.description)
                 .font(.system(size: 14))
-                .foregroundColor(Color.white.opacity(0.5))
+                .foregroundColor(themeModel.textSecondary)
         }
     }
     
     var selectionDot: some View {
         Circle()
-            .fill(isSelected ? Color.blue : Color.clear)
+            .fill(isSelected ? themeModel.accent : Color.clear)
             .overlay(
                 Circle().stroke(
-                    isSelected ? Color.blue : Color.white.opacity(0.25),
+                    isSelected ? themeModel.accent : themeModel.border,
                     lineWidth: 1.5
                 )
             )
@@ -191,14 +199,14 @@ struct RoleCardView: View {
         RoundedRectangle(cornerRadius: 16)
             .fill(
                 isSelected
-                    ? Color(red: 0.1, green: 0.18, blue: 0.32)
-                    : Color(red: 0.12, green: 0.14, blue: 0.18)
+                    ? themeModel.accent.opacity(0.12)
+                    : themeModel.backgroundElevated
             )
     }
 
     var cardBorder: some View {
         RoundedRectangle(cornerRadius: 16)
-            .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 1.5)
+            .stroke(isSelected ? themeModel.accent : Color.clear, lineWidth: 1.5)
     }
 }
 

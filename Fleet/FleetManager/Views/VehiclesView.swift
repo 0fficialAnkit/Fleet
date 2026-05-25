@@ -11,7 +11,7 @@ struct VehiclesView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: themeModel.spacingMD) {
                         ForEach(viewModel.vehicles) { vehicle in
-                            NavigationLink(destination: VehicleDetailView(vehicle: vehicle, viewModel: viewModel)) {
+                            NavigationLink(value: vehicle) {
                                 VehicleRowView(
                                     vehicle: vehicle,
                                     statusColor: viewModel.getStatusColor(vehicle.status)

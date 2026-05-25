@@ -1,62 +1,90 @@
 import SwiftUI
 
+@MainActor
 @Observable
 final class EmployeesViewModel {
-    private(set) var users: [User] = MockData.users
-    private(set) var roles: [Role] = MockData.roles
-    
-    var employees: [User] {
-        // Return all users except the Fleet Manager
-        users.filter { user in
-            let role = getRole(for: user)
-            return role?.roleName.lowercased() != "fleet manager"
+    private(set) var profiles: [Profile] = []
+
+    var isLoading = false
+    var errorMessage: String?
+    var isCreatingUser = false
+
+    /// All non-manager profiles
+    var employees: [Profile] {
+        profiles.filter { $0.role != "fleet_manager" }
+    }
+
+    func setupRealtime() {
+        RealtimeManager.shared.addUsersChangeHandler { [weak self] in
+            Task { await self?.loadData() }
+        }
+        RealtimeManager.shared.addProfilesChangeHandler { [weak self] in
+            Task { await self?.loadData() }
         }
     }
-    
-    func getRole(for user: User) -> Role? {
-        roles.first { $0.id == user.roleId }
+
+    func loadData() async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            profiles = try await ProfileService.fetchAllProfiles()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
     }
-    
+
+    func getRole(for profile: Profile) -> String {
+        switch profile.role {
+        case "fleet_manager": return "Fleet Manager"
+        case "driver": return "Driver"
+        case "maintenance": return "Maintenance"
+        default: return "Unknown"
+        }
+    }
+
     func getIcon(for roleName: String) -> String {
         switch roleName.lowercased() {
-        case "fleet manager": return "person.badge.shield.checkmark.fill"
+        case "fleet_manager", "fleet manager": return "person.badge.shield.checkmark.fill"
         case "driver": return "steeringwheel"
         case "maintenance": return "wrench.and.screwdriver.fill"
         default: return "person.fill"
         }
     }
-    
+
     func getColor(for roleName: String) -> Color {
         switch roleName.lowercased() {
-        case "fleet manager": return themeModel.analyticsPurple
+        case "fleet_manager", "fleet manager": return themeModel.analyticsPurple
         case "driver": return themeModel.info
         case "maintenance": return themeModel.warning
         default: return themeModel.textSecondary
         }
     }
-    
-    func addEmployee(fullName: String, email: String, phone: String, licenseNumber: String?, roleId: UUID) {
-        let newUser = User(
-            id: UUID(),
-            fullName: fullName,
+
+    func addEmployee(fullName: String, email: String, password: String, phone: String, licenseNumber: String?, role: String) async throws {
+        isCreatingUser = true
+        defer { isCreatingUser = false }
+        
+        _ = try await ProfileService.createUserLocally(
             email: email,
-            passwordHash: "$2b$12$dummy",
+            password: password,
+            fullName: fullName,
             phone: phone,
             licenseNumber: licenseNumber,
-            roleId: roleId,
-            status: .active,
-            createdAt: Date()
+            role: role
         )
-        users.append(newUser)
+        
+        await loadData()
     }
-    
-    func deleteEmployee(_ user: User) {
-        users.removeAll { $0.id == user.id }
-    }
-    
-    func updateEmployee(_ updatedUser: User) {
-        if let index = users.firstIndex(where: { $0.id == updatedUser.id }) {
-            users[index] = updatedUser
+
+    func deleteEmployee(_ profile: Profile) {
+        Task {
+            do {
+                try await UserService.deleteUser(id: profile.id)
+                await loadData()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }

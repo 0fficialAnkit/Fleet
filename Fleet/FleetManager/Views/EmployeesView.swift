@@ -2,6 +2,13 @@ import SwiftUI
 
 struct EmployeesView: View {
     var viewModel: EmployeesViewModel
+    let roleFilter: String
+    
+    var filteredEmployees: [Profile] {
+        viewModel.employees.filter { profile in
+            profile.role.lowercased() == roleFilter.lowercased()
+        }
+    }
     
     var body: some View {
         Group {
@@ -10,13 +17,12 @@ struct EmployeesView: View {
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: themeModel.spacingMD) {
-                        ForEach(viewModel.employees) { user in
-                            let role = viewModel.getRole(for: user)
-                            let roleName = role?.roleName ?? "Unknown Role"
+                        ForEach(filteredEmployees) { profile in
+                            let roleName = viewModel.getRole(for: profile)
                             
-                            NavigationLink(destination: EmployeeDetailView(user: user, viewModel: viewModel)) {
+                            NavigationLink(destination: EmployeeDetailView(profile: profile, viewModel: viewModel)) {
                                 EmployeeRowView(
-                                    user: user,
+                                    profile: profile,
                                     roleName: roleName,
                                     icon: viewModel.getIcon(for: roleName),
                                     iconColor: viewModel.getColor(for: roleName)
@@ -35,7 +41,7 @@ struct EmployeesView: View {
 
 
 struct EmployeeRowView: View {
-    let user: User
+    let profile: Profile
     let roleName: String
     let icon: String
     let iconColor: Color
@@ -43,7 +49,7 @@ struct EmployeeRowView: View {
     var body: some View {
         HStack(spacing: themeModel.spacingMD) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(user.fullName)
+                Text(profile.fullName)
                     .font(themeModel.headline(18))
                     .foregroundColor(themeModel.textPrimary)
                 
@@ -73,6 +79,6 @@ struct EmployeeRowView: View {
 
 #Preview {
     NavigationStack {
-        EmployeesView(viewModel: EmployeesViewModel())
+        EmployeesView(viewModel: EmployeesViewModel(), roleFilter: "driver")
     }
 }

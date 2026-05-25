@@ -55,6 +55,7 @@ struct ScheduledTask: Identifiable, Hashable {
     let partsNeeded: [String]
     let previousNote: String
     let aiRecommendation: String
+    let sourceTaskId: UUID? // link to Supabase MaintenanceTask.id
 }
 
 // MARK: - ScheduledWorkOrder (UI display model)
@@ -71,21 +72,172 @@ struct ScheduledWorkOrder: Identifiable, Hashable {
     let laborCost: String
     var notes: String
     var partsUsed: [String]
+    let sourceWorkOrderId: UUID? // link to Supabase WorkOrder.id
 }
 
 // MARK: - ViewModel
 
+@MainActor
 @Observable
 final class MaintenanceSchedulerViewModel {
 
     var selectedDate: Date = Calendar.current.startOfDay(for: Date())
     var selectedTask: ScheduledTask? = nil
     var showTaskDetail: Bool = false
-    
-    // Unified Navigation & Work Orders State
+
     var selectedTab: SchedulerTabType = .tasks
     var selectedWorkOrder: ScheduledWorkOrder? = nil
     var showWorkOrderDetail: Bool = false
+
+    var allTasks: [ScheduledTask] = []
+    var allWorkOrders: [ScheduledWorkOrder] = []
+
+    var isLoading = false
+    var errorMessage: String?
+    var currentUserId: UUID?
+
+    private var rawTasks: [MaintenanceTask] = []
+    private var rawWorkOrders: [WorkOrder] = []
+    private var vehicles: [Vehicle] = []
+    private var profiles: [Profile] = []
+    private(set) var inventory: [Inventory] = []
+
+    // MARK: - Load Data
+
+    func loadData() async {
+        guard let userId = currentUserId else { return }
+        isLoading = true
+        errorMessage = nil
+        do {
+            async let t = MaintenanceTaskService.fetchTasksForUser(assignedTo: userId)
+            async let w = WorkOrderService.fetchWorkOrdersForUser(assignedTo: userId)
+            async let v = VehicleService.fetchAllVehicles()
+            async let p = ProfileService.fetchAllProfiles()
+            async let i = InventoryService.fetchAllInventory()
+
+            rawTasks = try await t
+            rawWorkOrders = try await w
+            vehicles = try await v
+            profiles = try await p
+            inventory = try await i
+
+            buildDisplayModels()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    func setupRealtime() {
+        let rt = RealtimeManager.shared
+        rt.addMaintenanceTasksChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addWorkOrdersChangeHandler { [weak self] in Task { await self?.loadData() } }
+    }
+
+    // MARK: - Build UI display models from Supabase data
+
+    private func buildDisplayModels() {
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "hh:mm a"
+
+        allTasks = rawTasks.map { task in
+            let vehicle = vehicles.first { $0.id == task.vehicleId }
+            let scheduledBy = profiles.first { $0.id == task.scheduledBy }
+
+            let displayStatus: TaskDisplayStatus
+            switch task.status {
+            case .pending: displayStatus = .pending
+            case .inProgress: displayStatus = .inProgress
+            case .completed: displayStatus = .completed
+            case .cancelled: displayStatus = .delayed
+            case .none: displayStatus = .pending
+            }
+
+            let priority: TaskPriority
+            switch task.taskType {
+            case .repair: priority = .high
+            case .inspection: priority = .medium
+            case .oilChange: priority = .low
+            case .tireRotation: priority = .low
+            case .other: priority = .medium
+            case .none: priority = .medium
+            }
+
+            return ScheduledTask(
+                id: UUID(),
+                vehicleNumber: vehicle?.licensePlate ?? "Unknown",
+                vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
+                taskType: task.taskType ?? .other,
+                priority: priority,
+                scheduledTime: task.scheduledDate.map { timeFormatter.string(from: $0) } ?? "TBD",
+                assignedBy: scheduledBy?.fullName ?? "Fleet Manager",
+                estimatedDuration: "1-2 hrs",
+                status: displayStatus,
+                description: task.description ?? "No description.",
+                date: task.scheduledDate ?? Date(),
+                checklistItems: defaultChecklist(for: task.taskType),
+                partsNeeded: [],
+                previousNote: "",
+                aiRecommendation: "",
+                sourceTaskId: task.id
+            )
+        }
+
+        allWorkOrders = rawWorkOrders.map { wo in
+            let vehicle = vehicles.first { $0.id == wo.vehicleId }
+            let createdBy = profiles.first { $0.id == wo.createdBy }
+
+            return ScheduledWorkOrder(
+                id: UUID(),
+                vehicleNumber: vehicle?.licensePlate ?? "Unknown",
+                vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
+                priority: wo.priority ?? .medium,
+                status: wo.status ?? .open,
+                createdAt: wo.createdAt ?? Date(),
+                assignedBy: createdBy?.fullName ?? "Fleet Manager",
+                laborHours: "—",
+                laborCost: "—",
+                notes: "",
+                partsUsed: [],
+                sourceWorkOrderId: wo.id
+            )
+        }
+    }
+
+    private func defaultChecklist(for type: MaintenanceTaskType?) -> [ChecklistItem] {
+        switch type {
+        case .oilChange:
+            return [
+                ChecklistItem(title: "Drain old engine oil"),
+                ChecklistItem(title: "Replace oil filter"),
+                ChecklistItem(title: "Add new oil"),
+                ChecklistItem(title: "Check for leaks after fill")
+            ]
+        case .tireRotation:
+            return [
+                ChecklistItem(title: "Record current tread depth"),
+                ChecklistItem(title: "Rotate tyres"),
+                ChecklistItem(title: "Inflate to recommended PSI"),
+                ChecklistItem(title: "Check for punctures or cracks")
+            ]
+        case .inspection:
+            return [
+                ChecklistItem(title: "Lights and signals check"),
+                ChecklistItem(title: "Fluid levels check"),
+                ChecklistItem(title: "Brake system check"),
+                ChecklistItem(title: "Tyre pressure verification")
+            ]
+        case .repair:
+            return [
+                ChecklistItem(title: "Diagnose fault"),
+                ChecklistItem(title: "Order parts if needed"),
+                ChecklistItem(title: "Perform repair"),
+                ChecklistItem(title: "Test after repair")
+            ]
+        default:
+            return [ChecklistItem(title: "Complete task")]
+        }
+    }
 
     // MARK: - Calendar Days
     var calendarDays: [Date] {
@@ -130,6 +282,20 @@ final class MaintenanceSchedulerViewModel {
     func updateTaskStatus(id: UUID, to status: TaskDisplayStatus) {
         if let i = allTasks.firstIndex(where: { $0.id == id }) {
             allTasks[i].status = status
+
+            // Write back to Supabase
+            if let sourceId = allTasks[i].sourceTaskId {
+                let dbStatus: MaintenanceTaskStatus
+                switch status {
+                case .pending: dbStatus = .pending
+                case .inProgress: dbStatus = .inProgress
+                case .completed: dbStatus = .completed
+                case .delayed, .critical: dbStatus = .pending
+                }
+                Task {
+                    try? await MaintenanceTaskService.updateTaskStatus(id: sourceId, status: dbStatus)
+                }
+            }
         }
         if selectedTask?.id == id {
             selectedTask?.status = status
@@ -148,6 +314,28 @@ final class MaintenanceSchedulerViewModel {
     func updateWorkOrderStatus(id: UUID, to status: WorkOrderStatus) {
         if let i = allWorkOrders.firstIndex(where: { $0.id == id }) {
             allWorkOrders[i].status = status
+
+            // Write back to Supabase
+            if let sourceId = allWorkOrders[i].sourceWorkOrderId {
+                Task {
+                    try? await WorkOrderService.updateWorkOrderStatus(id: sourceId, status: status)
+                    // If completed, create maintenance history
+                    if status == .completed {
+                        let wo = allWorkOrders[i]
+                        if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                            let history = MaintenanceHistory(
+                                id: UUID(),
+                                vehicleId: vehicle.id,
+                                workOrderId: sourceId,
+                                serviceDetails: "Work order completed: \(wo.notes)",
+                                cost: nil,
+                                completedAt: Date()
+                            )
+                            try? await MaintenanceHistoryService.createHistory(history)
+                        }
+                    }
+                }
+            }
         }
         if selectedWorkOrder?.id == id {
             selectedWorkOrder?.status = status
@@ -170,233 +358,30 @@ final class MaintenanceSchedulerViewModel {
         if selectedWorkOrder?.id == id {
             selectedWorkOrder?.partsUsed.append(part)
         }
+        
+        // Find matching inventory item
+        if let inventoryItem = inventory.first(where: { $0.partName?.lowercased() == part.lowercased() }) {
+            let itemId = inventoryItem.id
+            let stock = inventoryItem.stockQuantity ?? 0
+            
+            Task {
+                // Update stock if greater than 0
+                if stock > 0 {
+                    try? await InventoryService.updateStock(id: itemId, newQuantity: stock - 1)
+                }
+                
+                // Add WorkOrderPart record
+                if let sourceId = allWorkOrders.first(where: { $0.id == id })?.sourceWorkOrderId {
+                    let wop = WorkOrderPart(
+                        id: UUID(),
+                        workOrderId: sourceId,
+                        inventoryItemId: itemId,
+                        quantityUsed: 1,
+                        hoursSpent: nil
+                    )
+                    try? await WorkOrderPartService.addPart(wop)
+                }
+            }
+        }
     }
-
-    // MARK: - Mock Data
-
-    var allTasks: [ScheduledTask] = {
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
-
-        func dt(_ dayOffset: Int, _ hour: Int, _ minute: Int = 0) -> Date {
-            let d = cal.date(byAdding: .day, value: dayOffset, to: today)!
-            return cal.date(bySettingHour: hour, minute: minute, second: 0, of: d)!
-        }
-
-        return [
-            // ── TODAY ──────────────────────────────────────────────
-            ScheduledTask(
-                id: UUID(), vehicleNumber: "MH-12-CX-4490", vehicleName: "Truck #24",
-                taskType: .inspection, priority: .high,
-                scheduledTime: "09:00 AM", assignedBy: "James Fleet",
-                estimatedDuration: "2 hrs", status: .inProgress,
-                description: "Full brake system inspection and replacement of front brake pads if worn.",
-                date: dt(0, 9),
-                checklistItems: [
-                    ChecklistItem(title: "Check brake pad thickness", isChecked: true),
-                    ChecklistItem(title: "Inspect brake discs for wear", isChecked: true),
-                    ChecklistItem(title: "Check brake fluid level", isChecked: false),
-                    ChecklistItem(title: "Test brake pedal response", isChecked: false)
-                ],
-                partsNeeded: ["Brake Pads (Front) × 2", "Brake Fluid DOT4 × 1"],
-                previousNote: "Last inspection 3 months ago. Minor wear noted on front pads.",
-                aiRecommendation: "High likelihood of pad replacement. Stock front pads before starting."
-            ),
-            ScheduledTask(
-                id: UUID(), vehicleNumber: "MH-14-AB-2234", vehicleName: "Van #08",
-                taskType: .oilChange, priority: .medium,
-                scheduledTime: "11:30 AM", assignedBy: "James Fleet",
-                estimatedDuration: "45 min", status: .pending,
-                description: "Scheduled oil change and oil filter replacement.",
-                date: dt(0, 11, 30),
-                checklistItems: [
-                    ChecklistItem(title: "Drain old engine oil"),
-                    ChecklistItem(title: "Replace oil filter"),
-                    ChecklistItem(title: "Add new oil (5W-30, 5L)"),
-                    ChecklistItem(title: "Check for leaks after fill")
-                ],
-                partsNeeded: ["Engine Oil 5W-30 (5L) × 1", "Oil Filter × 1"],
-                previousNote: "Last oil change was 6,000 km ago. Overdue by ~500 km.",
-                aiRecommendation: "Routine change — no anomalies expected. Estimated 40 min."
-            ),
-            ScheduledTask(
-                id: UUID(), vehicleNumber: "MH-02-TF-7891", vehicleName: "Bus #03",
-                taskType: .tireRotation, priority: .low,
-                scheduledTime: "02:00 PM", assignedBy: "Sarah Admin",
-                estimatedDuration: "1 hr", status: .pending,
-                description: "Rotate all four tyres, check tread depth and tyre pressure.",
-                date: dt(0, 14),
-                checklistItems: [
-                    ChecklistItem(title: "Record current tread depth"),
-                    ChecklistItem(title: "Rotate tyres (front → rear)"),
-                    ChecklistItem(title: "Inflate to recommended PSI"),
-                    ChecklistItem(title: "Check for punctures or cracks")
-                ],
-                partsNeeded: [],
-                previousNote: "Last rotation at 8,000 km. Rear tyres slightly more worn.",
-                aiRecommendation: "Consider rear tyre replacement within next 2 rotation cycles."
-            ),
-            ScheduledTask(
-                id: UUID(), vehicleNumber: "MH-12-CX-4490", vehicleName: "Truck #24",
-                taskType: .repair, priority: .emergency,
-                scheduledTime: "04:30 PM", assignedBy: "James Fleet",
-                estimatedDuration: "3 hrs", status: .critical,
-                description: "Emergency AC compressor failure. Vehicle grounded until resolved.",
-                date: dt(0, 16, 30),
-                checklistItems: [
-                    ChecklistItem(title: "Diagnose compressor fault code"),
-                    ChecklistItem(title: "Check refrigerant levels"),
-                    ChecklistItem(title: "Replace compressor unit"),
-                    ChecklistItem(title: "Recharge refrigerant (R134a)"),
-                    ChecklistItem(title: "Verify cooling output post-repair")
-                ],
-                partsNeeded: ["AC Compressor × 1", "Refrigerant R134a × 2"],
-                previousNote: "Driver reported AC failure mid-route. Unusual noise from engine bay.",
-                aiRecommendation: "Compressor bearing likely seized. Order part immediately — 2-3 day lead time if not in stock."
-            ),
-            // ── YESTERDAY ─────────────────────────────────────────
-            ScheduledTask(
-                id: UUID(), vehicleNumber: "DL-01-RT-5566", vehicleName: "Pickup #11",
-                taskType: .oilChange, priority: .low,
-                scheduledTime: "11:00 AM", assignedBy: "James Fleet",
-                estimatedDuration: "45 min", status: .completed,
-                description: "Routine oil change and engine health check.",
-                date: dt(-1, 11),
-                checklistItems: [
-                    ChecklistItem(title: "Drain old oil", isChecked: true),
-                    ChecklistItem(title: "Replace filter", isChecked: true),
-                    ChecklistItem(title: "Add new oil", isChecked: true),
-                    ChecklistItem(title: "Check for leaks", isChecked: true)
-                ],
-                partsNeeded: ["Engine Oil × 1", "Oil Filter × 1"],
-                previousNote: "Completed without issues.",
-                aiRecommendation: "Next oil change due in approximately 5,000 km."
-            ),
-            ScheduledTask(
-                id: UUID(), vehicleNumber: "MH-02-TF-7891", vehicleName: "Bus #03",
-                taskType: .inspection, priority: .medium,
-                scheduledTime: "09:00 AM", assignedBy: "Sarah Admin",
-                estimatedDuration: "1 hr", status: .delayed,
-                description: "Pre-route safety inspection — delayed due to part unavailability.",
-                date: dt(-1, 9),
-                checklistItems: [
-                    ChecklistItem(title: "Lights and signals check", isChecked: true),
-                    ChecklistItem(title: "Mirror alignment", isChecked: true),
-                    ChecklistItem(title: "Fluid levels", isChecked: false),
-                    ChecklistItem(title: "Tyre pressure", isChecked: false)
-                ],
-                partsNeeded: [],
-                previousNote: "Inspection paused — technician awaiting coolant delivery.",
-                aiRecommendation: "Reschedule completion to earliest available slot today."
-            ),
-            // ── TOMORROW ──────────────────────────────────────────
-            ScheduledTask(
-                id: UUID(), vehicleNumber: "DL-01-RT-5566", vehicleName: "Pickup #11",
-                taskType: .inspection, priority: .high,
-                scheduledTime: "08:00 AM", assignedBy: "James Fleet",
-                estimatedDuration: "1.5 hrs", status: .pending,
-                description: "Pre-trip safety inspection before long-haul assignment.",
-                date: dt(1, 8),
-                checklistItems: [
-                    ChecklistItem(title: "Lights and signals check"),
-                    ChecklistItem(title: "Mirror alignment"),
-                    ChecklistItem(title: "Fluid levels check"),
-                    ChecklistItem(title: "Tyre pressure verification")
-                ],
-                partsNeeded: [],
-                previousNote: "Vehicle assigned for 450 km intercity route.",
-                aiRecommendation: "All systems nominal based on last log. Quick check should suffice."
-            ),
-            ScheduledTask(
-                id: UUID(), vehicleNumber: "MH-14-AB-2234", vehicleName: "Van #08",
-                taskType: .other, priority: .medium,
-                scheduledTime: "10:00 AM", assignedBy: "Sarah Admin",
-                estimatedDuration: "30 min", status: .pending,
-                description: "Windshield wiper replacement and washer fluid top-up.",
-                date: dt(1, 10),
-                checklistItems: [
-                    ChecklistItem(title: "Remove old wiper blades"),
-                    ChecklistItem(title: "Fit new blades"),
-                    ChecklistItem(title: "Top up washer fluid")
-                ],
-                partsNeeded: ["Windshield Wipers × 2", "Washer Fluid × 1"],
-                previousNote: "Driver reported poor visibility during rain.",
-                aiRecommendation: "Standard replacement. No complex diagnosis needed."
-            ),
-            // ── DAY AFTER TOMORROW ───────────────────────────────
-            ScheduledTask(
-                id: UUID(), vehicleNumber: "MH-02-TF-7891", vehicleName: "Bus #03",
-                taskType: .repair, priority: .high,
-                scheduledTime: "09:30 AM", assignedBy: "James Fleet",
-                estimatedDuration: "4 hrs", status: .pending,
-                description: "Transmission fluid flush and filter replacement.",
-                date: dt(2, 9, 30),
-                checklistItems: [
-                    ChecklistItem(title: "Drain transmission fluid"),
-                    ChecklistItem(title: "Replace transmission filter"),
-                    ChecklistItem(title: "Refill with ATF fluid"),
-                    ChecklistItem(title: "Road test post-service")
-                ],
-                partsNeeded: ["ATF Fluid (4L) × 2", "Transmission Filter × 1"],
-                previousNote: "Slight delay in gear engagement reported by driver.",
-                aiRecommendation: "Fluid degradation suspected. Flush before it causes downstream damage."
-            )
-        ]
-    }()
-
-    var allWorkOrders: [ScheduledWorkOrder] = {
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
-
-        func dt(_ dayOffset: Int, _ hour: Int, _ minute: Int = 0) -> Date {
-            let d = cal.date(byAdding: .day, value: dayOffset, to: today)!
-            return cal.date(bySettingHour: hour, minute: minute, second: 0, of: d)!
-        }
-
-        return [
-            // ── TODAY ──────────────────────────────────────────────
-            ScheduledWorkOrder(
-                id: UUID(), vehicleNumber: "MH-12-CX-4490", vehicleName: "Truck #24",
-                priority: .critical, status: .inProgress,
-                createdAt: dt(0, 9, 30), assignedBy: "Sarah Admin",
-                laborHours: "3.5 hrs", laborCost: "$210",
-                notes: "Technician in progress of replacing compressor and pads.",
-                partsUsed: ["Brake Pads (Front) × 2", "Brake Fluid DOT4 × 1"]
-            ),
-            ScheduledWorkOrder(
-                id: UUID(), vehicleNumber: "MH-14-AB-2234", vehicleName: "Van #08",
-                priority: .medium, status: .open,
-                createdAt: dt(0, 13), assignedBy: "James Fleet",
-                laborHours: "1.0 hr", laborCost: "$60",
-                notes: "Pending assignment to secondary bay.",
-                partsUsed: ["Engine Oil 5W-30 (5L) × 1", "Oil Filter × 1"]
-            ),
-            // ── YESTERDAY ─────────────────────────────────────────
-            ScheduledWorkOrder(
-                id: UUID(), vehicleNumber: "DL-01-RT-5566", vehicleName: "Pickup #11",
-                priority: .low, status: .completed,
-                createdAt: dt(-1, 10), assignedBy: "Sarah Admin",
-                laborHours: "0.5 hrs", laborCost: "$30",
-                notes: "Topped up coolant and verified all levels.",
-                partsUsed: ["Engine Coolant × 1"]
-            ),
-            ScheduledWorkOrder(
-                id: UUID(), vehicleNumber: "MH-02-TF-7891", vehicleName: "Bus #03",
-                priority: .high, status: .cancelled,
-                createdAt: dt(-1, 14), assignedBy: "James Fleet",
-                laborHours: "0 hrs", laborCost: "$0",
-                notes: "Trip cancelled. Postponed maintenance to next week.",
-                partsUsed: []
-            ),
-            // ── TOMORROW ──────────────────────────────────────────
-            ScheduledWorkOrder(
-                id: UUID(), vehicleNumber: "DL-01-RT-5566", vehicleName: "Pickup #11",
-                priority: .high, status: .open,
-                createdAt: dt(1, 8, 30), assignedBy: "James Fleet",
-                laborHours: "2.0 hrs", laborCost: "$120",
-                notes: "Spark plug maintenance scheduled for early morning routing.",
-                partsUsed: ["Spark Plugs × 4"]
-            )
-        ]
-    }()
 }

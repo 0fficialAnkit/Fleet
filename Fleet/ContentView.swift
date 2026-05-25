@@ -55,6 +55,9 @@ struct ContentView: View {
         .environment(authViewModel)
         .task {
             await authViewModel.checkUserSession()
+            if authViewModel.isAuthenticated {
+                await RealtimeManager.shared.subscribeAll()
+            }
         }
     }
 }

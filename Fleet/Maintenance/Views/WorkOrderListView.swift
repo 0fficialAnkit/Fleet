@@ -3,15 +3,10 @@ import SwiftUI
 struct WorkOrderListView: View {
     @State private var selectedFilter: WorkOrderStatus? = nil
     @State private var showNewOrderSheet = false
-
-    // Dummy Data based on DataModel
-    let workOrders = [
-        WorkOrder(id: UUID(), vehicleId: UUID(), createdBy: UUID(), assignedTo: UUID(), priority: .high,     status: .open,       createdAt: Date().addingTimeInterval(-86400)),
-        WorkOrder(id: UUID(), vehicleId: UUID(), createdBy: UUID(), assignedTo: UUID(), priority: .medium,   status: .inProgress, createdAt: Date().addingTimeInterval(-172800)),
-        WorkOrder(id: UUID(), vehicleId: UUID(), createdBy: UUID(), assignedTo: UUID(), priority: .critical, status: .open,       createdAt: Date().addingTimeInterval(-43200)),
-        WorkOrder(id: UUID(), vehicleId: UUID(), createdBy: UUID(), assignedTo: UUID(), priority: .low,      status: .completed,  createdAt: Date().addingTimeInterval(-259200)),
-        WorkOrder(id: UUID(), vehicleId: UUID(), createdBy: UUID(), assignedTo: UUID(), priority: .high,     status: .cancelled,  createdAt: Date().addingTimeInterval(-345600))
-    ]
+    @State private var workOrders: [WorkOrder] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var navigationPath = [MaintenanceDestination]()
 
     var filteredOrders: [WorkOrder] {
         guard let filter = selectedFilter else { return workOrders }
@@ -19,70 +14,75 @@ struct WorkOrderListView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: themeModel.spacingMD) {
+                if isLoading && workOrders.isEmpty {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    ScrollView {
+                        VStack(spacing: themeModel.spacingMD) {
 
-                        // MARK: - Summary Strip
-                        HStack(spacing: themeModel.spacingMD) {
-                            MiniStatBadge(
-                                count: workOrders.filter { $0.status == .open }.count,
-                                label: "Open",
-                                color: themeModel.info
-                            )
-                            MiniStatBadge(
-                                count: workOrders.filter { $0.status == .inProgress }.count,
-                                label: "In Progress",
-                                color: themeModel.warning
-                            )
-                            MiniStatBadge(
-                                count: workOrders.filter { $0.status == .completed }.count,
-                                label: "Done",
-                                color: themeModel.success
-                            )
-                        }
-                        .padding(.horizontal, themeModel.spacingMD)
-
-                        // MARK: - Filter Picker
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: themeModel.spacingSM) {
-                                FilterChip(label: "All",        isSelected: selectedFilter == nil,              color: themeModel.maintenancePrimary) { selectedFilter = nil }
-                                FilterChip(label: "Open",       isSelected: selectedFilter == .open,            color: themeModel.info)     { selectedFilter = .open }
-                                FilterChip(label: "In Progress",isSelected: selectedFilter == .inProgress,      color: themeModel.warning)  { selectedFilter = .inProgress }
-                                FilterChip(label: "Completed",  isSelected: selectedFilter == .completed,       color: themeModel.success)  { selectedFilter = .completed }
-                                FilterChip(label: "Cancelled",  isSelected: selectedFilter == .cancelled,       color: themeModel.danger)   { selectedFilter = .cancelled }
+                            // MARK: - Summary Strip
+                            HStack(spacing: themeModel.spacingMD) {
+                                MiniStatBadge(
+                                    count: workOrders.filter { $0.status == .open }.count,
+                                    label: "Open",
+                                    color: themeModel.info
+                                )
+                                MiniStatBadge(
+                                    count: workOrders.filter { $0.status == .inProgress }.count,
+                                    label: "In Progress",
+                                    color: themeModel.warning
+                                )
+                                MiniStatBadge(
+                                    count: workOrders.filter { $0.status == .completed }.count,
+                                    label: "Done",
+                                    color: themeModel.success
+                                )
                             }
                             .padding(.horizontal, themeModel.spacingMD)
-                        }
 
-                        // MARK: - Order List
-                        if filteredOrders.isEmpty {
-                            VStack(spacing: themeModel.spacingMD) {
-                                Image(systemName: "tray")
-                                    .font(.system(size: 44))
-                                    .foregroundStyle(themeModel.textTertiary)
-                                Text("No orders found")
-                                    .font(themeModel.bodyMedium())
-                                    .foregroundStyle(themeModel.textSecondary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, themeModel.spacingXXL)
-                        } else {
-                            LazyVStack(spacing: themeModel.spacingMD) {
-                                ForEach(filteredOrders) { order in
-                                    NavigationLink(destination: WorkOrderDetailView(workOrder: order)) {
-                                        WorkOrderRow(workOrder: order)
-                                    }
-                                    .buttonStyle(.plain)
+                            // MARK: - Filter Picker
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: themeModel.spacingSM) {
+                                    FilterChip(label: "All",        isSelected: selectedFilter == nil,              color: themeModel.maintenancePrimary) { selectedFilter = nil }
+                                    FilterChip(label: "Open",       isSelected: selectedFilter == .open,            color: themeModel.info)     { selectedFilter = .open }
+                                    FilterChip(label: "In Progress",isSelected: selectedFilter == .inProgress,      color: themeModel.warning)  { selectedFilter = .inProgress }
+                                    FilterChip(label: "Completed",  isSelected: selectedFilter == .completed,       color: themeModel.success)  { selectedFilter = .completed }
+                                    FilterChip(label: "Cancelled",  isSelected: selectedFilter == .cancelled,       color: themeModel.danger)   { selectedFilter = .cancelled }
                                 }
+                                .padding(.horizontal, themeModel.spacingMD)
                             }
-                            .padding(.horizontal, themeModel.spacingMD)
+
+                            // MARK: - Order List
+                            if filteredOrders.isEmpty {
+                                VStack(spacing: themeModel.spacingMD) {
+                                    Image(systemName: "tray")
+                                        .font(.system(size: 44))
+                                        .foregroundStyle(themeModel.textTertiary)
+                                    Text("No orders found")
+                                        .font(themeModel.bodyMedium())
+                                        .foregroundStyle(themeModel.textSecondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, themeModel.spacingXXL)
+                            } else {
+                                LazyVStack(spacing: themeModel.spacingMD) {
+                                    ForEach(filteredOrders) { order in
+                                        NavigationLink(value: MaintenanceDestination.workOrderDetail(order)) {
+                                            WorkOrderRow(workOrder: order)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(.horizontal, themeModel.spacingMD)
+                            }
                         }
+                        .padding(.vertical, themeModel.spacingMD)
                     }
-                    .padding(.vertical, themeModel.spacingMD)
                 }
             }
             .navigationTitle("Work Orders")
@@ -95,7 +95,26 @@ struct WorkOrderListView: View {
                     }
                 }
             }
+            .navigationDestination(for: MaintenanceDestination.self) { destination in
+                switch destination {
+                case .workOrderDetail(let order):
+                    WorkOrderDetailView(workOrder: order)
+                }
+            }
+            .task {
+                await loadWorkOrders()
+            }
         }
+    }
+
+    private func loadWorkOrders() async {
+        isLoading = true
+        do {
+            workOrders = try await WorkOrderService.fetchAllWorkOrders()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
     }
 }
 

@@ -29,6 +29,10 @@ struct ReportsView: View {
             .sheet(item: $selectedReport) { report in
                 ReportDetailView(report: report, viewModel: viewModel)
             }
+            .task {
+                await viewModel.loadData()
+                viewModel.setupRealtime()
+            }
         }
     }
 

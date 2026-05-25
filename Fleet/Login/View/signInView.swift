@@ -21,7 +21,7 @@ struct SignInView: View {
     // MARK: - Body
     var body: some View {
         ZStack {
-            Color.black
+            themeModel.backgroundPrimary
                 .ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 0) {
@@ -49,33 +49,31 @@ struct SignInView: View {
     var appIcon: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 22)
-                .fill(Color.blue)
+                .fill(themeModel.accent)
                 .frame(width: 80, height: 80)
             Image(systemName: "truck.box.fill")
                 .font(.system(size: 36))
-                .foregroundColor(.white)
+                .foregroundColor(themeModel.accentForeground)
         }
     }
     // MARK: - Title
     var titleSection: some View {
         VStack(spacing: 8) {
-            Text("PrimeFleet")
+            Text("GoFleet")
                 .font(.system(size: 34, weight: .bold))
-                .foregroundColor(.white)
-            Text("Sign in to PrimeFleet")
+                .foregroundColor(themeModel.textPrimary)
+            Text("Sign in to GoFleet")
             .font(.system(size: 16))
-            .foregroundColor(.white.opacity(0.5))
+            .foregroundColor(themeModel.textSecondary)
         }
     }
-
-
 
     // MARK: - Input Fields
     var inputFields: some View {
         VStack(spacing: 14) {
             if let errorMessage = authViewModel.errorMessage {
                 Text(errorMessage)
-                    .foregroundColor(.red)
+                    .foregroundColor(themeModel.danger)
                     .font(.caption)
                     .multilineTextAlignment(.center)
             }
@@ -83,15 +81,19 @@ struct SignInView: View {
                 "",
                 text: $emailOrPhone,
                 prompt: Text("Enter email or phone")
-                    .foregroundColor(.white.opacity(0.45))
+                    .foregroundColor(themeModel.placeholder)
             )
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
-                .foregroundColor(.white)
+                .foregroundColor(themeModel.textPrimary)
                 .padding(.horizontal, 18)
                 .frame(height: 56)
-                .background(Color(red: 0.12, green: 0.14, blue: 0.18))
+                .background(themeModel.inputBackground)
                 .cornerRadius(14)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(themeModel.divider, lineWidth: 1)
+                )
 
             HStack {
                 if isPasswordVisible {
@@ -99,55 +101,60 @@ struct SignInView: View {
                         "",
                         text: $password,
                         prompt: Text("Password")
-                            .foregroundColor(.white.opacity(0.45))
+                            .foregroundColor(themeModel.placeholder)
                     )
                 } else {
                     SecureField(
                         "",
                         text: $password,
                         prompt: Text("Password")
-                            .foregroundColor(.white.opacity(0.45))
+                            .foregroundColor(themeModel.placeholder)
                     )
                 }
                 Button {
                     isPasswordVisible.toggle()
                 } label: {
                     Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
-                        .foregroundColor(.white.opacity(0.5))
+                        .foregroundColor(themeModel.textSecondary)
                 }
             }
-            .foregroundColor(.white)
+            .foregroundColor(themeModel.textPrimary)
             .padding(.horizontal, 18)
             .frame(height: 56)
-            .background(Color(red: 0.12, green: 0.14, blue: 0.18))
+            .background(themeModel.inputBackground)
             .cornerRadius(14)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(themeModel.divider, lineWidth: 1)
+            )
         }
     }
     // MARK: - Main Button
     var actionButton: some View {
-        Button {
+        let isButtonDisabled = emailOrPhone.isEmpty || password.isEmpty
+        return Button {
             Task {
                 await authViewModel.signIn(email: emailOrPhone, password: password)
             }
         } label: {
             if authViewModel.isLoading {
                 ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    .progressViewStyle(CircularProgressViewStyle(tint: isButtonDisabled ? themeModel.buttonDisabledText : themeModel.accentForeground))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(Color.blue)
+                    .background(isButtonDisabled ? themeModel.buttonDisabled : themeModel.accent)
                     .cornerRadius(16)
             } else {
                 Text("Sign In")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(isButtonDisabled ? themeModel.buttonDisabledText : themeModel.accentForeground)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(Color.blue)
+                    .background(isButtonDisabled ? themeModel.buttonDisabled : themeModel.accent)
                     .cornerRadius(16)
             }
         }
-        .disabled(authViewModel.isLoading || emailOrPhone.isEmpty || password.isEmpty)
+        .disabled(authViewModel.isLoading || isButtonDisabled)
     }
 
 }
