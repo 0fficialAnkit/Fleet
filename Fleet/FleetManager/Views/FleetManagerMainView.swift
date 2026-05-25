@@ -2,58 +2,68 @@ import SwiftUI
 
 struct FleetManagerMainView: View {
     @State private var selectedTab = 0
-    
+
     init() {
-        // Customize TabBar appearance for a sleek, modern look
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = UIColor(themeModel.tabBar)
-        
+
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
         UITabBar.appearance().unselectedItemTintColor = UIColor(themeModel.unselectedTab)
-        
-        // Customize NavigationBar appearance to match the theme when using native NavigationStack
+
         let navAppearance = UINavigationBarAppearance()
         navAppearance.configureWithTransparentBackground()
         navAppearance.largeTitleTextAttributes = [.foregroundColor: UIColor(themeModel.textPrimary)]
         navAppearance.titleTextAttributes = [.foregroundColor: UIColor(themeModel.textPrimary)]
-        
+
         UINavigationBar.appearance().standardAppearance = navAppearance
         UINavigationBar.appearance().compactAppearance = navAppearance
         UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
     }
-    
+
     var body: some View {
         TabView(selection: $selectedTab) {
+
+            // MARK: Dashboard (profile access via toolbar)
             DashboardView()
                 .tabItem {
-                    Image(systemName: "square.grid.2x2")
+                    Image(systemName: "square.grid.2x2.fill")
                     Text("Dashboard")
                 }
                 .tag(0)
-            
+
+            // MARK: Fleet — Drivers + Maintenance
             FleetView()
                 .tabItem {
-                    Image(systemName: "car")
+                    Image(systemName: "person.2.fill")
                     Text("Fleet")
                 }
                 .tag(1)
-            
-            EmployeeMainView()
+
+            // MARK: Orders
+            OrdersView()
                 .tabItem {
-                    Image(systemName: "person.3")
-                    Text("Employees")
+                    Image(systemName: "shippingbox.fill")
+                    Text("Orders")
                 }
                 .tag(2)
-            
 
-
+            // MARK: Reports
+            ReportsView()
+                .tabItem {
+                    Image(systemName: "chart.bar.fill")
+                    Text("Reports")
+                }
+                .tag(3)
         }
         .tint(themeModel.selectedTab)
     }
 }
 
+
 #Preview {
     FleetManagerMainView()
+        .environment(AuthViewModel())
 }
+

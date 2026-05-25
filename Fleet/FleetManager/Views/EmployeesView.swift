@@ -2,13 +2,12 @@ import SwiftUI
 
 struct EmployeesView: View {
     var viewModel: EmployeesViewModel
-    var filterRole: String? = nil
+    let roleFilter: String
     
-    var filteredEmployees: [User] {
-        if let role = filterRole {
-            return viewModel.employees.filter { viewModel.getRole(for: $0)?.roleName.lowercased() == role.lowercased() }
+    var filteredEmployees: [Profile] {
+        viewModel.employees.filter { profile in
+            profile.role.lowercased() == roleFilter.lowercased()
         }
-        return viewModel.employees
     }
     
     var body: some View {
@@ -18,38 +17,31 @@ struct EmployeesView: View {
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: themeModel.spacingMD) {
-                        if filteredEmployees.isEmpty {
-                            Text("No employees found.")
-                                .foregroundColor(themeModel.textSecondary)
-                                .padding(.top, 40)
-                        } else {
-                            ForEach(filteredEmployees) { user in
-                            let role = viewModel.getRole(for: user)
-                            let roleName = role?.roleName ?? "Unknown Role"
+                        ForEach(filteredEmployees) { profile in
+                            let roleName = viewModel.getRole(for: profile)
                             
-                            NavigationLink(destination: EmployeeDetailView(user: user, viewModel: viewModel)) {
+                            NavigationLink(destination: EmployeeDetailView(profile: profile, viewModel: viewModel)) {
                                 EmployeeRowView(
-                                    user: user,
+                                    profile: profile,
                                     roleName: roleName,
                                     icon: viewModel.getIcon(for: roleName),
                                     iconColor: viewModel.getColor(for: roleName)
                                 )
                             }
                             .buttonStyle(.plain)
-                            }
                         }
                     }
                     .padding(.vertical, themeModel.spacingMD)
                     .padding(.horizontal, themeModel.spacingMD)
                 }
             }
+            }
         }
     }
-}
 
 
 struct EmployeeRowView: View {
-    let user: User
+    let profile: Profile
     let roleName: String
     let icon: String
     let iconColor: Color
@@ -57,25 +49,13 @@ struct EmployeeRowView: View {
     var body: some View {
         HStack(spacing: themeModel.spacingMD) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(user.fullName)
+                Text(profile.fullName)
                     .font(themeModel.headline(18))
                     .foregroundColor(themeModel.textPrimary)
                 
-                HStack(spacing: 6) {
-                    Text(roleName)
-                        .font(themeModel.caption(14))
-                        .foregroundColor(themeModel.textSecondary)
-                    
-                    if let license = user.licenseNumber {
-                        Text("•")
-                            .font(themeModel.caption(14))
-                            .foregroundColor(themeModel.textTertiary)
-                        
-                        Text(license)
-                            .font(themeModel.caption(14))
-                            .foregroundColor(themeModel.textSecondary)
-                    }
-                }
+                Text(roleName)
+                    .font(themeModel.caption(14))
+                    .foregroundColor(themeModel.textSecondary)
             }
             
             Spacer()
@@ -99,6 +79,6 @@ struct EmployeeRowView: View {
 
 #Preview {
     NavigationStack {
-        EmployeesView(viewModel: EmployeesViewModel())
+        EmployeesView(viewModel: EmployeesViewModel(), roleFilter: "driver")
     }
 }

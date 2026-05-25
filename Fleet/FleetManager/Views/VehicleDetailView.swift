@@ -3,19 +3,16 @@ import SwiftUI
 struct VehicleDetailView: View {
     let vehicle: Vehicle
     let viewModel: VehiclesViewModel
-    @Environment(\.dismiss) private var dismiss
-    @State private var isShowingEditSheet = false
     
-    var currentVehicle: Vehicle {
-        viewModel.vehicles.first { $0.id == vehicle.id } ?? vehicle
-    }
+    @State private var isShowingEdit = false
+    @Environment(\.dismiss) private var dismiss
     
     var driverName: String {
-        viewModel.getDriver(for: currentVehicle.assignedDriverId)?.fullName ?? "Unassigned"
+        viewModel.getDriver(for: vehicle.assignedDriverId)?.fullName ?? "Unassigned"
     }
     
     var pastTrips: [Trip] {
-        viewModel.getPastTrips(for: currentVehicle.id)
+        viewModel.getPastTrips(for: vehicle.id)
     }
     
     var body: some View {
@@ -26,77 +23,78 @@ struct VehicleDetailView: View {
                 VStack(spacing: themeModel.spacingLG) {
                     // Header Section
                     VStack(spacing: themeModel.spacingSM) {
-                        Image(systemName: "car.fill")
+                        Image(systemName: "truck.box.fill")
                             .font(.system(size: 60))
-                            .foregroundColor(themeModel.info)
+                            .foregroundColor(themeModel.accent)
                             .padding(.bottom, 8)
                         
-                        Text("\(currentVehicle.make ?? "Unknown") \(currentVehicle.model ?? "")")
+                        Text("\(vehicle.make ?? "Unknown") \(vehicle.model ?? "")")
                             .font(themeModel.largeTitle(28))
                             .foregroundColor(themeModel.textPrimary)
                         
-                        Text(currentVehicle.licensePlate ?? "No License Plate")
-                            .font(themeModel.bodyMedium(16))
-                            .foregroundColor(themeModel.textSecondary)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 6)
-                            .background(themeModel.surfaceTertiary)
-                            .clipShape(Capsule())
+                        StatusBadge(text: vehicle.licensePlate ?? "No License Plate", color: themeModel.accent)
                     }
                     .padding(.top, themeModel.spacingXL)
                     
                     // Vehicle Info Card
-                    VStack(spacing: 0) {
-                        DetailInfoRow(title: "Manufacturer", value: currentVehicle.make ?? "N/A")
-                        Divider().background(themeModel.divider)
-                        DetailInfoRow(title: "Model", value: currentVehicle.model ?? "N/A")
-                        Divider().background(themeModel.divider)
-                        DetailInfoRow(title: "Year", value: currentVehicle.year != nil ? String(currentVehicle.year!) : "N/A")
-                        Divider().background(themeModel.divider)
-                        DetailInfoRow(title: "Tank Capacity", value: currentVehicle.tankCapacity != nil ? "\(String(format: "%.1f", currentVehicle.tankCapacity!)) L" : "N/A")
-                        Divider().background(themeModel.divider)
-                        DetailInfoRow(title: "Mileage", value: currentVehicle.mileage != nil ? "\(String(format: "%.1f", currentVehicle.mileage!)) km/l" : "N/A")
-                        Divider().background(themeModel.divider)
-                        DetailInfoRow(title: "Purchase Date", value: currentVehicle.purchaseDate?.formatted(date: .abbreviated, time: .omitted) ?? "N/A")
-                    }
-                    .padding(themeModel.spacingMD)
-                    .background(themeModel.backgroundElevated)
-                    .cornerRadius(themeModel.radiusLG)
+                    
+                        VStack(spacing: 0) {
+                            InfoRow(icon: "building.2", label: "Manufacturer", value: vehicle.make ?? "N/A")
+                            Divider().background(themeModel.divider)
+                            InfoRow(icon: "tag", label: "Model", value: vehicle.model ?? "N/A")
+                            Divider().background(themeModel.divider)
+                            InfoRow(icon: "calendar", label: "Year", value: vehicle.year != nil ? String(vehicle.year!) : "N/A")
+                            Divider().background(themeModel.divider)
+                            InfoRow(icon: "fuelpump", label: "Tank Capacity", value: vehicle.tankCapacity != nil ? "\(String(format: "%.1f", vehicle.tankCapacity!)) L" : "N/A")
+                            Divider().background(themeModel.divider)
+                            InfoRow(icon: "gauge.open.with.lines.needle.33percent", label: "Mileage", value: vehicle.mileage != nil ? "\(String(format: "%.1f", vehicle.mileage!)) km/l" : "N/A")
+                            Divider().background(themeModel.divider)
+                            InfoRow(icon: "creditcard", label: "Purchase Date", value: vehicle.purchaseDate?.formatted(date: .abbreviated, time: .omitted) ?? "N/A")
+                        }
+                        .padding(themeModel.spacingMD)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                        )
+                        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
                     .padding(.horizontal, themeModel.spacingMD)
                     
                     // Assigned Driver Card
                     VStack(alignment: .leading, spacing: themeModel.spacingSM) {
-                        Text("Current Driver")
-                            .font(themeModel.headline(18))
-                            .foregroundColor(themeModel.textPrimary)
+                        SectionHeader(title: "Current Driver")
                             .padding(.horizontal, themeModel.spacingMD)
                         
-                        HStack(spacing: themeModel.spacingMD) {
-                            Circle()
-                                .fill(themeModel.surfaceTertiary)
-                                .frame(width: 40, height: 40)
-                                .overlay(
-                                    Image(systemName: "person.fill")
-                                        .foregroundColor(themeModel.textSecondary)
-                                )
-                            
-                            Text(driverName)
-                                .font(themeModel.body(16))
-                                .foregroundColor(themeModel.textPrimary)
-                            
-                            Spacer()
-                        }
-                        .padding(themeModel.spacingMD)
-                        .background(themeModel.backgroundElevated)
-                        .cornerRadius(themeModel.radiusLG)
+                        
+                            HStack(spacing: themeModel.spacingMD) {
+                                Circle()
+                                    .fill(themeModel.accent.opacity(0.1))
+                                    .frame(width: 40, height: 40)
+                                    .overlay(
+                                        Image(systemName: "person.crop.circle.fill")
+                                            .foregroundColor(themeModel.accent)
+                                            .font(.system(size: 20))
+                                    )
+                                
+                                Text(driverName)
+                                    .font(themeModel.body(16))
+                                    .foregroundColor(themeModel.textPrimary)
+                                
+                                Spacer()
+                            }
+                            .padding(themeModel.spacingMD)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                            )
+                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
                         .padding(.horizontal, themeModel.spacingMD)
                     }
                     
                     // Past Trips History
                     VStack(alignment: .leading, spacing: themeModel.spacingSM) {
-                        Text("Past Trips")
-                            .font(themeModel.headline(18))
-                            .foregroundColor(themeModel.textPrimary)
+                        SectionHeader(title: "Past Trips")
                             .padding(.horizontal, themeModel.spacingMD)
                         
                         if pastTrips.isEmpty {
@@ -117,53 +115,37 @@ struct VehicleDetailView: View {
         }
         .navigationTitle("Details")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button(action: {
-                        isShowingEditSheet = true
+                        isShowingEdit = true
                     }) {
                         Label("Edit", systemImage: "pencil")
                     }
                     
                     Button(role: .destructive, action: {
-                        viewModel.deleteVehicle(currentVehicle)
-                        dismiss()
+                        Task {
+                            do {
+                                try await viewModel.deleteVehicle(vehicle)
+                                dismiss()
+                            } catch {
+                                viewModel.errorMessage = error.localizedDescription
+                            }
+                        }
                     }) {
                         Label("Delete", systemImage: "trash")
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 17, weight: .regular))
-                        .foregroundColor(themeModel.textPrimary)
-                        .padding(8)
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(themeModel.textPrimary)
                 }
             }
         }
-        .sheet(isPresented: $isShowingEditSheet) {
-            EditVehicleView(vehicle: currentVehicle, viewModel: viewModel)
+        .sheet(isPresented: $isShowingEdit) {
+            EditVehicleView(viewModel: viewModel, vehicle: vehicle)
         }
-    }
-}
-
-struct DetailInfoRow: View {
-    let title: String
-    let value: String
-    
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(themeModel.bodyMedium(16))
-                .foregroundColor(themeModel.textSecondary)
-            Spacer()
-            Text(value)
-                .font(themeModel.body(16))
-                .foregroundColor(themeModel.textPrimary)
-        }
-        .padding(.vertical, 12)
     }
 }
 
@@ -176,37 +158,56 @@ struct TripHistoryRow: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: "map.fill")
-                    .foregroundColor(themeModel.info)
-                Text("Distance: \(String(format: "%.1f", trip.distance ?? 0)) km")
-                    .font(themeModel.headline(16))
-                    .foregroundColor(themeModel.textPrimary)
-                Spacer()
-                Text(trip.endTime?.formatted(date: .abbreviated, time: .shortened) ?? "")
-                    .font(themeModel.caption(12))
-                    .foregroundColor(themeModel.textTertiary)
+        
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Image(systemName: "map.fill")
+                        .foregroundColor(themeModel.info)
+                    Text("Distance: \(String(format: "%.1f", trip.distance ?? 0)) km")
+                        .font(themeModel.headline(16))
+                        .foregroundColor(themeModel.textPrimary)
+                    Spacer()
+                    Text(trip.endTime?.formatted(date: .abbreviated, time: .shortened) ?? "")
+                        .font(themeModel.caption(12))
+                        .foregroundColor(themeModel.textTertiary)
+                }
+                
+                HStack {
+                    Image(systemName: "person.fill")
+                        .foregroundColor(themeModel.textSecondary)
+                        .font(.system(size: 14))
+                    Text("Driver: \(driverName)")
+                        .font(themeModel.body(14))
+                        .foregroundColor(themeModel.textSecondary)
+                }
             }
-            
-            HStack {
-                Image(systemName: "person.fill")
-                    .foregroundColor(themeModel.textSecondary)
-                    .font(.system(size: 14))
-                Text("Driver: \(driverName)")
-                    .font(themeModel.body(14))
-                    .foregroundColor(themeModel.textSecondary)
-            }
-        }
-        .padding(themeModel.spacingMD)
-        .background(themeModel.backgroundElevated)
-        .cornerRadius(themeModel.radiusLG)
+            .padding(themeModel.spacingMD)
+            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+            )
+            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
 }
 
 #Preview {
     NavigationStack {
-        VehicleDetailView(vehicle: MockData.vehicles.first!, viewModel: VehiclesViewModel())
-            .preferredColorScheme(.dark)
+        VehicleDetailView(
+            vehicle: Vehicle(
+                id: UUID(),
+                make: "Ford",
+                model: "Transit",
+                year: 2024,
+                vin: "123456789",
+                licensePlate: "FL-99-TR",
+                tankCapacity: 80.0,
+                mileage: 12.4,
+                purchaseDate: Date(),
+                assignedDriverId: nil,
+                status: .active
+            ),
+            viewModel: VehiclesViewModel()
+        )
     }
 }

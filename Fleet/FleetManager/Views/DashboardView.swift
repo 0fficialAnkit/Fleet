@@ -2,230 +2,331 @@ import SwiftUI
 
 struct DashboardView: View {
     @State private var viewModel = DashboardViewModel()
+    @State private var isShowingProfile = false
+    @State private var showingNotifications = false
+    @Environment(AuthViewModel.self) private var authViewModel
+    @State private var navigationPath = NavigationPath()
     
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
                 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: themeModel.spacingLG) {
-                        metricsGrid
-                        recentOrdersSection
-                        maintenanceSection
+                if viewModel.isLoading && viewModel.vehicles.isEmpty {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: themeModel.spacingLG) {
+                            fleetOverviewCard
+                            recentOrdersSection
+                            maintenanceSection
+                        }
+                        .padding(.bottom, themeModel.spacingXL)
                     }
-                    .padding(.vertical, themeModel.spacingMD)
                 }
             }
             .navigationTitle("Dashboard")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(destination: ProfileView()) {
-                        Image(systemName: "person.fill")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(.white)
-                            .frame(width: 34, height: 34)
-//                            .background(Circle().fill(Color.white.opacity(0.18)))
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button(action: { showingNotifications = true }) {
+                        Image(systemName: "bell")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(themeModel.textPrimary)
+                            .frame(width: 38, height: 38)
                     }
-                    .buttonStyle(.plain)
+                    
+                    Button(action: { isShowingProfile = true }) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(themeModel.analyticsPurple)
+                    }
+                }
+            }
+            .sheet(isPresented: $isShowingProfile) {
+                ProfileView()
+                    .environment(authViewModel)
+            }
+            .sheet(isPresented: $showingNotifications) {
+                NotificationsView()
+            }
+            .navigationDestination(for: DashboardDestination.self) { destination in
+                switch destination {
+                case .vehiclesRoot:
+                    VehiclesRootView()
+                default:
+                    EmptyView()
                 }
             }
         }
+        .task {
+            await viewModel.loadData()
+            viewModel.setupRealtime()
+        }
     }
     
-    // MARK: - Metrics Grid
-    private var metricsGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: themeModel.spacingMD) {
-            MetricCardView(title: "Total Vehicles", value: "\(viewModel.totalVehicles)", icon: "car.2.fill", color: themeModel.info)
-            MetricCardView(title: "Active Trips", value: "\(viewModel.activeTrips)", icon: "map.fill", color: themeModel.success)
-            MetricCardView(title: "Pending Orders", value: "\(viewModel.pendingOrders)", icon: "doc.text.fill", color: themeModel.warning)
-            MetricCardView(title: "Drivers on Trip", value: "\(viewModel.driversOnTrip)", icon: "person.2.fill", color: themeModel.analyticsPurple)
+    // MARK: - Fleet Overview Card (Idea 3)
+    
+    private var fleetOverviewCard: some View {
+        NavigationLink(value: DashboardDestination.vehiclesRoot) {
+            VStack(spacing: 0) {
+                // Header: icon badge + count + chevron on top trailing
+                HStack(alignment: .top, spacing: themeModel.spacingMD) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: themeModel.radiusSM, style: .continuous)
+                            .fill(themeModel.accent.opacity(0.12))
+                            .frame(width: 48, height: 48)
+                        Image(systemName: "truck.box.fill")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(themeModel.accent)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Total Vehicle \(viewModel.totalVehicles)")
+                            .font(themeModel.title(26))
+                            .foregroundStyle(themeModel.textPrimary)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(themeModel.textSecondary)
+                        .padding(.top, 4)
+                }
+                
+                Divider()
+                    .background(themeModel.divider)
+                    .padding(.vertical, themeModel.spacingMD)
+                
+                // Status breakdown row
+                HStack(spacing: themeModel.spacingSM) {
+                    FleetStatPill(
+                        value: viewModel.driversOnTrip,
+                        label: "Active",
+                        color: themeModel.success
+                    )
+                    FleetStatPill(
+                        value: max(0, viewModel.totalVehicles - viewModel.driversOnTrip - viewModel.maintenanceVehicles.count),
+                        label: "Idle",
+                        color: themeModel.warning
+                    )
+                    FleetStatPill(
+                        value: viewModel.maintenanceVehicles.count,
+                        label: "Service",
+                        color: themeModel.danger
+                    )
+                }
+            }
+            .padding(themeModel.spacingMD)
+            .background(themeModel.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                    .stroke(themeModel.border.opacity(0.6), lineWidth: 0.5)
+            )
+            .shadow(color: themeModel.shadowSoft, radius: 12, y: 4)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .padding(.horizontal, themeModel.spacingMD)
     }
     
     // MARK: - Recent Orders
+    
     private var recentOrdersSection: some View {
         VStack(alignment: .leading, spacing: themeModel.spacingMD) {
-            HStack {
-                Text("Recent Orders")
-                    .font(themeModel.title(22))
-                    .foregroundColor(themeModel.textPrimary)
-                Spacer()
-                Button("See All") { }
-                    .font(themeModel.bodyMedium())
-                    .foregroundColor(themeModel.info)
+            SectionHeader(title: "Recent Orders", action: "See All") {
+                // Action
             }
             .padding(.horizontal, themeModel.spacingMD)
             
-            ForEach(viewModel.recentOrders) { trip in
-                TripCardView(trip: trip)
+            if viewModel.recentOrders.isEmpty {
+                Text("No orders yet.")
+                    .font(themeModel.body(16))
+                    .foregroundStyle(themeModel.textSecondary)
                     .padding(.horizontal, themeModel.spacingMD)
+            } else {
+                ForEach(viewModel.recentOrders) { trip in
+                    TripCardView(trip: trip, viewModel: viewModel)
+                        .padding(.horizontal, themeModel.spacingMD)
+                }
             }
         }
     }
     
     // MARK: - Maintenance
+    
     private var maintenanceSection: some View {
         VStack(alignment: .leading, spacing: themeModel.spacingMD) {
-            Text("Need Maintenance")
-                .font(themeModel.title(22))
-                .foregroundColor(themeModel.textPrimary)
+            SectionHeader(title: "Need Maintenance")
                 .padding(.horizontal, themeModel.spacingMD)
             
-            ForEach(viewModel.maintenanceVehicles) { vehicle in
-                MaintenanceCardView(vehicle: vehicle)
+            if viewModel.maintenanceVehicles.isEmpty {
+                Text("All vehicles operational.")
+                    .font(themeModel.body(16))
+                    .foregroundStyle(themeModel.textSecondary)
                     .padding(.horizontal, themeModel.spacingMD)
+            } else {
+                ForEach(viewModel.maintenanceVehicles) { vehicle in
+                    MaintenanceCardView(vehicle: vehicle, viewModel: viewModel)
+                        .padding(.horizontal, themeModel.spacingMD)
+                }
             }
         }
     }
 }
 
-// MARK: - Supporting Views
+// MARK: - Fleet Stat Pill
 
-struct MetricCardView: View {
-    let title: String
-    let value: String
-    let icon: String
+struct FleetStatPill: View {
+    let value: Int
+    let label: String
     let color: Color
     
     var body: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.system(size: 20))
-                    .foregroundColor(color)
-                    .padding(10)
-                    .background(color.opacity(0.15))
-                    .cornerRadius(themeModel.radiusSM)
-                Spacer()
-            }
-            
-            Text(value)
-                .font(themeModel.largeTitle(28))
-                .foregroundColor(themeModel.textPrimary)
-            
-            Text(title)
-                .font(themeModel.bodyMedium(14))
-                .foregroundColor(themeModel.textSecondary)
+        VStack(spacing: 5) {
+            Text("\(value)")
+                .font(themeModel.headline(20))
+                .foregroundStyle(themeModel.textPrimary)
+            Text(label)
+                .font(themeModel.small(11))
+                .foregroundStyle(themeModel.textSecondary)
         }
-        .padding(themeModel.spacingMD)
-        .background(themeModel.backgroundElevated)
-        .cornerRadius(themeModel.radiusLG)
-        .shadow(color: themeModel.shadowSoft, radius: 5, x: 0, y: 2)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, themeModel.spacingMD)
+        .background(color.opacity(0.08))
+        .overlay(
+            RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
+                .stroke(color.opacity(0.25), lineWidth: 0.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
     }
 }
 
+// MARK: - Trip Card
+
 struct TripCardView: View {
     let trip: Trip
+    let viewModel: DashboardViewModel
     
     var routeName: String {
-        MockData.routes.first(where: { $0.id == trip.routeId })?.routeName ?? "Unknown Route"
+        viewModel.routeName(for: trip.routeId)
+    }
+    
+    var displayTitle: String {
+        if let type = trip.orderType {
+            return type.displayName
+        }
+        return routeName
     }
     
     var driverName: String {
-        MockData.users.first(where: { $0.id == trip.driverId })?.fullName ?? "Unassigned"
+        viewModel.driverName(for: trip.driverId)
+    }
+    
+    var statusColor: Color {
+        switch trip.status {
+        case .scheduled: return themeModel.info
+        case .active:    return themeModel.warning
+        case .completed: return themeModel.success
+        case .cancelled: return themeModel.danger
+        case .none:      return themeModel.textDisabled
+        }
     }
     
     var body: some View {
         VStack(alignment: .leading, spacing: themeModel.spacingMD) {
             HStack {
-                Text(routeName)
+                Text(displayTitle)
                     .font(themeModel.headline(16))
-                    .foregroundColor(themeModel.textPrimary)
+                    .foregroundStyle(themeModel.textPrimary)
                     .lineLimit(1)
                 Spacer()
-                statusBadge(for: trip.status ?? .scheduled)
+                StatusBadge(text: trip.status?.rawValue.capitalized ?? "Unknown", color: statusColor)
             }
             
             HStack {
                 HStack(spacing: 6) {
-                    Image(systemName: "person.fill")
-                        .foregroundColor(themeModel.textTertiary)
-                        .font(.system(size: 14))
+                    Image(systemName: "person.crop.circle.fill")
+                        .foregroundStyle(themeModel.accent)
+                        .font(.system(size: 16))
                     Text(driverName)
                         .font(themeModel.caption(14))
-                        .foregroundColor(themeModel.textSecondary)
+                        .foregroundStyle(themeModel.textSecondary)
                 }
                 Spacer()
                 if let distance = trip.distance {
                     HStack(spacing: 6) {
                         Image(systemName: "ruler.fill")
-                            .foregroundColor(themeModel.textTertiary)
+                            .foregroundStyle(themeModel.textTertiary)
                             .font(.system(size: 14))
                         Text(String(format: "%.1f km", distance))
                             .font(themeModel.caption(14))
-                            .foregroundColor(themeModel.textSecondary)
+                            .foregroundStyle(themeModel.textSecondary)
                     }
                 }
             }
         }
         .padding(themeModel.spacingMD)
-        .background(themeModel.backgroundElevated)
-        .cornerRadius(themeModel.radiusLG)
-    }
-    
-    @ViewBuilder
-    private func statusBadge(for status: TripStatus) -> some View {
-        let color: Color = {
-            switch status {
-            case .scheduled: return themeModel.info
-            case .active: return themeModel.warning
-            case .completed: return themeModel.success
-            case .cancelled: return themeModel.danger
-            }
-        }()
-        
-        Text(status.rawValue.capitalized)
-            .font(themeModel.small(12))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(color.opacity(0.15))
-            .foregroundColor(color)
-            .cornerRadius(themeModel.radiusXS)
+        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+        )
+        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
 }
 
+// MARK: - Maintenance Card
+
 struct MaintenanceCardView: View {
     let vehicle: Vehicle
+    let viewModel: DashboardViewModel
     
     var maintenanceTask: MaintenanceTask? {
-        MockData.maintenanceTasks.first(where: { $0.vehicleId == vehicle.id && $0.status != .completed })
+        viewModel.maintenanceTask(for: vehicle.id)
     }
     
     var body: some View {
         HStack(spacing: themeModel.spacingMD) {
             Image(systemName: "wrench.and.screwdriver.fill")
                 .font(.system(size: 24))
-                .foregroundColor(themeModel.warning)
-                .padding(12)
+                .foregroundStyle(themeModel.warning)
+                .frame(width: 44, height: 44)
                 .background(themeModel.warning.opacity(0.15))
-                .cornerRadius(themeModel.radiusSM)
+                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusSM, style: .continuous))
             
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
                     .font(themeModel.headline(16))
-                    .foregroundColor(themeModel.textPrimary)
+                    .foregroundStyle(themeModel.textPrimary)
                 
                 Text(vehicle.licensePlate ?? "No Plate")
                     .font(themeModel.bodyMedium(14))
-                    .foregroundColor(themeModel.textSecondary)
+                    .foregroundStyle(themeModel.textSecondary)
                 
                 if let task = maintenanceTask {
                     Text(task.description ?? "Needs maintenance")
                         .font(themeModel.caption(12))
-                        .foregroundColor(themeModel.danger)
+                        .foregroundStyle(themeModel.danger)
                         .lineLimit(2)
                 }
             }
             Spacer()
         }
         .padding(themeModel.spacingMD)
-        .background(themeModel.backgroundElevated)
-        .cornerRadius(themeModel.radiusLG)
+        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+        )
+        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
 }
 
 #Preview {
     DashboardView()
+        .environment(AuthViewModel())
 }
+
