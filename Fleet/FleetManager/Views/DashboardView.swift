@@ -298,6 +298,16 @@ struct DashboardView: View {
                 switch destination {
                 case .vehiclesRoot:
                     VehiclesRootView()
+                case .orderDetail(let trip):
+                    OrderDetailView(
+                        trip: trip,
+                        viewModel: OrdersViewModel(
+                            trips: viewModel.trips,
+                            routes: viewModel.routes,
+                            profiles: viewModel.profiles,
+                            vehicles: viewModel.vehicles
+                        )
+                    )
                 }
             }
         }
@@ -378,10 +388,8 @@ struct DashboardView: View {
     
     private var recentOrdersSection: some View {
         VStack(alignment: .leading, spacing: themeModel.spacingMD) {
-            SectionHeader(title: "Recent Orders", action: "See All") {
-                // Action
-            }
-            .padding(.horizontal, themeModel.spacingMD)
+            SectionHeader(title: "Recent Orders")
+                .padding(.horizontal, themeModel.spacingMD)
             
             if viewModel.recentOrders.isEmpty {
                 Text("No orders yet.")
@@ -390,8 +398,12 @@ struct DashboardView: View {
                     .padding(.horizontal, themeModel.spacingMD)
             } else {
                 ForEach(viewModel.recentOrders) { trip in
-                    TripCardView(trip: trip, viewModel: viewModel)
-                        .padding(.horizontal, themeModel.spacingMD)
+                    NavigationLink(value: DashboardDestination.orderDetail(trip)) {
+                        TripCardView(trip: trip, viewModel: viewModel)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, themeModel.spacingMD)
                 }
             }
         }
@@ -453,7 +465,11 @@ struct TripCardView: View {
     let viewModel: DashboardViewModel
     
     var routeName: String {
-        viewModel.routeName(for: trip.routeId)
+        let name = viewModel.routeName(for: trip.routeId)
+        if name == "Unknown Route" {
+            return trip.orderType?.displayName ?? "Unknown Order"
+        }
+        return name
     }
     
     var driverName: String {
@@ -471,37 +487,43 @@ struct TripCardView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
-            HStack {
-                Text(routeName)
-                    .font(themeModel.headline(16))
-                    .foregroundStyle(themeModel.textPrimary)
-                    .lineLimit(1)
-                Spacer()
-                StatusBadge(text: trip.status?.rawValue.capitalized ?? "Unknown", color: statusColor)
-            }
-            
-            HStack {
-                HStack(spacing: 6) {
-                    Image(systemName: "person.crop.circle.fill")
-                        .foregroundStyle(themeModel.accent)
-                        .font(.system(size: 16))
-                    Text(driverName)
-                        .font(themeModel.caption(14))
-                        .foregroundStyle(themeModel.textSecondary)
+        HStack(spacing: themeModel.spacingMD) {
+            VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+                HStack {
+                    Text(routeName)
+                        .font(themeModel.headline(16))
+                        .foregroundStyle(themeModel.textPrimary)
+                        .lineLimit(1)
+                    Spacer()
+                    StatusBadge(text: trip.status?.rawValue.capitalized ?? "Unknown", color: statusColor)
                 }
-                Spacer()
-                if let distance = trip.distance {
+                
+                HStack {
                     HStack(spacing: 6) {
-                        Image(systemName: "ruler.fill")
-                            .foregroundStyle(themeModel.textTertiary)
-                            .font(.system(size: 14))
-                        Text(String(format: "%.1f km", distance))
+                        Image(systemName: "person.crop.circle.fill")
+                            .foregroundStyle(themeModel.accent)
+                            .font(.system(size: 16))
+                        Text(driverName)
                             .font(themeModel.caption(14))
                             .foregroundStyle(themeModel.textSecondary)
                     }
+                    Spacer()
+                    if let distance = trip.distance {
+                        HStack(spacing: 6) {
+                            Image(systemName: "ruler.fill")
+                                .foregroundStyle(themeModel.textTertiary)
+                                .font(.system(size: 14))
+                            Text(String(format: "%.1f km", distance))
+                                .font(themeModel.caption(14))
+                                .foregroundStyle(themeModel.textSecondary)
+                        }
+                    }
                 }
             }
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(themeModel.textTertiary)
         }
         .padding(themeModel.spacingMD)
         .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
