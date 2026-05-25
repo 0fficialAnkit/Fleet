@@ -2,65 +2,64 @@ import SwiftUI
 
 struct DriverProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
+    @State private var profileVM = ProfileViewModel()
 
     var body: some View {
 
-        NavigationStack {
-
             ScrollView {
-
-                VStack(spacing: 24) {
-
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.system(size: 100))
-                        .foregroundStyle(.blue)
-
-                    VStack(spacing: 8) {
-
-                        Text("Alex Johnson")
-                            .font(.title.bold())
-
-                        Text("Fleet Driver")
-                            .foregroundStyle(.gray)
-                    }
+                VStack(spacing: 32) {
+                    ProfileHeader(
+                        icon: "person.crop.circle.fill",
+                        name: profileVM.currentUser?.fullName ?? "Driver",
+                        role: "Fleet Driver",
+                        accentColor: themeModel.driverPrimary
+                    )
 
                     VStack(spacing: 16) {
-
-                        settingsRow(title: "Notifications", icon: "bell")
-
-                        settingsRow(title: "Documents", icon: "doc")
-
-                        settingsRow(title: "Support", icon: "questionmark.circle")
-
-                        Button(action: {
-                            Task {
-                                await authViewModel.signOut()
+                            VStack(spacing: 12) {
+                                InfoRow(icon: "bell", label: "Notifications", value: "Enabled")
+                                Divider()
+                                InfoRow(icon: "doc.text.fill", label: "Documents", value: "Verified")
+                                Divider()
+                                InfoRow(icon: "lifepreserver", label: "Support", value: "Online")
                             }
-                        }) {
-                            settingsRow(title: "Logout", icon: "rectangle.portrait.and.arrow.right")
+                            .padding(themeModel.spacingMD)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                            )
+                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+
+                        VStack(spacing: 0) {
+                            Button(action: {
+                                Task {
+                                    await authViewModel.signOut()
+                                }
+                            }) {
+                                ActionRow(icon: "door.left.hand.open", title: "Logout", isDestructive: true)
+                            }
                         }
+                        .padding(themeModel.spacingMD)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                        )
+                        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
                     }
                 }
                 .padding()
             }
-            .background(Color.black)
+            .background(themeModel.backgroundPrimary.ignoresSafeArea())
             .navigationTitle("Profile")
+        .task {
+            await profileVM.loadProfile()
         }
-    }
-
-    func settingsRow(title: String, icon: String) -> some View {
-
-        HStack {
-
-            Image(systemName: icon)
-
-            Text(title)
-
-            Spacer()
-        }
-        .padding()
-        .background(Color.white.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
 }
 
+#Preview {
+    DriverProfileView()
+        .environment(AuthViewModel())
+}

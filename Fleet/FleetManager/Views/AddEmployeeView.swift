@@ -1,94 +1,180 @@
 import SwiftUI
+import Supabase
 
 struct AddEmployeeView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: EmployeesViewModel
+    let roleName: String
     
     @State private var fullName = ""
     @State private var email = ""
+    @State private var password = ""
     @State private var phone = ""
     @State private var licenseNumber = ""
-    @State private var selectedRoleId: UUID?
+    @State private var isPasswordVisible = false
     
     var isDriverSelected: Bool {
-        guard let id = selectedRoleId, let role = viewModel.roles.first(where: { $0.id == id }) else { return false }
-        return role.roleName.lowercased() == "driver"
+        return roleName.lowercased() == "driver"
     }
     
-    var assignableRoles: [Role] {
-        viewModel.roles.filter { $0.roleName.lowercased() != "fleet manager" }
+    /// Map display role to database role string
+    var dbRole: String {
+        isDriverSelected ? "driver" : "maintenance"
     }
     
     var body: some View {
         NavigationStack {
-            Form {
-                Section(header: Text("Personal Details").foregroundColor(themeModel.textSecondary)) {
-                    TextField("Full Name", text: $fullName)
-                        .foregroundColor(themeModel.textPrimary)
-                    TextField("Email", text: $email)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                        .foregroundColor(themeModel.textPrimary)
-                    TextField("Phone", text: $phone)
-                        .keyboardType(.phonePad)
-                        .foregroundColor(themeModel.textPrimary)
-                    
-                    TextField("Driver License Number", text: $licenseNumber)
-                        .foregroundColor(isDriverSelected ? themeModel.textPrimary : themeModel.textDisabled)
-                        .disabled(!isDriverSelected)
-                }
-                .listRowBackground(themeModel.backgroundElevated)
+            ZStack {
+                themeModel.backgroundPrimary.ignoresSafeArea()
                 
-                Section(header: Text("Role & Access").foregroundColor(themeModel.textSecondary)) {
-                    Picker("Select Role", selection: $selectedRoleId) {
-                        Text("Select a role").tag(UUID?.none)
-                        ForEach(assignableRoles) { role in
-                            Text(role.roleName).tag(UUID?.some(role.id))
+                ScrollView {
+                    VStack(spacing: themeModel.spacingLG) {
+                        
+                        // Error message
+                        if let error = viewModel.errorMessage {
+                            Text(error)
+                                .font(themeModel.caption(14))
+                                .foregroundColor(themeModel.danger)
+                                .padding(.horizontal, themeModel.spacingMD)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                            SectionHeader(title: "Personal Details")
+                                .padding(.horizontal, themeModel.spacingMD)
+                            
+                                VStack(spacing: 0) {
+                                    TextField("Full Name", text: $fullName)
+                                        .padding(.vertical, 12)
+                                        .foregroundColor(themeModel.textPrimary)
+                                    
+                                    Divider().background(themeModel.divider)
+                                    
+                                    TextField("Email", text: $email)
+                                        .keyboardType(.emailAddress)
+                                        .autocapitalization(.none)
+                                        .padding(.vertical, 12)
+                                        .foregroundColor(themeModel.textPrimary)
+                                        
+                                    Divider().background(themeModel.divider)
+                                    
+                                    HStack {
+                                        if isPasswordVisible {
+                                            TextField("Password", text: $password)
+                                                .foregroundColor(themeModel.textPrimary)
+                                        } else {
+                                            SecureField("Password", text: $password)
+                                                .foregroundColor(themeModel.textPrimary)
+                                        }
+                                        
+                                        Button(action: {
+                                            isPasswordVisible.toggle()
+                                        }) {
+                                            Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                                                .foregroundColor(themeModel.textSecondary)
+                                        }
+                                    }
+                                    .padding(.vertical, 12)
+                                    
+                                    Divider().background(themeModel.divider)
+                                    
+                                    TextField("Phone", text: $phone)
+                                        .keyboardType(.phonePad)
+                                        .padding(.vertical, 12)
+                                        .foregroundColor(themeModel.textPrimary)
+                                    
+                                    if isDriverSelected {
+                                        Divider().background(themeModel.divider)
+                                        
+                                        TextField("Driver License Number", text: $licenseNumber)
+                                            .padding(.vertical, 12)
+                                            .foregroundColor(themeModel.textPrimary)
+                                    }
+                                }
+                                .padding(themeModel.spacingMD)
+                                .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                        .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                                )
+                                .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                            .padding(.horizontal, themeModel.spacingMD)
                         }
                     }
-                    .foregroundColor(themeModel.textPrimary)
+                    .padding(.vertical, themeModel.spacingMD)
                 }
-                .listRowBackground(themeModel.backgroundElevated)
             }
-            .scrollContentBackground(.hidden)
-            .background(themeModel.backgroundPrimary)
-            .navigationTitle("Add Employee")
+            .navigationTitle(isDriverSelected ? "Add Driver" : "Add Maintenance Staff")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(themeModel.info)
+                    .foregroundColor(themeModel.accent)
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        if let roleId = selectedRoleId, !fullName.isEmpty {
-                            viewModel.addEmployee(
-                                fullName: fullName,
-                                email: email,
-                                phone: phone,
-                                licenseNumber: isDriverSelected && !licenseNumber.isEmpty ? licenseNumber : nil,
-                                roleId: roleId
-                            )
-                            dismiss()
+                        guard !fullName.isEmpty, !email.isEmpty, !password.isEmpty else { return }
+                        Task {
+                            do {
+                                try await viewModel.addEmployee(
+                                    fullName: fullName,
+                                    email: email,
+                                    password: password,
+                                    phone: phone,
+                                    licenseNumber: isDriverSelected && !licenseNumber.isEmpty ? licenseNumber : nil,
+                                    role: dbRole
+                                )
+                                dismiss()
+                            } catch let error as NSError where error.domain == "ProfileService" {
+                                viewModel.errorMessage = error.localizedDescription
+                            } catch {
+                                // Supabase functions error might contain a body
+                                if let functionsError = error as? FunctionsError {
+                                    switch functionsError {
+                                    case .httpError(let code, let data):
+                                        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                                           let serverError = json["error"] as? String {
+                                            viewModel.errorMessage = "Server Error (\(code)): \(serverError)"
+                                        } else {
+                                            viewModel.errorMessage = "HTTP Error \(code)"
+                                        }
+                                    case .relayError:
+                                        viewModel.errorMessage = "Network relay error"
+                                    }
+                                } else {
+                                    viewModel.errorMessage = error.localizedDescription
+                                }
+                            }
                         }
                     }
-                    .foregroundColor(themeModel.info)
+                    .foregroundColor(themeModel.accent)
                     .bold()
-                    .disabled(fullName.isEmpty || selectedRoleId == nil)
+                    .disabled(fullName.isEmpty || email.isEmpty || password.isEmpty || viewModel.isCreatingUser)
+                }
+            }
+            .overlay {
+                if viewModel.isCreatingUser {
+                    ZStack {
+                        Color.black.opacity(0.4).ignoresSafeArea()
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(1.2)
+                            Text("Creating user...")
+                                .font(themeModel.bodyMedium())
+                                .foregroundColor(.white)
+                        }
+                        .padding(32)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                    }
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 }
 
 #Preview {
-    AddEmployeeView(viewModel: EmployeesViewModel())
+    AddEmployeeView(viewModel: EmployeesViewModel(), roleName: "driver")
 }
-

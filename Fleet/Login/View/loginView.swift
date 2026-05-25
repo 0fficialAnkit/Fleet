@@ -12,234 +12,206 @@ struct RoleDisplayItem: Identifiable {
 
 // MARK: - LoginView
 struct LoginView: View {
-    @State private var selectedRoleId: Int = 1
-    @State private var email = ""
-    @State private var password = ""
-    @State private var isPasswordVisible = false
-    @State private var navigateToCreateAccount = false
 
-    @Environment(AuthViewModel.self) private var authViewModel
+    enum Destination: Hashable {
+        case signIn
+        case createAccount
+    }
+
+    @State private var selectedRoleId: Int = 1
+    @State private var navigationPath = [Destination]()
 
     let roleItems: [RoleDisplayItem] = [
-        RoleDisplayItem(id: 1, roleName: "Fleet Manager", description: "", iconName: "shield.fill", iconColor: .blue, iconBackground: .clear),
-        RoleDisplayItem(id: 2, roleName: "Driver", description: "", iconName: "box.truck.fill", iconColor: .blue, iconBackground: .clear),
-        RoleDisplayItem(id: 3, roleName: "Maintenance", description: "", iconName: "wrench.and.screwdriver.fill", iconColor: .blue, iconBackground: .clear)
+        RoleDisplayItem(
+            id: 1,
+            roleName: "Fleet Manager",
+            description: "Manage fleet, drivers & analytics",
+            iconName: "shield.fill",
+            iconColor: themeModel.accent,
+            iconBackground: themeModel.accent.opacity(0.15)
+        ),
+        RoleDisplayItem(
+            id: 2,
+            roleName: "Driver",
+            description: "View routes, log trips & fuel",
+            iconName: "truck.box.fill",
+            iconColor: themeModel.driverPrimary,
+            iconBackground: themeModel.driverPrimary.opacity(0.15)
+        ),
+        RoleDisplayItem(
+            id: 3,
+            roleName: "Maintenance",
+            description: "Schedule repairs & manage parts",
+            iconName: "wrench.and.screwdriver.fill",
+            iconColor: themeModel.maintenancePrimary,
+            iconBackground: themeModel.maintenancePrimary.opacity(0.15)
+        )
     ]
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
-                Color(.systemGroupedBackground)
+                themeModel.backgroundPrimary
                     .ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 0) {
-                        Spacer().frame(height: 20)
-                        
-                        // App Icon Button
-                        Button(action: {
-                            navigateToCreateAccount = true
-                        }) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 18)
-                                    .fill(Color.blue)
-                                    .frame(width: 64, height: 64)
-                                    .shadow(color: Color.blue.opacity(0.3), radius: 10, y: 5)
-                                Image(systemName: "box.truck.fill")
-                                    .font(.system(size: 28))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        .buttonStyle(PlainButtonStyle())
-
-                        Spacer().frame(height: 16)
-
-                        // Title
-                        Text("FleetOps")
-                            .font(.system(size: 32, weight: .bold))
-                            .foregroundColor(.primary)
-                        
-                        Text("Precision logistics at your fingertips.")
-                            .font(.system(size: 15))
-                            .foregroundColor(.secondary)
-                            .padding(.top, 4)
-
-                        Spacer().frame(height: 32)
-
-                        Text("SELECT YOUR ROLE")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.secondary)
-                            .kerning(1.2)
-                        
-                        Spacer().frame(height: 16)
-
-                        // Role Selection Row
-                        HStack(spacing: 12) {
-                            ForEach(roleItems) { item in
-                                RoleSelectionButton(
-                                    item: item,
-                                    isSelected: selectedRoleId == item.id
-                                )
-                                .onTapGesture {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        selectedRoleId = item.id
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer().frame(height: 32)
-
-                        // Form Card
-                        VStack(spacing: 20) {
-                            // Email
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("EMAIL ADDRESS")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(.secondary)
-                                
-                                HStack {
-                                    Image(systemName: "envelope")
-                                        .foregroundColor(.secondary)
-                                    TextField("mail", text: $email)
-                                        .keyboardType(.emailAddress)
-                                        .textInputAutocapitalization(.never)
-                                        .foregroundColor(.primary)
-                                }
-                                .padding(.horizontal, 16)
-                                .frame(height: 52)
-                                .background(Color(.secondarySystemGroupedBackground))
-                                .cornerRadius(12)
-                            }
-
-                            // Password
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Text("PASSWORD")
-                                        .font(.system(size: 11, weight: .bold))
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                    Button("FORGOT?") {
-                                    }
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(.blue)
-                                }
-
-                                HStack {
-                                    Image(systemName: "lock")
-                                        .foregroundColor(.secondary)
-                                    if isPasswordVisible {
-                                        TextField("••••••••", text: $password)
-                                            .foregroundColor(.primary)
-                                    } else {
-                                        SecureField("••••••••", text: $password)
-                                            .foregroundColor(.primary)
-                                    }
-                                    Button(action: { isPasswordVisible.toggle() }) {
-                                        Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
-                                            .foregroundColor(.secondary)
-                                    }
-                                }
-                                .padding(.horizontal, 16)
-                                .frame(height: 52)
-                                .background(Color(.secondarySystemGroupedBackground))
-                                .cornerRadius(12)
-                            }
-
-                            Spacer().frame(height: 4)
-
-                            // Sign In Button
-                            Button(action: {
-                                Task {
-                                    await authViewModel.signIn(email: email, password: password)
-                                }
-                            }) {
-                                HStack {
-                                    if authViewModel.isLoading {
-                                        ProgressView().tint(.white)
-                                    } else {
-                                        Text("Sign In")
-                                            .font(.system(size: 16, weight: .semibold))
-                                        Image(systemName: "arrow.right")
-                                            .font(.system(size: 14, weight: .semibold))
-                                    }
-                                }
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 52)
-                                .background(Color.blue)
-                                .cornerRadius(12)
-                                .shadow(color: Color.blue.opacity(0.3), radius: 10, y: 5)
-                            }
-                            .disabled(authViewModel.isLoading || email.isEmpty || password.isEmpty)
-
-                            Spacer().frame(height: 8)
-
-                            // Face ID Button
-                            Button(action: {}) {
-                                HStack {
-                                    Image(systemName: "faceid")
-                                        .font(.system(size: 18))
-                                    Text("LOGIN WITH FACE ID")
-                                        .font(.system(size: 12, weight: .semibold))
-                                }
-                                .foregroundColor(.secondary)
-                                .frame(width: 200, height: 44)
-                                .background(Color(.systemBackground))
-                                .cornerRadius(22)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 22)
-                                        .stroke(Color(.separator), lineWidth: 1)
-                                )
-                            }
-                        }
-                        .padding(24)
-                        .background(Color(.systemBackground))
-                        .cornerRadius(24)
-                        .shadow(color: Color.black.opacity(0.05), radius: 20, y: 10)
-
-                        Spacer().frame(height: 32)
-
-                        Spacer().frame(height: 40)
-                    }
-                    .padding(.horizontal, 24)
+                
+                VStack(spacing: 0) {
+                    Spacer()
+                    appIconView
+                    Spacer().frame(height: 20)
+                    titleSection
+                    Spacer().frame(height: 40)
+                    roleCardList
+                    Spacer().frame(height: 40)
+                    continueButton
+                    Spacer().frame(height: 40)
+                }
+                .padding(.horizontal, 24)
+            }
+            .navigationDestination(for: Destination.self) { destination in
+                switch destination {
+                case .signIn:
+                    SignInView()
+                case .createAccount:
+                    CreateAccountView(onSuccess: {
+                        navigationPath = [.signIn]
+                    })
                 }
             }
-            .navigationDestination(isPresented: $navigateToCreateAccount) {
-                CreateAccountView()
+        }
+    }
+    // MARK: - App Icon (blue truck)
+    var appIconView: some View {
+        Button(action: {
+            navigationPath.append(.createAccount)
+        }) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(themeModel.accent)
+                    .frame(width: 80, height: 80)
+                Image(systemName: "truck.box.fill")
+                    .font(.system(size: 36))
+                    .foregroundColor(themeModel.accentForeground)
             }
         }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    // MARK: - Title + Subtitle
+    var titleSection: some View {
+        VStack(spacing: 8) {
+            Text("GoFleet")
+                .font(.system(size: 34, weight: .bold))
+                .foregroundColor(themeModel.textPrimary)
+            Text("Select your role to continue")
+                .font(.system(size: 16))
+                .foregroundColor(themeModel.textSecondary)
+        }
+    }
+
+    // MARK: - All Role Cards
+    var roleCardList: some View {
+        VStack(spacing: 14) {
+            ForEach(roleItems) { item in
+                RoleCardView(
+                    item: item,
+                    isSelected: selectedRoleId == item.id
+                )
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedRoleId = item.id
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Continue Button
+    var continueButton: some View {
+        Button(action: handleContinue) {
+            Text("Continue")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(themeModel.accentForeground)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(themeModel.accent)
+                .cornerRadius(16)
+        }
+    }
+
+    // MARK: - Continue Action
+    func handleContinue() {
+        navigationPath.append(.signIn)
     }
 }
 
-struct RoleSelectionButton: View {
+// MARK: - RoleCardView
+struct RoleCardView: View {
     let item: RoleDisplayItem
     let isSelected: Bool
-
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: item.iconName)
-                .font(.system(size: 20))
-                .foregroundColor(isSelected ? .blue : .secondary)
-            
-            Text(item.roleName)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isSelected ? .blue : .secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+        HStack(spacing: 16) {
+            iconBox
+            labelStack
+            Spacer()
+            selectionDot
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 80)
-        .background(
-            isSelected 
-            ? Color.blue.opacity(0.1) 
-            : Color(.systemBackground)
-        )
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color.blue : Color(.separator), lineWidth: 1.5)
-        )
-        .shadow(color: Color.black.opacity(isSelected ? 0 : 0.05), radius: 5, y: 2)
+        .padding(16)
+        .background(cardBackground)
+        .overlay(cardBorder)
+        .cornerRadius(16)
     }
+
+    var iconBox: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(item.iconBackground)
+                .frame(width: 52, height: 52)
+            Image(systemName: item.iconName)
+                .font(.system(size: 22))
+                .foregroundColor(item.iconColor)
+        }
+    }
+
+    var labelStack: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(item.roleName)
+                .font(.system(size: 17, weight: .bold))
+                .foregroundColor(themeModel.textPrimary)
+            Text(item.description)
+                .font(.system(size: 14))
+                .foregroundColor(themeModel.textSecondary)
+        }
+    }
+    
+    var selectionDot: some View {
+        Circle()
+            .fill(isSelected ? themeModel.accent : Color.clear)
+            .overlay(
+                Circle().stroke(
+                    isSelected ? themeModel.accent : themeModel.border,
+                    lineWidth: 1.5
+                )
+            )
+            .frame(width: 22, height: 22)
+    }
+    
+    var cardBackground: some View {
+        RoundedRectangle(cornerRadius: 16)
+            .fill(
+                isSelected
+                    ? themeModel.accent.opacity(0.12)
+                    : themeModel.backgroundElevated
+            )
+    }
+
+    var cardBorder: some View {
+        RoundedRectangle(cornerRadius: 16)
+            .stroke(isSelected ? themeModel.accent : Color.clear, lineWidth: 1.5)
+    }
+}
+
+// MARK: - Preview
+#Preview {
+    LoginView()
+        .environment(AuthViewModel())
 }

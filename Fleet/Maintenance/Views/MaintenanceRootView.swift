@@ -1,33 +1,33 @@
 import SwiftUI
 
 struct MaintenanceRootView: View {
+    @State private var selectedTab: Int = 0
+    
     var body: some View {
-        TabView {
-            MaintenanceDashboardView()
+        TabView(selection: $selectedTab) {
+            MaintenanceDashboardView(selectedTab: $selectedTab)
                 .tabItem {
-                    Label("Dashboard", systemImage: "chart.bar.doc.horizontal.fill")
+                    Label("Dashboard", systemImage: "gauge.with.dots.needle.33percent")
                 }
-            
-            WorkOrderListView()
+                .tag(0)
+
+            MaintenanceSchedulerView()
                 .tabItem {
-                    Label("Work Orders", systemImage: "wrench.and.screwdriver.fill")
+                    Label("Schedule", systemImage: "calendar.badge.clock")
                 }
-            
+                .tag(1)
+
             InventoryView()
                 .tabItem {
-                    Label("Inventory", systemImage: "shippingbox.fill")
+                    Label("Inventory", systemImage: "archivebox.fill")
                 }
-            
-            MaintenanceProfileView()
-                .tabItem {
-                    Label("Profile", systemImage: "person.crop.circle.fill")
-                }
+                .tag(2)
         }
-        .tint(.blue)
-        .preferredColorScheme(.dark)
+        .tint(themeModel.maintenancePrimary)
     }
 }
 
 #Preview {
     MaintenanceRootView()
+        .environment(AuthViewModel())
 }

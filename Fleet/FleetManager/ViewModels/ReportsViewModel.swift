@@ -1,0 +1,208 @@
+import SwiftUI
+
+// MARK: - Issue Report Status
+enum IssueReportStatus: String, CaseIterable, Identifiable {
+    case open       = "Open"
+    case assigned   = "Assigned"
+    case inProgress = "In Progress"
+    case resolved   = "Resolved"
+
+    var id: String { rawValue }
+
+    var color: Color {
+        switch self {
+        case .open:       return themeModel.danger
+        case .assigned:   return themeModel.warning
+        case .inProgress: return themeModel.info
+        case .resolved:   return themeModel.success
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .open:       return "exclamationmark.circle.fill"
+        case .assigned:   return "person.fill.checkmark"
+        case .inProgress: return "wrench.and.screwdriver.fill"
+        case .resolved:   return "checkmark.circle.fill"
+        }
+    }
+
+    var dbValue: String {
+        switch self {
+        case .open:       return "open"
+        case .assigned:   return "assigned"
+        case .inProgress: return "in_progress"
+        case .resolved:   return "resolved"
+        }
+    }
+
+    static func from(dbValue: String) -> IssueReportStatus {
+        switch dbValue {
+        case "open":        return .open
+        case "assigned":    return .assigned
+        case "in_progress": return .inProgress
+        case "resolved":    return .resolved
+        default:            return .open
+        }
+    }
+}
+
+// MARK: - Issue Report Model (view model for display)
+struct IssueReport: Identifiable {
+    let id: UUID
+    let vehicleId: UUID
+    let vehicleName: String
+    let licensePlate: String
+    let driverName: String
+    let issueCategory: String
+    let severity: DefectSeverity
+    let description: String
+    let submittedAt: Date
+    var assignedTo: UUID?
+    var status: IssueReportStatus
+}
+
+// MARK: - Status History Entry
+struct StatusHistoryEntry: Identifiable {
+    let id = UUID()
+    let status: IssueReportStatus
+    let timestamp: Date
+    let note: String
+}
+
+// MARK: - Reports ViewModel
+@MainActor
+@Observable
+final class ReportsViewModel {
+
+    private(set) var profiles: [Profile] = []
+    private(set) var allVehicles: [Vehicle] = []
+
+    var reports: [IssueReport] = []
+    var isLoading = false
+    var errorMessage: String?
+
+    func loadData() async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            async let p = ProfileService.fetchAllProfiles()
+            async let v = VehicleService.fetchAllVehicles()
+            async let ir = IssueReportService.fetchAllIssueReports()
+
+            profiles = try await p
+            allVehicles = try await v
+            let issueRecords = try await ir
+
+            // Build display reports from issue_reports table
+            self.reports = issueRecords.map { record in
+                let vehicle = allVehicles.first { $0.id == record.vehicleId }
+                let make = vehicle?.make ?? "Vehicle"
+                let model = vehicle?.model ?? ""
+                let plate = vehicle?.licensePlate ?? "—"
+                let driver = profileName(record.reportedBy)
+
+                let severity: DefectSeverity
+                switch record.severity {
+                case "low": severity = .low
+                case "medium": severity = .medium
+                case "high": severity = .high
+                case "critical": severity = .critical
+                default: severity = .medium
+                }
+
+                return IssueReport(
+                    id: record.id,
+                    vehicleId: record.vehicleId,
+                    vehicleName: "\(make) \(model)",
+                    licensePlate: plate,
+                    driverName: driver,
+                    issueCategory: record.category,
+                    severity: severity,
+                    description: record.description ?? "No description provided.",
+                    submittedAt: record.createdAt ?? Date(),
+                    assignedTo: record.assignedTo,
+                    status: IssueReportStatus.from(dbValue: record.status)
+                )
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    func setupRealtime() {
+        let rt = RealtimeManager.shared
+        rt.addDefectReportsChangeHandler { [weak self] in
+            Task { await self?.loadData() }
+        }
+        rt.addIssueReportsChangeHandler { [weak self] in
+            Task { await self?.loadData() }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func profileName(_ id: UUID?) -> String {
+        guard let id else { return "Unknown" }
+        return profiles.first { $0.id == id }?.fullName ?? "Unknown"
+    }
+
+    // MARK: - Computed Counts
+    var openCount: Int       { reports.filter { $0.status == .open }.count }
+    var assignedCount: Int   { reports.filter { $0.status == .assigned || $0.status == .inProgress }.count }
+    var resolvedCount: Int   { reports.filter { $0.status == .resolved }.count }
+
+    // MARK: - Maintenance Staff
+    var maintenanceStaff: [Profile] {
+        profiles.filter { $0.role == "maintenance" }
+    }
+
+    func staffName(_ id: UUID?) -> String {
+        guard let id else { return "Unassigned" }
+        return profiles.first { $0.id == id }?.fullName ?? "Unknown"
+    }
+
+    // MARK: - Mutating Actions (now persists to Supabase)
+    func update(reportId: UUID, assignedTo: UUID?, status: IssueReportStatus) {
+        guard let idx = reports.firstIndex(where: { $0.id == reportId }) else { return }
+        reports[idx].assignedTo = assignedTo
+        reports[idx].status = status
+
+        // Persist to Supabase
+        Task {
+            do {
+                try await IssueReportService.updateIssueReport(
+                    id: reportId,
+                    assignedTo: assignedTo,
+                    status: status.dbValue
+                )
+                // Notify assigned maintenance staff
+                if let staffId = assignedTo {
+                    let notification = Notification(
+                        id: UUID(),
+                        userId: staffId,
+                        title: "Issue Assigned",
+                        message: "A new issue report has been assigned to you: \(reports[idx].issueCategory) on \(reports[idx].vehicleName)",
+                        type: .maintenance,
+                        isRead: false,
+                        createdAt: Date()
+                    )
+                    try? await NotificationService.createNotification(notification)
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    // MARK: - Severity helpers
+    func severityColor(_ s: DefectSeverity) -> Color {
+        switch s {
+        case .low:      return themeModel.success
+        case .medium:   return themeModel.warning
+        case .high:     return Color.orange
+        case .critical: return themeModel.danger
+        }
+    }
+}
