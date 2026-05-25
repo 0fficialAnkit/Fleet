@@ -186,11 +186,13 @@ class AuthViewModel {
     func signOut() async {
         do {
             try await supabase.auth.signOut()
-            self.isAuthenticated = false
-            self.currentUser = nil
-            self.currentProfile = nil
         } catch {
-            self.errorMessage = error.localizedDescription
+            print("[AuthViewModel] signOut ERROR: \(error)")
         }
+        // Always clear local state to prevent getting stuck
+        self.isAuthenticated = false
+        self.currentUser = nil
+        self.currentProfile = nil
+        self.errorMessage = nil
     }
 }

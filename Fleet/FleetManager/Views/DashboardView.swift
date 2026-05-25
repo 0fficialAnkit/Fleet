@@ -456,6 +456,13 @@ struct TripCardView: View {
         viewModel.routeName(for: trip.routeId)
     }
     
+    var displayTitle: String {
+        if let type = trip.orderType {
+            return type.displayName
+        }
+        return routeName
+    }
+    
     var driverName: String {
         viewModel.driverName(for: trip.driverId)
     }
@@ -473,7 +480,7 @@ struct TripCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: themeModel.spacingMD) {
             HStack {
-                Text(routeName)
+                Text(displayTitle)
                     .font(themeModel.headline(16))
                     .foregroundStyle(themeModel.textPrimary)
                     .lineLimit(1)

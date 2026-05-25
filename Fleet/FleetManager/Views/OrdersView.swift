@@ -152,7 +152,7 @@ struct OrderCardView: View {
             // Route Name & Chevron
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(route?.routeName ?? "Unknown Route")
+                    Text(trip.orderType?.displayName ?? route?.routeName ?? "Unknown Route")
                         .font(themeModel.headline(16))
                         .foregroundColor(themeModel.textPrimary)
                     
