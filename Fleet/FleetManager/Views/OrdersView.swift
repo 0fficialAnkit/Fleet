@@ -72,7 +72,7 @@ struct OrdersView: View {
                             Button(action: {
                                 selectedOrderType = type
                             }) {
-                                Text(type.rawValue)
+                                Text(type.displayName)
                             }
                         }
                     } label: {
@@ -183,7 +183,7 @@ struct OrderCardView: View {
                 Spacer()
                 
                 if let type = trip.orderType {
-                    Text(type.rawValue)
+                    Text(type.displayName)
                         .font(themeModel.small(11))
                         .foregroundColor(themeModel.accent)
                         .padding(.horizontal, 8)
