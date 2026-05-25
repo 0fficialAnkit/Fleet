@@ -44,7 +44,7 @@ enum themeModel {
     static let accentForeground = Color(UIColor.systemBackground)
     
     static let driverPrimary = Color("Driver")
-    static let maintenancePrimary = Color.orange
+    static let maintenancePrimary = Color.brown
 
     // ======================================================
     // MARK: - Semantic Colors
