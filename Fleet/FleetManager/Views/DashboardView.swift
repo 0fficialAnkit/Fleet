@@ -39,7 +39,7 @@ struct DashboardView: View {
                     Button(action: { isShowingProfile = true }) {
                         Image(systemName: "person.crop.circle.fill")
                             .font(.system(size: 22, weight: .medium))
-                            .foregroundStyle(themeModel.analyticsPurple)
+                            .foregroundStyle(themeModel.accent)
                     }
                 }
             }

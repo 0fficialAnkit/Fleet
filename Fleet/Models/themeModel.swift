@@ -37,14 +37,25 @@ enum themeModel {
     static let textInverse = Color(UIColor.systemBackground)
 
     // ======================================================
-    // MARK: - Brand & Accents
+    // MARK: - Role Accents  (one color per user role)
+    //
+    //  Fleet Manager → Blue   (.tint applied in FleetManagerMainView)
+    //  Driver        → Green  (.tint applied in DriverRootView)
+    //  Maintenance   → Orange (.tint applied in MaintenanceRootView)
+    //
+    //  All other UI (backgrounds, text, surfaces) is shared and
+    //  derives from iOS system-adaptive colors below.
     // ======================================================
 
-    static let accent = Color.teal
-    static let accentForeground = Color(UIColor.systemBackground)
-    
-    static let driverPrimary = Color("Driver")
-    static let maintenancePrimary = Color.brown
+    /// Fleet Manager accent — system blue (authority, command)
+    static let accent             = Color.blue
+    static let accentForeground   = Color(UIColor.systemBackground)
+
+    /// Driver accent — system green (movement, active, go)
+    static let driverPrimary      = Color.green
+
+    /// Maintenance accent — system orange (caution, technical work)
+    static let maintenancePrimary = Color.orange
 
     // ======================================================
     // MARK: - Semantic Colors
