@@ -110,10 +110,12 @@ enum UserService {
     }
 
     static func deleteUser(id: UUID) async throws {
+        struct DeleteParams: Encodable {
+            let target_user_id: UUID
+        }
+        
         try await supabase
-            .from("users")
-            .delete()
-            .eq("id", value: id)
+            .rpc("delete_user_auth", params: DeleteParams(target_user_id: id))
             .execute()
     }
 
