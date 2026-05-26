@@ -96,7 +96,7 @@ struct TripRouteMapView: View {
             VStack(spacing: 10) {
                 ProgressView()
                 Text("Loading route…")
-                    .font(.system(size: , weight: .regular, design: .rounded))
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
                     .foregroundStyle(Color.secondary)
             }
         }
@@ -110,7 +110,7 @@ struct TripRouteMapView: View {
                     .font(.system(size: 36))
                     .foregroundStyle(Color.green.opacity(0.4))
                 Text(msg)
-                    .font(.system(size: , weight: .regular, design: .rounded))
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
                     .foregroundStyle(Color.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
@@ -123,7 +123,7 @@ struct TripRouteMapView: View {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
                 Text("Navigate in Maps")
-                    .font(.system(size: , weight: .medium, design: .rounded))
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 20)

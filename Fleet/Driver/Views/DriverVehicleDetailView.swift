@@ -60,7 +60,7 @@ struct DriverVehicleDetailView: View {
                     .foregroundStyle(Color.primary)
 
                 Text(vehicle.licensePlate ?? "—")
-                    .font(.system(size: , weight: .medium, design: .rounded))
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.green)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 5)
@@ -91,7 +91,7 @@ struct DriverVehicleDetailView: View {
     private var vehicleInfoCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("Vehicle Info", systemImage: "info.circle.fill")
-                .font(.system(size: , weight: .semibold, design: .rounded))
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
             VStack(spacing: 0) {
@@ -125,7 +125,7 @@ struct DriverVehicleDetailView: View {
     private var vehicleHealthCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("Quick Stats", systemImage: "heart.text.clipboard.fill")
-                .font(.system(size: , weight: .semibold, design: .rounded))
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
             HStack(spacing: 16) {
@@ -159,7 +159,7 @@ struct DriverVehicleDetailView: View {
                 .foregroundStyle(Color.primary)
 
             Text(label)
-                .font(.system(size: , weight: .regular, design: .rounded))
+                .font(.system(size: 16, weight: .regular, design: .rounded))
                 .foregroundStyle(Color(UIColor.tertiaryLabel))
         }
         .padding(16)
@@ -180,10 +180,10 @@ struct DriverVehicleDetailView: View {
                     .font(.system(size: 18, weight: .semibold))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Report an Issue")
-                        .font(.system(size: , weight: .medium, design: .rounded))
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
                         .fontWeight(.semibold)
                     Text("Notify maintenance about a problem")
-                        .font(.system(size: , weight: .regular, design: .rounded))
+                        .font(.system(size: 16, weight: .regular, design: .rounded))
                         .opacity(0.75)
                 }
                 Spacer()

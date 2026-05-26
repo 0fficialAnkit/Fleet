@@ -65,7 +65,7 @@ extension DriverDashboardView {
     private var greetingHeader: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("\(viewModel.greetingText()),")
-                .font(.system(size: , weight: .semibold, design: .rounded))
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.secondary)
 
             Text(viewModel.driverName.components(separatedBy: " ").first ?? "Driver")
@@ -73,7 +73,7 @@ extension DriverDashboardView {
                 .foregroundStyle(Color.primary)
 
             Text(Date().formatted(.dateTime.weekday(.wide).month(.wide).day()))
-                .font(.system(size: , weight: .regular, design: .rounded))
+                .font(.system(size: 16, weight: .regular, design: .rounded))
                 .foregroundStyle(Color(UIColor.tertiaryLabel))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -104,7 +104,7 @@ extension DriverDashboardView {
                                 )
 
                             Text("Trip In Progress")
-                                .font(.system(size: , weight: .medium, design: .rounded))
+                                .font(.system(size: 16, weight: .medium, design: .rounded))
                                 .foregroundStyle(Color.green)
                         }
 
@@ -127,11 +127,11 @@ extension DriverDashboardView {
 
                         VStack(alignment: .leading, spacing: 8) {
                             Text(route?.startLocation ?? "Pickup Location")
-                                .font(.system(size: , weight: .medium, design: .rounded))
+                                .font(.system(size: 16, weight: .medium, design: .rounded))
                                 .foregroundStyle(Color.primary)
                                 .lineLimit(1)
                             Text(route?.endLocation ?? "Drop-off Location")
-                                .font(.system(size: , weight: .medium, design: .rounded))
+                                .font(.system(size: 16, weight: .medium, design: .rounded))
                                 .foregroundStyle(Color.primary)
                                 .lineLimit(1)
                         }
@@ -143,7 +143,7 @@ extension DriverDashboardView {
                     HStack(spacing: 16) {
                         if let vehicle {
                             Label("\(vehicle.make ?? "") \(vehicle.model ?? "")", systemImage: "truck.box.fill")
-                                .font(.system(size: , weight: .regular, design: .rounded))
+                                .font(.system(size: 16, weight: .regular, design: .rounded))
                                 .foregroundStyle(Color.secondary)
                         }
 
@@ -151,7 +151,7 @@ extension DriverDashboardView {
 
                         if let startTime = trip.startTime {
                             Label("Started \(startTime.formatted(date: .omitted, time: .shortened))", systemImage: "clock.fill")
-                                .font(.system(size: , weight: .regular, design: .rounded))
+                                .font(.system(size: 16, weight: .regular, design: .rounded))
                                 .foregroundStyle(Color(UIColor.tertiaryLabel))
                         }
                     }
@@ -175,7 +175,7 @@ extension DriverDashboardView {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Label("Achievements", systemImage: "trophy.fill")
-                        .font(.system(size: , weight: .medium, design: .rounded))
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
                         .foregroundStyle(Color.yellow)
                     Spacer()
                     Image(systemName: "checkmark.seal.fill")
@@ -189,7 +189,7 @@ extension DriverDashboardView {
                             .fontWeight(.bold)
                             .foregroundStyle(Color.primary)
                         Text("Completed")
-                            .font(.system(size: , weight: .regular, design: .rounded))
+                            .font(.system(size: 16, weight: .regular, design: .rounded))
                             .foregroundStyle(Color.secondary)
                     }
 
@@ -203,7 +203,7 @@ extension DriverDashboardView {
                             .fontWeight(.bold)
                             .foregroundStyle(Color.primary)
                         Text("Distance")
-                            .font(.system(size: , weight: .regular, design: .rounded))
+                            .font(.system(size: 16, weight: .regular, design: .rounded))
                             .foregroundStyle(Color.secondary)
                     }
                 }
@@ -220,7 +220,7 @@ extension DriverDashboardView {
             // Hours Active Card (40% width)
             VStack(alignment: .leading, spacing: 10) {
                 Label("Active Time", systemImage: "clock.badge.checkmark.fill")
-                    .font(.system(size: , weight: .medium, design: .rounded))
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.green)
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -229,7 +229,7 @@ extension DriverDashboardView {
                         .fontWeight(.bold)
                         .foregroundStyle(Color.primary)
                     Text("Hours Active")
-                        .font(.system(size: , weight: .regular, design: .rounded))
+                        .font(.system(size: 16, weight: .regular, design: .rounded))
                         .foregroundStyle(Color.secondary)
                 }
             }
@@ -268,7 +268,7 @@ extension DriverDashboardView {
                         .font(.system(size: 36))
                         .foregroundStyle(Color(UIColor.tertiaryLabel))
                     Text("No upcoming trips scheduled")
-                        .font(.system(size: , weight: .regular, design: .rounded))
+                        .font(.system(size: 16, weight: .regular, design: .rounded))
                         .foregroundStyle(Color.secondary)
                 }
                 .frame(maxWidth: .infinity)
@@ -316,10 +316,10 @@ extension DriverDashboardView {
                         .foregroundStyle(Color(UIColor.tertiaryLabel))
                     VStack(alignment: .leading, spacing: 2) {
                         Text("No Assigned Vehicle")
-                            .font(.system(size: , weight: .medium, design: .rounded))
+                            .font(.system(size: 16, weight: .medium, design: .rounded))
                             .foregroundStyle(Color.primary)
                         Text("Contact fleet manager for vehicle details")
-                            .font(.system(size: , weight: .regular, design: .rounded))
+                            .font(.system(size: 16, weight: .regular, design: .rounded))
                             .foregroundStyle(Color.secondary)
                     }
                     Spacer()
@@ -367,7 +367,7 @@ struct EnrichedTripCard: View {
             // Top: Route ID + status + order type
             HStack {
                 Text("Route #\(trip.id.uuidString.prefix(6).uppercased())")
-                    .font(.system(size: , weight: .semibold, design: .rounded))
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.primary)
 
                 Spacer()
@@ -407,7 +407,7 @@ struct EnrichedTripCard: View {
             HStack(spacing: 16) {
                 if let vehicle {
                     Label("\(vehicle.make ?? "") \(vehicle.model ?? "")", systemImage: "truck.box.fill")
-                        .font(.system(size: , weight: .regular, design: .rounded))
+                        .font(.system(size: 16, weight: .regular, design: .rounded))
                         .foregroundStyle(Color(UIColor.tertiaryLabel))
                         .lineLimit(1)
                 }
@@ -416,13 +416,13 @@ struct EnrichedTripCard: View {
 
                 if let start = trip.startTime {
                     Label(start.formatted(date: .omitted, time: .shortened), systemImage: "clock")
-                        .font(.system(size: , weight: .regular, design: .rounded))
+                        .font(.system(size: 16, weight: .regular, design: .rounded))
                         .foregroundStyle(Color(UIColor.tertiaryLabel))
                 }
 
                 if let distance = trip.distance, distance > 0 {
                     Label(String(format: "%.1f km", distance), systemImage: "road.lanes")
-                        .font(.system(size: , weight: .regular, design: .rounded))
+                        .font(.system(size: 16, weight: .regular, design: .rounded))
                         .foregroundStyle(Color(UIColor.tertiaryLabel))
                 }
             }
@@ -463,11 +463,11 @@ private struct QuickActionCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             Text(title)
-                .font(.system(size: , weight: .medium, design: .rounded))
+                .font(.system(size: 16, weight: .medium, design: .rounded))
                 .foregroundStyle(Color.primary)
 
             Text(subtitle)
-                .font(.system(size: , weight: .regular, design: .rounded))
+                .font(.system(size: 16, weight: .regular, design: .rounded))
                 .foregroundStyle(Color(UIColor.tertiaryLabel))
         }
         .padding(16)

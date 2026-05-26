@@ -113,10 +113,10 @@ struct DriverReportIssueView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(vehicle.make ?? "Vehicle") \(vehicle.model ?? "")")
-                    .font(.system(size: , weight: .semibold, design: .rounded))
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.primary)
                 Text(vehicle.licensePlate ?? "—")
-                    .font(.system(size: , weight: .regular, design: .rounded))
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
                     .foregroundStyle(Color.green)
             }
             Spacer()
@@ -133,7 +133,7 @@ struct DriverReportIssueView: View {
     private var issueCategorySection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("Issue Type", systemImage: "exclamationmark.triangle.fill")
-                .font(.system(size: , weight: .semibold, design: .rounded))
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
@@ -157,7 +157,7 @@ struct DriverReportIssueView: View {
                     .foregroundStyle(isSelected ? category.color : Color.secondary)
                     .frame(width: 20)
                 Text(category.rawValue)
-                    .font(.system(size: , weight: .regular, design: .rounded))
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
                     .foregroundStyle(isSelected ? Color.primary : Color.secondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
@@ -182,7 +182,7 @@ struct DriverReportIssueView: View {
     private var severitySection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("Severity", systemImage: "gauge.with.dots.needle.67percent")
-                .font(.system(size: , weight: .semibold, design: .rounded))
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
             HStack(spacing: 8) {
@@ -202,7 +202,7 @@ struct DriverReportIssueView: View {
             }
         }) {
             Text(severity.rawValue.capitalized)
-                .font(.system(size: , weight: .regular, design: .rounded))
+                .font(.system(size: 16, weight: .regular, design: .rounded))
                 .fontWeight(isSelected ? .semibold : .regular)
                 .foregroundStyle(isSelected ? color : Color.secondary)
                 .padding(.horizontal, 14)
@@ -233,7 +233,7 @@ struct DriverReportIssueView: View {
     private var descriptionSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("Description", systemImage: "text.alignleft")
-                .font(.system(size: , weight: .semibold, design: .rounded))
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
             ZStack(alignment: .topLeading) {
@@ -246,14 +246,14 @@ struct DriverReportIssueView: View {
 
                 if description.isEmpty {
                     Text("Briefly describe the issue…")
-                        .font(.system(size: , weight: .regular, design: .rounded))
+                        .font(.system(size: 16, weight: .regular, design: .rounded))
                         .foregroundStyle(Color(UIColor.quaternaryLabel))
                         .padding(.horizontal, 14)
                         .padding(.top, 14)
                 }
 
                 TextEditor(text: $description)
-                    .font(.system(size: , weight: .regular, design: .rounded))
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
                     .foregroundStyle(Color.primary)
                     .scrollContentBackground(.hidden)
                     .background(Color.clear)
@@ -269,7 +269,7 @@ struct DriverReportIssueView: View {
             HStack {
                 Spacer()
                 Text("\(description.count)/\(maxDescriptionLength)")
-                    .font(.system(size: , weight: .regular, design: .rounded))
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
                     .foregroundStyle(description.count > maxDescriptionLength - 20 ? Color.yellow : Color(UIColor.quaternaryLabel))
             }
         }
@@ -288,7 +288,7 @@ struct DriverReportIssueView: View {
                     Text("Submit Report")
                 }
             }
-            .font(.system(size: , weight: .medium, design: .rounded))
+            .font(.system(size: 16, weight: .medium, design: .rounded))
             .fontWeight(.semibold)
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
@@ -329,7 +329,7 @@ struct DriverReportIssueView: View {
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.primary)
                 Text("Your issue has been reported.\nThe maintenance team will be notified.")
-                    .font(.system(size: , weight: .regular, design: .rounded))
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
                     .foregroundStyle(Color.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -338,7 +338,7 @@ struct DriverReportIssueView: View {
 
             Button(action: { dismiss() }) {
                 Text("Done")
-                    .font(.system(size: , weight: .medium, design: .rounded))
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
                     .fontWeight(.semibold)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -356,11 +356,11 @@ struct DriverReportIssueView: View {
     private var photosSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("Damage Photos", systemImage: "camera.fill")
-                .font(.system(size: , weight: .semibold, design: .rounded))
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
             Text("Add photos to verify vehicle damage (up to 5)")
-                .font(.system(size: , weight: .regular, design: .rounded))
+                .font(.system(size: 16, weight: .regular, design: .rounded))
                 .foregroundStyle(Color.secondary)
 
             if !capturedImages.isEmpty {
@@ -397,7 +397,7 @@ struct DriverReportIssueView: View {
                     Image(systemName: "plus.circle.fill")
                         .foregroundStyle(Color.green)
                     Text(capturedImages.isEmpty ? "Add Photos" : "Add More Photos")
-                        .font(.system(size: , weight: .medium, design: .rounded))
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
                         .foregroundStyle(Color.green)
                 }
                 .frame(maxWidth: .infinity)

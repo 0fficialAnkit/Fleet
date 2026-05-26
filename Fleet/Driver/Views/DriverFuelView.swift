@@ -39,7 +39,7 @@ struct DriverFuelView: View {
                                 Image(systemName: "drop.fill")
                                     .foregroundStyle(Color.secondary)
                                 Text("Fuel Volume (Liters)")
-                                    .font(.system(size: , weight: .medium, design: .rounded))
+                                    .font(.system(size: 16, weight: .medium, design: .rounded))
                                     .foregroundStyle(Color.secondary)
                             }
                             TextField("0.0", text: $volume)
@@ -55,7 +55,7 @@ struct DriverFuelView: View {
                                 Image(systemName: "indianrupeesign")
                                     .foregroundStyle(Color.secondary)
                                 Text("Total Price Paid")
-                                    .font(.system(size: , weight: .medium, design: .rounded))
+                                    .font(.system(size: 16, weight: .medium, design: .rounded))
                                     .foregroundStyle(Color.secondary)
                             }
                             TextField("0.00", text: $price)
@@ -71,10 +71,10 @@ struct DriverFuelView: View {
                                 Image(systemName: "camera.fill")
                                     .foregroundStyle(Color.secondary)
                                 Text("Fuel Bill Photo")
-                                    .font(.system(size: , weight: .medium, design: .rounded))
+                                    .font(.system(size: 16, weight: .medium, design: .rounded))
                                     .foregroundStyle(Color.secondary)
                                 Text("(Required)")
-                                    .font(.system(size: , weight: .regular, design: .rounded))
+                                    .font(.system(size: 16, weight: .regular, design: .rounded))
                                     .foregroundStyle(Color.red)
                             }
 
@@ -113,10 +113,10 @@ struct DriverFuelView: View {
                                             .font(.system(size: 32))
                                             .foregroundStyle(Color.green)
                                         Text("Tap to attach bill photo")
-                                            .font(.system(size: , weight: .medium, design: .rounded))
+                                            .font(.system(size: 16, weight: .medium, design: .rounded))
                                             .foregroundStyle(Color.green)
                                         Text("Photo will be sent to Fleet Manager")
-                                            .font(.system(size: , weight: .regular, design: .rounded))
+                                            .font(.system(size: 16, weight: .regular, design: .rounded))
                                             .foregroundStyle(Color(UIColor.tertiaryLabel))
                                     }
                                     .frame(maxWidth: .infinity)
@@ -144,7 +144,7 @@ struct DriverFuelView: View {
                                     Text("Submit Fuel Log")
                                 }
                             }
-                            .font(.system(size: , weight: .medium, design: .rounded))
+                            .font(.system(size: 16, weight: .medium, design: .rounded))
                             .frame(maxWidth: .infinity)
                             .padding(16)
                             .background(!isFormValid || isSubmitting ? Color(UIColor.tertiarySystemFill) : Color.green)
@@ -167,7 +167,7 @@ struct DriverFuelView: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(Color.green)
                             Text("Synced with Fleet Manager")
-                                .font(.system(size: , weight: .medium, design: .rounded))
+                                .font(.system(size: 16, weight: .medium, design: .rounded))
                                 .foregroundStyle(Color.primary)
                             Spacer()
                         }
@@ -183,7 +183,7 @@ struct DriverFuelView: View {
 
                         if viewModel.fuelLogs.isEmpty {
                             Text("No fuel logs recorded yet.")
-                                .font(.system(size: , weight: .regular, design: .rounded))
+                                .font(.system(size: 16, weight: .regular, design: .rounded))
                                 .foregroundStyle(Color.secondary)
                         } else {
                             ForEach(viewModel.fuelLogs) { log in
@@ -193,14 +193,14 @@ struct DriverFuelView: View {
                                             Image(systemName: "drop.fill")
                                                 .foregroundColor(Color.green)
                                             Text("\(String(format: "%.1f", log.litersUsed ?? 0.0)) Liters")
-                                                .font(.system(size: , weight: .semibold, design: .rounded))
+                                                .font(.system(size: 18, weight: .semibold, design: .rounded))
                                                 .foregroundColor(Color.primary)
                                         }
                                         HStack {
                                             Image(systemName: "calendar")
                                                 .foregroundColor(Color.secondary)
                                             Text((log.recordedAt ?? Date()).formatted(date: .abbreviated, time: .shortened))
-                                                .font(.system(size: , weight: .regular, design: .rounded))
+                                                .font(.system(size: 16, weight: .regular, design: .rounded))
                                                 .foregroundColor(Color.secondary)
                                         }
                                     }

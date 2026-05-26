@@ -73,7 +73,7 @@ struct DriverChecklistView: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundStyle(Color.yellow)
                             Text("Items marked with ● are mandatory")
-                                .font(.system(size: , weight: .regular, design: .rounded))
+                                .font(.system(size: 16, weight: .regular, design: .rounded))
                                 .foregroundStyle(Color.secondary)
                         }
                         .padding(.horizontal, 4)
@@ -98,7 +98,7 @@ struct DriverChecklistView: View {
                                     VStack(alignment: .leading, spacing: 2) {
                                         HStack(spacing: 6) {
                                             Text(item.name)
-                                                .font(.system(size: , weight: .regular, design: .rounded))
+                                                .font(.system(size: 16, weight: .regular, design: .rounded))
                                                 .foregroundColor(Color.primary)
                                             if item.mandatory {
                                                 Circle()
@@ -108,7 +108,7 @@ struct DriverChecklistView: View {
                                         }
                                         if item.mandatory {
                                             Text("Required")
-                                                .font(.system(size: , weight: .medium, design: .rounded))
+                                                .font(.system(size: 16, weight: .medium, design: .rounded))
                                                 .foregroundStyle(Color.red)
                                         }
                                     }
@@ -143,12 +143,12 @@ struct DriverChecklistView: View {
                                 Image(systemName: "camera.fill")
                                     .foregroundStyle(Color.green)
                                 Text("Vehicle Inspection Photos")
-                                    .font(.system(size: , weight: .semibold, design: .rounded))
+                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
                                     .foregroundStyle(Color.primary)
                             }
 
                             Text("Upload photos of any damage or concerns found during inspection")
-                                .font(.system(size: , weight: .regular, design: .rounded))
+                                .font(.system(size: 16, weight: .regular, design: .rounded))
                                 .foregroundStyle(Color.secondary)
 
                             // Photo grid
@@ -186,7 +186,7 @@ struct DriverChecklistView: View {
                                     Image(systemName: "plus.circle.fill")
                                         .foregroundStyle(Color.green)
                                     Text(capturedImages.isEmpty ? "Add Photos" : "Add More Photos")
-                                        .font(.system(size: , weight: .medium, design: .rounded))
+                                        .font(.system(size: 16, weight: .medium, design: .rounded))
                                         .foregroundStyle(Color.green)
                                 }
                                 .frame(maxWidth: .infinity)
@@ -203,12 +203,12 @@ struct DriverChecklistView: View {
                         // MARK: - Additional Notes
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Additional Notes")
-                                .font(.system(size: , weight: .semibold, design: .rounded))
+                                .font(.system(size: 18, weight: .semibold, design: .rounded))
                                 .foregroundStyle(Color.primary)
 
                             TextField("Note any issues, damage, or observations...", text: $additionalNotes, axis: .vertical)
                                 .lineLimit(3...6)
-                                .font(.system(size: , weight: .regular, design: .rounded))
+                                .font(.system(size: 16, weight: .regular, design: .rounded))
                                 .padding(16)
                                 .background(Color(UIColor.secondarySystemBackground))
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -222,7 +222,7 @@ struct DriverChecklistView: View {
                 VStack(spacing: 8) {
                     if !allMandatoryChecked {
                         Text("Complete all mandatory items to submit")
-                            .font(.system(size: , weight: .regular, design: .rounded))
+                            .font(.system(size: 16, weight: .regular, design: .rounded))
                             .foregroundStyle(Color.red)
                     }
 
@@ -235,7 +235,7 @@ struct DriverChecklistView: View {
                                 Text(isSubmitted ? "Submitted Successfully" : "Submit Inspection")
                             }
                         }
-                        .font(.system(size: , weight: .semibold, design: .rounded))
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
                         .foregroundColor(allMandatoryChecked && !isSubmitted ? Color(UIColor.systemBackground) : Color(UIColor.tertiaryLabel))
                         .frame(maxWidth: .infinity)
                         .padding(16)
@@ -291,12 +291,12 @@ struct DriverChecklistView: View {
 
             HStack {
                 Text("\(checkedCount)/\(totalCount) checked")
-                    .font(.system(size: , weight: .regular, design: .rounded))
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
                     .foregroundStyle(Color(UIColor.tertiaryLabel))
                 Spacer()
                 if allMandatoryChecked {
                     Text("All mandatory items ✓")
-                        .font(.system(size: , weight: .regular, design: .rounded))
+                        .font(.system(size: 16, weight: .regular, design: .rounded))
                         .foregroundStyle(Color.green)
                 }
             }
