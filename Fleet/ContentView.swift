@@ -10,6 +10,7 @@ import Supabase
 
 struct ContentView: View {
     @State private var authViewModel = AuthViewModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
@@ -57,6 +58,13 @@ struct ContentView: View {
             await authViewModel.checkUserSession()
             if authViewModel.isAuthenticated {
                 await RealtimeManager.shared.subscribeAll()
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                Task {
+                    await authViewModel.verifySessionStatus()
+                }
             }
         }
     }

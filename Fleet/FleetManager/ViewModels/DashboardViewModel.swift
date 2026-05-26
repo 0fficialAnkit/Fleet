@@ -61,7 +61,12 @@ final class DashboardViewModel {
     }
 
     var recentOrders: [Trip] {
-        Array(trips.prefix(3))
+        let sorted = trips.sorted {
+            let lhs = $0.startTime ?? .distantPast
+            let rhs = $1.startTime ?? .distantPast
+            return lhs > rhs
+        }
+        return Array(sorted.prefix(3))
     }
 
     var maintenanceVehicles: [Vehicle] {
