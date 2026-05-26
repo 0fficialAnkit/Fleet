@@ -17,11 +17,10 @@ struct SignInView: View {
 
     @Environment(AuthViewModel.self) private var authViewModel
 
-
     // MARK: - Body
     var body: some View {
         ZStack {
-            Color(UIColor.systemGroupedBackground)
+            Color(.systemGroupedBackground)
                 .ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 0) {
@@ -34,7 +33,7 @@ struct SignInView: View {
                     Spacer()
                         .frame(height: 28)
                     inputFields
-                    
+
                     Spacer()
                         .frame(height: 28)
                     actionButton
@@ -49,11 +48,11 @@ struct SignInView: View {
     var appIcon: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 22)
-                .fill(Color.blue)
+                .fill(Color.teal)
                 .frame(width: 80, height: 80)
             Image(systemName: "truck.box.fill")
                 .font(.system(size: 36))
-                .foregroundColor(Color(UIColor.systemBackground))
+                .foregroundColor(Color(.systemBackground))
         }
     }
     // MARK: - Title
@@ -81,18 +80,18 @@ struct SignInView: View {
                 "",
                 text: $emailOrPhone,
                 prompt: Text("Enter email or phone")
-                    .foregroundColor(Color(UIColor.placeholderText))
+                    .foregroundColor(Color(.placeholderText))
             )
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
                 .foregroundColor(Color.primary)
                 .padding(.horizontal, 18)
                 .frame(height: 56)
-                .background(Color(UIColor.secondarySystemBackground))
+                .background(Color(.secondarySystemBackground))
                 .cornerRadius(14)
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color(UIColor.separator), lineWidth: 1)
+                        .stroke(Color(.separator), lineWidth: 1)
                 )
 
             HStack {
@@ -101,14 +100,14 @@ struct SignInView: View {
                         "",
                         text: $password,
                         prompt: Text("Password")
-                            .foregroundColor(Color(UIColor.placeholderText))
+                            .foregroundColor(Color(.placeholderText))
                     )
                 } else {
                     SecureField(
                         "",
                         text: $password,
                         prompt: Text("Password")
-                            .foregroundColor(Color(UIColor.placeholderText))
+                            .foregroundColor(Color(.placeholderText))
                     )
                 }
                 Button {
@@ -121,11 +120,11 @@ struct SignInView: View {
             .foregroundColor(Color.primary)
             .padding(.horizontal, 18)
             .frame(height: 56)
-            .background(Color(UIColor.secondarySystemBackground))
+            .background(Color(.secondarySystemBackground))
             .cornerRadius(14)
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color(UIColor.separator), lineWidth: 1)
+                    .stroke(Color(.separator), lineWidth: 1)
             )
         }
     }
@@ -139,18 +138,18 @@ struct SignInView: View {
         } label: {
             if authViewModel.isLoading {
                 ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: isButtonDisabled ? Color(UIColor.tertiaryLabel) : Color(UIColor.systemBackground)))
+                    .progressViewStyle(CircularProgressViewStyle(tint: isButtonDisabled ? Color(.tertiaryLabel) : Color(.systemBackground)))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(isButtonDisabled ? Color(UIColor.tertiarySystemFill) : Color.blue)
+                    .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.teal)
                     .cornerRadius(16)
             } else {
                 Text("Sign In")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(isButtonDisabled ? Color(UIColor.tertiaryLabel) : Color(UIColor.systemBackground))
+                    .foregroundColor(isButtonDisabled ? Color(.tertiaryLabel) : Color(.systemBackground))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(isButtonDisabled ? Color(UIColor.tertiarySystemFill) : Color.blue)
+                    .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.teal)
                     .cornerRadius(16)
             }
         }

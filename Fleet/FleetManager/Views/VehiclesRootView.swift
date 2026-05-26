@@ -6,7 +6,7 @@ struct VehiclesRootView: View {
 
     var body: some View {
         ZStack {
-            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+            Color(.systemGroupedBackground).ignoresSafeArea()
             VehiclesView(viewModel: vehiclesViewModel)
         }
         .navigationTitle("Vehicles")
@@ -17,7 +17,7 @@ struct VehiclesRootView: View {
                         .font(.system(size: 17, weight: .medium))
                         .foregroundStyle(Color.primary)
                         .frame(width: 38, height: 38)
-//                        .glassEffect(in: Circle())
+//                        .background(.ultraThinMaterial, in: Circle())
                 }
                 .buttonStyle(.plain)
             }

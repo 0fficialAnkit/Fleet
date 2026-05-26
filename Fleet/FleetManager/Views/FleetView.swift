@@ -22,7 +22,7 @@ struct FleetView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     Picker("Fleet Section", selection: $selectedTab) {
@@ -54,7 +54,7 @@ struct FleetView: View {
                             .font(.system(size: 17, weight: .medium))
                             .foregroundStyle(Color.primary)
                             .frame(width: 38, height: 38)
-//                            .glassEffect(in: Circle())
+//                            .background(.ultraThinMaterial, in: Circle())
                     }
                     .buttonStyle(.plain)
                 }

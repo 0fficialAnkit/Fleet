@@ -5,58 +5,58 @@ struct AddEmployeeView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: EmployeesViewModel
     let roleName: String
-    
+
     @State private var fullName = ""
     @State private var email = ""
     @State private var password = ""
     @State private var phone = ""
     @State private var licenseNumber = ""
     @State private var isPasswordVisible = false
-    
+
     var isDriverSelected: Bool {
         return roleName.lowercased() == "driver"
     }
-    
+
     /// Map display role to database role string
     var dbRole: String {
         isDriverSelected ? "driver" : "maintenance"
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
-                
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 ScrollView {
                     VStack(spacing: 24) {
-                        
+
                         // Error message
                         if let error = viewModel.errorMessage {
                             Text(error)
-                                .font(.system(size: 14, weight: .regular, design: .rounded))
+                                .font(.subheadline)
                                 .foregroundColor(Color.red)
                                 .padding(.horizontal, 16)
                         }
-                        
+
                         VStack(alignment: .leading, spacing: 8) {
                             SectionHeader(title: "Personal Details")
                                 .padding(.horizontal, 16)
-                            
+
                                 VStack(spacing: 0) {
                                     TextField("Full Name", text: $fullName)
                                         .padding(.vertical, 12)
                                         .foregroundColor(Color.primary)
-                                    
-                                    Divider().background(Color(UIColor.separator))
-                                    
+
+                                    Divider().background(Color(.separator))
+
                                     TextField("Email", text: $email)
                                         .keyboardType(.emailAddress)
                                         .autocapitalization(.none)
                                         .padding(.vertical, 12)
                                         .foregroundColor(Color.primary)
-                                        
-                                    Divider().background(Color(UIColor.separator))
-                                    
+
+                                    Divider().background(Color(.separator))
+
                                     HStack {
                                         if isPasswordVisible {
                                             TextField("Password", text: $password)
@@ -65,7 +65,7 @@ struct AddEmployeeView: View {
                                             SecureField("Password", text: $password)
                                                 .foregroundColor(Color.primary)
                                         }
-                                        
+
                                         Button(action: {
                                             isPasswordVisible.toggle()
                                         }) {
@@ -74,29 +74,29 @@ struct AddEmployeeView: View {
                                         }
                                     }
                                     .padding(.vertical, 12)
-                                    
-                                    Divider().background(Color(UIColor.separator))
-                                    
+
+                                    Divider().background(Color(.separator))
+
                                     TextField("Phone", text: $phone)
                                         .keyboardType(.phonePad)
                                         .padding(.vertical, 12)
                                         .foregroundColor(Color.primary)
-                                    
+
                                     if isDriverSelected {
-                                        Divider().background(Color(UIColor.separator))
-                                        
+                                        Divider().background(Color(.separator))
+
                                         TextField("Driver License Number", text: $licenseNumber)
                                             .padding(.vertical, 12)
                                             .foregroundColor(Color.primary)
                                     }
                                 }
                                 .padding(16)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                                         .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                                 )
-                                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
                             .padding(.horizontal, 16)
                         }
                     }
@@ -110,9 +110,9 @@ struct AddEmployeeView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(Color.blue)
+                    .foregroundColor(Color.teal)
                 }
-                
+
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         guard !fullName.isEmpty, !email.isEmpty, !password.isEmpty else { return }
@@ -149,7 +149,7 @@ struct AddEmployeeView: View {
                             }
                         }
                     }
-                    .foregroundColor(Color.blue)
+                    .foregroundColor(Color.teal)
                     .bold()
                     .disabled(fullName.isEmpty || email.isEmpty || password.isEmpty || viewModel.isCreatingUser)
                 }
@@ -163,11 +163,11 @@ struct AddEmployeeView: View {
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .scaleEffect(1.2)
                             Text("Creating user...")
-                                .font(.system(size: , weight: .medium, design: .rounded))
+                                .font(.body.weight(.medium))
                                 .foregroundColor(.white)
                         }
                         .padding(32)
-                        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     }
                 }
             }

@@ -64,7 +64,7 @@ final class EmployeesViewModel {
     func addEmployee(fullName: String, email: String, password: String, phone: String, licenseNumber: String?, role: String) async throws {
         isCreatingUser = true
         defer { isCreatingUser = false }
-        
+
         _ = try await ProfileService.createUserLocally(
             email: email,
             password: password,
@@ -73,7 +73,7 @@ final class EmployeesViewModel {
             licenseNumber: licenseNumber,
             role: role
         )
-        
+
         await loadData()
     }
 

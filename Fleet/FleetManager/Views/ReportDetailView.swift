@@ -21,24 +21,24 @@ struct ReportDetailView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 24) {
-                        
+
                         // Header: Vehicle & License Plate
                         VStack(alignment: .leading, spacing: 6) {
                             Text(report.vehicleName)
-                                .font(.system(size: 26, weight: .bold, design: .rounded))
+                                .font(.title2.bold())
                                 .foregroundStyle(Color.primary)
-                            
+
                             HStack {
                                 Text(report.licensePlate)
                                     .font(.system(size: 16, weight: .semibold, design: .monospaced))
-                                    .foregroundStyle(Color.blue)
-                                
+                                    .foregroundStyle(Color.teal)
+
                                 Spacer()
-                                
+
                                 // Severity Badge
                                 StatusBadge(
                                     text: report.severity.rawValue.capitalized,
@@ -47,18 +47,18 @@ struct ReportDetailView: View {
                             }
                         }
                         .padding(.top, 8)
-                        
-                        Divider().background(Color(UIColor.separator))
-                        
+
+                        Divider().background(Color(.separator))
+
                         // Driver and DateTime Details
                         VStack(alignment: .leading, spacing: 16) {
                             // Driver Details from Database
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Reported By")
                                     .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                    .foregroundStyle(Color(.tertiaryLabel))
                                     .textCase(.uppercase)
-                                
+
                                 if let driver = driverProfile {
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(driver.fullName)
@@ -79,44 +79,44 @@ struct ReportDetailView: View {
                                         .foregroundStyle(Color.primary)
                                 }
                             }
-                            
+
                             // Date details
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Reported On")
                                     .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                    .foregroundStyle(Color(.tertiaryLabel))
                                     .textCase(.uppercase)
                                 Text(report.submittedAt.formatted(date: .abbreviated, time: .shortened))
                                     .font(.system(size: 15))
                                     .foregroundStyle(Color.secondary)
                             }
                         }
-                        
-                        Divider().background(Color(UIColor.separator))
-                        
+
+                        Divider().background(Color(.separator))
+
                         // Description Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Issue Description")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                .foregroundStyle(Color(.tertiaryLabel))
                                 .textCase(.uppercase)
-                            
+
                             Text(report.description)
                                 .font(.system(size: 16, weight: .regular))
                                 .foregroundStyle(Color.secondary)
                                 .lineSpacing(4)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
-                        
-                        Divider().background(Color(UIColor.separator))
-                        
+
+                        Divider().background(Color(.separator))
+
                         // Assignment Section (iOS Native Drop Down)
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Assign Maintenance Staff")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                .foregroundStyle(Color(.tertiaryLabel))
                                 .textCase(.uppercase)
-                            
+
                             Menu {
                                 Button(action: {
                                     withAnimation {
@@ -130,7 +130,7 @@ struct ReportDetailView: View {
                                         }
                                     }
                                 }
-                                
+
                                 ForEach(viewModel.maintenanceStaff) { staff in
                                     Button(action: {
                                         withAnimation {
@@ -150,8 +150,8 @@ struct ReportDetailView: View {
                                 HStack {
                                     Image(systemName: "wrench.and.screwdriver.fill")
                                         .font(.system(size: 16))
-                                        .foregroundStyle(Color.blue)
-                                    
+                                        .foregroundStyle(Color.teal)
+
                                     if let selectedStaffId = selectedStaffId {
                                         Text(viewModel.staffName(selectedStaffId))
                                             .font(.system(size: 16, weight: .medium))
@@ -161,12 +161,12 @@ struct ReportDetailView: View {
                                             .font(.system(size: 16, weight: .medium))
                                             .foregroundStyle(Color.secondary)
                                     }
-                                    
+
                                     Spacer()
-                                    
+
                                     Image(systemName: "chevron.up.chevron.down")
                                         .font(.system(size: 14))
-                                        .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                        .foregroundStyle(Color(.tertiaryLabel))
                                 }
                                 .padding(.vertical, 12)
                                 .padding(.horizontal, 16)
@@ -180,7 +180,7 @@ struct ReportDetailView: View {
                                 )
                             }
                         }
-                        
+
                     }
                     .padding(24)
                     .padding(.bottom, 40)
@@ -197,7 +197,7 @@ struct ReportDetailView: View {
                     Button("Save") {
                         handleSave()
                     }
-                    .foregroundStyle(Color.blue)
+                    .foregroundStyle(Color.teal)
                     .fontWeight(.semibold)
                 }
             }

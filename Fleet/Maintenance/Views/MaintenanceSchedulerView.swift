@@ -13,7 +13,7 @@ struct MaintenanceSchedulerView: View {
     @Environment(AuthViewModel.self) private var authViewModel
 
     init() {
-        UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(Color.orange)
+        UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(Color.brown)
         UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
         UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor(Color.secondary)], for: .normal)
     }
@@ -21,7 +21,7 @@ struct MaintenanceSchedulerView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 ScrollView {
                     VStack(spacing: 0) {
@@ -122,34 +122,34 @@ private struct DayCell: View {
     private var dayNumber: String {
         let f = DateFormatter(); f.dateFormat = "d"; return f.string(from: date)
     }
-    private var labelColor: Color { isSelected ? Color.orange : Color(UIColor.tertiaryLabel) }
+    private var labelColor: Color { isSelected ? Color.brown : Color(.tertiaryLabel) }
     private var numberColor: Color { isSelected ? Color.primary : Color.secondary }
 
     var body: some View {
         VStack(spacing: 6) {
             Text(dayName)
-                .font(.system(size: , weight: .medium, design: .rounded))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(labelColor)
                 .animation(.easeInOut(duration: 0.25), value: isSelected)
 
             Text(dayNumber)
-                .font(isSelected ? .system(size: 20, weight: .bold, design: .rounded) : .system(size: , weight: .semibold, design: .rounded))
+                .font(isSelected ? .title3.bold() : .headline)
                 .foregroundStyle(numberColor)
                 .animation(.spring(response: 0.3), value: isSelected)
 
             // Combined event dot indicator
             Circle()
-                .fill(taskCount > 0 ? Color.orange : Color.clear)
+                .fill(taskCount > 0 ? Color.brown : Color.clear)
                 .frame(width: 5, height: 5)
         }
         .frame(width: 54, height: 72)
         .background {
             if isSelected {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.orange.opacity(0.15))
+                    .fill(Color.brown.opacity(0.15))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.orange.opacity(0.4), lineWidth: 1.2)
+                            .stroke(Color.brown.opacity(0.4), lineWidth: 1.2)
                     )
                     .matchedGeometryEffect(id: "calendarSelectedBG", in: namespace)
             }
@@ -157,7 +157,7 @@ private struct DayCell: View {
         .overlay {
             if isToday && !isSelected {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(Color.blue.opacity(pulseOpacity), lineWidth: 1.5)
+                    .stroke(Color.teal.opacity(pulseOpacity), lineWidth: 1.5)
                     .scaleEffect(pulseScale)
                     .onAppear { startPulse() }
             }
@@ -218,11 +218,11 @@ private struct TaskListSection: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(dateTitle)
-                        .font(.system(size: , weight: .semibold, design: .rounded))
+                        .font(.headline)
                         .foregroundStyle(Color.primary)
                     Text("\(itemsCount) \(viewModel.selectedTab.rawValue.lowercased()) assigned")
-                        .font(.system(size: , weight: .regular, design: .rounded))
-                        .foregroundStyle(Color(UIColor.tertiaryLabel))
+                        .font(.footnote)
+                        .foregroundStyle(Color(.tertiaryLabel))
                 }
                 Spacer()
                 if itemsCount > 0 {
@@ -302,7 +302,7 @@ private struct StatusLegendChip: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Color(UIColor.tertiarySystemBackground).opacity(0.6))
+        .background(Color(.tertiarySystemBackground).opacity(0.6))
         .clipShape(Capsule())
     }
 }
@@ -324,11 +324,11 @@ private struct TaskCard: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(task.vehicleName)
-                                .font(.system(size: , weight: .semibold, design: .rounded))
+                                .font(.headline)
                                 .foregroundStyle(Color.primary)
                             Text(task.vehicleNumber)
-                                .font(.system(size: , weight: .regular, design: .rounded))
-                                .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                .font(.footnote)
+                                .foregroundStyle(Color(.tertiaryLabel))
                         }
                         Spacer()
                         StatusBadge(text: task.status.rawValue, color: statusColor(task.status))
@@ -336,8 +336,8 @@ private struct TaskCard: View {
 
                     // Task type
                     Text(taskTypeLabel(task.taskType))
-                        .font(.system(size: , weight: .medium, design: .rounded))
-                        .foregroundStyle(Color.orange)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(Color.brown)
 
                     // Info row
                     HStack(spacing: 16) {
@@ -350,10 +350,10 @@ private struct TaskCard: View {
                     HStack(spacing: 5) {
                         Image(systemName: "person.fill")
                             .font(.caption2)
-                            .foregroundStyle(Color(UIColor.tertiaryLabel))
+                            .foregroundStyle(Color(.tertiaryLabel))
                         Text("Assigned by \(task.assignedBy)")
-                            .font(.system(size: , weight: .regular, design: .rounded))
-                            .foregroundStyle(Color(UIColor.tertiaryLabel))
+                            .font(.footnote)
+                            .foregroundStyle(Color(.tertiaryLabel))
                     }
                 }
                 .padding(.vertical, 16)
@@ -361,16 +361,12 @@ private struct TaskCard: View {
                 .padding(.leading, 16)
             }
         }
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(statusColor(task.status).opacity(0.5), lineWidth: 1.0)
         )
-        .shadow(
-            color: statusColor(task.status).opacity(0.15),
-            radius: 8,
-            y: 4
-        )
+
         .scaleEffect(isPressed ? 0.97 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
         .simultaneousGesture(
@@ -397,11 +393,11 @@ private struct WorkOrderCard: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("WO-\(workOrder.id.uuidString.prefix(6).uppercased())")
-                                .font(.system(size: , weight: .semibold, design: .rounded))
+                                .font(.headline)
                                 .foregroundStyle(Color.primary)
                             Text("\(workOrder.vehicleName) · \(workOrder.vehicleNumber)")
-                                .font(.system(size: , weight: .regular, design: .rounded))
-                                .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                .font(.footnote)
+                                .foregroundStyle(Color(.tertiaryLabel))
                         }
                         Spacer()
                         StatusBadge(
@@ -422,9 +418,9 @@ private struct WorkOrderCard: View {
                         HStack(spacing: 6) {
                             Image(systemName: "gearshape.fill")
                                 .font(.system(size: 11))
-                                .foregroundStyle(Color.orange)
+                                .foregroundStyle(Color.brown)
                             Text(workOrder.partsUsed.joined(separator: ", "))
-                                .font(.system(size: , weight: .medium, design: .rounded))
+                                .font(.caption.weight(.medium))
                                 .foregroundStyle(Color.secondary)
                                 .lineLimit(1)
                         }
@@ -435,16 +431,12 @@ private struct WorkOrderCard: View {
                 .padding(.leading, 16)
             }
         }
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(statusColor(workOrder.status).opacity(0.5), lineWidth: 1.0)
         )
-        .shadow(
-            color: statusColor(workOrder.status).opacity(0.15),
-            radius: 8,
-            y: 4
-        )
+
         .scaleEffect(isPressed ? 0.97 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
         .simultaneousGesture(
@@ -494,7 +486,7 @@ private struct InfoPill: View {
                 .font(.system(size: 11))
                 .foregroundStyle(color)
             Text(text)
-                .font(.system(size: , weight: .medium, design: .rounded))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(color)
         }
         .padding(.horizontal, 8)
@@ -517,12 +509,12 @@ private struct EmptyScheduleView: View {
         VStack(spacing: 24) {
             ZStack {
                 Circle()
-                    .fill(Color.orange.opacity(0.08))
+                    .fill(Color.brown.opacity(0.08))
                     .frame(width: 120, height: 120)
 
                 Image(systemName: "wrench.and.screwdriver.fill")
                     .font(.system(size: 48, weight: .light))
-                    .foregroundStyle(Color.orange.opacity(0.6))
+                    .foregroundStyle(Color.brown.opacity(0.6))
                     .symbolEffect(.pulse)
                     .offset(y: floatOffset)
                     .onAppear {
@@ -534,11 +526,11 @@ private struct EmptyScheduleView: View {
 
             VStack(spacing: 8) {
                 Text(title)
-                    .font(.system(size: , weight: .semibold, design: .rounded))
+                    .font(.headline)
                     .foregroundStyle(Color.primary)
                 Text(message)
-                    .font(.system(size: , weight: .regular, design: .rounded))
-                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+                    .font(.body)
+                    .foregroundStyle(Color(.tertiaryLabel))
                     .multilineTextAlignment(.center)
             }
         }
@@ -561,7 +553,7 @@ struct TaskDetailSheet: View {
 
     var body: some View {
         ZStack {
-            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+            Color(.systemGroupedBackground).ignoresSafeArea()
 
             ScrollView {
                     VStack(spacing: 24) {
@@ -576,11 +568,11 @@ struct TaskDetailSheet: View {
 
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(currentTask.vehicleName)
-                                    .font(.system(size: , weight: .semibold, design: .rounded))
+                                    .font(.headline)
                                     .foregroundStyle(Color.primary)
                                 Text(currentTask.vehicleNumber)
-                                    .font(.system(size: , weight: .regular, design: .rounded))
-                                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                    .font(.footnote)
+                                    .foregroundStyle(Color(.tertiaryLabel))
                             }
                             Spacer()
                             StatusBadge(text: currentTask.status.rawValue, color: statusColor(currentTask.status))
@@ -596,13 +588,13 @@ struct TaskDetailSheet: View {
                         // MARK: Vehicle Details
                         SheetSection(title: "Task Details") {
                             InfoRow(icon: "car.fill",      label: "Vehicle",   value: "\(currentTask.vehicleName) · \(currentTask.vehicleNumber)")
-                            Divider().background(Color(UIColor.separator))
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "wrench.fill",   label: "Type",      value: taskTypeLabel(currentTask.taskType))
-                            Divider().background(Color(UIColor.separator))
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "flag.fill",     label: "Priority",  value: currentTask.priority.rawValue, valueColor: priorityColor(currentTask.priority))
-                            Divider().background(Color(UIColor.separator))
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "clock.fill",    label: "Time",      value: "\(currentTask.scheduledTime) · \(currentTask.estimatedDuration)")
-                            Divider().background(Color(UIColor.separator))
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "person.fill",   label: "Assigned By", value: currentTask.assignedBy)
                         }
 
@@ -615,7 +607,7 @@ struct TaskDetailSheet: View {
                             HStack {
                                 GeometryReader { geo in
                                     ZStack(alignment: .leading) {
-                                        RoundedRectangle(cornerRadius: 4).fill(Color(UIColor.tertiarySystemBackground)).frame(height: 6)
+                                        RoundedRectangle(cornerRadius: 4).fill(Color(.tertiarySystemBackground)).frame(height: 6)
                                         RoundedRectangle(cornerRadius: 4)
                                             .fill(Color.green)
                                             .frame(width: totalCount > 0 ? geo.size.width * CGFloat(doneCount) / CGFloat(totalCount) : 0, height: 6)
@@ -624,19 +616,19 @@ struct TaskDetailSheet: View {
                                 .frame(height: 6)
 
                                 Text("\(doneCount)/\(totalCount)")
-                                    .font(.system(size: , weight: .regular, design: .rounded))
-                                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                    .font(.footnote)
+                                    .foregroundStyle(Color(.tertiaryLabel))
                                     .frame(width: 36, alignment: .trailing)
                             }
 
-                            Divider().background(Color(UIColor.separator))
+                            Divider().background(Color(.separator))
 
                             ForEach(items) { item in
                                 ChecklistRow(item: item) {
                                     viewModel.toggleChecklist(taskId: currentTask.id, itemId: item.id)
                                 }
                                 if item.id != items.last?.id {
-                                    Divider().background(Color(UIColor.separator)).padding(.leading, 32)
+                                    Divider().background(Color(.separator)).padding(.leading, 32)
                                 }
                             }
                         }
@@ -647,15 +639,15 @@ struct TaskDetailSheet: View {
                                 ForEach(Array(currentTask.partsNeeded.enumerated()), id: \.offset) { idx, part in
                                     HStack(spacing: 16) {
                                         Image(systemName: "gearshape.fill")
-                                            .foregroundStyle(Color.orange)
+                                            .foregroundStyle(Color.brown)
                                             .frame(width: 20)
                                         Text(part)
-                                            .font(.system(size: , weight: .regular, design: .rounded))
+                                            .font(.body)
                                             .foregroundStyle(Color.primary)
                                         Spacer()
                                     }
                                     if idx < currentTask.partsNeeded.count - 1 {
-                                        Divider().background(Color(UIColor.separator))
+                                        Divider().background(Color(.separator))
                                     }
                                 }
                             }
@@ -665,7 +657,7 @@ struct TaskDetailSheet: View {
                         SheetSection(title: "Service Notes") {
                             TextField("Add notes, observations, or findings...", text: $repairNotes, axis: .vertical)
                                 .lineLimit(3...6)
-                                .font(.system(size: , weight: .regular, design: .rounded))
+                                .font(.body)
                                 .foregroundStyle(Color.primary)
                         }
 
@@ -673,10 +665,10 @@ struct TaskDetailSheet: View {
                         SheetSection(title: "Previous History") {
                             HStack(alignment: .top, spacing: 16) {
                                 Image(systemName: "clock.arrow.circlepath")
-                                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                    .foregroundStyle(Color(.tertiaryLabel))
                                     .frame(width: 20)
                                 Text(currentTask.previousNote)
-                                    .font(.system(size: , weight: .regular, design: .rounded))
+                                    .font(.body)
                                     .foregroundStyle(Color.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
@@ -689,7 +681,7 @@ struct TaskDetailSheet: View {
                                     .foregroundStyle(Color.yellow)
                                     .font(.system(size: 18, weight: .semibold))
                                 Text(currentTask.aiRecommendation)
-                                    .font(.system(size: , weight: .regular, design: .rounded))
+                                    .font(.body)
                                     .foregroundStyle(Color.primary)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
@@ -698,7 +690,7 @@ struct TaskDetailSheet: View {
                         // MARK: Action Buttons
                         VStack(spacing: 16) {
                             if currentTask.status == .pending || currentTask.status == .delayed {
-                                SheetActionButton(title: "Start Task", icon: "play.circle.fill", color: Color.orange) {
+                                SheetActionButton(title: "Start Task", icon: "play.circle.fill", color: Color.brown) {
                                     viewModel.updateTaskStatus(id: currentTask.id, to: .inProgress)
                                 }
                             }
@@ -746,7 +738,7 @@ struct WorkOrderDetailSheet: View {
 
     var body: some View {
         ZStack {
-            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+            Color(.systemGroupedBackground).ignoresSafeArea()
 
             ScrollView {
                     VStack(spacing: 24) {
@@ -759,11 +751,11 @@ struct WorkOrderDetailSheet: View {
 
                             VStack(alignment: .leading, spacing: 3) {
                                 Text("WO-\(currentWO.id.uuidString.prefix(8).uppercased())")
-                                    .font(.system(size: , weight: .semibold, design: .rounded))
+                                    .font(.headline)
                                     .foregroundStyle(Color.primary)
                                 Text("\(currentWO.vehicleName) · \(currentWO.vehicleNumber)")
-                                    .font(.system(size: , weight: .regular, design: .rounded))
-                                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                    .font(.footnote)
+                                    .foregroundStyle(Color(.tertiaryLabel))
                             }
                             Spacer()
                             StatusBadge(text: statusLabel(currentWO.status), color: statusColor(currentWO.status))
@@ -779,13 +771,13 @@ struct WorkOrderDetailSheet: View {
                         // MARK: Work Order Details
                         SheetSection(title: "Order Details") {
                             InfoRow(icon: "number",        label: "Order ID",    value: "WO-\(currentWO.id.uuidString.prefix(8).uppercased())")
-                            Divider().background(Color(UIColor.separator))
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "car.fill",      label: "Vehicle",     value: "\(currentWO.vehicleName) · \(currentWO.vehicleNumber)")
-                            Divider().background(Color(UIColor.separator))
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "flag.fill",     label: "Priority",    value: priorityLabel(currentWO.priority), valueColor: priorityColor(currentWO.priority))
-                            Divider().background(Color(UIColor.separator))
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "person.fill",   label: "Assigned To",  value: currentWO.assignedBy)
-                            Divider().background(Color(UIColor.separator))
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "calendar",      label: "Created At",   value: currentWO.createdAt.formatted(date: .abbreviated, time: .shortened))
                         }
 
@@ -794,10 +786,10 @@ struct WorkOrderDetailSheet: View {
                             Button(action: { showAddPartSheet = true }) {
                                 HStack(spacing: 8) {
                                     Image(systemName: "plus.circle.fill")
-                                        .foregroundStyle(Color.orange)
+                                        .foregroundStyle(Color.brown)
                                     Text("Add Part from Inventory")
-                                        .font(.system(size: , weight: .medium, design: .rounded))
-                                        .foregroundStyle(Color.orange)
+                                        .font(.body.weight(.medium))
+                                        .foregroundStyle(Color.brown)
                                     Spacer()
                                 }
                                 .padding(.vertical, 4)
@@ -805,20 +797,20 @@ struct WorkOrderDetailSheet: View {
                             .buttonStyle(.plain)
 
                             if !currentWO.partsUsed.isEmpty {
-                                Divider().background(Color(UIColor.separator))
+                                Divider().background(Color(.separator))
 
                                 ForEach(Array(currentWO.partsUsed.enumerated()), id: \.offset) { idx, part in
                                     HStack(spacing: 16) {
                                         Image(systemName: "gearshape.2.fill")
-                                            .foregroundStyle(Color.orange)
+                                            .foregroundStyle(Color.brown)
                                             .frame(width: 20)
                                         Text(part)
-                                            .font(.system(size: , weight: .regular, design: .rounded))
+                                            .font(.body)
                                             .foregroundStyle(Color.primary)
                                         Spacer()
                                     }
                                     if idx < currentWO.partsUsed.count - 1 {
-                                        Divider().background(Color(UIColor.separator))
+                                        Divider().background(Color(.separator))
                                     }
                                 }
                             }
@@ -836,7 +828,7 @@ struct WorkOrderDetailSheet: View {
                         SheetSection(title: "Service Notes") {
                             TextField("Add order details, notes or observations...", text: $notes, axis: .vertical)
                                 .lineLimit(3...6)
-                                .font(.system(size: , weight: .regular, design: .rounded))
+                                .font(.body)
                                 .foregroundStyle(Color.primary)
                                 .onChange(of: notes) { _, newValue in
                                     viewModel.updateWorkOrderNotes(id: currentWO.id, notes: newValue)
@@ -849,7 +841,7 @@ struct WorkOrderDetailSheet: View {
                         // MARK: Action Buttons
                         VStack(spacing: 16) {
                             if currentWO.status == .open {
-                                SheetActionButton(title: "Start Work Order", icon: "play.circle.fill", color: Color.orange) {
+                                SheetActionButton(title: "Start Work Order", icon: "play.circle.fill", color: Color.brown) {
                                     viewModel.updateWorkOrderStatus(id: currentWO.id, to: .inProgress)
                                 }
                             }
@@ -878,17 +870,17 @@ struct WorkOrderDetailSheet: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showAddPartSheet) {
                 ZStack {
-                    Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+                    Color(.systemGroupedBackground).ignoresSafeArea()
                     VStack(spacing: 20) {
                         Text("Add Spare Part")
-                            .font(.system(size: , weight: .semibold, design: .rounded))
+                            .font(.headline)
                             .foregroundStyle(Color.primary)
                             .padding(.top, 20)
 
                         TextField("Part Name (e.g. Air Filter)", text: $newPartName)
-                            .font(.system(size: , weight: .regular, design: .rounded))
+                            .font(.body)
                             .padding(12)
-                            .background(Color(UIColor.tertiarySystemBackground))
+                            .background(Color(.tertiarySystemBackground))
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                             .padding(.horizontal)
 
@@ -900,15 +892,15 @@ struct WorkOrderDetailSheet: View {
                             }
                         }) {
                             Text("Add to Consumed Parts")
-                                .font(.system(size: , weight: .semibold, design: .rounded))
+                                .font(.headline)
                                 .foregroundStyle(Color.primary)
                                 .padding()
                                 .frame(maxWidth: .infinity)
-                                .background(Color.orange)
+                                .background(Color.brown)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                                 .padding(.horizontal)
                         }
-                        
+
                         Spacer()
                     }
                 }
@@ -977,12 +969,12 @@ private struct SheetSection<Content: View>: View {
                 content()
             }
             .padding(16)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
             )
-            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
         }
     }
 }
@@ -999,14 +991,14 @@ private struct ChecklistRow: View {
         Button(action: { withAnimation(.spring(response: 0.3)) { onToggle() } }) {
             HStack(spacing: 16) {
                 Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(item.isChecked ? Color.green : Color(UIColor.quaternaryLabel))
+                    .foregroundStyle(item.isChecked ? Color.green : Color(.quaternaryLabel))
                     .font(.system(size: 20))
                     .symbolEffect(.bounce, value: item.isChecked)
 
                 Text(item.title)
-                    .font(.system(size: , weight: .regular, design: .rounded))
-                    .foregroundStyle(item.isChecked ? Color(UIColor.tertiaryLabel) : Color.primary)
-                    .strikethrough(item.isChecked, color: Color(UIColor.tertiaryLabel))
+                    .font(.body)
+                    .foregroundStyle(item.isChecked ? Color(.tertiaryLabel) : Color.primary)
+                    .strikethrough(item.isChecked, color: Color(.tertiaryLabel))
                     .animation(.easeInOut(duration: 0.2), value: item.isChecked)
 
                 Spacer()
@@ -1032,16 +1024,16 @@ private struct SheetActionButton: View {
                 Image(systemName: icon)
                 Text(title)
             }
-            .font(.system(size: , weight: .semibold, design: .rounded))
+            .font(.headline)
             .foregroundStyle(color)
             .frame(maxWidth: .infinity)
             .padding(16)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(color.opacity(0.35), lineWidth: 1)
             )
-            .shadow(color: color.opacity(0.2), radius: 8, y: 4)
+
         }
     }
 }
@@ -1060,11 +1052,11 @@ private struct SheetSecondaryButton: View {
                 Image(systemName: icon)
                 Text(title)
             }
-            .font(.system(size: , weight: .medium, design: .rounded))
+            .font(.body.weight(.medium))
             .foregroundStyle(Color.secondary)
             .frame(maxWidth: .infinity)
             .padding(16)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
@@ -1089,11 +1081,11 @@ private struct LaborStatBox: View {
                 .foregroundStyle(color)
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
-                    .font(.system(size: , weight: .semibold, design: .rounded))
+                    .font(.headline)
                     .foregroundStyle(Color.primary)
                 Text(label)
-                    .font(.system(size: , weight: .regular, design: .rounded))
-                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+                    .font(.footnote)
+                    .foregroundStyle(Color(.tertiaryLabel))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

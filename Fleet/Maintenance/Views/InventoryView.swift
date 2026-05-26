@@ -27,7 +27,7 @@ struct InventoryView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 if isLoading && inventoryItems.isEmpty {
                     ProgressView()
@@ -41,7 +41,7 @@ struct InventoryView: View {
                                 InventoryStat(
                                     value: "\(inventoryItems.count)",
                                     label: "Total Parts",
-                                    color: Color.orange
+                                    color: Color.brown
                                 )
                                 InventoryStat(
                                     value: "\(lowStockCount)",
@@ -63,22 +63,22 @@ struct InventoryView: View {
                                     .font(.system(size: 18, weight: .semibold))
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("AI Forecast")
-                                        .font(.system(size: , weight: .medium, design: .rounded))
+                                        .font(.body.weight(.medium))
                                         .foregroundStyle(Color.yellow)
                                     Text("High demand for **Oil Filters** expected next week. Consider restocking soon.")
-                                        .font(.system(size: , weight: .regular, design: .rounded))
+                                        .font(.footnote)
                                         .foregroundStyle(Color.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                                 Spacer(minLength: 0)
                             }
                             .padding(16)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                                     .stroke(Color.yellow.opacity(0.25), lineWidth: 0.8)
                             )
-                            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
                             .padding(.horizontal, 16)
 
                             // MARK: - Low Stock Filter Toggle
@@ -88,7 +88,7 @@ struct InventoryView: View {
                                         Image(systemName: showLowStockOnly ? "checkmark.circle.fill" : "exclamationmark.triangle")
                                             .foregroundStyle(Color.red)
                                         Text(showLowStockOnly ? "Showing Low Stock Only" : "Show Low Stock Only (\(lowStockCount))")
-                                            .font(.system(size: , weight: .medium, design: .rounded))
+                                            .font(.body.weight(.medium))
                                             .foregroundStyle(Color.red)
                                         Spacer()
                                     }
@@ -108,9 +108,9 @@ struct InventoryView: View {
                                 VStack(spacing: 16) {
                                     Image(systemName: "magnifyingglass")
                                         .font(.system(size: 40))
-                                        .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                        .foregroundStyle(Color(.tertiaryLabel))
                                     Text("No parts found")
-                                        .font(.system(size: , weight: .medium, design: .rounded))
+                                        .font(.body.weight(.medium))
                                         .foregroundStyle(Color.secondary)
                                 }
                                 .frame(maxWidth: .infinity)
@@ -179,15 +179,15 @@ private struct InventoryStat: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.system(size: , weight: .semibold, design: .rounded))
+                .font(.headline)
                 .foregroundStyle(color)
             Text(label)
-                .font(.system(size: , weight: .medium, design: .rounded))
-                .foregroundStyle(Color(UIColor.tertiaryLabel))
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color(.tertiaryLabel))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(color.opacity(0.2), lineWidth: 0.8)
@@ -214,20 +214,20 @@ struct InventoryRow: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.partName ?? "Unknown Part")
-                        .font(.system(size: , weight: .semibold, design: .rounded))
+                        .font(.headline)
                         .foregroundStyle(Color.primary)
                     Text("Unit Cost: ₹\(String(format: "%.2f", item.unitCost ?? 0.0))")
-                        .font(.system(size: , weight: .regular, design: .rounded))
+                        .font(.footnote)
                         .foregroundStyle(Color.secondary)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("\(item.stockQuantity ?? 0)")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(.title3.bold())
                         .foregroundStyle(isLowStock ? Color.red : Color.primary)
                     Text("in stock")
-                        .font(.system(size: , weight: .medium, design: .rounded))
-                        .foregroundStyle(Color(UIColor.tertiaryLabel))
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color(.tertiaryLabel))
                 }
             }
 
@@ -235,7 +235,7 @@ struct InventoryRow: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color(UIColor.tertiarySystemBackground))
+                        .fill(Color(.tertiarySystemBackground))
                         .frame(height: 6)
                     RoundedRectangle(cornerRadius: 4)
                         .fill(isLowStock ? Color.red : Color.green)
@@ -251,18 +251,18 @@ struct InventoryRow: View {
                         .font(.caption2)
                         .foregroundStyle(Color.red)
                     Text("Below reorder level (\(item.reorderLevel ?? 0)). Restock recommended.")
-                        .font(.system(size: , weight: .medium, design: .rounded))
+                        .font(.caption.weight(.medium))
                         .foregroundStyle(Color.red)
                 }
             }
         }
         .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(isLowStock ? Color.red.opacity(0.3) : Color.white.opacity(0.12), lineWidth: isLowStock ? 1 : 0.5)
         )
-        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
     }
 }
 
@@ -273,33 +273,33 @@ struct InventoryRow: View {
 // MARK: - InventoryItemSheet
 struct InventoryItemSheet: View {
     @Environment(\.dismiss) private var dismiss
-    
+
     let editingItem: Inventory?
     let onSave: () -> Void
-    
+
     @State private var partName: String = ""
     @State private var stockQuantity: String = ""
     @State private var reorderLevel: String = ""
     @State private var unitCost: String = ""
-    
+
     @State private var isSaving = false
     @State private var errorMessage: String?
-    
+
     @State private var showingDeleteAlert = false
     @State private var isDeleting = false
-    
+
     var isFormValid: Bool {
         !partName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
-                
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 ScrollView {
                     VStack(spacing: 20) {
-                        
+
                         if let errorMessage {
                             HStack(spacing: 10) {
                                 Image(systemName: "exclamationmark.triangle.fill")
@@ -314,7 +314,7 @@ struct InventoryItemSheet: View {
                             .cornerRadius(12)
                             .padding(.horizontal, 24)
                         }
-                        
+
                         VStack(alignment: .leading, spacing: 16) {
                             // Part Name
                             VStack(alignment: .leading, spacing: 6) {
@@ -322,19 +322,19 @@ struct InventoryItemSheet: View {
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(Color.secondary)
                                     .kerning(1.2)
-                                
-                                TextField("", text: $partName, prompt: Text("e.g. Brake Pads").foregroundColor(Color(UIColor.placeholderText)))
+
+                                TextField("", text: $partName, prompt: Text("e.g. Brake Pads").foregroundColor(Color(.placeholderText)))
                                     .foregroundColor(Color.primary)
                                     .padding(.horizontal, 18)
                                     .frame(height: 56)
-                                    .background(Color(UIColor.secondarySystemBackground))
+                                    .background(Color(.secondarySystemBackground))
                                     .cornerRadius(14)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 14)
-                                            .stroke(Color(UIColor.separator), lineWidth: 1)
+                                            .stroke(Color(.separator), lineWidth: 1)
                                     )
                             }
-                            
+
                             // Stock Quantity & Reorder Level (Side by Side)
                             HStack(spacing: 16) {
                                 VStack(alignment: .leading, spacing: 6) {
@@ -342,68 +342,68 @@ struct InventoryItemSheet: View {
                                         .font(.system(size: 12, weight: .bold))
                                         .foregroundColor(Color.secondary)
                                         .kerning(1.2)
-                                    
-                                    TextField("", text: $stockQuantity, prompt: Text("0").foregroundColor(Color(UIColor.placeholderText)))
+
+                                    TextField("", text: $stockQuantity, prompt: Text("0").foregroundColor(Color(.placeholderText)))
                                         .keyboardType(.numberPad)
                                         .foregroundColor(Color.primary)
                                         .padding(.horizontal, 18)
                                         .frame(height: 56)
-                                        .background(Color(UIColor.secondarySystemBackground))
+                                        .background(Color(.secondarySystemBackground))
                                         .cornerRadius(14)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 14)
-                                                .stroke(Color(UIColor.separator), lineWidth: 1)
+                                                .stroke(Color(.separator), lineWidth: 1)
                                         )
                                 }
-                                
+
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("REORDER LEVEL")
                                         .font(.system(size: 12, weight: .bold))
                                         .foregroundColor(Color.secondary)
                                         .kerning(1.2)
-                                    
-                                    TextField("", text: $reorderLevel, prompt: Text("0").foregroundColor(Color(UIColor.placeholderText)))
+
+                                    TextField("", text: $reorderLevel, prompt: Text("0").foregroundColor(Color(.placeholderText)))
                                         .keyboardType(.numberPad)
                                         .foregroundColor(Color.primary)
                                         .padding(.horizontal, 18)
                                         .frame(height: 56)
-                                        .background(Color(UIColor.secondarySystemBackground))
+                                        .background(Color(.secondarySystemBackground))
                                         .cornerRadius(14)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 14)
-                                                .stroke(Color(UIColor.separator), lineWidth: 1)
+                                                .stroke(Color(.separator), lineWidth: 1)
                                         )
                                 }
                             }
-                            
+
                             // Unit Cost
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("UNIT COST (₹)")
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(Color.secondary)
                                     .kerning(1.2)
-                                
-                                TextField("", text: $unitCost, prompt: Text("0.00").foregroundColor(Color(UIColor.placeholderText)))
+
+                                TextField("", text: $unitCost, prompt: Text("0.00").foregroundColor(Color(.placeholderText)))
                                     .keyboardType(.decimalPad)
                                     .foregroundColor(Color.primary)
                                     .padding(.horizontal, 18)
                                     .frame(height: 56)
-                                    .background(Color(UIColor.secondarySystemBackground))
+                                    .background(Color(.secondarySystemBackground))
                                     .cornerRadius(14)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 14)
-                                            .stroke(Color(UIColor.separator), lineWidth: 1)
+                                            .stroke(Color(.separator), lineWidth: 1)
                                     )
                             }
                         }
                         .padding(.horizontal, 24)
-                        
+
                         Spacer().frame(height: 20)
-                        
+
                         // Action Buttons
                         VStack(spacing: 14) {
                             let isButtonDisabled = !isFormValid || isSaving
-                            
+
                             Button(action: saveAction) {
                                 HStack {
                                     if isSaving {
@@ -414,14 +414,14 @@ struct InventoryItemSheet: View {
                                             .font(.system(size: 18, weight: .semibold))
                                     }
                                 }
-                                .foregroundColor(isButtonDisabled ? Color(UIColor.tertiaryLabel) : .white)
+                                .foregroundColor(isButtonDisabled ? Color(.tertiaryLabel) : .white)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 56)
-                                .background(isButtonDisabled ? Color(UIColor.tertiarySystemFill) : Color.orange)
+                                .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.brown)
                                 .cornerRadius(16)
                             }
                             .disabled(isButtonDisabled)
-                            
+
                             if editingItem != nil {
                                 Button(action: { showingDeleteAlert = true }) {
                                     HStack {
@@ -475,16 +475,16 @@ struct InventoryItemSheet: View {
             }
         }
     }
-    
+
     private func saveAction() {
         guard isFormValid else { return }
         isSaving = true
         errorMessage = nil
-        
+
         let qty = Int(stockQuantity) ?? 0
         let reorder = Int(reorderLevel) ?? 0
         let cost = Double(unitCost) ?? 0.0
-        
+
         Task {
             do {
                 if let item = editingItem {
@@ -514,12 +514,12 @@ struct InventoryItemSheet: View {
             isSaving = false
         }
     }
-    
+
     private func deleteAction() {
         guard let item = editingItem else { return }
         isDeleting = true
         errorMessage = nil
-        
+
         Task {
             do {
                 try await InventoryService.deleteItem(id: item.id)

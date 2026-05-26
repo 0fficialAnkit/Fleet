@@ -207,11 +207,11 @@ final class MaintenanceSchedulerViewModel {
                 sourceWorkOrderId: wo.id
             )
         }
-        
+
         let mappedIssueReports = rawIssueReports.map { ir in
             let vehicle = vehicles.first { $0.id == ir.vehicleId }
             let reportedBy = profiles.first { $0.id == ir.reportedBy }
-            
+
             let priority: WorkOrderPriority
             switch ir.severity.lowercased() {
             case "critical": priority = .critical
@@ -220,7 +220,7 @@ final class MaintenanceSchedulerViewModel {
             case "low": priority = .low
             default: priority = .medium
             }
-            
+
             let status: WorkOrderStatus
             switch ir.status.lowercased() {
             case "open", "assigned": status = .open
@@ -228,7 +228,7 @@ final class MaintenanceSchedulerViewModel {
             case "resolved", "closed": status = .completed
             default: status = .open
             }
-            
+
             return ScheduledWorkOrder(
                 id: UUID(),
                 vehicleNumber: vehicle?.licensePlate ?? "Unknown",
@@ -245,7 +245,7 @@ final class MaintenanceSchedulerViewModel {
                 sourceIssueReportId: ir.id
             )
         }
-        
+
         mappedWorkOrders.append(contentsOf: mappedIssueReports)
         allWorkOrders = mappedWorkOrders
     }
@@ -415,18 +415,18 @@ final class MaintenanceSchedulerViewModel {
         if selectedWorkOrder?.id == id {
             selectedWorkOrder?.partsUsed.append(part)
         }
-        
+
         // Find matching inventory item
         if let inventoryItem = inventory.first(where: { $0.partName?.lowercased() == part.lowercased() }) {
             let itemId = inventoryItem.id
             let stock = inventoryItem.stockQuantity ?? 0
-            
+
             Task {
                 // Update stock if greater than 0
                 if stock > 0 {
                     try? await InventoryService.updateStock(id: itemId, newQuantity: stock - 1)
                 }
-                
+
                 // Add WorkOrderPart record
                 if let sourceId = allWorkOrders.first(where: { $0.id == id })?.sourceWorkOrderId {
                     let wop = WorkOrderPart(

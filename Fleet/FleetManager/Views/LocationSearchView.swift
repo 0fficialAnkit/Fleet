@@ -105,7 +105,7 @@ struct LocationSearchView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundStyle(Color.blue)
+                        .foregroundStyle(Color.teal)
                 }
             }
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search address or place")
@@ -121,9 +121,9 @@ struct LocationSearchView: View {
         VStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 38))
-                .foregroundStyle(Color.blue.opacity(0.5))
+                .foregroundStyle(Color.teal.opacity(0.5))
             Text("Start typing to search for an address or place")
-                .font(.system(size: , weight: .regular, design: .rounded))
+                .font(.body)
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -136,9 +136,9 @@ struct LocationSearchView: View {
         VStack(spacing: 12) {
             Image(systemName: "map")
                 .font(.system(size: 38))
-                .foregroundStyle(Color(UIColor.quaternaryLabel))
+                .foregroundStyle(Color(.quaternaryLabel))
             Text("No results for \"\(query)\"")
-                .font(.system(size: , weight: .regular, design: .rounded))
+                .font(.body)
                 .foregroundStyle(Color.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -150,20 +150,20 @@ struct LocationSearchView: View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(Color.blue.opacity(0.12))
+                    .fill(Color.teal.opacity(0.12))
                     .frame(width: 36, height: 36)
                 Image(systemName: "mappin")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.blue)
+                    .foregroundStyle(Color.teal)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(completion.title)
-                    .font(.system(size: , weight: .medium, design: .rounded))
+                    .font(.body.weight(.medium))
                     .foregroundStyle(Color.primary)
                 if !completion.subtitle.isEmpty {
                     Text(completion.subtitle)
-                        .font(.system(size: , weight: .regular, design: .rounded))
+                        .font(.footnote)
                         .foregroundStyle(Color.secondary)
                         .lineLimit(1)
                 }
@@ -173,7 +173,7 @@ struct LocationSearchView: View {
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 12))
-                .foregroundStyle(Color(UIColor.quaternaryLabel))
+                .foregroundStyle(Color(.quaternaryLabel))
         }
         .padding(.vertical, 4)
     }

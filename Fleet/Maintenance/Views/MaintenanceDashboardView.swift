@@ -10,7 +10,7 @@ struct MaintenanceDashboardView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 ScrollView {
                     VStack(spacing: 24) {
@@ -29,7 +29,7 @@ struct MaintenanceDashboardView: View {
                                     )
                                 }
                                 .buttonStyle(.plain)
-                                
+
                                 NavigationLink(value: MaintenanceDestination.workOrderList(filter: nil, assignedTo: viewModel.currentUserId, priority: .critical)) {
                                     DashboardCard(
                                         title: "CRITICAL\nREPAIRS",
@@ -42,7 +42,7 @@ struct MaintenanceDashboardView: View {
                                 }
                                 .buttonStyle(.plain)
                             }
-                            
+
                             Button {
                                 selectedTab = 2 // Switch to Inventory Tab
                             } label: {
@@ -63,9 +63,9 @@ struct MaintenanceDashboardView: View {
                                     VStack(spacing: 8) {
                                         Image(systemName: "calendar.badge.checkmark")
                                             .font(.system(size: 32))
-                                            .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                            .foregroundStyle(Color(.tertiaryLabel))
                                         Text("No upcoming tasks")
-                                            .font(.system(size: , weight: .medium, design: .rounded))
+                                            .font(.body.weight(.medium))
                                             .foregroundStyle(Color.secondary)
                                     }
                                     Spacer()
@@ -96,7 +96,7 @@ struct MaintenanceDashboardView: View {
                                             .font(.system(size: 32))
                                             .foregroundStyle(Color.green)
                                         Text("No priority tasks")
-                                            .font(.system(size: , weight: .medium, design: .rounded))
+                                            .font(.body.weight(.medium))
                                             .foregroundStyle(Color.secondary)
                                     }
                                     Spacer()
@@ -122,7 +122,7 @@ struct MaintenanceDashboardView: View {
                     Button(action: { isShowingProfile = true }) {
                         Image(systemName: "person.crop.circle")
                             .font(.system(size: 28, weight: .medium))
-//                            .foregroundStyle(Color.orange)
+//                            .foregroundStyle(Color.brown)
                     }
                 }
             }
@@ -159,14 +159,14 @@ struct UpcomingMaintenanceCard: View {
             ZStack(alignment: .topLeading) {
                 // Placeholder Image
                 Rectangle()
-                    .fill(Color(UIColor.tertiarySystemBackground))
+                    .fill(Color(.tertiarySystemBackground))
                     .frame(height: 180)
                     .overlay(
                         Image(systemName: "box.truck.fill")
                             .font(.system(size: 60))
-                            .foregroundStyle(Color(UIColor.tertiaryLabel).opacity(0.3))
+                            .foregroundStyle(Color(.tertiaryLabel).opacity(0.3))
                     )
-                
+
                 // Priority Badge
                 if let priorityLabel = item.priorityLabel, let priorityColor = item.priorityColor {
                     Text(priorityLabel.capitalized)
@@ -179,7 +179,7 @@ struct UpcomingMaintenanceCard: View {
                         .padding(12)
                 }
             }
-            
+
             // MARK: - Content
             VStack(alignment: .leading, spacing: 12) {
                 // Tags
@@ -189,29 +189,29 @@ struct UpcomingMaintenanceCard: View {
                         .foregroundStyle(Color.secondary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color(UIColor.tertiarySystemBackground))
+                        .background(Color(.tertiarySystemBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
-                    
+
                     Text(item.assignmentTag)
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(Color.orange)
+                        .foregroundStyle(Color.brown)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.orange.opacity(0.15))
+                        .background(Color.brown.opacity(0.15))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
-                
+
                 // Titles
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.vehicleName)
                         .font(.system(size: 24, weight: .bold))
                         .foregroundStyle(Color.primary)
-                    
+
                     Text(item.taskDescription)
                         .font(.system(size: 16, weight: .regular))
                         .foregroundStyle(Color.secondary)
                 }
-                
+
                 // Meta Info
                 HStack(spacing: 16) {
                     HStack(spacing: 6) {
@@ -226,7 +226,7 @@ struct UpcomingMaintenanceCard: View {
                 .font(.system(size: 14))
                 .foregroundStyle(Color.secondary)
                 .padding(.vertical, 4)
-                
+
                 // Action Buttons
                 VStack(spacing: 10) {
                     Button {
@@ -240,10 +240,10 @@ struct UpcomingMaintenanceCard: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.orange)
+                        .background(Color.brown)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
-                    
+
                     if let destination = item.destination {
                         NavigationLink(value: destination) {
                             Text("View Details")
@@ -254,7 +254,7 @@ struct UpcomingMaintenanceCard: View {
                                 .background(Color.clear)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color(UIColor.opaqueSeparator), lineWidth: 1)
+                                        .stroke(Color(.opaqueSeparator), lineWidth: 1)
                                 )
                         }
                     }
@@ -262,10 +262,10 @@ struct UpcomingMaintenanceCard: View {
                 .padding(.top, 4)
             }
             .padding(16)
-            .background(Color(UIColor.systemBackground))
+            .background(Color(.systemBackground))
         }
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.1), radius: 10, y: 4)
+
     }
 }
 
@@ -290,7 +290,7 @@ struct DashboardCard: View {
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(titleColor)
             }
-            
+
             Text(value)
                 .font(.system(size: 34, weight: .heavy, design: .rounded))
                 .foregroundColor(valueColor)
@@ -299,34 +299,34 @@ struct DashboardCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
     }
 }
 
 struct AvailablePartsCard: View {
     let percentage: Int
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 8) {
                 Text("AVAILABLE PARTS")
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundColor(.gray)
-                
+
                 HStack(alignment: .lastTextBaseline, spacing: 2) {
                     Text("\(percentage)")
                         .font(.system(size: 34, weight: .heavy, design: .rounded))
                         .foregroundColor(.primary)
                     Text("%")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .font(.title3.bold())
                         .foregroundColor(.gray)
                 }
             }
             Spacer()
-            
+
             ZStack {
                 Circle()
-                    .fill(Color(UIColor.secondarySystemBackground))
+                    .fill(Color(.secondarySystemBackground))
                     .frame(width: 60, height: 60)
                 Image(systemName: "shippingbox")
                     .font(.system(size: 24))
@@ -334,9 +334,9 @@ struct AvailablePartsCard: View {
             }
         }
         .padding(20)
-        .background(Color(UIColor.systemBackground))
+        .background(Color(.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
     }
 }
 
@@ -344,14 +344,14 @@ struct AvailablePartsCard: View {
 struct PriorityQueueCard: View {
     let item: UnifiedMaintenanceItem
     let viewModel: MaintenanceDashboardViewModel
-    
+
     var iconName: String {
         switch item {
         case .issueReport: return "exclamationmark.triangle.fill"
         case .workOrder: return "wrench.and.screwdriver.fill"
         }
     }
-    
+
     var priorityColor: Color {
         switch item.unifiedPriority {
         case .critical, .high: return Color.red
@@ -360,7 +360,7 @@ struct PriorityQueueCard: View {
         case nil: return Color.secondary
         }
     }
-    
+
     var priorityLabel: String {
         switch item.unifiedPriority {
         case .critical: return "CRITICAL"
@@ -370,7 +370,7 @@ struct PriorityQueueCard: View {
         case nil: return "NONE"
         }
     }
-    
+
     var body: some View {
         HStack(spacing: 16) {
             ZStack {
@@ -381,20 +381,20 @@ struct PriorityQueueCard: View {
                     .font(.system(size: 20))
                     .foregroundColor(priorityColor)
             }
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(viewModel.vehiclePlate(for: item.vehicleId))
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.body.bold())
                     .foregroundStyle(Color.primary)
-                
+
                 Text(item.subtitle)
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.secondary)
                     .lineLimit(1)
             }
-            
+
             Spacer()
-            
+
             VStack(alignment: .trailing, spacing: 12) {
                 Text(priorityLabel)
                     .font(.system(size: 10, weight: .bold))
@@ -403,16 +403,16 @@ struct PriorityQueueCard: View {
                     .background(priorityColor.opacity(0.15))
                     .foregroundColor(priorityColor)
                     .clipShape(Capsule())
-                
+
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color(UIColor.tertiaryLabel))
+                    .foregroundColor(Color(.tertiaryLabel))
             }
         }
         .padding(16)
-        .background(Color(UIColor.systemBackground))
+        .background(Color(.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
     }
 }
 

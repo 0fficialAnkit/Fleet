@@ -5,22 +5,22 @@ struct VehicleSelectionView: View {
     var orderType: OrderType
     var viewModel: OrdersViewModel
     @Binding var selectedOrderType: OrderType?
-    
+
     var availableVehicles: [Vehicle] {
         viewModel.availableVehicles(for: orderType)
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
-                
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 16) {
-                        
+
                         if availableVehicles.isEmpty {
                             Text("No active vehicles match this order type.")
-                                .font(.system(size: 16, weight: .regular, design: .rounded))
+                                .font(.body)
                                 .foregroundColor(Color.secondary)
                                 .padding(.top, 40)
                         } else {
@@ -35,14 +35,14 @@ struct VehicleSelectionView: View {
             }
             .navigationTitle("Select Vehicle")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color(UIColor.systemGroupedBackground), for: .navigationBar)
+            .toolbarBackground(Color(.systemGroupedBackground), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(Color.blue)
+                    .foregroundColor(Color.teal)
                 }
             }
             .onChange(of: selectedOrderType) { _, newValue in
@@ -59,18 +59,18 @@ struct VehicleSelectionRow: View {
     var orderType: OrderType
     var viewModel: OrdersViewModel
     @Binding var selectedOrderType: OrderType?
-    
+
     var body: some View {
         NavigationLink(destination: DriverSelectionView(orderType: orderType, selectedVehicle: vehicle, viewModel: viewModel, selectedOrderType: $selectedOrderType)) {
             HStack {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(.body.bold())
                         .foregroundColor(Color.primary)
-                    
+
                     HStack(spacing: 8) {
-                        StatusBadge(text: vehicle.licensePlate ?? "No Plate", color: Color.blue)
-                        
+                        StatusBadge(text: vehicle.licensePlate ?? "No Plate", color: Color.teal)
+
                         if vehicle.assignedDriverId == nil {
                             StatusBadge(text: "No Driver", color: Color.yellow)
                         }
@@ -78,17 +78,17 @@ struct VehicleSelectionRow: View {
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .foregroundColor(Color(UIColor.tertiaryLabel))
+                    .foregroundColor(Color(.tertiaryLabel))
                     .font(.system(size: 14, weight: .bold))
             }
             .contentShape(Rectangle())
             .padding(16)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
             )
-            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
         }
         .buttonStyle(.plain)
     }

@@ -47,8 +47,8 @@ final class VehiclesViewModel {
         switch status {
         case .active: return Color.green
         case .maintenance: return Color.yellow
-        case .inactive: return Color(UIColor.tertiaryLabel)
-        case nil: return Color(UIColor.tertiaryLabel)
+        case .inactive: return Color(.tertiaryLabel)
+        case nil: return Color(.tertiaryLabel)
         }
     }
 

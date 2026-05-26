@@ -48,7 +48,7 @@ final class MaintenanceViewModel {
         case .pending: return Color.yellow
         case .inProgress: return Color.blue
         case .cancelled: return Color.red
-        case nil: return Color(UIColor.tertiaryLabel)
+        case nil: return Color(.tertiaryLabel)
         }
     }
 

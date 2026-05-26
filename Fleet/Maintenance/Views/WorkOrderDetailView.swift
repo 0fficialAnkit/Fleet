@@ -67,7 +67,7 @@ struct WorkOrderDetailView: View {
 
     var body: some View {
         ZStack {
-            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+            Color(.systemGroupedBackground).ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 24) {
@@ -78,7 +78,7 @@ struct WorkOrderDetailView: View {
                             .font(.system(size: 20, weight: .semibold))
                             .foregroundStyle(statusColor(currentStatus))
                         Text(statusLabel(currentStatus))
-                            .font(.system(size: , weight: .semibold, design: .rounded))
+                            .font(.headline)
                             .foregroundStyle(statusColor(currentStatus))
                         Spacer()
                         StatusBadge(
@@ -122,25 +122,25 @@ struct WorkOrderDetailView: View {
                             ActionRow(
                                 icon: "plus.circle.fill",
                                 title: "Add Part from Inventory",
-                                iconColor: Color.orange
+                                iconColor: Color.brown
                             )
                         }
                         .buttonStyle(.plain)
 
                         if !localParts.isEmpty {
-                            Divider().background(Color(UIColor.separator))
+                            Divider().background(Color(.separator))
                             ForEach(Array(localParts.enumerated()), id: \.offset) { idx, part in
                                 HStack(spacing: 16) {
                                     Image(systemName: "gearshape.2.fill")
-                                        .foregroundStyle(Color.orange)
+                                        .foregroundStyle(Color.brown)
                                         .frame(width: 20)
                                     Text(part)
-                                        .font(.system(size: , weight: .regular, design: .rounded))
+                                        .font(.body)
                                         .foregroundStyle(Color.primary)
                                     Spacer()
                                 }
                                 if idx < localParts.count - 1 {
-                                    Divider().background(Color(UIColor.separator))
+                                    Divider().background(Color(.separator))
                                 }
                             }
                         }
@@ -150,14 +150,14 @@ struct WorkOrderDetailView: View {
                     GlassSection(title: "Service Notes") {
                         TextField("Add service details, notes or observations...", text: $notes, axis: .vertical)
                             .lineLimit(4...8)
-                            .font(.system(size: , weight: .regular, design: .rounded))
+                            .font(.body)
                             .foregroundStyle(Color.primary)
                     }
 
                     // MARK: - Action Buttons
                     VStack(spacing: 16) {
                         if currentStatus == .open {
-                            ActionButton(title: "Start Work Order", icon: "play.circle.fill", color: Color.orange) {
+                            ActionButton(title: "Start Work Order", icon: "play.circle.fill", color: Color.brown) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .inProgress }
                             }
                         }
@@ -186,17 +186,17 @@ struct WorkOrderDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showAddPartSheet) {
             ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
                 VStack(spacing: 20) {
                     Text("Add Spare Part")
-                        .font(.system(size: , weight: .semibold, design: .rounded))
+                        .font(.headline)
                         .foregroundStyle(Color.primary)
                         .padding(.top, 24)
 
                     TextField("Part Name (e.g. Air Filter)", text: $newPartName)
-                        .font(.system(size: , weight: .regular, design: .rounded))
+                        .font(.body)
                         .padding(12)
-                        .background(Color(UIColor.tertiarySystemBackground))
+                        .background(Color(.tertiarySystemBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                         .padding(.horizontal)
 
@@ -207,11 +207,11 @@ struct WorkOrderDetailView: View {
                         showAddPartSheet = false
                     } label: {
                         Text("Add to Consumed Parts")
-                            .font(.system(size: , weight: .semibold, design: .rounded))
+                            .font(.headline)
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.orange)
+                            .background(Color.brown)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                             .padding(.horizontal)
                     }
@@ -223,7 +223,7 @@ struct WorkOrderDetailView: View {
         }
     }
 
-    private var divider: some View { Divider().background(Color(UIColor.separator)) }
+    private var divider: some View { Divider().background(Color(.separator)) }
 
     // MARK: - Helpers
     func statusIcon(_ s: WorkOrderStatus?) -> String {
@@ -294,12 +294,12 @@ private struct GlassSection<Content: View>: View {
                 content()
             }
             .padding(16)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
             )
-            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
         }
     }
 }
@@ -314,9 +314,9 @@ private struct PartRow: View {
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: icon).foregroundStyle(color).frame(width: 22)
-            Text(name).font(.system(size: , weight: .regular, design: .rounded)).foregroundStyle(Color.primary)
+            Text(name).font(.body).foregroundStyle(Color.primary)
             Spacer()
-            Text("×\(qty)").font(.system(size: , weight: .medium, design: .rounded)).foregroundStyle(Color.secondary)
+            Text("×\(qty)").font(.body.weight(.medium)).foregroundStyle(Color.secondary)
         }
     }
 }
@@ -332,8 +332,8 @@ private struct LaborStat: View {
         HStack(spacing: 8) {
             Image(systemName: icon).foregroundStyle(color)
             VStack(alignment: .leading, spacing: 2) {
-                Text(value).font(.system(size: , weight: .semibold, design: .rounded)).foregroundStyle(Color.primary)
-                Text(label).font(.system(size: , weight: .regular, design: .rounded)).foregroundStyle(Color(UIColor.tertiaryLabel))
+                Text(value).font(.headline).foregroundStyle(Color.primary)
+                Text(label).font(.footnote).foregroundStyle(Color(.tertiaryLabel))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -356,16 +356,16 @@ private struct ActionButton: View {
                 Image(systemName: icon)
                 Text(title)
             }
-            .font(.system(size: , weight: .semibold, design: .rounded))
+            .font(.headline)
             .foregroundStyle(color)
             .frame(maxWidth: .infinity)
             .padding(16)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(color.opacity(0.3), lineWidth: 1)
             )
-            .shadow(color: color.opacity(0.15), radius: 8, y: 4)
+
         }
     }
 }

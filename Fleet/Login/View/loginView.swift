@@ -27,8 +27,8 @@ struct LoginView: View {
             roleName: "Fleet Manager",
             description: "Manage fleet, drivers & analytics",
             iconName: "shield.fill",
-            iconColor: Color.blue,
-            iconBackground: Color.blue.opacity(0.15)
+            iconColor: Color.teal,
+            iconBackground: Color.teal.opacity(0.15)
         ),
         RoleDisplayItem(
             id: 2,
@@ -43,17 +43,17 @@ struct LoginView: View {
             roleName: "Maintenance",
             description: "Schedule repairs & manage parts",
             iconName: "wrench.and.screwdriver.fill",
-            iconColor: Color.orange,
-            iconBackground: Color.orange.opacity(0.15)
+            iconColor: Color.brown,
+            iconBackground: Color.brown.opacity(0.15)
         )
     ]
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
-                Color(UIColor.systemGroupedBackground)
+                Color(.systemGroupedBackground)
                     .ignoresSafeArea()
-                
+
                 VStack(spacing: 0) {
                     Spacer()
                     appIconView
@@ -86,11 +86,11 @@ struct LoginView: View {
         }) {
             ZStack {
                 RoundedRectangle(cornerRadius: 22)
-                    .fill(Color.blue)
+                    .fill(Color.teal)
                     .frame(width: 80, height: 80)
                 Image(systemName: "truck.box.fill")
                     .font(.system(size: 36))
-                    .foregroundColor(Color(UIColor.systemBackground))
+                    .foregroundColor(Color(.systemBackground))
             }
         }
         .buttonStyle(PlainButtonStyle())
@@ -130,10 +130,10 @@ struct LoginView: View {
         Button(action: handleContinue) {
             Text("Continue")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(Color(UIColor.systemBackground))
+                .foregroundColor(Color(.systemBackground))
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
-                .background(Color.blue)
+                .background(Color.teal)
                 .cornerRadius(16)
         }
     }
@@ -182,31 +182,31 @@ struct RoleCardView: View {
                 .foregroundColor(Color.secondary)
         }
     }
-    
+
     var selectionDot: some View {
         Circle()
-            .fill(isSelected ? Color.blue : Color.clear)
+            .fill(isSelected ? Color.teal : Color.clear)
             .overlay(
                 Circle().stroke(
-                    isSelected ? Color.blue : Color(UIColor.opaqueSeparator),
+                    isSelected ? Color.teal : Color(.opaqueSeparator),
                     lineWidth: 1.5
                 )
             )
             .frame(width: 22, height: 22)
     }
-    
+
     var cardBackground: some View {
         RoundedRectangle(cornerRadius: 16)
             .fill(
                 isSelected
-                    ? Color.blue.opacity(0.12)
-                    : Color(UIColor.systemBackground)
+                    ? Color.teal.opacity(0.12)
+                    : Color(.systemBackground)
             )
     }
 
     var cardBorder: some View {
         RoundedRectangle(cornerRadius: 16)
-            .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 1.5)
+            .stroke(isSelected ? Color.teal : Color.clear, lineWidth: 1.5)
     }
 }
 

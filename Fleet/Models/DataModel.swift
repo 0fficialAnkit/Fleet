@@ -51,9 +51,9 @@ enum OrderType: String, Codable, CaseIterable, Sendable, Identifiable {
   case pickUpAndDrop = "pick_up_and_drop"
   case bulkOrderShip = "bulk_order_ship"
   case travel = "travel"
-  
+
   var id: String { rawValue }
-  
+
   var displayName: String {
       switch self {
       case .pickUpAndDrop: return "Pick Up & Drop"
@@ -620,4 +620,3 @@ struct MaintenanceStaffRecord: Codable, Identifiable, Hashable, Sendable {
         case createdAt = "created_at"
     }
 }
-

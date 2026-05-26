@@ -12,7 +12,7 @@ struct IssueReportDetailView: View {
 
     var body: some View {
         ZStack {
-            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+            Color(.systemGroupedBackground).ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 24) {
@@ -23,7 +23,7 @@ struct IssueReportDetailView: View {
                             .font(.system(size: 20, weight: .semibold))
                             .foregroundStyle(statusColor(currentStatus))
                         Text(statusLabel(currentStatus))
-                            .font(.system(size: , weight: .semibold, design: .rounded))
+                            .font(.headline)
                             .foregroundStyle(statusColor(currentStatus))
                         Spacer()
                         StatusBadge(
@@ -57,7 +57,7 @@ struct IssueReportDetailView: View {
                     if let desc = report.description, !desc.isEmpty {
                         GlassSection(title: "Description") {
                             Text(desc)
-                                .font(.system(size: , weight: .regular, design: .rounded))
+                                .font(.body)
                                 .foregroundStyle(Color.primary)
                         }
                     }
@@ -65,7 +65,7 @@ struct IssueReportDetailView: View {
                     // MARK: - Action Buttons
                     VStack(spacing: 16) {
                         if currentStatus.lowercased() == "open" || currentStatus.lowercased() == "assigned" {
-                            ActionButton(title: "Start Work", icon: "play.circle.fill", color: Color.orange) {
+                            ActionButton(title: "Start Work", icon: "play.circle.fill", color: Color.brown) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = "in_progress" }
                             }
                         }
@@ -89,7 +89,7 @@ struct IssueReportDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private var divider: some View { Divider().background(Color(UIColor.separator)) }
+    private var divider: some View { Divider().background(Color(.separator)) }
 
     // MARK: - Helpers
     func statusIcon(_ s: String) -> String {
@@ -100,7 +100,7 @@ struct IssueReportDetailView: View {
         default: return "tray.circle"
         }
     }
-    
+
     func statusLabel(_ s: String) -> String {
         switch s.lowercased() {
         case "open": return "Open"
@@ -111,7 +111,7 @@ struct IssueReportDetailView: View {
         default: return "Unknown"
         }
     }
-    
+
     func statusColor(_ s: String) -> Color {
         switch s.lowercased() {
         case "open", "assigned": return Color.blue
@@ -120,7 +120,7 @@ struct IssueReportDetailView: View {
         default: return Color.secondary
         }
     }
-    
+
     func severityLabel(_ p: String) -> String {
         switch p.lowercased() {
         case "low": return "Low"
@@ -130,7 +130,7 @@ struct IssueReportDetailView: View {
         default: return "N/A"
         }
     }
-    
+
     func severityIcon(_ p: String) -> String {
         switch p.lowercased() {
         case "low": return "arrow.down.circle"
@@ -140,7 +140,7 @@ struct IssueReportDetailView: View {
         default: return "minus.circle"
         }
     }
-    
+
     func severityColor(_ p: String) -> Color {
         switch p.lowercased() {
         case "critical": return Color.red
@@ -164,12 +164,12 @@ private struct GlassSection<Content: View>: View {
                 content()
             }
             .padding(16)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
             )
-            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
         }
     }
 }
@@ -187,16 +187,16 @@ private struct ActionButton: View {
                 Image(systemName: icon)
                 Text(title)
             }
-            .font(.system(size: , weight: .semibold, design: .rounded))
+            .font(.headline)
             .foregroundStyle(color)
             .frame(maxWidth: .infinity)
             .padding(16)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(color.opacity(0.3), lineWidth: 1)
             )
-            .shadow(color: color.opacity(0.15), radius: 8, y: 4)
+
         }
     }
 }

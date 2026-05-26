@@ -3,15 +3,15 @@ import SwiftUI
 struct EditEmployeeView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: EmployeesViewModel
-    
+
     @State private var originalProfile: Profile
     @State private var fullName: String
     @State private var email: String
     @State private var phone: String
     @State private var licenseNumber: String
-    
+
     let isDriverSelected: Bool
-    
+
     init(profile: Profile, viewModel: EmployeesViewModel) {
         self.viewModel = viewModel
         _originalProfile = State(initialValue: profile)
@@ -21,54 +21,54 @@ struct EditEmployeeView: View {
         _licenseNumber = State(initialValue: profile.licenseNumber ?? "")
         self.isDriverSelected = (profile.role == "driver")
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
-                
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 ScrollView {
                     VStack(spacing: 24) {
-                        
+
                         VStack(alignment: .leading, spacing: 8) {
                             SectionHeader(title: "Personal Details")
                                 .padding(.horizontal, 16)
-                            
+
                                 VStack(spacing: 0) {
                                     TextField("Full Name", text: $fullName)
                                         .padding(.vertical, 12)
                                         .foregroundColor(Color.primary)
-                                    
-                                    Divider().background(Color(UIColor.separator))
-                                    
+
+                                    Divider().background(Color(.separator))
+
                                     TextField("Email", text: $email)
                                         .keyboardType(.emailAddress)
                                         .autocapitalization(.none)
                                         .padding(.vertical, 12)
                                         .foregroundColor(Color.primary)
-                                    
-                                    Divider().background(Color(UIColor.separator))
-                                    
+
+                                    Divider().background(Color(.separator))
+
                                     TextField("Phone", text: $phone)
                                         .keyboardType(.phonePad)
                                         .padding(.vertical, 12)
                                         .foregroundColor(Color.primary)
-                                    
+
                                     if isDriverSelected {
-                                        Divider().background(Color(UIColor.separator))
-                                        
+                                        Divider().background(Color(.separator))
+
                                         TextField("Driver License Number", text: $licenseNumber)
                                             .padding(.vertical, 12)
                                             .foregroundColor(Color.primary)
                                     }
                                 }
                                 .padding(16)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                                         .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                                 )
-                                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
                             .padding(.horizontal, 16)
                         }
                     }
@@ -82,9 +82,9 @@ struct EditEmployeeView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(Color.blue)
+                    .foregroundColor(Color.teal)
                 }
-                
+
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         guard !fullName.isEmpty else { return }
@@ -93,7 +93,7 @@ struct EditEmployeeView: View {
                         updatedProfile.email = email
                         updatedProfile.phone = phone.isEmpty ? nil : phone
                         updatedProfile.licenseNumber = isDriverSelected && !licenseNumber.isEmpty ? licenseNumber : nil
-                        
+
                         Task {
                             do {
                                 try await ProfileService.updateProfile(updatedProfile)
@@ -104,7 +104,7 @@ struct EditEmployeeView: View {
                             }
                         }
                     }
-                    .foregroundColor(Color.blue)
+                    .foregroundColor(Color.teal)
                     .bold()
                     .disabled(fullName.isEmpty)
                 }

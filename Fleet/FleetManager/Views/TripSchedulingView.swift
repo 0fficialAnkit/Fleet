@@ -26,7 +26,7 @@ struct TripSchedulingView: View {
 
     var body: some View {
         ZStack {
-            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+            Color(.systemGroupedBackground).ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 24) {
@@ -67,7 +67,7 @@ struct TripSchedulingView: View {
 
                             // Connector line
                             Rectangle()
-                                .fill(Color(UIColor.separator))
+                                .fill(Color(.separator))
                                 .frame(width: 2, height: 28)
                                 .padding(.leading, 16 + 20)
 
@@ -84,12 +84,12 @@ struct TripSchedulingView: View {
                             }
                         }
                         .padding(16)
-                        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 20, style: .continuous)
                                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                         )
-                        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
                         .padding(.horizontal, 16)
                     }
 
@@ -111,7 +111,7 @@ struct TripSchedulingView: View {
                     cardSection(title: "Schedule Date & Time") {
                         DatePicker("Start Time", selection: $startTime, in: Date()...)
                             .datePickerStyle(.graphical)
-                            .tint(Color.blue)
+                            .tint(Color.teal)
                             .padding(.vertical, 8)
                     }
                 }
@@ -124,12 +124,12 @@ struct TripSchedulingView: View {
             ToolbarItem(placement: .confirmationAction) {
                 if isSaving {
                     ProgressView()
-                        .tint(Color.blue)
+                        .tint(Color.teal)
                 } else {
                     Button("Save") {
                         Task { await save() }
                     }
-                    .foregroundStyle(canSave ? Color.blue : Color(UIColor.quaternaryLabel))
+                    .foregroundStyle(canSave ? Color.teal : Color(.quaternaryLabel))
                     .bold()
                     .disabled(!canSave)
                 }
@@ -194,7 +194,7 @@ struct TripSchedulingView: View {
     // MARK: - Helpers
 
     private var divider: some View {
-        Divider().background(Color(UIColor.separator))
+        Divider().background(Color(.separator))
     }
 
     @ViewBuilder
@@ -207,12 +207,12 @@ struct TripSchedulingView: View {
                 content()
             }
             .padding(16)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
             )
-            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
             .padding(.horizontal, 16)
         }
     }
@@ -240,15 +240,15 @@ struct TripSchedulingView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(label)
-                        .font(.system(size: , weight: .regular, design: .rounded))
+                        .font(.footnote)
                         .foregroundStyle(Color.secondary)
                     Text(value)
-                        .font(.system(size: , weight: .medium, design: .rounded))
-                        .foregroundStyle(placeholder ? Color(UIColor.quaternaryLabel) : Color.primary)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(placeholder ? Color(.quaternaryLabel) : Color.primary)
                         .lineLimit(1)
                     if let sub = subtitle, !sub.isEmpty {
                         Text(sub)
-                            .font(.system(size: , weight: .regular, design: .rounded))
+                            .font(.footnote)
                             .foregroundStyle(Color.secondary)
                             .lineLimit(1)
                     }
@@ -258,7 +258,7 @@ struct TripSchedulingView: View {
 
                 Image(systemName: placeholder ? "plus.circle.fill" : "pencil.circle.fill")
                     .font(.system(size: 20))
-                    .foregroundStyle(Color.blue)
+                    .foregroundStyle(Color.teal)
             }
         }
         .buttonStyle(.plain)
@@ -276,15 +276,15 @@ struct SummaryRow: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 16))
-                .foregroundStyle(Color.blue)
+                .foregroundStyle(Color.teal)
                 .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 12, weight: .regular, design: .rounded))
-                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+                    .font(.caption)
+                    .foregroundStyle(Color(.tertiaryLabel))
                 Text(value)
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.primary)
             }
             Spacer()

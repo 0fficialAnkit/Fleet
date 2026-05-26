@@ -22,7 +22,7 @@ struct AddMaintenanceView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 Form {
                     // Vehicle picker
@@ -36,14 +36,14 @@ struct AddMaintenanceView: View {
                         }
                         .foregroundColor(Color.primary)
                     }
-                    .listRowBackground(Color(UIColor.systemBackground))
+                    .listRowBackground(Color(.systemBackground))
 
                     // Assign to Maintenance Staff
                     Section(header: Text("Assign To").foregroundColor(Color.secondary)) {
                         if viewModel.maintenanceStaff.isEmpty {
                             Text("No maintenance staff found. Add staff in Supabase.")
                                 .font(.caption)
-                                .foregroundColor(Color(UIColor.tertiaryLabel))
+                                .foregroundColor(Color(.tertiaryLabel))
                         } else {
                             Picker("Assign to", selection: $selectedAssignedTo) {
                                 Text("Unassigned").tag(UUID?.none)
@@ -54,7 +54,7 @@ struct AddMaintenanceView: View {
                             .foregroundColor(Color.primary)
                         }
                     }
-                    .listRowBackground(Color(UIColor.systemBackground))
+                    .listRowBackground(Color(.systemBackground))
 
                     // Link to Work Order (optional)
                     if !viewModel.workOrders.isEmpty {
@@ -68,7 +68,7 @@ struct AddMaintenanceView: View {
                             }
                             .foregroundColor(Color.primary)
                         }
-                        .listRowBackground(Color(UIColor.systemBackground))
+                        .listRowBackground(Color(.systemBackground))
                     }
 
                     // Task Details
@@ -81,14 +81,14 @@ struct AddMaintenanceView: View {
                         }
                         .foregroundColor(Color.primary)
 
-                        TextField("", text: $description, prompt: Text("Description").foregroundColor(Color(UIColor.placeholderText)))
+                        TextField("", text: $description, prompt: Text("Description").foregroundColor(Color(.placeholderText)))
                             .foregroundColor(Color.primary)
 
                         DatePicker("Scheduled Date", selection: $scheduledDate, displayedComponents: .date)
                             .foregroundColor(Color.primary)
-                            .tint(Color.blue)
+                            .tint(Color.teal)
                     }
-                    .listRowBackground(Color(UIColor.systemBackground))
+                    .listRowBackground(Color(.systemBackground))
 
                     // Error
                     if let err = saveError {
@@ -97,18 +97,18 @@ struct AddMaintenanceView: View {
                                 .font(.caption)
                                 .foregroundColor(Color.red)
                         }
-                        .listRowBackground(Color(UIColor.systemBackground))
+                        .listRowBackground(Color(.systemBackground))
                     }
                 }
                 .scrollContentBackground(.hidden)
-                .background(Color(UIColor.systemGroupedBackground))
+                .background(Color(.systemGroupedBackground))
             }
             .navigationTitle("Add Maintenance Task")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(Color.blue)
+                        .foregroundColor(Color.teal)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -135,7 +135,7 @@ struct AddMaintenanceView: View {
                             isSaving = false
                         }
                     }
-                    .foregroundColor(Color.blue)
+                    .foregroundColor(Color.teal)
                     .bold()
                     .disabled(!isFormValid || isSaving)
                 }
@@ -148,7 +148,7 @@ struct AddMaintenanceView: View {
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             .foregroundColor(.white)
                             .padding(32)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     }
                 }
             }

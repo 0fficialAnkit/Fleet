@@ -48,7 +48,7 @@ final class OrdersViewModel {
         case .active: return Color.yellow
         case .completed: return Color.green
         case .cancelled: return Color.red
-        case .none: return Color(UIColor.quaternaryLabel)
+        case .none: return Color(.quaternaryLabel)
         }
     }
 
@@ -102,10 +102,10 @@ final class OrdersViewModel {
             createdAt: Date()
         )
         try? await NotificationService.createNotification(notification)
-        
+
         // Assign driver to vehicle
         try? await VehicleService.assignDriver(vehicleId: vehicleId, driverId: driverId)
-        
+
         await loadData()
     }
 

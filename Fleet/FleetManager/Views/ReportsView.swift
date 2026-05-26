@@ -14,7 +14,7 @@ struct ReportsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
@@ -56,21 +56,21 @@ struct ReportsView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             Text("\(count)")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(.title3.bold())
                 .foregroundStyle(Color.primary)
 
             Text(label)
-                .font(.system(size: , weight: .regular, design: .rounded))
-                .foregroundStyle(Color(UIColor.tertiaryLabel))
+                .font(.footnote)
+                .foregroundStyle(Color(.tertiaryLabel))
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
         )
-        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
     }
 
     // MARK: - Filter Chips
@@ -105,9 +105,9 @@ struct ReportsView: View {
                 VStack(spacing: 16) {
                     Image(systemName: "tray.fill")
                         .font(.system(size: 40))
-                        .foregroundStyle(Color(UIColor.quaternaryLabel))
+                        .foregroundStyle(Color(.quaternaryLabel))
                     Text("No reports found")
-                        .font(.system(size: , weight: .medium, design: .rounded))
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Color.secondary)
                 }
                 .frame(maxWidth: .infinity)
@@ -141,11 +141,11 @@ struct ReportRowView: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(report.vehicleName)
-                        .font(.system(size: , weight: .semibold, design: .rounded))
+                        .font(.headline)
                         .foregroundStyle(Color.primary)
                     Text(report.licensePlate)
-                        .font(.system(size: , weight: .regular, design: .rounded))
-                        .foregroundStyle(Color.blue)
+                        .font(.footnote)
+                        .foregroundStyle(Color.teal)
                 }
                 Spacer()
                 StatusBadge(
@@ -166,44 +166,42 @@ struct ReportRowView: View {
 
             // Description preview
             Text(report.description)
-                .font(.system(size: , weight: .regular, design: .rounded))
+                .font(.body)
                 .foregroundStyle(Color.secondary)
                 .lineLimit(2)
 
             // Footer
             HStack {
                 Label(report.driverName, systemImage: "steeringwheel")
-                    .font(.system(size: , weight: .regular, design: .rounded))
-                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+                    .font(.footnote)
+                    .foregroundStyle(Color(.tertiaryLabel))
                 Spacer()
                 if let assignedId = report.assignedTo {
                     Label(viewModel.staffName(assignedId), systemImage: "wrench.fill")
-                        .font(.system(size: , weight: .regular, design: .rounded))
+                        .font(.footnote)
                         .foregroundStyle(Color.yellow)
                 } else {
                     Text("Unassigned")
-                        .font(.system(size: , weight: .regular, design: .rounded))
-                        .foregroundStyle(Color(UIColor.quaternaryLabel))
+                        .font(.footnote)
+                        .foregroundStyle(Color(.quaternaryLabel))
                 }
                 Text("·")
-                    .foregroundStyle(Color(UIColor.quaternaryLabel))
+                    .foregroundStyle(Color(.quaternaryLabel))
                 Text(timeAgo)
-                    .font(.system(size: , weight: .regular, design: .rounded))
-                    .foregroundStyle(Color(UIColor.quaternaryLabel))
+                    .font(.footnote)
+                    .foregroundStyle(Color(.quaternaryLabel))
             }
         }
         .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(report.status == .open ? Color.red.opacity(0.25) : Color.white.opacity(0.1), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
         .contentShape(RoundedRectangle(cornerRadius: 20))
     }
 }
-
-
 
 #Preview {
     ReportsView()

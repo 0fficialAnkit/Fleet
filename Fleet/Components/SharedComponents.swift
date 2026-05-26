@@ -1,6 +1,5 @@
 import SwiftUI
 
-
 // ======================================================
 // MARK: - Status Badge
 // Colored pill with icon + text
@@ -19,7 +18,7 @@ struct StatusBadge: View {
                     .font(.system(size: 8, weight: .bold))
             }
             Text(text)
-                .font(.system(size: , weight: .medium, design: .rounded))
+                .font(.caption.weight(.medium))
                 .fontWeight(.semibold)
         }
         .foregroundStyle(color)
@@ -39,14 +38,14 @@ struct FilterButton: View {
     let title: String
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .font(.subheadline.weight(.medium))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(isSelected ? Color.blue : Color(UIColor.tertiarySystemBackground))
+                .background(isSelected ? Color.teal : Color(.tertiarySystemBackground))
                 .foregroundColor(isSelected ? .white : Color.secondary)
                 .clipShape(Capsule())
         }
@@ -80,15 +79,15 @@ struct MetricCard: View {
             }
 
             Text(value)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(.title3.bold())
                 .foregroundStyle(Color.primary)
 
             Text(label)
-                .font(.system(size: , weight: .regular, design: .rounded))
-                .foregroundStyle(Color(UIColor.tertiaryLabel))
+                .font(.footnote)
+                .foregroundStyle(Color(.tertiaryLabel))
         }
         .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
@@ -106,7 +105,7 @@ struct InfoRow: View {
     let icon: String
     let label: String
     let value: String
-    var iconColor: Color = Color(UIColor.tertiaryLabel)
+    var iconColor: Color = Color(.tertiaryLabel)
     var valueColor: Color? = nil
 
     var body: some View {
@@ -117,13 +116,13 @@ struct InfoRow: View {
                 .frame(width: 22)
 
             Text(label)
-                .font(.system(size: , weight: .regular, design: .rounded))
+                .font(.body)
                 .foregroundStyle(Color.secondary)
 
             Spacer()
 
             Text(value)
-                .font(.system(size: , weight: .medium, design: .rounded))
+                .font(.body.weight(.medium))
                 .foregroundStyle(valueColor ?? Color.primary)
                 .multilineTextAlignment(.trailing)
         }
@@ -140,7 +139,7 @@ struct ActionRow: View {
 
     let icon: String
     let title: String
-    var iconColor: Color = Color(UIColor.tertiaryLabel)
+    var iconColor: Color = Color(.tertiaryLabel)
     var isDestructive: Bool = false
 
     var body: some View {
@@ -151,14 +150,14 @@ struct ActionRow: View {
                 .frame(width: 22)
 
             Text(title)
-                .font(.system(size: , weight: .regular, design: .rounded))
+                .font(.body)
                 .foregroundStyle(isDestructive ? Color.red : Color.primary)
 
             Spacer()
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Color(UIColor.quaternaryLabel))
+                .foregroundStyle(Color(.quaternaryLabel))
         }
         .padding(.vertical, 8)
     }
@@ -178,7 +177,7 @@ struct SectionHeader: View {
     var body: some View {
         HStack {
             Text(title)
-                .font(.system(size: , weight: .semibold, design: .rounded))
+                .font(.headline)
                 .foregroundStyle(Color.primary)
 
             Spacer()
@@ -186,8 +185,8 @@ struct SectionHeader: View {
             if let action = action {
                 Button(action: { onAction?() }) {
                     Text(action)
-                        .font(.system(size: , weight: .regular, design: .rounded))
-                        .foregroundStyle(Color.blue)
+                        .font(.footnote)
+                        .foregroundStyle(Color.teal)
                 }
             }
         }
@@ -216,11 +215,11 @@ struct ProfileHeader: View {
                 .clipShape(Circle())
 
             Text(name)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .font(.title3.bold())
                 .foregroundStyle(Color.primary)
 
             Text(role)
-                .font(.system(size: , weight: .medium, design: .rounded))
+                .font(.body.weight(.medium))
                 .foregroundStyle(accentColor)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 5)

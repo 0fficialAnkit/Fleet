@@ -4,12 +4,12 @@ struct ProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var viewModel = ProfileViewModel()
     @State private var isEditing = false
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
-                
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 if let user = viewModel.currentUser {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 24) {
@@ -21,17 +21,17 @@ struct ProfileView: View {
                                 accentColor: Color.purple
                             )
                             .padding(.top, 32)
-                            
+
                             // Info Cards
-                            
+
                                 VStack(spacing: 0) {
                                     InfoRow(icon: "envelope.fill", label: "Email", value: user.email)
-                                    
-                                    Divider().background(Color(UIColor.separator))
+
+                                    Divider().background(Color(.separator))
                                     InfoRow(icon: "phone.fill", label: "Phone", value: user.phone ?? "N/A")
-                                    
+
                                     if let status = user.userStatus {
-                                        Divider().background(Color(UIColor.separator))
+                                        Divider().background(Color(.separator))
                                         InfoRow(
                                             icon: status == .active ? "checkmark.seal.fill" : "xmark.seal.fill",
                                             label: "Status",
@@ -39,39 +39,39 @@ struct ProfileView: View {
                                             valueColor: status == .active ? Color.green : Color.secondary
                                         )
                                     }
-                                    
+
                                     if let date = user.createdAt {
-                                        Divider().background(Color(UIColor.separator))
+                                        Divider().background(Color(.separator))
                                         InfoRow(icon: "calendar", label: "Joined", value: date.formatted(date: .abbreviated, time: .omitted))
                                     }
                                 }
                                 .padding(16)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                                         .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                                 )
-                                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
                             .padding(.horizontal, 16)
-                            
+
                             // Settings & Support Sections
-                            
+
                                 VStack(spacing: 0) {
                                     ActionRow(icon: "gearshape.fill", title: "Settings")
-                                    Divider().background(Color(UIColor.separator))
+                                    Divider().background(Color(.separator))
                                     ActionRow(icon: "questionmark.circle.fill", title: "Help & Support")
                                 }
                                 .padding(16)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                                         .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                                 )
-                                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
                             .padding(.horizontal, 16)
-                            
+
                             // Logout Button
-                            
+
 VStack(spacing: 0) {
                                 Button(action: {
                                     Task {
@@ -82,12 +82,12 @@ VStack(spacing: 0) {
                                 }
                             }
                             .padding(16)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                                     .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                             )
-                            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
                             .padding(.horizontal, 16)
                             .padding(.top, 16)
                         }
@@ -104,7 +104,7 @@ VStack(spacing: 0) {
                     Button("Edit") {
                         isEditing = true
                     }
-                    .foregroundColor(Color.blue)
+                    .foregroundColor(Color.teal)
                 }
             }
             .sheet(isPresented: $isEditing) {
@@ -135,19 +135,19 @@ VStack(spacing: 0) {
 
 struct EditProfileSheet: View {
     @Environment(\.dismiss) private var dismiss
-    
+
     @State var fullName: String
     @State var phone: String
-    
+
     var onSave: (String, String) -> Void
-    
+
     var body: some View {
         NavigationStack {
             Form {
                 Section(header: Text("Personal Info")) {
                     TextField("Full Name", text: $fullName)
                         .textContentType(.name)
-                    
+
                     TextField("Phone Number", text: $phone)
                         .keyboardType(.phonePad)
                         .textContentType(.telephoneNumber)

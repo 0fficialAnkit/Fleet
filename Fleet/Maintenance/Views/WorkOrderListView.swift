@@ -6,10 +6,10 @@ struct WorkOrderListView: View {
     @State private var workOrders: [UnifiedMaintenanceItem] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
-    
+
     let assignedUserId: UUID?
     let priorityFilter: WorkOrderPriority?
-    
+
     init(initialFilter: WorkOrderStatus? = nil, assignedUserId: UUID? = nil, priorityFilter: WorkOrderPriority? = nil) {
         self.assignedUserId = assignedUserId
         self.priorityFilter = priorityFilter
@@ -23,7 +23,7 @@ struct WorkOrderListView: View {
 
     var body: some View {
         ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 if isLoading && workOrders.isEmpty {
                     ProgressView()
@@ -55,7 +55,7 @@ struct WorkOrderListView: View {
                             // MARK: - Filter Picker
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
-                                    FilterChip(label: "All",        isSelected: selectedFilter == nil,              color: Color.orange) { selectedFilter = nil }
+                                    FilterChip(label: "All",        isSelected: selectedFilter == nil,              color: Color.brown) { selectedFilter = nil }
                                     FilterChip(label: "Open",       isSelected: selectedFilter == .open,            color: Color.blue)     { selectedFilter = .open }
                                     FilterChip(label: "In Progress",isSelected: selectedFilter == .inProgress,      color: Color.yellow)  { selectedFilter = .inProgress }
                                     FilterChip(label: "Completed",  isSelected: selectedFilter == .completed,       color: Color.green)  { selectedFilter = .completed }
@@ -69,9 +69,9 @@ struct WorkOrderListView: View {
                                 VStack(spacing: 16) {
                                     Image(systemName: "tray")
                                         .font(.system(size: 44))
-                                        .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                        .foregroundStyle(Color(.tertiaryLabel))
                                     Text("No orders found")
-                                        .font(.system(size: , weight: .medium, design: .rounded))
+                                        .font(.body.weight(.medium))
                                         .foregroundStyle(Color.secondary)
                                 }
                                 .frame(maxWidth: .infinity)
@@ -97,7 +97,7 @@ struct WorkOrderListView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showNewOrderSheet = true }) {
                         Image(systemName: "plus.circle.fill")
-                            .foregroundStyle(Color.orange)
+                            .foregroundStyle(Color.brown)
                             .font(.system(size: 20))
                     }
                 }
@@ -106,7 +106,6 @@ struct WorkOrderListView: View {
                 await loadWorkOrders()
             }
         }
-    
 
     private func getDestination(for item: UnifiedMaintenanceItem) -> MaintenanceDestination {
         switch item {
@@ -120,7 +119,7 @@ struct WorkOrderListView: View {
         do {
             var rawWOs: [WorkOrder] = []
             var rawIRs: [IssueReportRecord] = []
-            
+
             if let assignedTo = assignedUserId {
                 rawWOs = try await WorkOrderService.fetchWorkOrdersForUser(assignedTo: assignedTo)
                 rawIRs = try await IssueReportService.fetchIssueReportsAssignedTo(userId: assignedTo)
@@ -128,14 +127,14 @@ struct WorkOrderListView: View {
                 rawWOs = try await WorkOrderService.fetchAllWorkOrders()
                 // If no user ID, fetch all reports? Or just leave empty for now
             }
-            
+
             var unified = rawWOs.map { UnifiedMaintenanceItem.workOrder($0) } +
                           rawIRs.map { UnifiedMaintenanceItem.issueReport($0) }
-            
+
             if let pFilter = priorityFilter {
                 unified = unified.filter { $0.unifiedPriority == pFilter }
             }
-            
+
             workOrders = unified
         } catch {
             errorMessage = error.localizedDescription
@@ -153,15 +152,15 @@ private struct MiniStatBadge: View {
     var body: some View {
         VStack(spacing: 4) {
             Text("\(count)")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.title3.bold())
                 .foregroundStyle(color)
             Text(label)
-                .font(.system(size: , weight: .medium, design: .rounded))
-                .foregroundStyle(Color(UIColor.tertiaryLabel))
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color(.tertiaryLabel))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(color.opacity(0.2), lineWidth: 0.8)
@@ -179,12 +178,12 @@ private struct FilterChip: View {
     var body: some View {
         Button(action: action) {
             Text(label)
-                .font(.system(size: , weight: .regular, design: .rounded))
+                .font(.footnote)
                 .fontWeight(isSelected ? .semibold : .regular)
                 .foregroundStyle(isSelected ? color : Color.secondary)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(isSelected ? color.opacity(0.15) : Color(UIColor.secondarySystemBackground))
+                .background(isSelected ? color.opacity(0.15) : Color(.secondarySystemBackground))
                 .clipShape(Capsule())
                 .overlay(
                     Capsule().stroke(isSelected ? color.opacity(0.4) : Color.clear, lineWidth: 1)
@@ -207,7 +206,7 @@ struct UnifiedWorkItemRow: View {
                         .fill(priorityColor(item.unifiedPriority))
                         .frame(width: 8, height: 8)
                     Text(item.title)
-                        .font(.system(size: , weight: .semibold, design: .rounded))
+                        .font(.headline)
                         .foregroundStyle(Color.primary)
                 }
                 Spacer()
@@ -220,7 +219,7 @@ struct UnifiedWorkItemRow: View {
             HStack {
                 Label {
                     Text(priorityLabel(item.unifiedPriority))
-                        .font(.system(size: , weight: .medium, design: .rounded))
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Color.secondary)
                 } icon: {
                     Image(systemName: priorityIcon(item.unifiedPriority))
@@ -233,21 +232,21 @@ struct UnifiedWorkItemRow: View {
                     HStack(spacing: 4) {
                         Image(systemName: "clock")
                             .font(.caption2)
-                            .foregroundStyle(Color(UIColor.tertiaryLabel))
+                            .foregroundStyle(Color(.tertiaryLabel))
                         Text(date, style: .relative)
-                            .font(.system(size: , weight: .regular, design: .rounded))
-                            .foregroundStyle(Color(UIColor.tertiaryLabel))
+                            .font(.footnote)
+                            .foregroundStyle(Color(.tertiaryLabel))
                     }
                 }
             }
         }
         .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
         )
-        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
     }
 
     func statusLabel(_ status: WorkOrderStatus?) -> String {

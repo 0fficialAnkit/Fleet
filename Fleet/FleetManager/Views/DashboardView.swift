@@ -6,12 +6,12 @@ struct DashboardView: View {
     @State private var showingNotifications = false
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var navigationPath = NavigationPath()
-    
+
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
-                
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 if viewModel.isLoading && viewModel.vehicles.isEmpty {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -35,11 +35,11 @@ struct DashboardView: View {
                             .foregroundStyle(Color.primary)
                             .frame(width: 38, height: 38)
                     }
-                    
+
                     Button(action: { isShowingProfile = true }) {
                         Image(systemName: "person.crop.circle.fill")
                             .font(.system(size: 22, weight: .medium))
-                            .foregroundStyle(Color.blue)
+                            .foregroundStyle(Color.teal)
                     }
                 }
             }
@@ -72,9 +72,9 @@ struct DashboardView: View {
             viewModel.setupRealtime()
         }
     }
-    
+
     // MARK: - Fleet Overview Card (Idea 3)
-    
+
     private var fleetOverviewCard: some View {
         NavigationLink(value: DashboardDestination.vehiclesRoot) {
             VStack(spacing: 0) {
@@ -82,31 +82,31 @@ struct DashboardView: View {
                 HStack(alignment: .top, spacing: 16) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color.blue.opacity(0.12))
+                            .fill(Color.teal.opacity(0.12))
                             .frame(width: 48, height: 48)
                         Image(systemName: "truck.box.fill")
                             .font(.system(size: 22, weight: .medium))
-                            .foregroundStyle(Color.blue)
+                            .foregroundStyle(Color.teal)
                     }
-                    
+
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Total Vehicle \(viewModel.totalVehicles)")
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .font(.title2.bold())
                             .foregroundStyle(Color.primary)
                     }
-                    
+
                     Spacer()
-                    
+
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.secondary)
                         .padding(.top, 4)
                 }
-                
+
                 Divider()
-                    .background(Color(UIColor.separator))
+                    .background(Color(.separator))
                     .padding(.vertical, 16)
-                
+
                 // Status breakdown row
                 HStack(spacing: 8) {
                     FleetStatPill(
@@ -128,7 +128,7 @@ struct DashboardView: View {
             }
             .padding(16)
             .background(
-                Color(UIColor.tertiarySystemBackground).opacity(0.35)
+                Color(.tertiarySystemBackground).opacity(0.35)
             )
             .clipShape(
                 RoundedRectangle(
@@ -136,12 +136,10 @@ struct DashboardView: View {
                     style: .continuous
                 )
             )
-            .glassEffect(
-                in: RoundedRectangle(
+            .background(.ultraThinMaterial, in: RoundedRectangle(
                     cornerRadius: 20,
                     style: .continuous
-                )
-            )
+                ))
             .overlay(
                 RoundedRectangle(
                     cornerRadius: 20,
@@ -149,25 +147,25 @@ struct DashboardView: View {
                 )
                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
             )
-            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 16)
     }
-    
+
     // MARK: - Recent Orders
-    
+
     private var recentOrdersSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             SectionHeader(title: "Recent Orders", action: "See All") {
                 // Action
             }
             .padding(.horizontal, 16)
-            
+
             if viewModel.recentOrders.isEmpty {
                 Text("No orders yet.")
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .font(.body)
                     .foregroundStyle(Color.secondary)
                     .padding(.horizontal, 16)
             } else {
@@ -181,17 +179,17 @@ struct DashboardView: View {
             }
         }
     }
-    
+
     // MARK: - Maintenance
-    
+
     private var maintenanceSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             SectionHeader(title: "Need Maintenance")
                 .padding(.horizontal, 16)
-            
+
             if viewModel.maintenanceVehicles.isEmpty {
                 Text("All vehicles operational.")
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .font(.body)
                     .foregroundStyle(Color.secondary)
                     .padding(.horizontal, 16)
             } else {
@@ -210,14 +208,14 @@ struct FleetStatPill: View {
     let value: Int
     let label: String
     let color: Color
-    
+
     var body: some View {
         VStack(spacing: 5) {
             Text("\(value)")
-                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .font(.title3.weight(.semibold))
                 .foregroundStyle(Color.primary)
             Text(label)
-                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(Color.secondary)
         }
         .frame(maxWidth: .infinity)
@@ -236,78 +234,78 @@ struct FleetStatPill: View {
 struct TripCardView: View {
     let trip: Trip
     let viewModel: DashboardViewModel
-    
+
     var routeName: String {
         viewModel.routeName(for: trip.routeId)
     }
-    
+
     var displayTitle: String {
         if let type = trip.orderType {
             return type.displayName
         }
         return routeName
     }
-    
+
     var driverName: String {
         viewModel.driverName(for: trip.driverId)
     }
-    
+
     var statusColor: Color {
         switch trip.status {
         case .scheduled: return Color.blue
         case .active:    return Color.yellow
         case .completed: return Color.green
         case .cancelled: return Color.red
-        case .none:      return Color(UIColor.quaternaryLabel)
+        case .none:      return Color(.quaternaryLabel)
         }
     }
-    
+
     var body: some View {
         HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Text(displayTitle)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(.body.bold())
                         .foregroundStyle(Color.primary)
                         .lineLimit(1)
                     Spacer()
                     StatusBadge(text: trip.status?.rawValue.capitalized ?? "Unknown", color: statusColor)
                 }
-                
+
                 HStack {
                     HStack(spacing: 6) {
                         Image(systemName: "person.crop.circle.fill")
-                            .foregroundStyle(Color.blue)
+                            .foregroundStyle(Color.teal)
                             .font(.system(size: 16))
                         Text(driverName)
-                            .font(.system(size: 14, weight: .regular, design: .rounded))
+                            .font(.subheadline)
                             .foregroundStyle(Color.secondary)
                     }
                     Spacer()
                     if let distance = trip.distance {
                         HStack(spacing: 6) {
                             Image(systemName: "ruler.fill")
-                                .foregroundStyle(Color(UIColor.tertiaryLabel))
+                                .foregroundStyle(Color(.tertiaryLabel))
                                 .font(.system(size: 14))
                             Text(String(format: "%.1f km", distance))
-                                .font(.system(size: 14, weight: .regular, design: .rounded))
+                                .font(.subheadline)
                                 .foregroundStyle(Color.secondary)
                         }
                     }
                 }
             }
-            
+
             Image(systemName: "chevron.right")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Color.secondary)
         }
         .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
         )
-        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
     }
 }
 
@@ -316,11 +314,11 @@ struct TripCardView: View {
 struct MaintenanceCardView: View {
     let vehicle: Vehicle
     let viewModel: DashboardViewModel
-    
+
     var maintenanceTask: MaintenanceTask? {
         viewModel.maintenanceTask(for: vehicle.id)
     }
-    
+
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: "wrench.and.screwdriver.fill")
@@ -329,19 +327,19 @@ struct MaintenanceCardView: View {
                 .frame(width: 44, height: 44)
                 .background(Color.yellow.opacity(0.15))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.body.bold())
                     .foregroundStyle(Color.primary)
-                
+
                 Text(vehicle.licensePlate ?? "No Plate")
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.secondary)
-                
+
                 if let task = maintenanceTask {
                     Text(task.description ?? "Needs maintenance")
-                        .font(.system(size: 12, weight: .regular, design: .rounded))
+                        .font(.caption)
                         .foregroundStyle(Color.red)
                         .lineLimit(2)
                 }
@@ -349,12 +347,12 @@ struct MaintenanceCardView: View {
             Spacer()
         }
         .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
         )
-        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+
     }
 }
 
@@ -362,4 +360,3 @@ struct MaintenanceCardView: View {
     DashboardView()
         .environment(AuthViewModel())
 }
-

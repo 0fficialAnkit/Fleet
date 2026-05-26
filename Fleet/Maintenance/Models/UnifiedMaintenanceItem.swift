@@ -10,23 +10,23 @@ enum UnifiedMaintenanceItem: Identifiable, Hashable {
         case .issueReport(let ir): return ir.id
         }
     }
-    
+
     var vehicleId: UUID {
         switch self {
         case .workOrder(let wo): return wo.vehicleId
         case .issueReport(let ir): return ir.vehicleId
         }
     }
-    
+
     var title: String {
         switch self {
-        case .workOrder: 
+        case .workOrder:
             return "Work Order"
-        case .issueReport(let ir): 
+        case .issueReport(let ir):
             return ir.category
         }
     }
-    
+
     var subtitle: String {
         switch self {
         case .workOrder(let wo):
@@ -50,7 +50,7 @@ enum UnifiedMaintenanceItem: Identifiable, Hashable {
             }
         }
     }
-    
+
     var unifiedStatus: WorkOrderStatus? {
         switch self {
         case .workOrder(let wo):
@@ -65,7 +65,7 @@ enum UnifiedMaintenanceItem: Identifiable, Hashable {
             }
         }
     }
-    
+
     var createdAt: Date? {
         switch self {
         case .workOrder(let wo): return wo.createdAt

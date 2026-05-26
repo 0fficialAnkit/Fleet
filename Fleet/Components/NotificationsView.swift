@@ -9,8 +9,8 @@ struct NotificationsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
-                
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 if viewModel.isLoading && viewModel.notifications.isEmpty {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -20,7 +20,7 @@ struct NotificationsView: View {
                             .font(.system(size: 48))
                             .foregroundColor(Color.secondary)
                         Text("No notifications")
-                            .font(.system(size: , weight: .regular, design: .rounded))
+                            .font(.body)
                             .foregroundColor(Color.secondary)
                     }
                 } else {
@@ -54,8 +54,8 @@ struct NotificationsView: View {
                         Button("Mark All Read") {
                             viewModel.markAllAsRead()
                         }
-                        .foregroundColor(Color.blue)
-                        .font(.system(size: , weight: .regular, design: .rounded))
+                        .foregroundColor(Color.teal)
+                        .font(.footnote)
                     }
                 }
             }
@@ -71,7 +71,7 @@ struct NotificationsView: View {
 struct NotificationRow: View {
     let notification: Notification
     let onTap: () -> Void
-    
+
     var iconName: String {
         switch notification.type {
         case .info: return "info.circle.fill"
@@ -81,7 +81,7 @@ struct NotificationRow: View {
         case .none: return "bell.fill"
         }
     }
-    
+
     var iconColor: Color {
         switch notification.type {
         case .info: return Color.blue
@@ -91,7 +91,7 @@ struct NotificationRow: View {
         case .none: return Color.secondary
         }
     }
-    
+
     var body: some View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: 16) {
@@ -99,22 +99,22 @@ struct NotificationRow: View {
                     .font(.title2)
                     .foregroundColor(iconColor)
                     .padding(.top, 4)
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(notification.title ?? "Notification")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .font(.body.bold())
                             .foregroundColor(notification.isRead ? Color.secondary : Color.primary)
                         Spacer()
                         if let date = notification.createdAt {
                             Text(date.formatted(date: .abbreviated, time: .shortened))
-                                .font(.system(size: 12, weight: .regular, design: .rounded))
-                                .foregroundColor(Color(UIColor.tertiaryLabel))
+                                .font(.caption)
+                                .foregroundColor(Color(.tertiaryLabel))
                         }
                     }
-                    
+
                     Text(notification.message ?? "")
-                        .font(.system(size: 14, weight: .regular, design: .rounded))
+                        .font(.subheadline)
                         .foregroundColor(Color.secondary)
                         .multilineTextAlignment(.leading)
                 }

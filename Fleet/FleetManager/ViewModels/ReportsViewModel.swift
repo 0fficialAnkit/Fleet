@@ -149,7 +149,6 @@ final class ReportsViewModel {
         }
     }
 
-
     // MARK: - Helpers
 
     private func profileName(_ id: UUID?) -> String {
@@ -180,12 +179,12 @@ final class ReportsViewModel {
             }
             return "Working on vehicle"
         }
-        
+
         let pendingTasks = maintenanceTasks.filter { $0.assignedTo == staffId && $0.status == .pending }
         if !pendingTasks.isEmpty {
             return "Assigned (Pending)"
         }
-        
+
         return "Available"
     }
 

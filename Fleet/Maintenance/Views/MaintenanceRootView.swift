@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MaintenanceRootView: View {
     @State private var selectedTab: Int = 0
-    
+
     var body: some View {
         TabView(selection: $selectedTab) {
             MaintenanceDashboardView(selectedTab: $selectedTab)
@@ -23,7 +23,7 @@ struct MaintenanceRootView: View {
                 }
                 .tag(2)
         }
-        .tint(Color.orange)
+        .tint(Color.brown)
     }
 }
 

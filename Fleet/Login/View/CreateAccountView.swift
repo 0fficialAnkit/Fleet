@@ -6,31 +6,31 @@ struct CreateAccountView: View {
     @State private var password = ""
     @State private var selectedRoleId: Int = 1
     @State private var isPasswordVisible = false
-    
+
     var onSuccess: (() -> Void)? = nil
 
     @Environment(AuthViewModel.self) private var authViewModel
     @Environment(\.dismiss) private var dismiss
 
     let roleItems: [RoleDisplayItem] = [
-        RoleDisplayItem(id: 1, roleName: "Fleet Manager", description: "Manage fleet, drivers & analytics", iconName: "shield.fill", iconColor: Color.blue, iconBackground: Color.blue.opacity(0.15)),
+        RoleDisplayItem(id: 1, roleName: "Fleet Manager", description: "Manage fleet, drivers & analytics", iconName: "shield.fill", iconColor: Color.teal, iconBackground: Color.teal.opacity(0.15)),
         RoleDisplayItem(id: 2, roleName: "Driver", description: "View routes, log trips & fuel", iconName: "truck.box.fill", iconColor: Color.green, iconBackground: Color.green.opacity(0.15)),
-        RoleDisplayItem(id: 3, roleName: "Maintenance", description: "Schedule repairs & manage parts", iconName: "wrench.and.screwdriver.fill", iconColor: Color.orange, iconBackground: Color.orange.opacity(0.15))
+        RoleDisplayItem(id: 3, roleName: "Maintenance", description: "Schedule repairs & manage parts", iconName: "wrench.and.screwdriver.fill", iconColor: Color.brown, iconBackground: Color.brown.opacity(0.15))
     ]
 
     var body: some View {
         ZStack {
-            Color(UIColor.systemGroupedBackground)
+            Color(.systemGroupedBackground)
                 .ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: 0) {
                     Spacer().frame(height: 20)
-                    
+
                     Text("Create Account")
                         .font(.system(size: 28, weight: .bold))
                         .foregroundColor(Color.primary)
-                    
+
                     Text("Join GoFleet today")
                         .font(.system(size: 15))
                         .foregroundColor(Color.secondary)
@@ -42,7 +42,7 @@ struct CreateAccountView: View {
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(Color.secondary)
                         .kerning(1.2)
-                    
+
                     Spacer().frame(height: 16)
 
                     // Role Card List (horizontal squares without descriptions)
@@ -64,38 +64,38 @@ struct CreateAccountView: View {
 
                     VStack(spacing: 14) {
                         // Full Name
-                        TextField("", text: $fullName, prompt: Text("Full Name").foregroundColor(Color(UIColor.placeholderText)))
+                        TextField("", text: $fullName, prompt: Text("Full Name").foregroundColor(Color(.placeholderText)))
                             .foregroundColor(Color.primary)
                             .padding(.horizontal, 18)
                             .frame(height: 56)
-                            .background(Color(UIColor.secondarySystemBackground))
+                            .background(Color(.secondarySystemBackground))
                             .cornerRadius(14)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14)
-                                    .stroke(Color(UIColor.separator), lineWidth: 1)
+                                    .stroke(Color(.separator), lineWidth: 1)
                             )
 
                         // Email
-                        TextField("", text: $email, prompt: Text("Email address").foregroundColor(Color(UIColor.placeholderText)))
+                        TextField("", text: $email, prompt: Text("Email address").foregroundColor(Color(.placeholderText)))
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
                             .foregroundColor(Color.primary)
                             .padding(.horizontal, 18)
                             .frame(height: 56)
-                            .background(Color(UIColor.secondarySystemBackground))
+                            .background(Color(.secondarySystemBackground))
                             .cornerRadius(14)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14)
-                                    .stroke(Color(UIColor.separator), lineWidth: 1)
+                                    .stroke(Color(.separator), lineWidth: 1)
                             )
 
                         // Password
                         HStack {
                             if isPasswordVisible {
-                                TextField("", text: $password, prompt: Text("Password").foregroundColor(Color(UIColor.placeholderText)))
+                                TextField("", text: $password, prompt: Text("Password").foregroundColor(Color(.placeholderText)))
                                     .foregroundColor(Color.primary)
                             } else {
-                                SecureField("", text: $password, prompt: Text("Password").foregroundColor(Color(UIColor.placeholderText)))
+                                SecureField("", text: $password, prompt: Text("Password").foregroundColor(Color(.placeholderText)))
                                     .foregroundColor(Color.primary)
                             }
                             Button(action: { isPasswordVisible.toggle() }) {
@@ -105,11 +105,11 @@ struct CreateAccountView: View {
                         }
                         .padding(.horizontal, 18)
                         .frame(height: 56)
-                        .background(Color(UIColor.secondarySystemBackground))
+                        .background(Color(.secondarySystemBackground))
                         .cornerRadius(14)
                         .overlay(
                             RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color(UIColor.separator), lineWidth: 1)
+                                .stroke(Color(.separator), lineWidth: 1)
                         )
 
                         Spacer().frame(height: 14)
@@ -131,16 +131,16 @@ struct CreateAccountView: View {
                         }) {
                             HStack {
                                 if authViewModel.isLoading {
-                                    ProgressView().tint(isButtonDisabled ? Color(UIColor.tertiaryLabel) : Color(UIColor.systemBackground))
+                                    ProgressView().tint(isButtonDisabled ? Color(.tertiaryLabel) : Color(.systemBackground))
                                 } else {
                                     Text("Create Account")
                                         .font(.system(size: 18, weight: .semibold))
                                 }
                             }
-                            .foregroundColor(isButtonDisabled ? Color(UIColor.tertiaryLabel) : Color(UIColor.systemBackground))
+                            .foregroundColor(isButtonDisabled ? Color(.tertiaryLabel) : Color(.systemBackground))
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
-                            .background(isButtonDisabled ? Color(UIColor.tertiarySystemFill) : Color.blue)
+                            .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.teal)
                             .cornerRadius(16)
                         }
                         .disabled(authViewModel.isLoading || isButtonDisabled)
@@ -164,25 +164,25 @@ struct SquareRoleCardView: View {
         VStack(spacing: 8) {
             Image(systemName: item.iconName)
                 .font(.system(size: 20))
-                .foregroundColor(isSelected ? Color.blue : Color.secondary)
-            
+                .foregroundColor(isSelected ? Color.teal : Color.secondary)
+
             Text(item.roleName)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isSelected ? Color.blue : Color.secondary)
+                .foregroundColor(isSelected ? Color.teal : Color.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 80)
         .background(
-            isSelected 
-            ? Color.blue.opacity(0.12) 
-            : Color(UIColor.systemBackground)
+            isSelected
+            ? Color.teal.opacity(0.12)
+            : Color(.systemBackground)
         )
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color.blue : Color(UIColor.opaqueSeparator), lineWidth: 1.5)
+                .stroke(isSelected ? Color.teal : Color(.opaqueSeparator), lineWidth: 1.5)
         )
     }
 }
