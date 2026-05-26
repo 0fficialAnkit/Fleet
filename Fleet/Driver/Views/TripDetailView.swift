@@ -115,7 +115,7 @@ struct TripDetailView: View {
                             Text("Pickup / Origin")
                                 .font(.system(size: 16, weight: .regular, design: .rounded))
                                 .foregroundStyle(Color.secondary)
-                            Text("Warehouse A, Sector 12")
+                            Text(route?.startLocation ?? "No start location")
                                 .font(.system(size: 16, weight: .medium, design: .rounded))
                                 .foregroundStyle(Color.primary)
                         }
@@ -142,7 +142,7 @@ struct TripDetailView: View {
                             Text("Drop-off / Destination")
                                 .font(.system(size: 16, weight: .regular, design: .rounded))
                                 .foregroundStyle(Color.secondary)
-                            Text("Distribution Center, Zone B")
+                            Text(route?.endLocation ?? "No destination")
                                 .font(.system(size: 16, weight: .medium, design: .rounded))
                                 .foregroundStyle(Color.primary)
                         }
@@ -162,13 +162,13 @@ struct TripDetailView: View {
                     infoTile(
                         icon: "road.lanes",
                         label: "Distance",
-                        value: trip.distance != nil ? String(format: "%.1f km", trip.distance!) : "42 km",
+                        value: trip.distance != nil ? String(format: "%.1f km", trip.distance!) : "N/A",
                         color: Color.yellow
                     )
                     infoTile(
                         icon: "timer",
                         label: "Est. Duration",
-                        value: "~38 min",
+                        value: "N/A",
                         color: Color.purple
                     )
                 }
@@ -372,22 +372,39 @@ struct TripDetailView: View {
 
     // MARK: - Apple Maps Navigation
 
-    /// Geocodes the route's destination using iOS 26 MKGeocodingRequest
-    /// and opens Apple Maps with driving turn-by-turn navigation.
+    /// Geocodes both the fleet-manager-specified start and end locations,
+    /// then opens Apple Maps with the exact route the fleet manager defined.
     private func openMapsNavigation() {
-        guard let destination = route?.endLocation, !destination.isEmpty else { return }
+        guard let startAddr = route?.startLocation, !startAddr.isEmpty,
+              let endAddr   = route?.endLocation,   !endAddr.isEmpty
+        else { return }
+
         Task {
-            let searchRequest = MKLocalSearch.Request()
-            searchRequest.naturalLanguageQuery = destination
-            searchRequest.resultTypes = .address
-            guard let mapItem = try? await MKLocalSearch(request: searchRequest).start().mapItems.first
+            async let sourceResult = geocodeAddress(startAddr)
+            async let destResult   = geocodeAddress(endAddr)
+
+            guard let sourceItem = await sourceResult,
+                  let destItem   = await destResult
             else { return }
-            mapItem.name = destination
-            mapItem.openInMaps(launchOptions: [
-                MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving,
-                MKLaunchOptionsShowsTrafficKey: true
-            ])
+
+            sourceItem.name = startAddr
+            destItem.name   = endAddr
+
+            MKMapItem.openMaps(
+                with: [sourceItem, destItem],
+                launchOptions: [
+                    MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving,
+                    MKLaunchOptionsShowsTrafficKey: true
+                ]
+            )
         }
+    }
+
+    private func geocodeAddress(_ address: String) async -> MKMapItem? {
+        let req = MKLocalSearch.Request()
+        req.naturalLanguageQuery = address
+        req.resultTypes = .address
+        return try? await MKLocalSearch(request: req).start().mapItems.first
     }
 
     @ViewBuilder

@@ -19,6 +19,7 @@ struct DashboardView: View {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 24) {
                             fleetOverviewCard
+                            liveFleetSection
                             recentOrdersSection
                             maintenanceSection
                         }
@@ -156,6 +157,62 @@ struct DashboardView: View {
                     }
                     .buttonStyle(.plain)
                     .padding(.horizontal, 16)
+                }
+            }
+        }
+    }
+
+    // MARK: - Live Fleet Map
+
+    private var liveFleetSection: some View {
+        let activeTrips = viewModel.trips.filter { $0.status == .active }
+        return VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                SectionHeader(title: "Live Vehicles")
+                Spacer()
+                if !activeTrips.isEmpty {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 7, height: 7)
+                        Text("\(activeTrips.count) on route")
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(Color.secondary)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+
+            if activeTrips.isEmpty {
+                Text("No active trips right now.")
+                    .font(.body)
+                    .foregroundStyle(Color.secondary)
+                    .padding(.horizontal, 16)
+            } else {
+                ForEach(activeTrips) { trip in
+                    let route = viewModel.routes.first { $0.id == trip.routeId }
+                    let driverName = viewModel.driverName(for: trip.driverId)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Driver + vehicle label
+                        HStack(spacing: 8) {
+                            Image(systemName: "person.crop.circle.fill")
+                                .foregroundStyle(Color.blue)
+                            Text(driverName)
+                                .font(.subheadline.bold())
+                                .foregroundStyle(Color.primary)
+                            Spacer()
+                            StatusBadge(text: "Active", color: Color.green)
+                        }
+                        .padding(.horizontal, 16)
+
+                        // Reuse the exact same map from the driver's TripDetailView
+                        TripRouteMapView(
+                            startAddress: route?.startLocation,
+                            endAddress: route?.endLocation
+                        )
+                        .padding(.horizontal, 16)
+                    }
                 }
             }
         }
