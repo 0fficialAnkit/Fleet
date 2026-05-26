@@ -1,5 +1,6 @@
 import SwiftUI
 import Supabase
+import PhotosUI
 
 // MARK: - Issue Category
 enum IssueCategory: String, CaseIterable, Identifiable {
@@ -53,6 +54,9 @@ struct DriverReportIssueView: View {
 
     private let maxDescriptionLength = 200
 
+    @State private var selectedPhotos: [PhotosPickerItem] = []
+    @State private var capturedImages: [UIImage] = []
+
     var body: some View {
         ZStack {
             themeModel.backgroundPrimary.ignoresSafeArea()
@@ -66,6 +70,7 @@ struct DriverReportIssueView: View {
                         issueCategorySection
                         severitySection
                         descriptionSection
+                        photosSection
                         submitButton
                     }
                     .padding(themeModel.spacingMD)
@@ -82,6 +87,17 @@ struct DriverReportIssueView: View {
             Button("OK", role: .cancel) { }
         } message: {
             Text(errorMessage ?? "Unknown error occurred")
+        }
+        .onChange(of: selectedPhotos) { _, newItems in
+            Task {
+                for item in newItems {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        capturedImages.append(image)
+                    }
+                }
+                selectedPhotos = []
+            }
         }
     }
 
@@ -336,6 +352,72 @@ struct DriverReportIssueView: View {
         .transition(.opacity.combined(with: .scale(scale: 0.95)))
     }
 
+    // MARK: - Photos Section
+    private var photosSection: some View {
+        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+            Label("Damage Photos", systemImage: "camera.fill")
+                .font(themeModel.headline())
+                .foregroundStyle(themeModel.textPrimary)
+
+            Text("Add photos to verify vehicle damage (up to 5)")
+                .font(themeModel.caption())
+                .foregroundStyle(themeModel.textSecondary)
+
+            if !capturedImages.isEmpty {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    ForEach(capturedImages.indices, id: \.self) { index in
+                        ZStack(alignment: .topTrailing) {
+                            Image(uiImage: capturedImages[index])
+                                .resizable()
+                                .scaledToFill()
+                                .frame(height: 100)
+                                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusSM))
+
+                            Button {
+                                capturedImages.remove(at: index)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.title3)
+                                    .symbolRenderingMode(.palette)
+                                    .foregroundStyle(.white, themeModel.danger)
+                            }
+                            .padding(4)
+                        }
+                    }
+                }
+            }
+
+            PhotosPicker(
+                selection: $selectedPhotos,
+                maxSelectionCount: 5,
+                matching: .images,
+                photoLibrary: .shared()
+            ) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundStyle(themeModel.driverPrimary)
+                    Text(capturedImages.isEmpty ? "Add Photos" : "Add More Photos")
+                        .font(themeModel.bodyMedium())
+                        .foregroundStyle(themeModel.driverPrimary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(themeModel.spacingMD)
+                .background(themeModel.driverPrimary.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD))
+                .overlay(
+                    RoundedRectangle(cornerRadius: themeModel.radiusMD)
+                        .stroke(themeModel.driverPrimary.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [8]))
+                )
+            }
+        }
+        .padding(themeModel.spacingMD)
+        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+        )
+    }
+
     // MARK: - Submit Action
     private func handleSubmit() {
         withAnimation(.easeInOut) {
@@ -347,13 +429,36 @@ struct DriverReportIssueView: View {
                     isSubmitting = false
                     return
                 }
+
+                // Upload photos to Supabase Storage
+                var uploadedUrls: [String] = []
+                for (index, image) in capturedImages.enumerated() {
+                    if let data = image.jpegData(compressionQuality: 0.7) {
+                        let fileName = "defects/\(UUID().uuidString)_\(index).jpg"
+                        try await supabase.storage
+                            .from("fleet-uploads")
+                            .upload(fileName, data: data, options: .init(contentType: "image/jpeg"))
+                        if let publicUrl = try? supabase.storage.from("fleet-uploads").getPublicURL(path: fileName).absoluteString {
+                            uploadedUrls.append(publicUrl)
+                        }
+                    }
+                }
+
+                var finalDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !uploadedUrls.isEmpty {
+                    finalDescription += "\n\n[Damage Photos]"
+                    for url in uploadedUrls {
+                        finalDescription += "\n- \(url)"
+                    }
+                }
+
                 let report = IssueReportRecord(
                     id: UUID(),
                     vehicleId: vehicle.id,
                     reportedBy: userId,
                     category: selectedCategory.rawValue,
                     severity: selectedSeverity.rawValue,
-                    description: description.trimmingCharacters(in: .whitespacesAndNewlines),
+                    description: finalDescription,
                     status: "open",
                     assignedTo: nil,
                     createdAt: Date()

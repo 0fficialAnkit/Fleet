@@ -4,8 +4,8 @@ import MapKit
 struct TripDetailView: View {
 
     let trip: Trip
-    let onStart: (UUID, UUID, String) -> Void
-    let onEnd: (UUID, UUID, String) -> Void
+    let onStart: (UUID, UUID, String, [String]) -> Void
+    let onEnd: (UUID, UUID, String, [String]) -> Void
 
     // Local status so UI reacts immediately after start/end
     @State private var currentStatus: TripStatus?
@@ -13,9 +13,10 @@ struct TripDetailView: View {
 
     // Route loaded from Supabase
     @State private var route: Route?
+    @State private var vehicle: Vehicle?
     @State private var mapView: TripRouteMapView?
 
-    init(trip: Trip, onStart: @escaping (UUID, UUID, String) -> Void, onEnd: @escaping (UUID, UUID, String) -> Void) {
+    init(trip: Trip, onStart: @escaping (UUID, UUID, String, [String]) -> Void, onEnd: @escaping (UUID, UUID, String, [String]) -> Void) {
         self.trip = trip
         self.onStart = onStart
         self.onEnd = onEnd
@@ -172,6 +173,81 @@ struct TripDetailView: View {
                     )
                 }
 
+                // ── Assigned Vehicle ───────────────────────────────
+                sectionTitle("Assigned Vehicle")
+
+                if let vehicle {
+                    VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+                        HStack(spacing: themeModel.spacingMD) {
+                            Image(systemName: "truck.box.fill")
+                                .font(.system(size: 24))
+                                .foregroundStyle(themeModel.driverPrimary)
+                                .frame(width: 44, height: 44)
+                                .background(themeModel.driverPrimary.opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD))
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(vehicle.make ?? "Vehicle") \(vehicle.model ?? "")")
+                                    .font(themeModel.headline())
+                                    .foregroundStyle(themeModel.textPrimary)
+                                Text(vehicle.licensePlate ?? "—")
+                                    .font(themeModel.caption())
+                                    .foregroundStyle(themeModel.textSecondary)
+                            }
+                            Spacer()
+                        }
+
+                        Divider().background(themeModel.divider)
+
+                        HStack(spacing: themeModel.spacingMD) {
+                            NavigationLink(value: DriverDestination.vehicleDetail(vehicle)) {
+                                Label("View Details", systemImage: "info.circle")
+                                    .font(themeModel.caption())
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(themeModel.driverPrimary)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 12)
+                                    .background(themeModel.driverPrimary.opacity(0.08))
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+
+                            NavigationLink(value: DriverDestination.reportIssue(vehicle)) {
+                                Label("Report Issue", systemImage: "exclamationmark.triangle")
+                                    .font(themeModel.caption())
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(themeModel.danger)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 12)
+                                    .background(themeModel.danger.opacity(0.08))
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(themeModel.spacingMD)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                    )
+                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                } else {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Loading vehicle info...")
+                            .font(themeModel.body())
+                            .foregroundStyle(themeModel.textSecondary)
+                    }
+                    .padding(themeModel.spacingMD)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                    )
+                }
+
                 // ── Route Map ─────────────────────────────────────
                 sectionTitle("Route Map")
 
@@ -189,20 +265,22 @@ struct TripDetailView: View {
         .navigationTitle("Trip Details")
         .navigationBarTitleDisplayMode(.large)
         .task {
-            // Load the associated route so the map has real addresses
-            if let routeId = trip.routeId {
-                route = try? await RouteService.fetchRoute(id: routeId)
-            }
+            // Load route and vehicle details
+            async let fetchedRoute = trip.routeId != nil ? RouteService.fetchRoute(id: trip.routeId!) : nil
+            async let fetchedVehicle = VehicleService.fetchVehicle(id: trip.vehicleId)
+
+            route = try? await fetchedRoute
+            vehicle = try? await fetchedVehicle
         }
         .sheet(item: $showingChecklist) { type in
-            DriverChecklistView(checklistType: type) { notes in
+            DriverChecklistView(checklistType: type) { notes, urls in
                 if type == .preTrip {
-                    onStart(trip.id, trip.vehicleId, notes)
+                    onStart(trip.id, trip.vehicleId, notes, urls)
                     withAnimation { currentStatus = .active }
                     // Open Apple Maps with turn-by-turn navigation to destination
                     openMapsNavigation()
                 } else {
-                    onEnd(trip.id, trip.vehicleId, notes)
+                    onEnd(trip.id, trip.vehicleId, notes, urls)
                     withAnimation { currentStatus = .completed }
                 }
                 showingChecklist = nil

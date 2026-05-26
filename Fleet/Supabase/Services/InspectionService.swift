@@ -81,4 +81,17 @@ enum InspectionService {
             throw error
         }
     }
+
+    static func createInspectionPhoto(_ photo: InspectionPhoto) async throws {
+        do {
+            try await supabase
+                .from("inspection_photos")
+                .insert(photo)
+                .execute()
+            print("[InspectionService] createInspectionPhoto(\(photo.id)): OK")
+        } catch {
+            print("[InspectionService] createInspectionPhoto ERROR: \(error)")
+            throw error
+        }
+    }
 }

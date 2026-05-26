@@ -5,232 +5,416 @@ struct DriverDashboardView: View {
 
     @State private var viewModel = DriverDashboardViewModel()
     @Environment(AuthViewModel.self) private var authViewModel
-    @State private var showingNotifications = false
-    @State private var navigationPath = [DriverDestination]()
+    @State private var selectedTrip: Trip?
 
     var body: some View {
+        ZStack {
+            themeModel.backgroundPrimary.ignoresSafeArea()
 
-        NavigationStack(path: $navigationPath) {
-
-            ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
-
-                if viewModel.isLoading && viewModel.vehicle == nil {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                } else {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 20) {
-                            if let vehicle = viewModel.vehicle {
-                                NavigationLink(value: DriverDestination.vehicleDetail(vehicle)) {
-                                    vehicleCard(vehicle)
-                                }
-                                .buttonStyle(.plain)
-                            } else {
-                                Text("No vehicle assigned.")
-                                    .font(themeModel.body())
-                                    .foregroundStyle(themeModel.textSecondary)
-                                    .padding()
-                            }
-
-                            summaryCardsSection
-
-                            tripsSection
-                        }
-                        .padding()
+            if viewModel.isLoading && viewModel.trips.isEmpty {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: themeModel.driverPrimary))
+            } else {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: themeModel.spacingLG) {
+                        greetingHeader
+                        activeTripBanner
+                        statsRow
+                        upcomingTripSection
+                        quickActionsSection
                     }
+                    .padding(.horizontal, themeModel.spacingMD)
+                    .padding(.top, themeModel.spacingSM)
+                    .padding(.bottom, themeModel.spacingXXL)
                 }
             }
-            .navigationTitle("Driver Portal")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: themeModel.spacingMD) {
-                        Button(action: {
-                            showingNotifications = true
-                        }) {
-                            Image(systemName: "bell")
-                                .font(.title3)
-                                .foregroundStyle(themeModel.textPrimary)
-                        }
-
-                        NavigationLink(value: DriverDestination.profile) {
-                            Image(systemName: "person.crop.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(themeModel.driverPrimary)
-                        }
-                    }
-                }
-            }
-            .sheet(isPresented: $showingNotifications) {
-                NotificationsView()
-            }
-            .navigationDestination(for: DriverDestination.self) { destination in
-                switch destination {
-                case .profile:
-                    DriverProfileView()
-                case .vehicleDetail(let v):
-                    DriverVehicleDetailView(vehicle: v)
-                case .tripDetail(let t):
-                    TripDetailView(
-                        trip: t,
-                        onStart: { id, vId, notes in viewModel.startTrip(id: id, vehicleId: vId, notes: notes) },
-                        onEnd:   { id, vId, notes in viewModel.endTrip(id: id, vehicleId: vId, notes: notes) }
-                    )
-                }
+        }
+        .navigationTitle("Dashboard")
+        .navigationBarTitleDisplayMode(.large)
+        .navigationDestination(for: DriverDestination.self) { destination in
+            switch destination {
+            case .profile:
+                DriverProfileView()
+            case .tripDetail(let t):
+                TripDetailView(
+                    trip: t,
+                    onStart: { id, vId, notes, urls in viewModel.startTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) },
+                    onEnd:   { id, vId, notes, urls in viewModel.endTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) }
+                )
+            case .vehicleDetail(let v):
+                DriverVehicleDetailView(vehicle: v)
+            case .reportIssue(let v):
+                DriverReportIssueView(vehicle: v)
             }
         }
         .task {
             viewModel.currentUserId = authViewModel.currentUser?.id
+            viewModel.driverName = authViewModel.currentProfile?.fullName ?? "Driver"
             await viewModel.loadData()
             viewModel.setupRealtime()
         }
     }
 }
 
-#Preview {
-    DriverDashboardView()
-        .environment(AuthViewModel())
-}
-
 // MARK: - Subviews
 
 extension DriverDashboardView {
 
-    func vehicleCard(_ vehicle: Vehicle) -> some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+    // MARK: Greeting Header
+    private var greetingHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("\(viewModel.greetingText()),")
+                .font(themeModel.headline())
+                .foregroundStyle(themeModel.textSecondary)
 
-            HStack {
+            Text(viewModel.driverName.components(separatedBy: " ").first ?? "Driver")
+                .font(themeModel.largeTitle(30))
+                .foregroundStyle(themeModel.textPrimary)
 
-                VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+            Text(Date().formatted(.dateTime.weekday(.wide).month(.wide).day()))
+                .font(themeModel.caption())
+                .foregroundStyle(themeModel.textTertiary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, themeModel.spacingSM)
+    }
 
-                    Text("Assigned Vehicle")
+    // MARK: Active Trip Banner
+    @ViewBuilder
+    private var activeTripBanner: some View {
+        if let trip = viewModel.activeTrip {
+            let route = viewModel.routeForTrip(trip)
+            let vehicle = viewModel.vehicleForTrip(trip)
+
+            NavigationLink(value: DriverDestination.tripDetail(trip)) {
+                VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+                    HStack {
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(themeModel.driverPrimary)
+                                .frame(width: 10, height: 10)
+                                .overlay(
+                                    Circle()
+                                        .stroke(themeModel.driverPrimary.opacity(0.3), lineWidth: 3)
+                                )
+
+                            Text("Trip In Progress")
+                                .font(themeModel.bodyMedium())
+                                .foregroundStyle(themeModel.driverPrimary)
+                        }
+
+                        Spacer()
+
+                        if let orderType = trip.orderType {
+                            StatusBadge(text: orderType.displayName, color: themeModel.info, icon: "shippingbox")
+                        }
+                    }
+
+                    // Route info
+                    HStack(spacing: 12) {
+                        VStack(spacing: 4) {
+                            Circle().fill(themeModel.success).frame(width: 8, height: 8)
+                            Rectangle().fill(themeModel.divider).frame(width: 2, height: 20)
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.system(size: 12))
+                                .foregroundStyle(themeModel.danger)
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(route?.startLocation ?? "Pickup Location")
+                                .font(themeModel.bodyMedium())
+                                .foregroundStyle(themeModel.textPrimary)
+                                .lineLimit(1)
+                            Text(route?.endLocation ?? "Drop-off Location")
+                                .font(themeModel.bodyMedium())
+                                .foregroundStyle(themeModel.textPrimary)
+                                .lineLimit(1)
+                        }
+
+                        Spacer()
+                    }
+
+                    // Vehicle + time
+                    HStack(spacing: themeModel.spacingMD) {
+                        if let vehicle {
+                            Label("\(vehicle.make ?? "") \(vehicle.model ?? "")", systemImage: "truck.box.fill")
+                                .font(themeModel.caption())
+                                .foregroundStyle(themeModel.textSecondary)
+                        }
+
+                        Spacer()
+
+                        if let startTime = trip.startTime {
+                            Label("Started \(startTime.formatted(date: .omitted, time: .shortened))", systemImage: "clock.fill")
+                                .font(themeModel.caption())
+                                .foregroundStyle(themeModel.textTertiary)
+                        }
+                    }
+                }
+                .padding(themeModel.spacingMD)
+                .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                        .stroke(themeModel.driverPrimary.opacity(0.4), lineWidth: 1.5)
+                )
+                .shadow(color: themeModel.driverPrimary.opacity(0.15), radius: 12, y: 6)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: Stats Row
+    private var statsRow: some View {
+        HStack(spacing: themeModel.spacingMD) {
+            // Achievements Card (60% width)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label("Achievements", systemImage: "trophy.fill")
                         .font(themeModel.bodyMedium())
-                        .foregroundStyle(themeModel.textSecondary)
-
-                    Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
-                        .font(themeModel.title())
-                        .foregroundStyle(themeModel.textPrimary)
-
-                    Text(vehicle.licensePlate ?? "")
-                        .font(themeModel.bodyMedium())
-                        .foregroundStyle(themeModel.driverPrimary)
+                        .foregroundStyle(Color.yellow)
+                    Spacer()
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundStyle(themeModel.success)
                 }
 
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: themeModel.spacingSM) {
-                    Image(systemName: "truck.box.fill")
-                        .font(.system(size: 36))
-                        .foregroundStyle(themeModel.driverPrimary.opacity(0.7))
-                    HStack(spacing: 4) {
-                        Text("View Details")
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(viewModel.totalCompletedTrips)")
+                            .font(themeModel.title(22))
+                            .fontWeight(.bold)
+                            .foregroundStyle(themeModel.textPrimary)
+                        Text("Completed")
                             .font(themeModel.caption())
-                            .foregroundStyle(themeModel.driverPrimary)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(themeModel.driverPrimary)
+                            .foregroundStyle(themeModel.textSecondary)
+                    }
+
+                    Rectangle()
+                        .fill(themeModel.divider)
+                        .frame(width: 1, height: 36)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(String(format: "%.0f km", viewModel.totalDistanceKm))
+                            .font(themeModel.title(22))
+                            .fontWeight(.bold)
+                            .foregroundStyle(themeModel.textPrimary)
+                        Text("Distance")
+                            .font(themeModel.caption())
+                            .foregroundStyle(themeModel.textSecondary)
                     }
                 }
             }
+            .padding(themeModel.spacingMD)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+            )
+            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
 
-            HStack(spacing: themeModel.spacingLG) {
-
-                Label("\(Int(vehicle.mileage ?? 0))km", systemImage: "location.fill")
+            // Hours Active Card (40% width)
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Active Time", systemImage: "clock.badge.checkmark.fill")
                     .font(themeModel.bodyMedium())
                     .foregroundStyle(themeModel.driverPrimary)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(String(format: "%.1f hrs", viewModel.totalHoursActive))
+                        .font(themeModel.title(22))
+                        .fontWeight(.bold)
+                        .foregroundStyle(themeModel.textPrimary)
+                    Text("Hours Active")
+                        .font(themeModel.caption())
+                        .foregroundStyle(themeModel.textSecondary)
+                }
             }
+            .padding(themeModel.spacingMD)
+            .frame(width: 130, alignment: .leading)
+            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+            )
+            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
         }
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                .stroke(themeModel.driverPrimary.opacity(0.2), lineWidth: 1)
-        )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
     }
 
-    var summaryCardsSection: some View {
-
-        VStack(spacing: themeModel.spacingMD) {
-            HStack(spacing: themeModel.spacingMD) {
-                MetricCard(icon: "point.topleft.down.to.point.bottomright.curvepath", value: "\(viewModel.todaysTrips.count)", label: "Today's Trips", color: themeModel.warning)
-                MetricCard(icon: "timer", value: "\(viewModel.trips.filter { $0.status == .completed }.count)", label: "Completed", color: themeModel.analyticsPurple)
-            }
-        }
-    }
-
-    var tripsSection: some View {
-
+    // MARK: Upcoming Trip
+    private var upcomingTripSection: some View {
         VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+            SectionHeader(title: "Upcoming Assignment")
 
-            SectionHeader(title: "Today's Trips")
-
-            if viewModel.todaysTrips.isEmpty {
-                Text("No trips scheduled for today.")
-                    .font(themeModel.body())
-                    .foregroundStyle(themeModel.textSecondary)
+            if let trip = viewModel.upcomingTrip {
+                NavigationLink(value: DriverDestination.tripDetail(trip)) {
+                    EnrichedTripCard(
+                        trip: trip,
+                        route: viewModel.routeForTrip(trip),
+                        vehicle: viewModel.vehicleForTrip(trip)
+                    )
+                }
+                .buttonStyle(.plain)
             } else {
-                ForEach(viewModel.todaysTrips) { trip in
-                    NavigationLink(value: DriverDestination.tripDetail(trip)) {
-                        tripCard(trip)
+                VStack(spacing: themeModel.spacingSM) {
+                    Image(systemName: "calendar.badge.exclamationmark")
+                        .font(.system(size: 36))
+                        .foregroundStyle(themeModel.textTertiary)
+                    Text("No upcoming trips scheduled")
+                        .font(themeModel.body())
+                        .foregroundStyle(themeModel.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, themeModel.spacingLG)
+                .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+                )
+            }
+        }
+    }
+
+    // MARK: Quick Actions
+    private var quickActionsSection: some View {
+        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+            SectionHeader(title: "Vehicle Services")
+
+            if let vehicle = viewModel.assignedVehicle {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: themeModel.spacingMD) {
+                    NavigationLink(value: DriverDestination.vehicleDetail(vehicle)) {
+                        QuickActionCard(
+                            icon: "info.circle.fill",
+                            title: "Vehicle Info",
+                            subtitle: "\(vehicle.make ?? "My") \(vehicle.model ?? "Vehicle")",
+                            color: themeModel.driverPrimary
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    NavigationLink(value: DriverDestination.reportIssue(vehicle)) {
+                        QuickActionCard(
+                            icon: "exclamationmark.triangle.fill",
+                            title: "Report Issue",
+                            subtitle: "Log damage / defect",
+                            color: themeModel.danger
+                        )
                     }
                     .buttonStyle(.plain)
                 }
+            } else {
+                HStack(spacing: themeModel.spacingMD) {
+                    Image(systemName: "car.badge.gearshape")
+                        .font(.title2)
+                        .foregroundStyle(themeModel.textTertiary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("No Assigned Vehicle")
+                            .font(themeModel.bodyMedium())
+                            .foregroundStyle(themeModel.textPrimary)
+                        Text("Contact fleet manager for vehicle details")
+                            .font(themeModel.caption())
+                            .foregroundStyle(themeModel.textSecondary)
+                    }
+                    Spacer()
+                }
+                .padding(themeModel.spacingMD)
+                .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                        .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+                )
             }
         }
     }
+}
 
-    @ViewBuilder
-    func tripCard(_ trip: Trip) -> some View {
-        let statusColor: Color = {
-            switch trip.status {
-            case .scheduled: return themeModel.warning
-            case .active:    return themeModel.driverPrimary
-            case .completed: return themeModel.success
-            case .cancelled: return themeModel.danger
-            default:         return themeModel.textDisabled
-            }
-        }()
+// MARK: - Enriched Trip Card
 
-        let statusText: String = {
-            switch trip.status {
-            case .scheduled: return "Pending"
-            case .active:    return "In Progress"
-            case .completed: return "Completed"
-            case .cancelled: return "Cancelled"
-            default:         return "Unknown"
-            }
-        }()
+struct EnrichedTripCard: View {
+    let trip: Trip
+    let route: Route?
+    let vehicle: Vehicle?
 
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+    var statusColor: Color {
+        switch trip.status {
+        case .scheduled: return themeModel.warning
+        case .active:    return themeModel.driverPrimary
+        case .completed: return themeModel.success
+        case .cancelled: return themeModel.danger
+        case .none:      return themeModel.textDisabled
+        }
+    }
 
+    var statusText: String {
+        switch trip.status {
+        case .scheduled: return "Scheduled"
+        case .active:    return "In Progress"
+        case .completed: return "Completed"
+        case .cancelled: return "Cancelled"
+        case .none:      return "Unknown"
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+            // Top: Route ID + status + order type
             HStack {
                 Text("Route #\(trip.id.uuidString.prefix(6).uppercased())")
                     .font(themeModel.headline())
-                    .foregroundStyle(themeModel.driverPrimary)
+                    .foregroundStyle(themeModel.textPrimary)
 
                 Spacer()
+
+                if let orderType = trip.orderType {
+                    StatusBadge(text: orderType.displayName, color: themeModel.info, icon: orderTypeIcon(orderType))
+                }
 
                 StatusBadge(text: statusText, color: statusColor)
             }
 
-            HStack {
-                Label(
-                    trip.startTime?.formatted(date: .omitted, time: .shortened) ?? "N/A",
-                    systemImage: "clock"
-                )
-                .font(themeModel.caption())
-                .foregroundStyle(themeModel.textSecondary)
+            // Origin → Destination
+            HStack(spacing: 10) {
+                VStack(spacing: 3) {
+                    Circle().fill(themeModel.success).frame(width: 7, height: 7)
+                    Rectangle().fill(themeModel.divider).frame(width: 1.5, height: 16)
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(themeModel.danger)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(route?.startLocation ?? "Pickup")
+                        .font(themeModel.bodyMedium(14))
+                        .foregroundStyle(themeModel.textPrimary)
+                        .lineLimit(1)
+                    Text(route?.endLocation ?? "Destination")
+                        .font(themeModel.bodyMedium(14))
+                        .foregroundStyle(themeModel.textSecondary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+            }
+
+            // Bottom: Vehicle + time + distance
+            HStack(spacing: themeModel.spacingMD) {
+                if let vehicle {
+                    Label("\(vehicle.make ?? "") \(vehicle.model ?? "")", systemImage: "truck.box.fill")
+                        .font(themeModel.caption())
+                        .foregroundStyle(themeModel.textTertiary)
+                        .lineLimit(1)
+                }
 
                 Spacer()
 
-                HStack(spacing: 4) {
-                    Text("View Details")
+                if let start = trip.startTime {
+                    Label(start.formatted(date: .omitted, time: .shortened), systemImage: "clock")
                         .font(themeModel.caption())
-                        .foregroundStyle(themeModel.driverPrimary)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(themeModel.driverPrimary)
+                        .foregroundStyle(themeModel.textTertiary)
+                }
+
+                if let distance = trip.distance, distance > 0 {
+                    Label(String(format: "%.1f km", distance), systemImage: "road.lanes")
+                        .font(themeModel.caption())
+                        .foregroundStyle(themeModel.textTertiary)
                 }
             }
         }
@@ -238,8 +422,59 @@ extension DriverDashboardView {
         .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                .stroke(statusColor.opacity(0.25), lineWidth: 1)
         )
         .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+    }
+
+    private func orderTypeIcon(_ type: OrderType) -> String {
+        switch type {
+        case .pickUpAndDrop: return "shippingbox"
+        case .bulkOrderShip: return "cube.box.fill"
+        case .travel:        return "car.fill"
+        }
+    }
+}
+
+// MARK: - Quick Action Card
+
+private struct QuickActionCard: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+            Image(systemName: icon)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 40, height: 40)
+                .background(color.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusXS, style: .continuous))
+
+            Text(title)
+                .font(themeModel.bodyMedium())
+                .foregroundStyle(themeModel.textPrimary)
+
+            Text(subtitle)
+                .font(themeModel.caption())
+                .foregroundStyle(themeModel.textTertiary)
+        }
+        .padding(themeModel.spacingMD)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+        )
+        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+    }
+}
+
+#Preview {
+    NavigationStack {
+        DriverDashboardView()
+            .environment(AuthViewModel())
     }
 }
