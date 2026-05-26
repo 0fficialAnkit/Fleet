@@ -17,14 +17,24 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     override init() {
         super.init()
         manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+        manager.desiredAccuracy = kCLLocationAccuracyBest
         manager.distanceFilter = 10          // update every 10 m
         authorizationStatus = manager.authorizationStatus
+        // If permission was already granted on a previous launch, start immediately.
+        // locationManagerDidChangeAuthorization only fires on *changes*, not on init.
+        if authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways {
+            manager.startUpdatingLocation()
+        }
     }
 
-    /// Call once when the map appears to prompt for permission.
+    /// Request permission. If already granted, starts updates immediately.
     func requestPermission() {
-        manager.requestWhenInUseAuthorization()
+        switch authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            manager.startUpdatingLocation()   // already granted — just start
+        default:
+            manager.requestWhenInUseAuthorization()
+        }
     }
 
     func startUpdating() {
