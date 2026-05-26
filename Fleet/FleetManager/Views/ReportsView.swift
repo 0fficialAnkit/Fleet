@@ -76,35 +76,26 @@ struct ReportsView: View {
     // MARK: - Filter Chips
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: themeModel.spacingSM) {
-                filterChip(label: "All", status: nil)
+            HStack(spacing: 12) {
+                FilterButton(title: "All", isSelected: filterStatus == nil) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        filterStatus = nil
+                    }
+                }
                 ForEach(IssueReportStatus.allCases) { status in
-                    filterChip(label: status.rawValue, status: status)
+                    FilterButton(
+                        title: status.rawValue,
+                        isSelected: filterStatus == status
+                    ) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            filterStatus = status
+                        }
+                    }
                 }
             }
             .padding(.horizontal, themeModel.spacingMD)
         }
-    }
-
-    private func filterChip(label: String, status: IssueReportStatus?) -> some View {
-        let isSelected = filterStatus == status
-        let color: Color = status?.color ?? themeModel.accent
-        return Button(action: {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                filterStatus = isSelected ? nil : status
-            }
-        }) {
-            Text(label)
-                .font(themeModel.caption())
-                .fontWeight(isSelected ? .semibold : .regular)
-                .foregroundStyle(isSelected ? color : themeModel.textSecondary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(Capsule().fill(isSelected ? color.opacity(0.15) : Color.white.opacity(0.05)))
-                .overlay(Capsule().stroke(isSelected ? color.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.2), value: isSelected)
+        .padding(.vertical, themeModel.spacingSM)
     }
 
     // MARK: - Reports List

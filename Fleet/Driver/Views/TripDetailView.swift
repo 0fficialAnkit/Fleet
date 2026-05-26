@@ -1,4 +1,5 @@
 import SwiftUI
+import MapKit
 
 struct TripDetailView: View {
 
@@ -9,6 +10,10 @@ struct TripDetailView: View {
     // Local status so UI reacts immediately after start/end
     @State private var currentStatus: TripStatus?
     @State private var showingChecklist: InspectionType? = nil
+
+    // Route loaded from Supabase
+    @State private var route: Route?
+    @State private var mapView: TripRouteMapView?
 
     init(trip: Trip, onStart: @escaping (UUID, UUID, String) -> Void, onEnd: @escaping (UUID, UUID, String) -> Void) {
         self.trip = trip
@@ -167,30 +172,12 @@ struct TripDetailView: View {
                     )
                 }
 
-                // ── Map Placeholder ────────────────────────────────
+                // ── Route Map ─────────────────────────────────────
                 sectionTitle("Route Map")
 
-                ZStack {
-                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                        .fill(themeModel.driverPrimary.opacity(0.07))
-                        .frame(height: 200)
-
-                    VStack(spacing: 10) {
-                        Image(systemName: "map.fill")
-                            .font(.system(size: 44))
-                            .foregroundStyle(themeModel.driverPrimary.opacity(0.45))
-                        Text("Map View")
-                            .font(themeModel.bodyMedium())
-                            .foregroundStyle(themeModel.textSecondary)
-                        Text("Warehouse A  →  Distribution Center, Zone B")
-                            .font(themeModel.caption())
-                            .foregroundStyle(themeModel.textTertiary)
-                            .multilineTextAlignment(.center)
-                    }
-                }
-                .overlay(
-                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                        .stroke(themeModel.driverPrimary.opacity(0.2), lineWidth: 1)
+                TripRouteMapView(
+                    startAddress: route?.startLocation,
+                    endAddress:   route?.endLocation
                 )
 
                 // ── Action Buttons ─────────────────────────────────
@@ -201,11 +188,19 @@ struct TripDetailView: View {
         .background(themeModel.backgroundPrimary.ignoresSafeArea())
         .navigationTitle("Trip Details")
         .navigationBarTitleDisplayMode(.large)
+        .task {
+            // Load the associated route so the map has real addresses
+            if let routeId = trip.routeId {
+                route = try? await RouteService.fetchRoute(id: routeId)
+            }
+        }
         .sheet(item: $showingChecklist) { type in
             DriverChecklistView(checklistType: type) { notes in
                 if type == .preTrip {
                     onStart(trip.id, trip.vehicleId, notes)
                     withAnimation { currentStatus = .active }
+                    // Open Apple Maps with turn-by-turn navigation to destination
+                    openMapsNavigation()
                 } else {
                     onEnd(trip.id, trip.vehicleId, notes)
                     withAnimation { currentStatus = .completed }
@@ -295,6 +290,26 @@ struct TripDetailView: View {
         Text(text)
             .font(themeModel.headline())
             .foregroundStyle(themeModel.textPrimary)
+    }
+
+    // MARK: - Apple Maps Navigation
+
+    /// Geocodes the route's destination using iOS 26 MKGeocodingRequest
+    /// and opens Apple Maps with driving turn-by-turn navigation.
+    private func openMapsNavigation() {
+        guard let destination = route?.endLocation, !destination.isEmpty else { return }
+        Task {
+            let searchRequest = MKLocalSearch.Request()
+            searchRequest.naturalLanguageQuery = destination
+            searchRequest.resultTypes = .address
+            guard let mapItem = try? await MKLocalSearch(request: searchRequest).start().mapItems.first
+            else { return }
+            mapItem.name = destination
+            mapItem.openInMaps(launchOptions: [
+                MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving,
+                MKLaunchOptionsShowsTrafficKey: true
+            ])
+        }
     }
 
     @ViewBuilder

@@ -54,8 +54,16 @@ struct DashboardView: View {
                 switch destination {
                 case .vehiclesRoot:
                     VehiclesRootView()
-                default:
-                    EmptyView()
+                case .orderDetail(let trip):
+                    OrderDetailView(
+                        trip: trip,
+                        viewModel: OrdersViewModel(
+                            trips: viewModel.trips,
+                            routes: viewModel.routes,
+                            profiles: viewModel.profiles,
+                            vehicles: viewModel.vehicles
+                        )
+                    )
                 }
             }
         }
@@ -119,13 +127,29 @@ struct DashboardView: View {
                 }
             }
             .padding(themeModel.spacingMD)
-            .background(themeModel.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                    .stroke(themeModel.border.opacity(0.6), lineWidth: 0.5)
+            .background(
+                themeModel.surfaceTertiary.opacity(0.35)
             )
-            .shadow(color: themeModel.shadowSoft, radius: 12, y: 4)
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: themeModel.radiusLG,
+                    style: .continuous
+                )
+            )
+            .glassEffect(
+                in: RoundedRectangle(
+                    cornerRadius: themeModel.radiusLG,
+                    style: .continuous
+                )
+            )
+            .overlay(
+                RoundedRectangle(
+                    cornerRadius: themeModel.radiusLG,
+                    style: .continuous
+                )
+                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+            )
+            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -148,8 +172,11 @@ struct DashboardView: View {
                     .padding(.horizontal, themeModel.spacingMD)
             } else {
                 ForEach(viewModel.recentOrders) { trip in
-                    TripCardView(trip: trip, viewModel: viewModel)
-                        .padding(.horizontal, themeModel.spacingMD)
+                    NavigationLink(value: DashboardDestination.orderDetail(trip)) {
+                        TripCardView(trip: trip, viewModel: viewModel)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, themeModel.spacingMD)
                 }
             }
         }
@@ -236,37 +263,43 @@ struct TripCardView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
-            HStack {
-                Text(displayTitle)
-                    .font(themeModel.headline(16))
-                    .foregroundStyle(themeModel.textPrimary)
-                    .lineLimit(1)
-                Spacer()
-                StatusBadge(text: trip.status?.rawValue.capitalized ?? "Unknown", color: statusColor)
-            }
-            
-            HStack {
-                HStack(spacing: 6) {
-                    Image(systemName: "person.crop.circle.fill")
-                        .foregroundStyle(themeModel.accent)
-                        .font(.system(size: 16))
-                    Text(driverName)
-                        .font(themeModel.caption(14))
-                        .foregroundStyle(themeModel.textSecondary)
+        HStack(spacing: themeModel.spacingMD) {
+            VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+                HStack {
+                    Text(displayTitle)
+                        .font(themeModel.headline(16))
+                        .foregroundStyle(themeModel.textPrimary)
+                        .lineLimit(1)
+                    Spacer()
+                    StatusBadge(text: trip.status?.rawValue.capitalized ?? "Unknown", color: statusColor)
                 }
-                Spacer()
-                if let distance = trip.distance {
+                
+                HStack {
                     HStack(spacing: 6) {
-                        Image(systemName: "ruler.fill")
-                            .foregroundStyle(themeModel.textTertiary)
-                            .font(.system(size: 14))
-                        Text(String(format: "%.1f km", distance))
+                        Image(systemName: "person.crop.circle.fill")
+                            .foregroundStyle(themeModel.accent)
+                            .font(.system(size: 16))
+                        Text(driverName)
                             .font(themeModel.caption(14))
                             .foregroundStyle(themeModel.textSecondary)
                     }
+                    Spacer()
+                    if let distance = trip.distance {
+                        HStack(spacing: 6) {
+                            Image(systemName: "ruler.fill")
+                                .foregroundStyle(themeModel.textTertiary)
+                                .font(.system(size: 14))
+                            Text(String(format: "%.1f km", distance))
+                                .font(themeModel.caption(14))
+                                .foregroundStyle(themeModel.textSecondary)
+                        }
+                    }
                 }
             }
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(themeModel.textSecondary)
         }
         .padding(themeModel.spacingMD)
         .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))

@@ -91,9 +91,34 @@ struct OrderDetailView: View {
                         Divider().background(themeModel.divider)
                         OrderDetailInfoRow(icon: "car.fill", title: "Vehicle", value: vehicleInfo)
                     }
+//                    .padding(themeModel.spacingMD)
+//                    .background(themeModel.backgroundElevated)
+//                    .cornerRadius(themeModel.radiusLG)
+//                    .padding(.horizontal, themeModel.spacingMD)
                     .padding(themeModel.spacingMD)
-                    .background(themeModel.backgroundElevated)
-                    .cornerRadius(themeModel.radiusLG)
+                    .background(
+                        themeModel.surfaceTertiary.opacity(0.35)
+                    )
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: themeModel.radiusLG,
+                            style: .continuous
+                        )
+                    )
+                    .glassEffect(
+                        in: RoundedRectangle(
+                            cornerRadius: themeModel.radiusLG,
+                            style: .continuous
+                        )
+                    )
+                    .overlay(
+                        RoundedRectangle(
+                            cornerRadius: themeModel.radiusLG,
+                            style: .continuous
+                        )
+                        .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                    )
+                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
                     .padding(.horizontal, themeModel.spacingMD)
                 }
             }
