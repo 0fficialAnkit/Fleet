@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 import Supabase
 
 struct DriverFuelView: View {
@@ -9,182 +10,277 @@ struct DriverFuelView: View {
     @State private var isSubmitting: Bool = false
     @State private var errorMessage: String?
 
+    // Photo picker
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var billImage: UIImage?
+
     @State private var viewModel = DriverFuelViewModel()
     @State private var assignedVehicleId: UUID?
     @Environment(AuthViewModel.self) private var authViewModel
+
+    private var isFormValid: Bool {
+        !volume.isEmpty && !price.isEmpty && billImage != nil
+    }
+
+    private var inputFormSection: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            Text("Log Fuel Expense")
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.primary)
+
+            // Volume
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "drop.fill")
+                        .foregroundStyle(Color.secondary)
+                    Text("Fuel Volume (Liters)")
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.secondary)
+                }
+                TextField("0.0", text: $volume)
+                    .keyboardType(.decimalPad)
+                    .padding(16)
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(12)
+            }
+
+            // Price
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "indianrupeesign")
+                        .foregroundStyle(Color.secondary)
+                    Text("Total Price Paid")
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.secondary)
+                }
+                TextField("0.00", text: $price)
+                    .keyboardType(.decimalPad)
+                    .padding(16)
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(12)
+            }
+
+            // MARK: - Bill Photo (mandatory)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "camera.fill")
+                        .foregroundStyle(Color.secondary)
+                    Text("Fuel Bill Photo")
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.secondary)
+                    Text("(Required)")
+                        .font(.system(size: 16, weight: .regular, design: .rounded))
+                        .foregroundStyle(Color.red)
+                }
+
+                if let billImage {
+                    ZStack(alignment: .topTrailing) {
+                        Image(uiImage: billImage)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 200)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(Color.green.opacity(0.5), lineWidth: 1.5)
+                            )
+
+                        Button {
+                            self.billImage = nil
+                            selectedPhotoItem = nil
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.title2)
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(.white, Color.red)
+                        }
+                        .padding(8)
+                    }
+                } else {
+                    PhotosPicker(
+                        selection: $selectedPhotoItem,
+                        matching: .images,
+                        photoLibrary: .shared()
+                    ) {
+                        VStack(spacing: 8) {
+                            Image(systemName: "doc.viewfinder")
+                                .font(.system(size: 32))
+                                .foregroundStyle(Color.green)
+                            Text("Tap to attach bill photo")
+                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color.green)
+                            Text("Photo will be sent to Fleet Manager")
+                                .font(.system(size: 16, weight: .regular, design: .rounded))
+                                .foregroundStyle(Color(UIColor.tertiaryLabel))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 140)
+                        .background(Color.green.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(Color.green.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [8]))
+                        )
+                    }
+                }
+            }
+
+            // Submit
+            Button(action: submitFuelLog) {
+                HStack {
+                    if isSubmitting {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    } else {
+                        Image(systemName: "arrow.up.doc")
+                        Text("Submit Fuel Log")
+                    }
+                }
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .frame(maxWidth: .infinity)
+                .padding(16)
+                .background(!isFormValid || isSubmitting ? Color(UIColor.tertiarySystemFill) : Color.green)
+                .foregroundColor(!isFormValid || isSubmitting ? Color(UIColor.tertiaryLabel) : Color(UIColor.systemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .disabled(!isFormValid || isSubmitting)
+        }
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+        )
+        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+    }
+
+    @ViewBuilder
+    private var successBannerSection: some View {
+        if showSuccess {
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(Color.green)
+                Text("Synced with Fleet Manager")
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.primary)
+                Spacer()
+            }
+            .padding(16)
+            .background(Color.green.opacity(0.15))
+            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+
+    private var historySection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            SectionHeader(title: "Recent Logs")
+
+            if viewModel.fuelLogs.isEmpty {
+                Text("No fuel logs recorded yet.")
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .foregroundStyle(Color.secondary)
+            } else {
+                ForEach(viewModel.fuelLogs) { log in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Image(systemName: "drop.fill")
+                                    .foregroundColor(Color.green)
+                                Text("\(String(format: "%.1f", log.litersUsed ?? 0.0)) Liters")
+                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                    .foregroundColor(Color.primary)
+                            }
+                            HStack {
+                                Image(systemName: "calendar")
+                                    .foregroundColor(Color.secondary)
+                                Text((log.recordedAt ?? Date()).formatted(date: .abbreviated, time: .shortened))
+                                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                                    .foregroundColor(Color.secondary)
+                            }
+                        }
+
+                        Spacer()
+
+                        HStack(spacing: 2) {
+                            Image(systemName: "indianrupeesign")
+                                .foregroundColor(Color.secondary)
+                            Text("\(Int(log.fuelCost ?? 0.0))")
+                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .foregroundColor(Color.primary)
+                        }
+                    }
+                    .padding(16)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                    )
+                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                }
+            }
+        }
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-
-                    // Input Form
-
-                        VStack(alignment: .leading, spacing: 24) {
-                            Text("Log Fuel Expense")
-                                .font(.title3.bold())
-                                .foregroundStyle(Color.primary)
-
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Image(systemName: "drop.fill")
-                                        .foregroundStyle(Color.secondary)
-                                    Text("Fuel Volume (Liters)")
-                                        .font(.body.weight(.medium))
-                                        .foregroundStyle(Color.secondary)
-                                }
-                                TextField("0.0", text: $volume)
-                                    .keyboardType(.decimalPad)
-                                    .padding(16)
-                                    .background(Color(.secondarySystemBackground))
-                                    .cornerRadius(12)
-                            }
-
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Image(systemName: "indianrupeesign")
-                                        .foregroundStyle(Color.secondary)
-                                    Text("Total Price Paid")
-                                        .font(.body.weight(.medium))
-                                        .foregroundStyle(Color.secondary)
-                                }
-                                TextField("0.00", text: $price)
-                                    .keyboardType(.decimalPad)
-                                    .padding(16)
-                                    .background(Color(.secondarySystemBackground))
-                                    .cornerRadius(12)
-                            }
-
-                            // Auto-captured Location
-                            HStack {
-                                Image(systemName: "location.fill.viewfinder")
-                                    .foregroundStyle(Color.green)
-                                Text("Current Location: Downtown Station")
-                                    .font(.footnote)
-                                    .foregroundStyle(Color(.tertiaryLabel))
-                            }
-
-                            Button(action: submitFuelLog) {
-                                HStack {
-                                    if isSubmitting {
-                                        ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    } else {
-                                        Image(systemName: "arrow.up.doc")
-                                        Text("Submit")
-                                    }
-                                }
-                                    .font(.body.weight(.medium))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(16)
-                                    .background(volume.isEmpty || price.isEmpty || isSubmitting ? Color(.tertiarySystemFill) : Color.green)
-                                    .foregroundColor(volume.isEmpty || price.isEmpty || isSubmitting ? Color(.tertiaryLabel) : Color(.systemBackground))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                            }
-                            .disabled(volume.isEmpty || price.isEmpty || isSubmitting)
-                        }
-                        .padding(16)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                        )
-
-                    if showSuccess {
-
-                            HStack {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(Color.green)
-                                Text("Synced with Fleet Manager")
-                                    .font(.body.weight(.medium))
-                                    .foregroundStyle(Color.primary)
-                                Spacer()
-                            }
-                            .padding(16)
-                            .background(Color.green.opacity(0.15))
-                            .padding(0)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                            )
-
-                    }
-
-                    // History Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        SectionHeader(title: "Recent Logs")
-
-                        if viewModel.fuelLogs.isEmpty {
-                            Text("No fuel logs recorded yet.")
-                                .font(.body)
-                                .foregroundStyle(Color.secondary)
-                        } else {
-                            ForEach(viewModel.fuelLogs) { log in
-
-                                    HStack {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            HStack {
-                                                Image(systemName: "drop.fill")
-                                                    .foregroundColor(Color.green)
-                                                Text("\(String(format: "%.1f", log.litersUsed ?? 0.0)) Liters")
-                                                    .font(.headline)
-                                                    .foregroundColor(Color.primary)
-                                            }
-                                            HStack {
-                                                Image(systemName: "calendar")
-                                                    .foregroundColor(Color.secondary)
-                                                Text((log.recordedAt ?? Date()).formatted(date: .abbreviated, time: .shortened))
-                                                    .font(.footnote)
-                                                    .foregroundColor(Color.secondary)
-                                            }
-                                        }
-
-                                        Spacer()
-
-                                        HStack(spacing: 2) {
-                                            Image(systemName: "indianrupeesign")
-                                                .foregroundColor(Color.secondary)
-                                            Text("\(Int(log.fuelCost ?? 0.0))")
-                                                .font(.title3.bold())
-                                                .foregroundColor(Color.primary)
-                                        }
-                                    }
-                                    .padding(16)
-                                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                                    )
-
-                            }
-                        }
-                    }
+                    inputFormSection
+                    successBannerSection
+                    historySection
                 }
                 .padding()
             }
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Fuel")
-        }
-        .alert("Error", isPresented: Binding(
-            get: { errorMessage != nil },
-            set: { if !$0 { errorMessage = nil } }
-        )) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(errorMessage ?? "Unknown error occurred")
-        }
-        .task {
-            viewModel.currentUserId = authViewModel.currentUser?.id
-            await viewModel.loadData()
-            viewModel.setupRealtime()
-            // Fetch assigned vehicle
-            if let userId = authViewModel.currentUser?.id {
-                let vehicle = try? await VehicleService.fetchVehicleForDriver(driverId: userId)
-                assignedVehicleId = vehicle?.id
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: NotificationsView()) {
+                        Image(systemName: "bell.badge")
+                            .font(.title3)
+                            .foregroundStyle(Color.green)
+                    }
+
+                    NavigationLink(destination: DriverProfileView()) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(Color.green)
+                    }
+                }
+            }
+            .onChange(of: selectedPhotoItem) { _, newItem in
+                Task {
+                    if let data = try? await newItem?.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        billImage = image
+                    }
+                }
+            }
+            .alert("Error", isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage ?? "Unknown error occurred")
+            }
+            .task {
+                viewModel.currentUserId = authViewModel.currentUser?.id
+                await viewModel.loadData()
+                viewModel.setupRealtime()
+                // Fetch assigned vehicle
+                if let userId = authViewModel.currentUser?.id {
+                    let vehicle = try? await VehicleService.fetchVehicleForDriver(driverId: userId)
+                    assignedVehicleId = vehicle?.id
+                }
             }
         }
     }
+
+    // MARK: - Submit
 
     private func submitFuelLog() {
         let liters = Double(volume) ?? 0.0
@@ -197,13 +293,44 @@ struct DriverFuelView: View {
 
         Task {
             do {
+                // Upload bill photo to Supabase Storage
+                var billUrl: String?
+                if let billImage, let imageData = billImage.jpegData(compressionQuality: 0.7) {
+                    let fileName = "fuel_bills/\(UUID().uuidString).jpg"
+                    try await supabase.storage
+                        .from("fleet-uploads")
+                        .upload(fileName, data: imageData, options: .init(contentType: "image/jpeg"))
+                    billUrl = try supabase.storage.from("fleet-uploads").getPublicURL(path: fileName).absoluteString
+                }
+
                 try await viewModel.addFuelLog(liters: liters, cost: cost, vehicleId: vehicleId)
+
+                // Notify fleet managers about fuel log with bill
+                if let userId = authViewModel.currentUser?.id {
+                    let managers = try await ProfileService.fetchProfilesByRole(role: "fleet_manager")
+                    for manager in managers {
+                        let notification = Notification(
+                            id: UUID(),
+                            userId: manager.id,
+                            title: "Fuel Log Submitted",
+                            message: "Driver logged \(String(format: "%.1f", liters))L fuel — ₹\(Int(cost)). Bill photo attached.",
+                            type: .info,
+                            isRead: false,
+                            createdAt: Date()
+                        )
+                        try? await NotificationService.createNotification(notification)
+                    }
+                }
 
                 await MainActor.run {
                     isSubmitting = false
-                    showSuccess = true
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                        showSuccess = true
+                    }
                     volume = ""
                     price = ""
+                    self.billImage = nil
+                    selectedPhotoItem = nil
                 }
             } catch {
                 await MainActor.run {
@@ -216,6 +343,8 @@ struct DriverFuelView: View {
 }
 
 #Preview {
-    DriverFuelView()
-        .environment(AuthViewModel())
+    NavigationStack {
+        DriverFuelView()
+            .environment(AuthViewModel())
+    }
 }

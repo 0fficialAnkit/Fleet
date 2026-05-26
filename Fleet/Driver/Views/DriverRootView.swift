@@ -1,11 +1,8 @@
 import SwiftUI
 
 struct DriverRootView: View {
-
     var body: some View {
-
         TabView {
-
             DriverDashboardView()
                 .tabItem {
                     Label("Dashboard", systemImage: "house.fill")

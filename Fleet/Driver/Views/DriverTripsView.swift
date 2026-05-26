@@ -6,7 +6,6 @@ struct DriverTripsView: View {
     @State private var viewModel = DriverTripsViewModel()
     @State private var selectedFilter: TripFilter = .all
     @Environment(AuthViewModel.self) private var authViewModel
-    @State private var navigationPath = [DriverDestination]()
 
     enum TripFilter: String, CaseIterable {
         case all = "All"
@@ -25,12 +24,84 @@ struct DriverTripsView: View {
         }
     }
 
-    var filterBubbles: some View {
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                filterBubbles
+
+                if viewModel.isLoading && viewModel.trips.isEmpty {
+                    Spacer()
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color.green))
+                    Spacer()
+                } else if filteredTrips.isEmpty {
+                    Spacer()
+                    VStack(spacing: 8) {
+                        Image(systemName: "road.lanes")
+                            .font(.system(size: 40))
+                            .foregroundStyle(Color(UIColor.tertiaryLabel))
+                        Text("No trips found")
+                            .font(.system(size: 16, weight: .regular, design: .rounded))
+                            .foregroundStyle(Color.secondary)
+                    }
+                    Spacer()
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(spacing: 16) {
+                            ForEach(filteredTrips) { trip in
+                                NavigationLink(destination: TripDetailView(
+                                    trip: trip,
+                                    onStart: { id, vId, notes, urls in viewModel.startTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) },
+                                    onEnd:   { id, vId, notes, urls in viewModel.endTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) }
+                                )) {
+                                    EnrichedTripCard(
+                                        trip: trip,
+                                        route: viewModel.routeForTrip(trip),
+                                        vehicle: viewModel.vehicleForTrip(trip)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                    }
+                }
+            }
+            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+            .navigationTitle("Assigned Routes")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: NotificationsView()) {
+                        Image(systemName: "bell.badge")
+                            .font(.title3)
+                            .foregroundStyle(Color.green)
+                    }
+
+                    NavigationLink(destination: DriverProfileView()) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(Color.green)
+                    }
+                }
+            }
+            .task {
+                viewModel.currentUserId = authViewModel.currentUser?.id
+                await viewModel.loadData()
+                viewModel.setupRealtime()
+            }
+        }
+    }
+
+    // MARK: - Filter Bubbles
+
+    private var filterBubbles: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 ForEach(TripFilter.allCases, id: \.self) { filter in
                     Text(filter.rawValue)
-                        .font(.body.weight(.medium))
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .background(
@@ -45,133 +116,15 @@ struct DriverTripsView: View {
                         }
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
-    }
-
-    var body: some View {
-        NavigationStack(path: $navigationPath) {
-            VStack(spacing: 0) {
-                filterBubbles
-
-                if viewModel.isLoading && viewModel.trips.isEmpty {
-                    Spacer()
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    Spacer()
-                } else if filteredTrips.isEmpty {
-                    Spacer()
-                    Text("No trips found.")
-                        .font(.body)
-                        .foregroundStyle(Color.secondary)
-                    Spacer()
-                } else {
-                    ScrollView {
-                        VStack(spacing: 20) {
-                            ForEach(filteredTrips) { trip in
-                                NavigationLink(value: DriverDestination.tripDetail(trip)) {
-                                    DriverTripCardView(trip: trip)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding()
-                    }
-                }
-            }
-            .background(Color(.systemGroupedBackground).ignoresSafeArea())
-            .navigationTitle("Assigned Routes")
-            .navigationDestination(for: DriverDestination.self) { destination in
-                switch destination {
-                case .tripDetail(let t):
-                    TripDetailView(
-                        trip: t,
-                        onStart: { id, vId, notes in viewModel.startTrip(id: id, vehicleId: vId, notes: notes) },
-                        onEnd:   { id, vId, notes in viewModel.endTrip(id: id, vehicleId: vId, notes: notes) }
-                    )
-                default:
-                    EmptyView()
-                }
-            }
-        }
-        .task {
-            viewModel.currentUserId = authViewModel.currentUser?.id
-            await viewModel.loadData()
-            viewModel.setupRealtime()
-        }
-    }
-}
-
-// MARK: - Card (display only, no state)
-
-struct DriverTripCardView: View {
-    let trip: Trip
-
-    var statusColor: Color {
-        switch trip.status {
-        case .scheduled: return Color.yellow
-        case .active:    return Color.green
-        case .completed: return Color.green
-        case .cancelled: return Color.red
-        case .none:      return Color(.quaternaryLabel)
-        }
-    }
-
-    var statusText: String {
-        switch trip.status {
-        case .scheduled: return "Pending"
-        case .active:    return "In Progress"
-        case .completed: return "Completed"
-        case .cancelled: return "Cancelled"
-        case .none:      return "Unknown"
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-
-            HStack {
-                Text("Route #\(trip.id.uuidString.prefix(6).uppercased())")
-                    .font(.headline)
-                    .foregroundStyle(Color.primary)
-
-                Spacer()
-
-                StatusBadge(text: statusText, color: statusColor)
-            }
-
-            HStack {
-                Label(
-                    trip.startTime?.formatted(date: .omitted, time: .shortened) ?? "N/A",
-                    systemImage: "clock"
-                )
-                .font(.footnote)
-                .foregroundStyle(Color(.tertiaryLabel))
-
-                Spacer()
-
-                HStack(spacing: 4) {
-                    Text("Tap for details")
-                        .font(.footnote)
-                        .foregroundStyle(Color.green)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color.green)
-                }
-            }
-        }
-        .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-        )
-
     }
 }
 
 #Preview {
-    DriverTripsView()
-        .environment(AuthViewModel())
+    NavigationStack {
+        DriverTripsView()
+            .environment(AuthViewModel())
+    }
 }

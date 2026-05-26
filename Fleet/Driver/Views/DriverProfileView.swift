@@ -18,10 +18,10 @@ struct DriverProfileView: View {
                     // Personal Information Card
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Personal Information")
-                            .font(.body.bold())
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.primary)
                             .padding(.bottom, 4)
-
+                        
                         InfoRow(
                             icon: "person.fill",
                             label: "Full Name",
@@ -29,31 +29,31 @@ struct DriverProfileView: View {
                             iconColor: Color.green
                         )
 
-                        Divider().background(Color(.separator))
+                        Divider().background(Color(UIColor.separator))
                         InfoRow(
                             icon: "envelope.fill",
                             label: "Email",
                             value: profileVM.currentUser?.email ?? "—",
                             iconColor: Color.green
                         )
-
-                        Divider().background(Color(.separator))
+                        
+                        Divider().background(Color(UIColor.separator))
                         InfoRow(
                             icon: "phone.fill",
                             label: "Phone",
                             value: profileVM.currentUser?.phone ?? "Not Provided",
                             iconColor: Color.green
                         )
-
-                        Divider().background(Color(.separator))
+                        
+                        Divider().background(Color(UIColor.separator))
                         InfoRow(
                             icon: "lanyardcard.fill",
                             label: "License",
                             value: profileVM.currentUser?.licenseNumber ?? "Not Provided",
                             iconColor: Color.green
                         )
-
-                        Divider().background(Color(.separator))
+                        
+                        Divider().background(Color(UIColor.separator))
                         let status = profileVM.currentUser?.userStatus ?? .active
                         InfoRow(
                             icon: status == .active ? "checkmark.circle.fill" : "xmark.circle.fill",
@@ -62,8 +62,8 @@ struct DriverProfileView: View {
                             iconColor: status == .active ? Color.green : Color.secondary,
                             valueColor: status == .active ? Color.green : Color.secondary
                         )
-
-                        Divider().background(Color(.separator))
+                        
+                        Divider().background(Color(UIColor.separator))
                         InfoRow(
                             icon: "calendar",
                             label: "Joined",
@@ -72,16 +72,17 @@ struct DriverProfileView: View {
                         )
                     }
                     .padding(16)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                     )
+                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
 
                     // Preferences & Support Card
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Preferences & Support")
-                            .font(.body.bold())
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.primary)
                             .padding(.bottom, 4)
 
@@ -91,14 +92,14 @@ struct DriverProfileView: View {
                             value: "Enabled",
                             iconColor: Color.green
                         )
-                        Divider().background(Color(.separator))
+                        Divider().background(Color(UIColor.separator))
                         InfoRow(
                             icon: "doc.text.fill",
                             label: "Documents",
                             value: "Verified",
                             iconColor: Color.green
                         )
-                        Divider().background(Color(.separator))
+                        Divider().background(Color(UIColor.separator))
                         InfoRow(
                             icon: "lifepreserver",
                             label: "Support",
@@ -107,11 +108,12 @@ struct DriverProfileView: View {
                         )
                     }
                     .padding(16)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                     )
+                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
 
                     // Logout Button
                     Button(action: {
@@ -127,17 +129,17 @@ struct DriverProfileView: View {
                         )
                     }
                     .padding(16)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                     )
-
+                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
                 }
             }
             .padding()
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Profile")
         .task {
             await profileVM.loadProfile()

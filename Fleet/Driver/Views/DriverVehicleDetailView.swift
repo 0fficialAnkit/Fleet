@@ -7,7 +7,7 @@ struct DriverVehicleDetailView: View {
 
     var body: some View {
         ZStack {
-            Color(.systemGroupedBackground).ignoresSafeArea()
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 24) {
@@ -56,11 +56,11 @@ struct DriverVehicleDetailView: View {
 
             VStack(spacing: 6) {
                 Text("\(vehicle.make ?? "Unknown") \(vehicle.model ?? "")")
-                    .font(.title2.bold())
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(Color.primary)
 
                 Text(vehicle.licensePlate ?? "—")
-                    .font(.body.weight(.medium))
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.green)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 5)
@@ -91,33 +91,33 @@ struct DriverVehicleDetailView: View {
     private var vehicleInfoCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("Vehicle Info", systemImage: "info.circle.fill")
-                .font(.headline)
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
             VStack(spacing: 0) {
                 InfoRow(icon: "building.2", label: "Manufacturer", value: vehicle.make ?? "N/A")
-                Divider().background(Color(.separator))
+                Divider().background(Color(UIColor.separator))
                 InfoRow(icon: "tag", label: "Model", value: vehicle.model ?? "N/A")
-                Divider().background(Color(.separator))
+                Divider().background(Color(UIColor.separator))
                 InfoRow(icon: "calendar", label: "Year", value: vehicle.year.map(String.init) ?? "N/A")
-                Divider().background(Color(.separator))
+                Divider().background(Color(UIColor.separator))
                 InfoRow(
                     icon: "fuelpump",
                     label: "Tank Capacity",
                     value: vehicle.tankCapacity.map { String(format: "%.1f L", $0) } ?? "N/A"
                 )
                 if let vin = vehicle.vin {
-                    Divider().background(Color(.separator))
+                    Divider().background(Color(UIColor.separator))
                     InfoRow(icon: "qrcode", label: "VIN", value: vin)
                 }
             }
             .padding(16)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
             )
-
+            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
         }
     }
 
@@ -125,7 +125,7 @@ struct DriverVehicleDetailView: View {
     private var vehicleHealthCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("Quick Stats", systemImage: "heart.text.clipboard.fill")
-                .font(.headline)
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
             HStack(spacing: 16) {
@@ -155,21 +155,21 @@ struct DriverVehicleDetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             Text(value)
-                .font(.title3.bold())
+                .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.primary)
 
             Text(label)
-                .font(.footnote)
-                .foregroundStyle(Color(.tertiaryLabel))
+                .font(.system(size: 16, weight: .regular, design: .rounded))
+                .foregroundStyle(Color(UIColor.tertiaryLabel))
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
         )
-
+        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
     }
 
     // MARK: - Report Issue Button
@@ -180,10 +180,10 @@ struct DriverVehicleDetailView: View {
                     .font(.system(size: 18, weight: .semibold))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Report an Issue")
-                        .font(.body.weight(.medium))
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
                         .fontWeight(.semibold)
                     Text("Notify maintenance about a problem")
-                        .font(.footnote)
+                        .font(.system(size: 16, weight: .regular, design: .rounded))
                         .opacity(0.75)
                 }
                 Spacer()
@@ -201,8 +201,10 @@ struct DriverVehicleDetailView: View {
                 )
             )
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-
+            .shadow(color: Color.red.opacity(0.35), radius: 12, y: 6)
         }
         .buttonStyle(.plain)
     }
 }
+
+
