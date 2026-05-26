@@ -36,24 +36,66 @@ struct InventoryView: View {
                     ScrollView {
                         VStack(spacing: 16) {
 
-                            // MARK: - Summary Strip
-                            HStack(spacing: 16) {
-                                InventoryStat(
-                                    value: "\(inventoryItems.count)",
-                                    label: "Total Parts",
-                                    color: Color.brown
-                                )
-                                InventoryStat(
-                                    value: "\(lowStockCount)",
-                                    label: "Low Stock",
-                                    color: Color.red
-                                )
-                                InventoryStat(
-                                    value: "₹\(String(format: "%.0f", inventoryItems.compactMap(\.unitCost).reduce(0, +)))",
-                                    label: "Est. Value",
-                                    color: Color.green
-                                )
+                            // MARK: - Summary Card
+                            VStack(spacing: 0) {
+                                HStack(spacing: 0) {
+                                    // Total Parts
+                                    VStack(spacing: 8) {
+                                        Image(systemName: "shippingbox.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(Color.brown)
+                                        Text("\(inventoryItems.count)")
+                                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                                            .foregroundStyle(Color.primary)
+                                        Text("Total Parts")
+                                            .font(.system(size: 11, weight: .semibold))
+                                            .foregroundStyle(Color.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity)
+
+                                    Divider()
+                                        .frame(height: 40)
+                                        .foregroundStyle(Color(.separator))
+
+                                    // Low Stock
+                                    VStack(spacing: 8) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(Color.red)
+                                        Text("\(lowStockCount)")
+                                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                                            .foregroundStyle(lowStockCount > 0 ? Color.red : Color.primary)
+                                        Text("Low Stock")
+                                            .font(.system(size: 11, weight: .semibold))
+                                            .foregroundStyle(Color.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity)
+
+                                    Divider()
+                                        .frame(height: 40)
+                                        .foregroundStyle(Color(.separator))
+
+                                    // Est. Value
+                                    VStack(spacing: 8) {
+                                        Image(systemName: "indianrupeesign.circle.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(Color.green)
+                                        Text("₹\(String(format: "%.0f", inventoryItems.compactMap(\.unitCost).reduce(0, +)))")
+                                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                                            .foregroundStyle(Color.green)
+                                        Text("Est. Value")
+                                            .font(.system(size: 11, weight: .semibold))
+                                            .foregroundStyle(Color.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                }
+                                .padding(.vertical, 20)
                             }
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+                            )
                             .padding(.horizontal, 16)
 
                             // MARK: - AI Forecast Banner
@@ -170,30 +212,7 @@ struct InventoryView: View {
     }
 }
 
-// MARK: - Inventory Stat
-private struct InventoryStat: View {
-    let value: String
-    let label: String
-    let color: Color
 
-    var body: some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.headline)
-                .foregroundStyle(color)
-            Text(label)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Color(.tertiaryLabel))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(color.opacity(0.2), lineWidth: 0.8)
-        )
-    }
-}
 
 // MARK: - Inventory Row
 struct InventoryRow: View {
