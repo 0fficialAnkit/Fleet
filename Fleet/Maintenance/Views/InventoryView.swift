@@ -34,26 +34,39 @@ struct InventoryView: View {
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
                     ScrollView {
-                        VStack(spacing: themeModel.spacingMD) {
+                        LazyVStack(spacing: themeModel.spacingMD) {
 
                             // MARK: - Summary Strip
-                            HStack(spacing: themeModel.spacingMD) {
+                            HStack(spacing: 0) {
                                 InventoryStat(
                                     value: "\(inventoryItems.count)",
                                     label: "Total Parts",
                                     color: themeModel.maintenancePrimary
                                 )
+                                Divider()
+                                    .frame(height: 50)
+                                    .overlay(themeModel.textTertiary.opacity(0.3))
                                 InventoryStat(
                                     value: "\(lowStockCount)",
                                     label: "Low Stock",
                                     color: themeModel.danger
                                 )
+                                Divider()
+                                    .frame(height: 50)
+                                    .overlay(themeModel.textTertiary.opacity(0.3))
                                 InventoryStat(
                                     value: "₹\(String(format: "%.0f", inventoryItems.compactMap(\.unitCost).reduce(0, +)))",
                                     label: "Est. Value",
                                     color: themeModel.success
                                 )
                             }
+                            .padding(.vertical, 28)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                    .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
+                            )
+                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
                             .padding(.horizontal, themeModel.spacingMD)
 
                             // MARK: - AI Forecast Banner
@@ -132,6 +145,7 @@ struct InventoryView: View {
                         }
                         .padding(.vertical, themeModel.spacingMD)
                     }
+                    .scrollBounceBehavior(.basedOnSize)
                 }
             }
             .navigationTitle("Inventory")
@@ -177,21 +191,15 @@ private struct InventoryStat: View {
     let color: Color
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 6) {
             Text(value)
-                .font(themeModel.headline())
+                .font(.system(size: 24, weight: .bold, design: .rounded))
                 .foregroundStyle(color)
             Text(label)
-                .font(themeModel.small())
+                .font(themeModel.caption())
                 .foregroundStyle(themeModel.textTertiary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
-                .stroke(color.opacity(0.2), lineWidth: 0.8)
-        )
     }
 }
 
@@ -354,6 +362,10 @@ struct InventoryItemSheet: View {
                                             RoundedRectangle(cornerRadius: 14)
                                                 .stroke(themeModel.divider, lineWidth: 1)
                                         )
+                                        .onChange(of: stockQuantity) { _, newValue in
+                                            let filtered = newValue.filter { $0.isNumber }
+                                            if filtered != newValue { stockQuantity = filtered }
+                                        }
                                 }
                                 
                                 VStack(alignment: .leading, spacing: 6) {
@@ -373,6 +385,10 @@ struct InventoryItemSheet: View {
                                             RoundedRectangle(cornerRadius: 14)
                                                 .stroke(themeModel.divider, lineWidth: 1)
                                         )
+                                        .onChange(of: reorderLevel) { _, newValue in
+                                            let filtered = newValue.filter { $0.isNumber }
+                                            if filtered != newValue { reorderLevel = filtered }
+                                        }
                                 }
                             }
                             
@@ -394,6 +410,14 @@ struct InventoryItemSheet: View {
                                         RoundedRectangle(cornerRadius: 14)
                                             .stroke(themeModel.divider, lineWidth: 1)
                                     )
+                                    .onChange(of: unitCost) { _, newValue in
+                                        let allowed = CharacterSet(charactersIn: "0123456789.")
+                                        let filtered = String(newValue.unicodeScalars.filter { allowed.contains($0) })
+                                        // Allow only one decimal point
+                                        let parts = filtered.split(separator: ".", omittingEmptySubsequences: false)
+                                        let sanitized = parts.count > 2 ? parts[0] + "." + parts.dropFirst().joined() : filtered
+                                        if sanitized != newValue { unitCost = String(sanitized) }
+                                    }
                             }
                         }
                         .padding(.horizontal, 24)
