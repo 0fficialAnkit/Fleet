@@ -198,7 +198,6 @@ final class DriverDashboardViewModel {
 
 enum DriverDestination: Hashable {
     case profile
-    case notifications
     case tripDetail(Trip)
     case vehicleDetail(Vehicle)
     case reportIssue(Vehicle)

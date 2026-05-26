@@ -25,72 +25,66 @@ struct DriverTripsView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                filterBubbles
+        VStack(spacing: 0) {
+            filterBubbles
 
-                if viewModel.isLoading && viewModel.trips.isEmpty {
-                    Spacer()
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: themeModel.driverPrimary))
-                    Spacer()
-                } else if filteredTrips.isEmpty {
-                    Spacer()
-                    VStack(spacing: themeModel.spacingSM) {
-                        Image(systemName: "road.lanes")
-                            .font(.system(size: 40))
-                            .foregroundStyle(themeModel.textTertiary)
-                        Text("No trips found")
-                            .font(themeModel.body())
-                            .foregroundStyle(themeModel.textSecondary)
-                    }
-                    Spacer()
-                } else {
-                    ScrollView(showsIndicators: false) {
-                        LazyVStack(spacing: themeModel.spacingMD) {
-                            ForEach(filteredTrips) { trip in
-                                NavigationLink(destination: TripDetailView(
+            if viewModel.isLoading && viewModel.trips.isEmpty {
+                Spacer()
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: themeModel.driverPrimary))
+                Spacer()
+            } else if filteredTrips.isEmpty {
+                Spacer()
+                VStack(spacing: themeModel.spacingSM) {
+                    Image(systemName: "road.lanes")
+                        .font(.system(size: 40))
+                        .foregroundStyle(themeModel.textTertiary)
+                    Text("No trips found")
+                        .font(themeModel.body())
+                        .foregroundStyle(themeModel.textSecondary)
+                }
+                Spacer()
+            } else {
+                ScrollView(showsIndicators: false) {
+                    LazyVStack(spacing: themeModel.spacingMD) {
+                        ForEach(filteredTrips) { trip in
+                            NavigationLink(value: DriverDestination.tripDetail(trip)) {
+                                EnrichedTripCard(
                                     trip: trip,
-                                    onStart: { id, vId, notes, urls in viewModel.startTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) },
-                                    onEnd:   { id, vId, notes, urls in viewModel.endTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) }
-                                )) {
-                                    EnrichedTripCard(
-                                        trip: trip,
-                                        route: viewModel.routeForTrip(trip),
-                                        vehicle: viewModel.vehicleForTrip(trip)
-                                    )
-                                }
-                                .buttonStyle(.plain)
+                                    route: viewModel.routeForTrip(trip),
+                                    vehicle: viewModel.vehicleForTrip(trip)
+                                )
                             }
+                            .buttonStyle(.plain)
                         }
-                        .padding(.horizontal, themeModel.spacingMD)
-                        .padding(.vertical, themeModel.spacingSM)
                     }
+                    .padding(.horizontal, themeModel.spacingMD)
+                    .padding(.vertical, themeModel.spacingSM)
                 }
             }
-            .background(themeModel.backgroundPrimary.ignoresSafeArea())
-            .navigationTitle("Assigned Routes")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: NotificationsView()) {
-                        Image(systemName: "bell.badge")
-                            .font(.title3)
-                            .foregroundStyle(themeModel.driverPrimary)
-                    }
-
-                    NavigationLink(destination: DriverProfileView()) {
-                        Image(systemName: "person.crop.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(themeModel.driverPrimary)
-                    }
-                }
+        }
+        .background(themeModel.backgroundPrimary.ignoresSafeArea())
+        .navigationTitle("Assigned Routes")
+        .navigationDestination(for: DriverDestination.self) { destination in
+            switch destination {
+            case .tripDetail(let t):
+                TripDetailView(
+                    trip: t,
+                    onStart: { id, vId, notes, urls in viewModel.startTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) },
+                    onEnd:   { id, vId, notes, urls in viewModel.endTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) }
+                )
+            case .vehicleDetail(let v):
+                DriverVehicleDetailView(vehicle: v)
+            case .reportIssue(let v):
+                DriverReportIssueView(vehicle: v)
+            default:
+                EmptyView()
             }
-            .task {
-                viewModel.currentUserId = authViewModel.currentUser?.id
-                await viewModel.loadData()
-                viewModel.setupRealtime()
-            }
+        }
+        .task {
+            viewModel.currentUserId = authViewModel.currentUser?.id
+            await viewModel.loadData()
+            viewModel.setupRealtime()
         }
     }
 

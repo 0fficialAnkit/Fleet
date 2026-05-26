@@ -154,26 +154,15 @@ struct TripRouteMapView: View {
 
         let (origin, destination) = await (originItem, destItem)
 
-        var originItemResolved = origin
-        var destItemResolved = destination
-
-        if originItemResolved == nil || destItemResolved == nil {
-            // Fallback to dummy coordinates (e.g. Bangalore coordinates for demo)
-            let rawOrigin = MKMapItem(placemark: MKPlacemark(coordinate: CLLocationCoordinate2D(latitude: 12.9716, longitude: 77.5946)))
-            let rawDest = MKMapItem(placemark: MKPlacemark(coordinate: CLLocationCoordinate2D(latitude: 12.9141, longitude: 77.6413)))
-            originItemResolved = rawOrigin
-            destItemResolved = rawDest
-        }
-
-        guard let resolvedOrigin = originItemResolved, let resolvedDest = destItemResolved else {
+        guard let origin, let destination else {
             errorMessage = "Could not resolve route addresses."
             isLoading = false
             return
         }
 
-        originCoord      = resolvedOrigin.location.coordinate
-        destinationCoord = resolvedDest.location.coordinate
-        destinationMapItem = resolvedDest
+        originCoord      = origin.location.coordinate
+        destinationCoord = destination.location.coordinate
+        destinationMapItem = destination
 
         guard let oCoord = originCoord, let dCoord = destinationCoord else {
             errorMessage = "Could not read route coordinates."
