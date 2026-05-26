@@ -13,15 +13,15 @@ struct MaintenanceSchedulerView: View {
     @Environment(AuthViewModel.self) private var authViewModel
 
     init() {
-        UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(themeModel.maintenancePrimary)
+        UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(Color.brown)
         UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
-        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor(themeModel.textSecondary)], for: .normal)
+        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor(Color.secondary)], for: .normal)
     }
 
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 ScrollView {
                     VStack(spacing: 0) {
@@ -85,8 +85,8 @@ private struct CalendarStripView: View {
                         }
                     }
                 }
-                .padding(.horizontal, themeModel.spacingMD)
-                .padding(.vertical, themeModel.spacingMD)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
             }
             .onAppear {
                 let today = Calendar.current.startOfDay(for: Date())
@@ -97,8 +97,8 @@ private struct CalendarStripView: View {
                 }
             }
         }
-        .padding(.horizontal, themeModel.spacingMD)
-        .padding(.top, themeModel.spacingSM)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
     }
 }
 
@@ -122,47 +122,47 @@ private struct DayCell: View {
     private var dayNumber: String {
         let f = DateFormatter(); f.dateFormat = "d"; return f.string(from: date)
     }
-    private var labelColor: Color { isSelected ? themeModel.maintenancePrimary : themeModel.textTertiary }
-    private var numberColor: Color { isSelected ? themeModel.textPrimary : themeModel.textSecondary }
+    private var labelColor: Color { isSelected ? Color.brown : Color(.tertiaryLabel) }
+    private var numberColor: Color { isSelected ? Color.primary : Color.secondary }
 
     var body: some View {
         VStack(spacing: 6) {
             Text(dayName)
-                .font(themeModel.small())
+                .font(.caption.weight(.medium))
                 .foregroundStyle(labelColor)
                 .animation(.easeInOut(duration: 0.25), value: isSelected)
 
             Text(dayNumber)
-                .font(isSelected ? themeModel.title(20) : themeModel.headline())
+                .font(isSelected ? .title3.bold() : .headline)
                 .foregroundStyle(numberColor)
                 .animation(.spring(response: 0.3), value: isSelected)
 
             // Combined event dot indicator
             Circle()
-                .fill(taskCount > 0 ? themeModel.maintenancePrimary : Color.clear)
+                .fill(taskCount > 0 ? Color.brown : Color.clear)
                 .frame(width: 5, height: 5)
         }
         .frame(width: 54, height: 72)
         .background {
             if isSelected {
-                RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
-                    .fill(themeModel.maintenancePrimary.opacity(0.15))
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.brown.opacity(0.15))
                     .overlay(
-                        RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
-                            .stroke(themeModel.maintenancePrimary.opacity(0.4), lineWidth: 1.2)
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.brown.opacity(0.4), lineWidth: 1.2)
                     )
                     .matchedGeometryEffect(id: "calendarSelectedBG", in: namespace)
             }
         }
         .overlay {
             if isToday && !isSelected {
-                RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
-                    .stroke(themeModel.accent.opacity(pulseOpacity), lineWidth: 1.5)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.teal.opacity(pulseOpacity), lineWidth: 1.5)
                     .scaleEffect(pulseScale)
                     .onAppear { startPulse() }
             }
         }
-        .contentShape(RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     private func startPulse() {
@@ -187,8 +187,8 @@ private struct SchedulerSegmentedControl: View {
             }
         }
         .pickerStyle(.segmented)
-        .padding(.horizontal, themeModel.spacingMD)
-        .padding(.vertical, themeModel.spacingMD)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 16)
     }
 }
 
@@ -213,24 +213,24 @@ private struct TaskListSection: View {
     }
 
     var body: some View {
-        LazyVStack(spacing: themeModel.spacingMD) {
+        LazyVStack(spacing: 16) {
             // Section Header
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(dateTitle)
-                        .font(themeModel.headline())
-                        .foregroundStyle(themeModel.textPrimary)
+                        .font(.headline)
+                        .foregroundStyle(Color.primary)
                     Text("\(itemsCount) \(viewModel.selectedTab.rawValue.lowercased()) assigned")
-                        .font(themeModel.caption())
-                        .foregroundStyle(themeModel.textTertiary)
+                        .font(.footnote)
+                        .foregroundStyle(Color(.tertiaryLabel))
                 }
                 Spacer()
                 if itemsCount > 0 {
                     StatusLegendChip()
                 }
             }
-            .padding(.horizontal, themeModel.spacingMD)
-            .padding(.top, themeModel.spacingMD)
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.selectedDate)
 
             if viewModel.selectedTab == .tasks {
@@ -256,7 +256,7 @@ private struct TaskListSection: View {
                                 removal: .opacity
                             ))
                     }
-                    .padding(.horizontal, themeModel.spacingMD)
+                    .padding(.horizontal, 16)
                 }
             } else {
                 if viewModel.workOrdersForSelectedDate.isEmpty {
@@ -281,7 +281,7 @@ private struct TaskListSection: View {
                                 removal: .opacity
                             ))
                     }
-                    .padding(.horizontal, themeModel.spacingMD)
+                    .padding(.horizontal, 16)
                 }
             }
 
@@ -296,13 +296,13 @@ private struct TaskListSection: View {
 private struct StatusLegendChip: View {
     var body: some View {
         HStack(spacing: 6) {
-            Circle().fill(themeModel.danger).frame(width: 6, height: 6)
-            Circle().fill(themeModel.warning).frame(width: 6, height: 6)
-            Circle().fill(themeModel.success).frame(width: 6, height: 6)
+            Circle().fill(Color.red).frame(width: 6, height: 6)
+            Circle().fill(Color.yellow).frame(width: 6, height: 6)
+            Circle().fill(Color.green).frame(width: 6, height: 6)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(themeModel.surfaceTertiary.opacity(0.6))
+        .background(Color(.tertiarySystemBackground).opacity(0.6))
         .clipShape(Capsule())
     }
 }
@@ -318,17 +318,17 @@ private struct TaskCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Priority accent bar + header
-            HStack(spacing: themeModel.spacingMD) {
-                VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 16) {
                     // Top row
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(task.vehicleName)
-                                .font(themeModel.headline())
-                                .foregroundStyle(themeModel.textPrimary)
+                                .font(.headline)
+                                .foregroundStyle(Color.primary)
                             Text(task.vehicleNumber)
-                                .font(themeModel.caption())
-                                .foregroundStyle(themeModel.textTertiary)
+                                .font(.footnote)
+                                .foregroundStyle(Color(.tertiaryLabel))
                         }
                         Spacer()
                         StatusBadge(text: task.status.rawValue, color: statusColor(task.status))
@@ -336,11 +336,11 @@ private struct TaskCard: View {
 
                     // Task type
                     Text(taskTypeLabel(task.taskType))
-                        .font(themeModel.bodyMedium())
-                        .foregroundStyle(themeModel.maintenancePrimary)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(Color.brown)
 
                     // Info row
-                    HStack(spacing: themeModel.spacingMD) {
+                    HStack(spacing: 16) {
                         InfoPill(icon: "clock",                text: task.scheduledTime)
                         InfoPill(icon: "timer",                text: task.estimatedDuration)
                         InfoPill(icon: priorityIconName(task.priority), text: task.priority.rawValue, color: priorityColor(task.priority))
@@ -350,27 +350,23 @@ private struct TaskCard: View {
                     HStack(spacing: 5) {
                         Image(systemName: "person.fill")
                             .font(.caption2)
-                            .foregroundStyle(themeModel.textTertiary)
+                            .foregroundStyle(Color(.tertiaryLabel))
                         Text("Assigned by \(task.assignedBy)")
-                            .font(themeModel.caption())
-                            .foregroundStyle(themeModel.textTertiary)
+                            .font(.footnote)
+                            .foregroundStyle(Color(.tertiaryLabel))
                     }
                 }
-                .padding(.vertical, themeModel.spacingMD)
-                .padding(.trailing, themeModel.spacingMD)
-                .padding(.leading, themeModel.spacingMD)
+                .padding(.vertical, 16)
+                .padding(.trailing, 16)
+                .padding(.leading, 16)
             }
         }
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(statusColor(task.status).opacity(0.5), lineWidth: 1.0)
         )
-        .shadow(
-            color: statusColor(task.status).opacity(0.15),
-            radius: 8,
-            y: 4
-        )
+
         .scaleEffect(isPressed ? 0.97 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
         .simultaneousGesture(
@@ -391,17 +387,17 @@ private struct WorkOrderCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: themeModel.spacingMD) {
-                VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 16) {
                     // Header row
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("WO-\(workOrder.id.uuidString.prefix(6).uppercased())")
-                                .font(themeModel.headline())
-                                .foregroundStyle(themeModel.textPrimary)
+                                .font(.headline)
+                                .foregroundStyle(Color.primary)
                             Text("\(workOrder.vehicleName) · \(workOrder.vehicleNumber)")
-                                .font(themeModel.caption())
-                                .foregroundStyle(themeModel.textTertiary)
+                                .font(.footnote)
+                                .foregroundStyle(Color(.tertiaryLabel))
                         }
                         Spacer()
                         StatusBadge(
@@ -411,10 +407,10 @@ private struct WorkOrderCard: View {
                     }
 
                     // Labor & Assigned Row
-                    HStack(spacing: themeModel.spacingMD) {
+                    HStack(spacing: 16) {
                         InfoPill(icon: "person.fill", text: "By: \(workOrder.assignedBy)")
                         InfoPill(icon: "clock.fill",  text: workOrder.laborHours)
-                        InfoPill(icon: "indianrupeesign.circle.fill", text: workOrder.laborCost, color: themeModel.success)
+                        InfoPill(icon: "indianrupeesign.circle.fill", text: workOrder.laborCost, color: Color.green)
                     }
 
                     // Spare parts consumed (if any)
@@ -422,29 +418,25 @@ private struct WorkOrderCard: View {
                         HStack(spacing: 6) {
                             Image(systemName: "gearshape.fill")
                                 .font(.system(size: 11))
-                                .foregroundStyle(themeModel.maintenancePrimary)
+                                .foregroundStyle(Color.brown)
                             Text(workOrder.partsUsed.joined(separator: ", "))
-                                .font(themeModel.small())
-                                .foregroundStyle(themeModel.textSecondary)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(Color.secondary)
                                 .lineLimit(1)
                         }
                     }
                 }
-                .padding(.vertical, themeModel.spacingMD)
-                .padding(.trailing, themeModel.spacingMD)
-                .padding(.leading, themeModel.spacingMD)
+                .padding(.vertical, 16)
+                .padding(.trailing, 16)
+                .padding(.leading, 16)
             }
         }
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(statusColor(workOrder.status).opacity(0.5), lineWidth: 1.0)
         )
-        .shadow(
-            color: statusColor(workOrder.status).opacity(0.15),
-            radius: 8,
-            y: 4
-        )
+
         .scaleEffect(isPressed ? 0.97 : 1.0)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
         .simultaneousGesture(
@@ -465,19 +457,19 @@ private struct WorkOrderCard: View {
 
     func statusColor(_ status: WorkOrderStatus) -> Color {
         switch status {
-        case .open:       return themeModel.info
-        case .inProgress: return themeModel.warning
-        case .completed:  return themeModel.success
-        case .cancelled:  return themeModel.danger
+        case .open:       return Color.blue
+        case .inProgress: return Color.yellow
+        case .completed:  return Color.green
+        case .cancelled:  return Color.red
         }
     }
 
     func priorityColor(_ priority: WorkOrderPriority) -> Color {
         switch priority {
-        case .low:      return themeModel.success
-        case .medium:   return themeModel.info
-        case .high:     return themeModel.warning
-        case .critical: return themeModel.danger
+        case .low:      return Color.green
+        case .medium:   return Color.blue
+        case .high:     return Color.yellow
+        case .critical: return Color.red
         }
     }
 }
@@ -486,7 +478,7 @@ private struct WorkOrderCard: View {
 private struct InfoPill: View {
     let icon: String
     let text: String
-    var color: Color = themeModel.textSecondary
+    var color: Color = Color.secondary
 
     var body: some View {
         HStack(spacing: 4) {
@@ -494,7 +486,7 @@ private struct InfoPill: View {
                 .font(.system(size: 11))
                 .foregroundStyle(color)
             Text(text)
-                .font(themeModel.small())
+                .font(.caption.weight(.medium))
                 .foregroundStyle(color)
         }
         .padding(.horizontal, 8)
@@ -514,15 +506,15 @@ private struct EmptyScheduleView: View {
     @State private var floatOffset: CGFloat = 0
 
     var body: some View {
-        VStack(spacing: themeModel.spacingLG) {
+        VStack(spacing: 24) {
             ZStack {
                 Circle()
-                    .fill(themeModel.maintenancePrimary.opacity(0.08))
+                    .fill(Color.brown.opacity(0.08))
                     .frame(width: 120, height: 120)
 
                 Image(systemName: "wrench.and.screwdriver.fill")
                     .font(.system(size: 48, weight: .light))
-                    .foregroundStyle(themeModel.maintenancePrimary.opacity(0.6))
+                    .foregroundStyle(Color.brown.opacity(0.6))
                     .symbolEffect(.pulse)
                     .offset(y: floatOffset)
                     .onAppear {
@@ -534,16 +526,16 @@ private struct EmptyScheduleView: View {
 
             VStack(spacing: 8) {
                 Text(title)
-                    .font(themeModel.headline())
-                    .foregroundStyle(themeModel.textPrimary)
+                    .font(.headline)
+                    .foregroundStyle(Color.primary)
                 Text(message)
-                    .font(themeModel.body())
-                    .foregroundStyle(themeModel.textTertiary)
+                    .font(.body)
+                    .foregroundStyle(Color(.tertiaryLabel))
                     .multilineTextAlignment(.center)
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, themeModel.spacingXXL + 20)
+        .padding(.vertical, 40 + 20)
     }
 }
 
@@ -561,14 +553,14 @@ struct TaskDetailSheet: View {
 
     var body: some View {
         ZStack {
-            themeModel.backgroundPrimary.ignoresSafeArea()
+            Color(.systemGroupedBackground).ignoresSafeArea()
 
             ScrollView {
-                    VStack(spacing: themeModel.spacingLG) {
+                    VStack(spacing: 24) {
 
                         // MARK: Status Banner
                         let currentTask = viewModel.allTasks.first(where: { $0.id == task.id }) ?? task
-                        HStack(spacing: themeModel.spacingMD) {
+                        HStack(spacing: 16) {
                             Image(systemName: statusIcon(currentTask.status))
                                 .font(.system(size: 22, weight: .semibold))
                                 .foregroundStyle(statusColor(currentTask.status))
@@ -576,33 +568,33 @@ struct TaskDetailSheet: View {
 
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(currentTask.vehicleName)
-                                    .font(themeModel.headline())
-                                    .foregroundStyle(themeModel.textPrimary)
+                                    .font(.headline)
+                                    .foregroundStyle(Color.primary)
                                 Text(currentTask.vehicleNumber)
-                                    .font(themeModel.caption())
-                                    .foregroundStyle(themeModel.textTertiary)
+                                    .font(.footnote)
+                                    .foregroundStyle(Color(.tertiaryLabel))
                             }
                             Spacer()
                             StatusBadge(text: currentTask.status.rawValue, color: statusColor(currentTask.status))
                         }
-                        .padding(themeModel.spacingMD)
+                        .padding(16)
                         .background(statusColor(currentTask.status).opacity(0.09))
-                        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
                                 .stroke(statusColor(currentTask.status).opacity(0.3), lineWidth: 1)
                         )
 
                         // MARK: Vehicle Details
                         SheetSection(title: "Task Details") {
                             InfoRow(icon: "car.fill",      label: "Vehicle",   value: "\(currentTask.vehicleName) · \(currentTask.vehicleNumber)")
-                            Divider().background(themeModel.divider)
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "wrench.fill",   label: "Type",      value: taskTypeLabel(currentTask.taskType))
-                            Divider().background(themeModel.divider)
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "flag.fill",     label: "Priority",  value: currentTask.priority.rawValue, valueColor: priorityColor(currentTask.priority))
-                            Divider().background(themeModel.divider)
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "clock.fill",    label: "Time",      value: "\(currentTask.scheduledTime) · \(currentTask.estimatedDuration)")
-                            Divider().background(themeModel.divider)
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "person.fill",   label: "Assigned By", value: currentTask.assignedBy)
                         }
 
@@ -615,28 +607,28 @@ struct TaskDetailSheet: View {
                             HStack {
                                 GeometryReader { geo in
                                     ZStack(alignment: .leading) {
-                                        RoundedRectangle(cornerRadius: 4).fill(themeModel.surfaceTertiary).frame(height: 6)
+                                        RoundedRectangle(cornerRadius: 4).fill(Color(.tertiarySystemBackground)).frame(height: 6)
                                         RoundedRectangle(cornerRadius: 4)
-                                            .fill(themeModel.success)
+                                            .fill(Color.green)
                                             .frame(width: totalCount > 0 ? geo.size.width * CGFloat(doneCount) / CGFloat(totalCount) : 0, height: 6)
                                     }
                                 }
                                 .frame(height: 6)
 
                                 Text("\(doneCount)/\(totalCount)")
-                                    .font(themeModel.caption())
-                                    .foregroundStyle(themeModel.textTertiary)
+                                    .font(.footnote)
+                                    .foregroundStyle(Color(.tertiaryLabel))
                                     .frame(width: 36, alignment: .trailing)
                             }
 
-                            Divider().background(themeModel.divider)
+                            Divider().background(Color(.separator))
 
                             ForEach(items) { item in
                                 ChecklistRow(item: item) {
                                     viewModel.toggleChecklist(taskId: currentTask.id, itemId: item.id)
                                 }
                                 if item.id != items.last?.id {
-                                    Divider().background(themeModel.divider).padding(.leading, 32)
+                                    Divider().background(Color(.separator)).padding(.leading, 32)
                                 }
                             }
                         }
@@ -645,17 +637,17 @@ struct TaskDetailSheet: View {
                         if !currentTask.partsNeeded.isEmpty {
                             SheetSection(title: "Spare Parts Needed") {
                                 ForEach(Array(currentTask.partsNeeded.enumerated()), id: \.offset) { idx, part in
-                                    HStack(spacing: themeModel.spacingMD) {
+                                    HStack(spacing: 16) {
                                         Image(systemName: "gearshape.fill")
-                                            .foregroundStyle(themeModel.maintenancePrimary)
+                                            .foregroundStyle(Color.brown)
                                             .frame(width: 20)
                                         Text(part)
-                                            .font(themeModel.body())
-                                            .foregroundStyle(themeModel.textPrimary)
+                                            .font(.body)
+                                            .foregroundStyle(Color.primary)
                                         Spacer()
                                     }
                                     if idx < currentTask.partsNeeded.count - 1 {
-                                        Divider().background(themeModel.divider)
+                                        Divider().background(Color(.separator))
                                     }
                                 }
                             }
@@ -665,62 +657,62 @@ struct TaskDetailSheet: View {
                         SheetSection(title: "Service Notes") {
                             TextField("Add notes, observations, or findings...", text: $repairNotes, axis: .vertical)
                                 .lineLimit(3...6)
-                                .font(themeModel.body())
-                                .foregroundStyle(themeModel.textPrimary)
+                                .font(.body)
+                                .foregroundStyle(Color.primary)
                         }
 
                         // MARK: Previous History
                         SheetSection(title: "Previous History") {
-                            HStack(alignment: .top, spacing: themeModel.spacingMD) {
+                            HStack(alignment: .top, spacing: 16) {
                                 Image(systemName: "clock.arrow.circlepath")
-                                    .foregroundStyle(themeModel.textTertiary)
+                                    .foregroundStyle(Color(.tertiaryLabel))
                                     .frame(width: 20)
                                 Text(currentTask.previousNote)
-                                    .font(themeModel.body())
-                                    .foregroundStyle(themeModel.textSecondary)
+                                    .font(.body)
+                                    .foregroundStyle(Color.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }
 
                         // MARK: AI Recommendation
                         SheetSection(title: "AI Recommendation") {
-                            HStack(alignment: .top, spacing: themeModel.spacingMD) {
+                            HStack(alignment: .top, spacing: 16) {
                                 Image(systemName: "sparkles")
-                                    .foregroundStyle(themeModel.warning)
+                                    .foregroundStyle(Color.yellow)
                                     .font(.system(size: 18, weight: .semibold))
                                 Text(currentTask.aiRecommendation)
-                                    .font(themeModel.body())
-                                    .foregroundStyle(themeModel.textPrimary)
+                                    .font(.body)
+                                    .foregroundStyle(Color.primary)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }
 
                         // MARK: Action Buttons
-                        VStack(spacing: themeModel.spacingMD) {
+                        VStack(spacing: 16) {
                             if currentTask.status == .pending || currentTask.status == .delayed {
-                                SheetActionButton(title: "Start Task", icon: "play.circle.fill", color: themeModel.maintenancePrimary) {
+                                SheetActionButton(title: "Start Task", icon: "play.circle.fill", color: Color.brown) {
                                     viewModel.updateTaskStatus(id: currentTask.id, to: .inProgress)
                                 }
                             }
                             if currentTask.status == .inProgress || currentTask.status == .critical {
-                                SheetActionButton(title: "Mark as Completed", icon: "checkmark.circle.fill", color: themeModel.success) {
+                                SheetActionButton(title: "Mark as Completed", icon: "checkmark.circle.fill", color: Color.green) {
                                     viewModel.updateTaskStatus(id: currentTask.id, to: .completed)
                                 }
                             }
                             if currentTask.status != .completed && currentTask.status != .delayed {
-                                SheetActionButton(title: "Report Issue / Delay", icon: "exclamationmark.triangle.fill", color: themeModel.warning) {
+                                SheetActionButton(title: "Report Issue / Delay", icon: "exclamationmark.triangle.fill", color: Color.yellow) {
                                     viewModel.updateTaskStatus(id: currentTask.id, to: .delayed)
                                 }
                             }
 
-                            HStack(spacing: themeModel.spacingMD) {
+                            HStack(spacing: 16) {
                                 SheetSecondaryButton(title: "Add Photos", icon: "camera")
                                 SheetSecondaryButton(title: "Voice Note", icon: "mic.circle")
                             }
                         }
-                        .padding(.bottom, themeModel.spacingLG)
+                        .padding(.bottom, 24)
                     }
-                    .padding(themeModel.spacingMD)
+                    .padding(16)
             }
         }
         .navigationTitle(task.vehicleName)
@@ -746,46 +738,46 @@ struct WorkOrderDetailSheet: View {
 
     var body: some View {
         ZStack {
-            themeModel.backgroundPrimary.ignoresSafeArea()
+            Color(.systemGroupedBackground).ignoresSafeArea()
 
             ScrollView {
-                    VStack(spacing: themeModel.spacingLG) {
+                    VStack(spacing: 24) {
 
                         // MARK: Status Banner
-                        HStack(spacing: themeModel.spacingMD) {
+                        HStack(spacing: 16) {
                             Image(systemName: statusIcon(currentWO.status))
                                 .font(.system(size: 22, weight: .semibold))
                                 .foregroundStyle(statusColor(currentWO.status))
 
                             VStack(alignment: .leading, spacing: 3) {
                                 Text("WO-\(currentWO.id.uuidString.prefix(8).uppercased())")
-                                    .font(themeModel.headline())
-                                    .foregroundStyle(themeModel.textPrimary)
+                                    .font(.headline)
+                                    .foregroundStyle(Color.primary)
                                 Text("\(currentWO.vehicleName) · \(currentWO.vehicleNumber)")
-                                    .font(themeModel.caption())
-                                    .foregroundStyle(themeModel.textTertiary)
+                                    .font(.footnote)
+                                    .foregroundStyle(Color(.tertiaryLabel))
                             }
                             Spacer()
                             StatusBadge(text: statusLabel(currentWO.status), color: statusColor(currentWO.status))
                         }
-                        .padding(themeModel.spacingMD)
+                        .padding(16)
                         .background(statusColor(currentWO.status).opacity(0.09))
-                        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
                                 .stroke(statusColor(currentWO.status).opacity(0.3), lineWidth: 1)
                         )
 
                         // MARK: Work Order Details
                         SheetSection(title: "Order Details") {
                             InfoRow(icon: "number",        label: "Order ID",    value: "WO-\(currentWO.id.uuidString.prefix(8).uppercased())")
-                            Divider().background(themeModel.divider)
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "car.fill",      label: "Vehicle",     value: "\(currentWO.vehicleName) · \(currentWO.vehicleNumber)")
-                            Divider().background(themeModel.divider)
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "flag.fill",     label: "Priority",    value: priorityLabel(currentWO.priority), valueColor: priorityColor(currentWO.priority))
-                            Divider().background(themeModel.divider)
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "person.fill",   label: "Assigned To",  value: currentWO.assignedBy)
-                            Divider().background(themeModel.divider)
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "calendar",      label: "Created At",   value: currentWO.createdAt.formatted(date: .abbreviated, time: .shortened))
                         }
 
@@ -794,10 +786,10 @@ struct WorkOrderDetailSheet: View {
                             Button(action: { showAddPartSheet = true }) {
                                 HStack(spacing: 8) {
                                     Image(systemName: "plus.circle.fill")
-                                        .foregroundStyle(themeModel.maintenancePrimary)
+                                        .foregroundStyle(Color.brown)
                                     Text("Add Part from Inventory")
-                                        .font(themeModel.bodyMedium())
-                                        .foregroundStyle(themeModel.maintenancePrimary)
+                                        .font(.body.weight(.medium))
+                                        .foregroundStyle(Color.brown)
                                     Spacer()
                                 }
                                 .padding(.vertical, 4)
@@ -805,20 +797,20 @@ struct WorkOrderDetailSheet: View {
                             .buttonStyle(.plain)
 
                             if !currentWO.partsUsed.isEmpty {
-                                Divider().background(themeModel.divider)
+                                Divider().background(Color(.separator))
 
                                 ForEach(Array(currentWO.partsUsed.enumerated()), id: \.offset) { idx, part in
-                                    HStack(spacing: themeModel.spacingMD) {
+                                    HStack(spacing: 16) {
                                         Image(systemName: "gearshape.2.fill")
-                                            .foregroundStyle(themeModel.maintenancePrimary)
+                                            .foregroundStyle(Color.brown)
                                             .frame(width: 20)
                                         Text(part)
-                                            .font(themeModel.body())
-                                            .foregroundStyle(themeModel.textPrimary)
+                                            .font(.body)
+                                            .foregroundStyle(Color.primary)
                                         Spacer()
                                     }
                                     if idx < currentWO.partsUsed.count - 1 {
-                                        Divider().background(themeModel.divider)
+                                        Divider().background(Color(.separator))
                                     }
                                 }
                             }
@@ -826,9 +818,9 @@ struct WorkOrderDetailSheet: View {
 
                         // MARK: Labor & Financials
                         SheetSection(title: "Labor & Financials") {
-                            HStack(spacing: themeModel.spacingMD) {
-                                LaborStatBox(label: "Est. Hours", value: currentWO.laborHours, icon: "clock.fill",  color: themeModel.info)
-                                LaborStatBox(label: "Labor Cost",  value: currentWO.laborCost,   icon: "indianrupeesign.circle.fill",  color: themeModel.success)
+                            HStack(spacing: 16) {
+                                LaborStatBox(label: "Est. Hours", value: currentWO.laborHours, icon: "clock.fill",  color: Color.blue)
+                                LaborStatBox(label: "Labor Cost",  value: currentWO.laborCost,   icon: "indianrupeesign.circle.fill",  color: Color.green)
                             }
                         }
 
@@ -836,8 +828,8 @@ struct WorkOrderDetailSheet: View {
                         SheetSection(title: "Service Notes") {
                             TextField("Add order details, notes or observations...", text: $notes, axis: .vertical)
                                 .lineLimit(3...6)
-                                .font(themeModel.body())
-                                .foregroundStyle(themeModel.textPrimary)
+                                .font(.body)
+                                .foregroundStyle(Color.primary)
                                 .onChange(of: notes) { _, newValue in
                                     viewModel.updateWorkOrderNotes(id: currentWO.id, notes: newValue)
                                 }
@@ -847,48 +839,48 @@ struct WorkOrderDetailSheet: View {
                         }
 
                         // MARK: Action Buttons
-                        VStack(spacing: themeModel.spacingMD) {
+                        VStack(spacing: 16) {
                             if currentWO.status == .open {
-                                SheetActionButton(title: "Start Work Order", icon: "play.circle.fill", color: themeModel.maintenancePrimary) {
+                                SheetActionButton(title: "Start Work Order", icon: "play.circle.fill", color: Color.brown) {
                                     viewModel.updateWorkOrderStatus(id: currentWO.id, to: .inProgress)
                                 }
                             }
                             if currentWO.status == .inProgress {
-                                SheetActionButton(title: "Mark as Completed", icon: "checkmark.circle.fill", color: themeModel.success) {
+                                SheetActionButton(title: "Mark as Completed", icon: "checkmark.circle.fill", color: Color.green) {
                                     viewModel.updateWorkOrderStatus(id: currentWO.id, to: .completed)
                                 }
                             }
                             if currentWO.status == .completed {
-                                SheetActionButton(title: "Reopen Work Order", icon: "arrow.counterclockwise.circle.fill", color: themeModel.warning) {
+                                SheetActionButton(title: "Reopen Work Order", icon: "arrow.counterclockwise.circle.fill", color: Color.yellow) {
                                     viewModel.updateWorkOrderStatus(id: currentWO.id, to: .inProgress)
                                 }
                             }
                             if currentWO.status != .cancelled && currentWO.status != .completed {
-                                SheetActionButton(title: "Cancel Work Order", icon: "xmark.circle.fill", color: themeModel.danger) {
+                                SheetActionButton(title: "Cancel Work Order", icon: "xmark.circle.fill", color: Color.red) {
                                     viewModel.updateWorkOrderStatus(id: currentWO.id, to: .cancelled)
                                 }
                             }
                         }
-                        .padding(.bottom, themeModel.spacingLG)
+                        .padding(.bottom, 24)
                     }
-                    .padding(themeModel.spacingMD)
+                    .padding(16)
             }
         }
         .navigationTitle("Work Order Details")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showAddPartSheet) {
                 ZStack {
-                    themeModel.backgroundPrimary.ignoresSafeArea()
+                    Color(.systemGroupedBackground).ignoresSafeArea()
                     VStack(spacing: 20) {
                         Text("Add Spare Part")
-                            .font(themeModel.headline())
-                            .foregroundStyle(themeModel.textPrimary)
+                            .font(.headline)
+                            .foregroundStyle(Color.primary)
                             .padding(.top, 20)
 
                         TextField("Part Name (e.g. Air Filter)", text: $newPartName)
-                            .font(themeModel.body())
+                            .font(.body)
                             .padding(12)
-                            .background(themeModel.surfaceTertiary)
+                            .background(Color(.tertiarySystemBackground))
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                             .padding(.horizontal)
 
@@ -900,15 +892,15 @@ struct WorkOrderDetailSheet: View {
                             }
                         }) {
                             Text("Add to Consumed Parts")
-                                .font(themeModel.headline())
-                                .foregroundStyle(themeModel.textPrimary)
+                                .font(.headline)
+                                .foregroundStyle(Color.primary)
                                 .padding()
                                 .frame(maxWidth: .infinity)
-                                .background(themeModel.maintenancePrimary)
+                                .background(Color.brown)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                                 .padding(.horizontal)
                         }
-                        
+
                         Spacer()
                     }
                 }
@@ -936,10 +928,10 @@ struct WorkOrderDetailSheet: View {
 
     func statusColor(_ status: WorkOrderStatus) -> Color {
         switch status {
-        case .open:       return themeModel.info
-        case .inProgress: return themeModel.warning
-        case .completed:  return themeModel.success
-        case .cancelled:  return themeModel.danger
+        case .open:       return Color.blue
+        case .inProgress: return Color.yellow
+        case .completed:  return Color.green
+        case .cancelled:  return Color.red
         }
     }
 
@@ -954,10 +946,10 @@ struct WorkOrderDetailSheet: View {
 
     func priorityColor(_ priority: WorkOrderPriority) -> Color {
         switch priority {
-        case .low:      return themeModel.success
-        case .medium:   return themeModel.info
-        case .high:     return themeModel.warning
-        case .critical: return themeModel.danger
+        case .low:      return Color.green
+        case .medium:   return Color.blue
+        case .high:     return Color.yellow
+        case .critical: return Color.red
         }
     }
 }
@@ -971,18 +963,18 @@ private struct SheetSection<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
             SectionHeader(title: title)
-            VStack(spacing: themeModel.spacingMD) {
+            VStack(spacing: 16) {
                 content()
             }
-            .padding(themeModel.spacingMD)
-            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .padding(16)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
             )
-            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+
         }
     }
 }
@@ -997,16 +989,16 @@ private struct ChecklistRow: View {
 
     var body: some View {
         Button(action: { withAnimation(.spring(response: 0.3)) { onToggle() } }) {
-            HStack(spacing: themeModel.spacingMD) {
+            HStack(spacing: 16) {
                 Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(item.isChecked ? themeModel.success : themeModel.textDisabled)
+                    .foregroundStyle(item.isChecked ? Color.green : Color(.quaternaryLabel))
                     .font(.system(size: 20))
                     .symbolEffect(.bounce, value: item.isChecked)
 
                 Text(item.title)
-                    .font(themeModel.body())
-                    .foregroundStyle(item.isChecked ? themeModel.textTertiary : themeModel.textPrimary)
-                    .strikethrough(item.isChecked, color: themeModel.textTertiary)
+                    .font(.body)
+                    .foregroundStyle(item.isChecked ? Color(.tertiaryLabel) : Color.primary)
+                    .strikethrough(item.isChecked, color: Color(.tertiaryLabel))
                     .animation(.easeInOut(duration: 0.2), value: item.isChecked)
 
                 Spacer()
@@ -1028,20 +1020,20 @@ private struct SheetActionButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: themeModel.spacingSM) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
                 Text(title)
             }
-            .font(themeModel.headline())
+            .font(.headline)
             .foregroundStyle(color)
             .frame(maxWidth: .infinity)
-            .padding(themeModel.spacingMD)
-            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .padding(16)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(color.opacity(0.35), lineWidth: 1)
             )
-            .shadow(color: color.opacity(0.2), radius: 8, y: 4)
+
         }
     }
 }
@@ -1056,17 +1048,17 @@ private struct SheetSecondaryButton: View {
 
     var body: some View {
         Button(action: {}) {
-            HStack(spacing: themeModel.spacingSM) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
                 Text(title)
             }
-            .font(themeModel.bodyMedium())
-            .foregroundStyle(themeModel.textSecondary)
+            .font(.body.weight(.medium))
+            .foregroundStyle(Color.secondary)
             .frame(maxWidth: .infinity)
-            .padding(themeModel.spacingMD)
-            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .padding(16)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
             )
         }
@@ -1084,22 +1076,22 @@ private struct LaborStatBox: View {
     let color: Color
 
     var body: some View {
-        HStack(spacing: themeModel.spacingSM) {
+        HStack(spacing: 8) {
             Image(systemName: icon)
                 .foregroundStyle(color)
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
-                    .font(themeModel.headline())
-                    .foregroundStyle(themeModel.textPrimary)
+                    .font(.headline)
+                    .foregroundStyle(Color.primary)
                 Text(label)
-                    .font(themeModel.caption())
-                    .foregroundStyle(themeModel.textTertiary)
+                    .font(.footnote)
+                    .foregroundStyle(Color(.tertiaryLabel))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(themeModel.spacingMD)
+        .padding(16)
         .background(color.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -1109,11 +1101,11 @@ private struct LaborStatBox: View {
 
 func statusColor(_ status: TaskDisplayStatus) -> Color {
     switch status {
-    case .pending:    return themeModel.info
-    case .inProgress: return themeModel.warning
-    case .completed:  return themeModel.success
-    case .delayed:    return themeModel.danger
-    case .critical:   return themeModel.danger
+    case .pending:    return Color.blue
+    case .inProgress: return Color.yellow
+    case .completed:  return Color.green
+    case .delayed:    return Color.red
+    case .critical:   return Color.red
     }
 }
 
@@ -1129,10 +1121,10 @@ func statusIcon(_ status: TaskDisplayStatus) -> String {
 
 func priorityColor(_ priority: TaskPriority) -> Color {
     switch priority {
-    case .low:       return themeModel.success
-    case .medium:    return themeModel.info
-    case .high:      return themeModel.warning
-    case .emergency: return themeModel.danger
+    case .low:       return Color.green
+    case .medium:    return Color.blue
+    case .high:      return Color.yellow
+    case .emergency: return Color.red
     }
 }
 

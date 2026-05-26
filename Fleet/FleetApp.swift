@@ -10,7 +10,7 @@ import SwiftUI
 @main
 struct FleetApp: App {
     @State private var authViewModel = AuthViewModel()
-    
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -18,4 +18,3 @@ struct FleetApp: App {
         }
     }
 }
-

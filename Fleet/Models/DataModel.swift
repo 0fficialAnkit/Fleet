@@ -51,9 +51,9 @@ enum OrderType: String, Codable, CaseIterable, Sendable, Identifiable {
   case pickUpAndDrop = "pick_up_and_drop"
   case bulkOrderShip = "bulk_order_ship"
   case travel = "travel"
-  
+
   var id: String { rawValue }
-  
+
   var displayName: String {
       switch self {
       case .pickUpAndDrop: return "Pick Up & Drop"
@@ -349,6 +349,7 @@ struct Trip: Codable, Identifiable, Hashable, Sendable {
   var distance: Double?
   var status: TripStatus?
   var orderType: OrderType?
+  var createdAt: Date?
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -359,6 +360,7 @@ struct Trip: Codable, Identifiable, Hashable, Sendable {
       case endTime = "end_time"
       case distance, status
       case orderType = "order_type"
+      case createdAt = "created_at"
   }
 }
 
@@ -618,4 +620,3 @@ struct MaintenanceStaffRecord: Codable, Identifiable, Hashable, Sendable {
         case createdAt = "created_at"
     }
 }
-

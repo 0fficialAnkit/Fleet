@@ -3,25 +3,6 @@ import SwiftUI
 struct FleetManagerMainView: View {
     @State private var selectedTab = 0
 
-    init() {
-        let appearance = UITabBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor(themeModel.tabBar)
-
-        UITabBar.appearance().standardAppearance = appearance
-        UITabBar.appearance().scrollEdgeAppearance = appearance
-        UITabBar.appearance().unselectedItemTintColor = UIColor(themeModel.unselectedTab)
-
-        let navAppearance = UINavigationBarAppearance()
-        navAppearance.configureWithTransparentBackground()
-        navAppearance.largeTitleTextAttributes = [.foregroundColor: UIColor(themeModel.textPrimary)]
-        navAppearance.titleTextAttributes = [.foregroundColor: UIColor(themeModel.textPrimary)]
-
-        UINavigationBar.appearance().standardAppearance = navAppearance
-        UINavigationBar.appearance().compactAppearance = navAppearance
-        UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
-    }
-
     var body: some View {
         TabView(selection: $selectedTab) {
 
@@ -57,13 +38,11 @@ struct FleetManagerMainView: View {
                 }
                 .tag(3)
         }
-        .tint(themeModel.selectedTab)
+        .tint(Color.teal)
     }
 }
-
 
 #Preview {
     FleetManagerMainView()
         .environment(AuthViewModel())
 }
-

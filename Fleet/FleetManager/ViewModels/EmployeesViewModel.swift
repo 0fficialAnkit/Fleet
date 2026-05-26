@@ -54,17 +54,17 @@ final class EmployeesViewModel {
 
     func getColor(for roleName: String) -> Color {
         switch roleName.lowercased() {
-        case "fleet_manager", "fleet manager": return themeModel.analyticsPurple
-        case "driver": return themeModel.info
-        case "maintenance": return themeModel.warning
-        default: return themeModel.textSecondary
+        case "fleet_manager", "fleet manager": return Color.purple
+        case "driver": return Color.blue
+        case "maintenance": return Color.yellow
+        default: return Color.secondary
         }
     }
 
     func addEmployee(fullName: String, email: String, password: String, phone: String, licenseNumber: String?, role: String) async throws {
         isCreatingUser = true
         defer { isCreatingUser = false }
-        
+
         _ = try await ProfileService.createUserLocally(
             email: email,
             password: password,
@@ -73,7 +73,7 @@ final class EmployeesViewModel {
             licenseNumber: licenseNumber,
             role: role
         )
-        
+
         await loadData()
     }
 

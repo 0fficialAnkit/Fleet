@@ -9,8 +9,8 @@ struct NotificationsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
-                
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 if viewModel.isLoading && viewModel.notifications.isEmpty {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -18,10 +18,10 @@ struct NotificationsView: View {
                     VStack(spacing: 16) {
                         Image(systemName: "bell.slash")
                             .font(.system(size: 48))
-                            .foregroundColor(themeModel.textSecondary)
+                            .foregroundColor(Color.secondary)
                         Text("No notifications")
-                            .font(themeModel.body())
-                            .foregroundColor(themeModel.textSecondary)
+                            .font(.body)
+                            .foregroundColor(Color.secondary)
                     }
                 } else {
                     List {
@@ -47,15 +47,15 @@ struct NotificationsView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundColor(themeModel.textPrimary)
+                    .foregroundColor(Color.primary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     if !viewModel.notifications.filter({ !$0.isRead }).isEmpty {
                         Button("Mark All Read") {
                             viewModel.markAllAsRead()
                         }
-                        .foregroundColor(themeModel.accent)
-                        .font(themeModel.caption())
+                        .foregroundColor(Color.teal)
+                        .font(.footnote)
                     }
                 }
             }
@@ -71,7 +71,7 @@ struct NotificationsView: View {
 struct NotificationRow: View {
     let notification: Notification
     let onTap: () -> Void
-    
+
     var iconName: String {
         switch notification.type {
         case .info: return "info.circle.fill"
@@ -81,17 +81,17 @@ struct NotificationRow: View {
         case .none: return "bell.fill"
         }
     }
-    
+
     var iconColor: Color {
         switch notification.type {
-        case .info: return themeModel.info
-        case .warning: return themeModel.warning
-        case .alert: return themeModel.danger
-        case .maintenance: return themeModel.analyticsPurple
-        case .none: return themeModel.textSecondary
+        case .info: return Color.blue
+        case .warning: return Color.yellow
+        case .alert: return Color.red
+        case .maintenance: return Color.purple
+        case .none: return Color.secondary
         }
     }
-    
+
     var body: some View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: 16) {
@@ -99,33 +99,33 @@ struct NotificationRow: View {
                     .font(.title2)
                     .foregroundColor(iconColor)
                     .padding(.top, 4)
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(notification.title ?? "Notification")
-                            .font(themeModel.headline(16))
-                            .foregroundColor(notification.isRead ? themeModel.textSecondary : themeModel.textPrimary)
+                            .font(.body.bold())
+                            .foregroundColor(notification.isRead ? Color.secondary : Color.primary)
                         Spacer()
                         if let date = notification.createdAt {
                             Text(date.formatted(date: .abbreviated, time: .shortened))
-                                .font(themeModel.caption(12))
-                                .foregroundColor(themeModel.textTertiary)
+                                .font(.caption)
+                                .foregroundColor(Color(.tertiaryLabel))
                         }
                     }
-                    
+
                     Text(notification.message ?? "")
-                        .font(themeModel.body(14))
-                        .foregroundColor(themeModel.textSecondary)
+                        .font(.subheadline)
+                        .foregroundColor(Color.secondary)
                         .multilineTextAlignment(.leading)
                 }
             }
             .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .fill(notification.isRead ? Color.white.opacity(0.02) : Color.white.opacity(0.06))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(notification.isRead ? Color.clear : iconColor.opacity(0.3), lineWidth: 1)
             )
         }

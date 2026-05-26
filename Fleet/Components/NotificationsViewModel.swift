@@ -7,7 +7,7 @@ final class NotificationsViewModel {
     var isLoading = false
     var errorMessage: String?
     var currentUserId: UUID?
-    
+
     func loadData() async {
         guard let userId = currentUserId else { return }
         isLoading = true
@@ -19,13 +19,13 @@ final class NotificationsViewModel {
         }
         isLoading = false
     }
-    
+
     func setupRealtime() {
         RealtimeManager.shared.addNotificationsChangeHandler { [weak self] in
             Task { await self?.loadData() }
         }
     }
-    
+
     func markAsRead(_ notification: Notification) {
         Task {
             do {
@@ -36,7 +36,7 @@ final class NotificationsViewModel {
             }
         }
     }
-    
+
     func markAllAsRead() {
         let unread = notifications.filter { $0.isRead == false }
         for notification in unread {

@@ -1,16 +1,22 @@
 import SwiftUI
+import MapKit
 
 struct TripDetailView: View {
 
     let trip: Trip
-    let onStart: (UUID, UUID, String) -> Void
-    let onEnd: (UUID, UUID, String) -> Void
+    let onStart: (UUID, UUID, String, [String]) -> Void
+    let onEnd: (UUID, UUID, String, [String]) -> Void
 
     // Local status so UI reacts immediately after start/end
     @State private var currentStatus: TripStatus?
     @State private var showingChecklist: InspectionType? = nil
 
-    init(trip: Trip, onStart: @escaping (UUID, UUID, String) -> Void, onEnd: @escaping (UUID, UUID, String) -> Void) {
+    // Route loaded from Supabase
+    @State private var route: Route?
+    @State private var vehicle: Vehicle?
+    @State private var mapView: TripRouteMapView?
+
+    init(trip: Trip, onStart: @escaping (UUID, UUID, String, [String]) -> Void, onEnd: @escaping (UUID, UUID, String, [String]) -> Void) {
         self.trip = trip
         self.onStart = onStart
         self.onEnd = onEnd
@@ -21,11 +27,11 @@ struct TripDetailView: View {
 
     var statusColor: Color {
         switch currentStatus {
-        case .scheduled: return themeModel.warning
-        case .active:    return themeModel.driverPrimary
-        case .completed: return themeModel.success
-        case .cancelled: return themeModel.danger
-        default:         return themeModel.textDisabled
+        case .scheduled: return Color.yellow
+        case .active:    return Color.green
+        case .completed: return Color.green
+        case .cancelled: return Color.red
+        default:         return Color(UIColor.quaternaryLabel)
         }
     }
 
@@ -49,23 +55,23 @@ struct TripDetailView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Route #\(trip.id.uuidString.prefix(6).uppercased())")
-                            .font(themeModel.title())
-                            .foregroundStyle(themeModel.textPrimary)
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.primary)
                         StatusBadge(text: statusText, color: statusColor)
                     }
                     Spacer()
                     ZStack {
                         Circle()
-                            .fill(themeModel.driverPrimary.opacity(0.12))
+                            .fill(Color.green.opacity(0.12))
                             .frame(width: 56, height: 56)
                         Image(systemName: "truck.box.fill")
                             .font(.system(size: 26))
-                            .foregroundStyle(themeModel.driverPrimary)
+                            .foregroundStyle(Color.green)
                     }
                 }
 
                 Divider()
-                    .overlay(themeModel.divider)
+                    .overlay(Color(UIColor.separator))
 
                 // ── Date & Time ────────────────────────────────────
                 sectionTitle("Schedule")
@@ -75,19 +81,19 @@ struct TripDetailView: View {
                         icon: "calendar",
                         label: "Date",
                         value: trip.startTime?.formatted(date: .abbreviated, time: .omitted) ?? "Today",
-                        color: themeModel.analyticsPurple
+                        color: Color.purple
                     )
                     infoTile(
                         icon: "clock.fill",
                         label: "Start Time",
                         value: trip.startTime?.formatted(date: .omitted, time: .shortened) ?? "09:00 AM",
-                        color: themeModel.driverPrimary
+                        color: Color.green
                     )
                     infoTile(
                         icon: "clock.badge.checkmark.fill",
                         label: "Est. End",
                         value: trip.endTime?.formatted(date: .omitted, time: .shortened) ?? "N/A",
-                        color: themeModel.success
+                        color: Color.green
                     )
                 }
 
@@ -99,26 +105,26 @@ struct TripDetailView: View {
                     HStack(spacing: 14) {
                         ZStack {
                             Circle()
-                                .fill(themeModel.success.opacity(0.15))
+                                .fill(Color.green.opacity(0.15))
                                 .frame(width: 40, height: 40)
                             Image(systemName: "circle.fill")
                                 .font(.system(size: 12))
-                                .foregroundStyle(themeModel.success)
+                                .foregroundStyle(Color.green)
                         }
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Pickup / Origin")
-                                .font(themeModel.caption())
-                                .foregroundStyle(themeModel.textSecondary)
+                                .font(.system(size: 16, weight: .regular, design: .rounded))
+                                .foregroundStyle(Color.secondary)
                             Text("Warehouse A, Sector 12")
-                                .font(themeModel.bodyMedium())
-                                .foregroundStyle(themeModel.textPrimary)
+                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color.primary)
                         }
                         Spacer()
                     }
 
                     // Connector line
                     Rectangle()
-                        .fill(themeModel.divider)
+                        .fill(Color(UIColor.separator))
                         .frame(width: 2, height: 32)
                         .padding(.leading, 19)
 
@@ -126,30 +132,30 @@ struct TripDetailView: View {
                     HStack(spacing: 14) {
                         ZStack {
                             Circle()
-                                .fill(themeModel.danger.opacity(0.15))
+                                .fill(Color.red.opacity(0.15))
                                 .frame(width: 40, height: 40)
                             Image(systemName: "mappin.circle.fill")
                                 .font(.system(size: 20))
-                                .foregroundStyle(themeModel.danger)
+                                .foregroundStyle(Color.red)
                         }
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Drop-off / Destination")
-                                .font(themeModel.caption())
-                                .foregroundStyle(themeModel.textSecondary)
+                                .font(.system(size: 16, weight: .regular, design: .rounded))
+                                .foregroundStyle(Color.secondary)
                             Text("Distribution Center, Zone B")
-                                .font(themeModel.bodyMedium())
-                                .foregroundStyle(themeModel.textPrimary)
+                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color.primary)
                         }
                         Spacer()
                     }
                 }
-                .padding(themeModel.spacingMD)
-                .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                .padding(16)
+                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                 )
-                .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
 
                 // ── Distance Info ──────────────────────────────────
                 HStack(spacing: 12) {
@@ -157,40 +163,97 @@ struct TripDetailView: View {
                         icon: "road.lanes",
                         label: "Distance",
                         value: trip.distance != nil ? String(format: "%.1f km", trip.distance!) : "42 km",
-                        color: themeModel.warning
+                        color: Color.yellow
                     )
                     infoTile(
                         icon: "timer",
                         label: "Est. Duration",
                         value: "~38 min",
-                        color: themeModel.analyticsPurple
+                        color: Color.purple
                     )
                 }
 
-                // ── Map Placeholder ────────────────────────────────
+                // ── Assigned Vehicle ───────────────────────────────
+                sectionTitle("Assigned Vehicle")
+
+                if let vehicle {
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack(spacing: 16) {
+                            Image(systemName: "truck.box.fill")
+                                .font(.system(size: 24))
+                                .foregroundStyle(Color.green)
+                                .frame(width: 44, height: 44)
+                                .background(Color.green.opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(vehicle.make ?? "Vehicle") \(vehicle.model ?? "")")
+                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(Color.primary)
+                                Text(vehicle.licensePlate ?? "—")
+                                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                                    .foregroundStyle(Color.secondary)
+                            }
+                            Spacer()
+                        }
+
+                        Divider().background(Color(UIColor.separator))
+
+                        HStack(spacing: 16) {
+                            NavigationLink(value: DriverDestination.vehicleDetail(vehicle)) {
+                                Label("View Details", systemImage: "info.circle")
+                                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(Color.green)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 12)
+                                    .background(Color.green.opacity(0.08))
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+
+                            NavigationLink(value: DriverDestination.reportIssue(vehicle)) {
+                                Label("Report Issue", systemImage: "exclamationmark.triangle")
+                                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(Color.red)
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 12)
+                                    .background(Color.red.opacity(0.08))
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(16)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                    )
+                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                } else {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Loading vehicle info...")
+                            .font(.system(size: 16, weight: .regular, design: .rounded))
+                            .foregroundStyle(Color.secondary)
+                    }
+                    .padding(16)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                    )
+                }
+
+                // ── Route Map ─────────────────────────────────────
                 sectionTitle("Route Map")
 
-                ZStack {
-                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                        .fill(themeModel.driverPrimary.opacity(0.07))
-                        .frame(height: 200)
-
-                    VStack(spacing: 10) {
-                        Image(systemName: "map.fill")
-                            .font(.system(size: 44))
-                            .foregroundStyle(themeModel.driverPrimary.opacity(0.45))
-                        Text("Map View")
-                            .font(themeModel.bodyMedium())
-                            .foregroundStyle(themeModel.textSecondary)
-                        Text("Warehouse A  →  Distribution Center, Zone B")
-                            .font(themeModel.caption())
-                            .foregroundStyle(themeModel.textTertiary)
-                            .multilineTextAlignment(.center)
-                    }
-                }
-                .overlay(
-                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                        .stroke(themeModel.driverPrimary.opacity(0.2), lineWidth: 1)
+                TripRouteMapView(
+                    startAddress: route?.startLocation,
+                    endAddress:   route?.endLocation
                 )
 
                 // ── Action Buttons ─────────────────────────────────
@@ -198,16 +261,26 @@ struct TripDetailView: View {
             }
             .padding()
         }
-        .background(themeModel.backgroundPrimary.ignoresSafeArea())
+        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Trip Details")
         .navigationBarTitleDisplayMode(.large)
+        .task {
+            // Load route and vehicle details
+            async let fetchedRoute = trip.routeId != nil ? RouteService.fetchRoute(id: trip.routeId!) : nil
+            async let fetchedVehicle = VehicleService.fetchVehicle(id: trip.vehicleId)
+
+            route = try? await fetchedRoute
+            vehicle = try? await fetchedVehicle
+        }
         .sheet(item: $showingChecklist) { type in
-            DriverChecklistView(checklistType: type) { notes in
+            DriverChecklistView(checklistType: type) { notes, urls in
                 if type == .preTrip {
-                    onStart(trip.id, trip.vehicleId, notes)
+                    onStart(trip.id, trip.vehicleId, notes, urls)
                     withAnimation { currentStatus = .active }
+                    // Open Apple Maps with turn-by-turn navigation to destination
+                    openMapsNavigation()
                 } else {
-                    onEnd(trip.id, trip.vehicleId, notes)
+                    onEnd(trip.id, trip.vehicleId, notes, urls)
                     withAnimation { currentStatus = .completed }
                 }
                 showingChecklist = nil
@@ -227,30 +300,30 @@ struct TripDetailView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "play.fill")
                     Text("Start Trip")
-                        .font(themeModel.headline())
+                        .font(.system(size: 18, weight: .semibold, design: .rounded))
                 }
                 .frame(maxWidth: .infinity)
-                .padding(themeModel.spacingMD)
-                .background(themeModel.driverPrimary)
+                .padding(16)
+                .background(Color.green)
                 .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusSM))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .shadow(color: themeModel.driverPrimary.opacity(0.35), radius: 10, y: 4)
+            .shadow(color: Color.green.opacity(0.35), radius: 10, y: 4)
 
         case .active:
             VStack(spacing: 12) {
                 // In-progress banner
                 HStack(spacing: 10) {
                     Image(systemName: "bolt.fill")
-                        .foregroundStyle(themeModel.driverPrimary)
+                        .foregroundStyle(Color.green)
                     Text("Trip is currently in progress")
-                        .font(themeModel.bodyMedium())
-                        .foregroundStyle(themeModel.driverPrimary)
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.green)
                     Spacer()
                 }
-                .padding(themeModel.spacingMD)
-                .background(themeModel.driverPrimary.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusSM))
+                .padding(16)
+                .background(Color.green.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
 
                 // End Trip button
                 Button {
@@ -259,29 +332,29 @@ struct TripDetailView: View {
                     HStack(spacing: 10) {
                         Image(systemName: "stop.fill")
                         Text("End Trip")
-                            .font(themeModel.headline())
+                            .font(.system(size: 18, weight: .semibold, design: .rounded))
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(themeModel.spacingMD)
-                    .background(themeModel.danger)
+                    .padding(16)
+                    .background(Color.red)
                     .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusSM))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .shadow(color: themeModel.danger.opacity(0.35), radius: 10, y: 4)
+                .shadow(color: Color.red.opacity(0.35), radius: 10, y: 4)
             }
 
         case .completed:
             HStack(spacing: 10) {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(themeModel.success)
+                    .foregroundStyle(Color.green)
                 Text("Trip completed successfully")
-                    .font(themeModel.bodyMedium())
-                    .foregroundStyle(themeModel.success)
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.green)
                 Spacer()
             }
-            .padding(themeModel.spacingMD)
-            .background(themeModel.success.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusSM))
+            .padding(16)
+            .background(Color.green.opacity(0.1))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
 
         default:
             EmptyView()
@@ -293,8 +366,28 @@ struct TripDetailView: View {
     @ViewBuilder
     func sectionTitle(_ text: String) -> some View {
         Text(text)
-            .font(themeModel.headline())
-            .foregroundStyle(themeModel.textPrimary)
+            .font(.system(size: 18, weight: .semibold, design: .rounded))
+            .foregroundStyle(Color.primary)
+    }
+
+    // MARK: - Apple Maps Navigation
+
+    /// Geocodes the route's destination using iOS 26 MKGeocodingRequest
+    /// and opens Apple Maps with driving turn-by-turn navigation.
+    private func openMapsNavigation() {
+        guard let destination = route?.endLocation, !destination.isEmpty else { return }
+        Task {
+            let searchRequest = MKLocalSearch.Request()
+            searchRequest.naturalLanguageQuery = destination
+            searchRequest.resultTypes = .address
+            guard let mapItem = try? await MKLocalSearch(request: searchRequest).start().mapItems.first
+            else { return }
+            mapItem.name = destination
+            mapItem.openInMaps(launchOptions: [
+                MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving,
+                MKLaunchOptionsShowsTrafficKey: true
+            ])
+        }
     }
 
     @ViewBuilder
@@ -304,19 +397,19 @@ struct TripDetailView: View {
                 .font(.system(size: 16))
                 .foregroundStyle(color)
             Text(label)
-                .font(themeModel.caption())
-                .foregroundStyle(themeModel.textSecondary)
+                .font(.system(size: 16, weight: .regular, design: .rounded))
+                .foregroundStyle(Color.secondary)
             Text(value)
-                .font(themeModel.bodyMedium())
-                .foregroundStyle(themeModel.textPrimary)
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundStyle(Color.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
-        .padding(themeModel.spacingMD)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(color.opacity(0.2), lineWidth: 1)
         )
     }

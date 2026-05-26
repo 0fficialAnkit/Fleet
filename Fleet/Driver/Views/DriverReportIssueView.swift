@@ -1,5 +1,6 @@
 import SwiftUI
 import Supabase
+import PhotosUI
 
 // MARK: - Issue Category
 enum IssueCategory: String, CaseIterable, Identifiable {
@@ -27,13 +28,13 @@ enum IssueCategory: String, CaseIterable, Identifiable {
 
     var color: Color {
         switch self {
-        case .engine:     return themeModel.danger
-        case .tire:       return themeModel.warning
+        case .engine:     return Color.red
+        case .tire:       return Color.yellow
         case .brake:      return Color.orange
         case .electrical: return Color.yellow
-        case .fuelLeak:   return themeModel.info
-        case .bodyDamage: return themeModel.analyticsPurple
-        case .other:      return themeModel.textSecondary
+        case .fuelLeak:   return Color.blue
+        case .bodyDamage: return Color.purple
+        case .other:      return Color.secondary
         }
     }
 }
@@ -53,23 +54,27 @@ struct DriverReportIssueView: View {
 
     private let maxDescriptionLength = 200
 
+    @State private var selectedPhotos: [PhotosPickerItem] = []
+    @State private var capturedImages: [UIImage] = []
+
     var body: some View {
         ZStack {
-            themeModel.backgroundPrimary.ignoresSafeArea()
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
 
             if isSubmitted {
                 successView
             } else {
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: themeModel.spacingLG) {
+                    VStack(spacing: 24) {
                         vehicleHeader
                         issueCategorySection
                         severitySection
                         descriptionSection
+                        photosSection
                         submitButton
                     }
-                    .padding(themeModel.spacingMD)
-                    .padding(.bottom, themeModel.spacingXXL)
+                    .padding(16)
+                    .padding(.bottom, 40)
                 }
             }
         }
@@ -83,44 +88,55 @@ struct DriverReportIssueView: View {
         } message: {
             Text(errorMessage ?? "Unknown error occurred")
         }
+        .onChange(of: selectedPhotos) { _, newItems in
+            Task {
+                for item in newItems {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        capturedImages.append(image)
+                    }
+                }
+                selectedPhotos = []
+            }
+        }
     }
 
     // MARK: - Vehicle Header
     private var vehicleHeader: some View {
-        HStack(spacing: themeModel.spacingMD) {
+        HStack(spacing: 16) {
             Image(systemName: "truck.box.fill")
                 .font(.system(size: 28))
-                .foregroundStyle(themeModel.driverPrimary)
+                .foregroundStyle(Color.green)
                 .frame(width: 52, height: 52)
-                .background(themeModel.driverPrimary.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
+                .background(Color.green.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(vehicle.make ?? "Vehicle") \(vehicle.model ?? "")")
-                    .font(themeModel.headline())
-                    .foregroundStyle(themeModel.textPrimary)
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.primary)
                 Text(vehicle.licensePlate ?? "—")
-                    .font(themeModel.caption())
-                    .foregroundStyle(themeModel.driverPrimary)
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .foregroundStyle(Color.green)
             }
             Spacer()
         }
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
         )
     }
 
     // MARK: - Issue Category
     private var issueCategorySection: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
             Label("Issue Type", systemImage: "exclamationmark.triangle.fill")
-                .font(themeModel.headline())
-                .foregroundStyle(themeModel.textPrimary)
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.primary)
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: themeModel.spacingSM) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                 ForEach(IssueCategory.allCases) { category in
                     categoryCard(category)
                 }
@@ -135,14 +151,14 @@ struct DriverReportIssueView: View {
                 selectedCategory = category
             }
         }) {
-            HStack(spacing: themeModel.spacingSM) {
+            HStack(spacing: 8) {
                 Image(systemName: category.icon)
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(isSelected ? category.color : themeModel.textSecondary)
+                    .foregroundStyle(isSelected ? category.color : Color.secondary)
                     .frame(width: 20)
                 Text(category.rawValue)
-                    .font(themeModel.caption())
-                    .foregroundStyle(isSelected ? themeModel.textPrimary : themeModel.textSecondary)
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                 Spacer(minLength: 0)
@@ -150,11 +166,11 @@ struct DriverReportIssueView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .background(
-                RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(isSelected ? category.color.opacity(0.15) : Color.white.opacity(0.04))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(isSelected ? category.color.opacity(0.6) : Color.white.opacity(0.08), lineWidth: 1)
             )
             .animation(.easeInOut(duration: 0.2), value: isSelected)
@@ -164,12 +180,12 @@ struct DriverReportIssueView: View {
 
     // MARK: - Severity
     private var severitySection: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
             Label("Severity", systemImage: "gauge.with.dots.needle.67percent")
-                .font(themeModel.headline())
-                .foregroundStyle(themeModel.textPrimary)
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.primary)
 
-            HStack(spacing: themeModel.spacingSM) {
+            HStack(spacing: 8) {
                 ForEach(DefectSeverity.allCases, id: \.self) { severity in
                     severityChip(severity)
                 }
@@ -186,9 +202,9 @@ struct DriverReportIssueView: View {
             }
         }) {
             Text(severity.rawValue.capitalized)
-                .font(themeModel.caption())
+                .font(.system(size: 16, weight: .regular, design: .rounded))
                 .fontWeight(isSelected ? .semibold : .regular)
-                .foregroundStyle(isSelected ? color : themeModel.textSecondary)
+                .foregroundStyle(isSelected ? color : Color.secondary)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
                 .background(
@@ -206,39 +222,39 @@ struct DriverReportIssueView: View {
 
     private func severityColor(_ severity: DefectSeverity) -> Color {
         switch severity {
-        case .low:      return themeModel.success
-        case .medium:   return themeModel.warning
+        case .low:      return Color.green
+        case .medium:   return Color.yellow
         case .high:     return Color.orange
-        case .critical: return themeModel.danger
+        case .critical: return Color.red
         }
     }
 
     // MARK: - Description
     private var descriptionSection: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
             Label("Description", systemImage: "text.alignleft")
-                .font(themeModel.headline())
-                .foregroundStyle(themeModel.textPrimary)
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.primary)
 
             ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(Color.white.opacity(0.05))
                     .overlay(
-                        RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .stroke(Color.white.opacity(0.12), lineWidth: 1)
                     )
 
                 if description.isEmpty {
                     Text("Briefly describe the issue…")
-                        .font(themeModel.body())
-                        .foregroundStyle(themeModel.textDisabled)
+                        .font(.system(size: 16, weight: .regular, design: .rounded))
+                        .foregroundStyle(Color(UIColor.quaternaryLabel))
                         .padding(.horizontal, 14)
                         .padding(.top, 14)
                 }
 
                 TextEditor(text: $description)
-                    .font(themeModel.body())
-                    .foregroundStyle(themeModel.textPrimary)
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .foregroundStyle(Color.primary)
                     .scrollContentBackground(.hidden)
                     .background(Color.clear)
                     .padding(10)
@@ -253,8 +269,8 @@ struct DriverReportIssueView: View {
             HStack {
                 Spacer()
                 Text("\(description.count)/\(maxDescriptionLength)")
-                    .font(themeModel.caption())
-                    .foregroundStyle(description.count > maxDescriptionLength - 20 ? themeModel.warning : themeModel.textDisabled)
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .foregroundStyle(description.count > maxDescriptionLength - 20 ? Color.yellow : Color(UIColor.quaternaryLabel))
             }
         }
     }
@@ -262,7 +278,7 @@ struct DriverReportIssueView: View {
     // MARK: - Submit Button
     private var submitButton: some View {
         Button(action: handleSubmit) {
-            HStack(spacing: themeModel.spacingSM) {
+            HStack(spacing: 8) {
                 if isSubmitting {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -272,20 +288,20 @@ struct DriverReportIssueView: View {
                     Text("Submit Report")
                 }
             }
-            .font(themeModel.bodyMedium())
+            .font(.system(size: 16, weight: .medium, design: .rounded))
             .fontWeight(.semibold)
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .frame(height: 54)
             .background(
                 LinearGradient(
-                    colors: [themeModel.danger, themeModel.danger.opacity(0.7)],
+                    colors: [Color.red, Color.red.opacity(0.7)],
                     startPoint: .leading,
                     endPoint: .trailing
                 )
             )
-            .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
-            .shadow(color: themeModel.danger.opacity(0.35), radius: 12, y: 6)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: Color.red.opacity(0.35), radius: 12, y: 6)
         }
         .disabled(description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSubmitting)
         .opacity(description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1.0)
@@ -293,28 +309,28 @@ struct DriverReportIssueView: View {
 
     // MARK: - Success View
     private var successView: some View {
-        VStack(spacing: themeModel.spacingLG) {
+        VStack(spacing: 24) {
             Spacer()
 
             ZStack {
                 Circle()
-                    .fill(themeModel.success.opacity(0.15))
+                    .fill(Color.green.opacity(0.15))
                     .frame(width: 110, height: 110)
                 Circle()
-                    .fill(themeModel.success.opacity(0.08))
+                    .fill(Color.green.opacity(0.08))
                     .frame(width: 140, height: 140)
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 56))
-                    .foregroundStyle(themeModel.success)
+                    .foregroundStyle(Color.green)
             }
 
-            VStack(spacing: themeModel.spacingSM) {
+            VStack(spacing: 8) {
                 Text("Report Submitted")
-                    .font(themeModel.largeTitle(26))
-                    .foregroundStyle(themeModel.textPrimary)
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.primary)
                 Text("Your issue has been reported.\nThe maintenance team will be notified.")
-                    .font(themeModel.body())
-                    .foregroundStyle(themeModel.textSecondary)
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .foregroundStyle(Color.secondary)
                     .multilineTextAlignment(.center)
             }
 
@@ -322,18 +338,84 @@ struct DriverReportIssueView: View {
 
             Button(action: { dismiss() }) {
                 Text("Done")
-                    .font(themeModel.bodyMedium())
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
                     .fontWeight(.semibold)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
-                    .background(themeModel.driverPrimary)
-                    .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
+                    .background(Color.green)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
-            .padding(.horizontal, themeModel.spacingMD)
-            .padding(.bottom, themeModel.spacingXXL)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 40)
         }
         .transition(.opacity.combined(with: .scale(scale: 0.95)))
+    }
+
+    // MARK: - Photos Section
+    private var photosSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label("Damage Photos", systemImage: "camera.fill")
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.primary)
+
+            Text("Add photos to verify vehicle damage (up to 5)")
+                .font(.system(size: 16, weight: .regular, design: .rounded))
+                .foregroundStyle(Color.secondary)
+
+            if !capturedImages.isEmpty {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    ForEach(capturedImages.indices, id: \.self) { index in
+                        ZStack(alignment: .topTrailing) {
+                            Image(uiImage: capturedImages[index])
+                                .resizable()
+                                .scaledToFill()
+                                .frame(height: 100)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                            Button {
+                                capturedImages.remove(at: index)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.title3)
+                                    .symbolRenderingMode(.palette)
+                                    .foregroundStyle(.white, Color.red)
+                            }
+                            .padding(4)
+                        }
+                    }
+                }
+            }
+
+            PhotosPicker(
+                selection: $selectedPhotos,
+                maxSelectionCount: 5,
+                matching: .images,
+                photoLibrary: .shared()
+            ) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus.circle.fill")
+                        .foregroundStyle(Color.green)
+                    Text(capturedImages.isEmpty ? "Add Photos" : "Add More Photos")
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.green)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(16)
+                .background(Color.green.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.green.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [8]))
+                )
+            }
+        }
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+        )
     }
 
     // MARK: - Submit Action
@@ -347,13 +429,36 @@ struct DriverReportIssueView: View {
                     isSubmitting = false
                     return
                 }
+
+                // Upload photos to Supabase Storage
+                var uploadedUrls: [String] = []
+                for (index, image) in capturedImages.enumerated() {
+                    if let data = image.jpegData(compressionQuality: 0.7) {
+                        let fileName = "defects/\(UUID().uuidString)_\(index).jpg"
+                        try await supabase.storage
+                            .from("fleet-uploads")
+                            .upload(fileName, data: data, options: .init(contentType: "image/jpeg"))
+                        if let publicUrl = try? supabase.storage.from("fleet-uploads").getPublicURL(path: fileName).absoluteString {
+                            uploadedUrls.append(publicUrl)
+                        }
+                    }
+                }
+
+                var finalDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !uploadedUrls.isEmpty {
+                    finalDescription += "\n\n[Damage Photos]"
+                    for url in uploadedUrls {
+                        finalDescription += "\n- \(url)"
+                    }
+                }
+
                 let report = IssueReportRecord(
                     id: UUID(),
                     vehicleId: vehicle.id,
                     reportedBy: userId,
                     category: selectedCategory.rawValue,
                     severity: selectedSeverity.rawValue,
-                    description: description.trimmingCharacters(in: .whitespacesAndNewlines),
+                    description: finalDescription,
                     status: "open",
                     assignedTo: nil,
                     createdAt: Date()
