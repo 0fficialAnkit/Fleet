@@ -18,7 +18,7 @@ struct DriverRootView: View {
                     Label("Fuel", systemImage: "fuelpump.fill")
                 }
         }
-        .tint(themeModel.driverPrimary)
+        .tint(Color.green)
     }
 }
 

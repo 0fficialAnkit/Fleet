@@ -6,7 +6,7 @@ struct VehiclesRootView: View {
 
     var body: some View {
         ZStack {
-            themeModel.backgroundPrimary.ignoresSafeArea()
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
             VehiclesView(viewModel: vehiclesViewModel)
         }
         .navigationTitle("Vehicles")
@@ -15,7 +15,7 @@ struct VehiclesRootView: View {
                 Button(action: { isShowingAddVehicle = true }) {
                     Image(systemName: "plus")
                         .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(themeModel.textPrimary)
+                        .foregroundStyle(Color.primary)
                         .frame(width: 38, height: 38)
 //                        .glassEffect(in: Circle())
                 }

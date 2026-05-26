@@ -29,12 +29,12 @@ struct EmployeeDetailView: View {
     
     var body: some View {
         ZStack {
-            themeModel.backgroundPrimary.ignoresSafeArea()
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
             
             ScrollView(showsIndicators: false) {
-                VStack(spacing: themeModel.spacingLG) {
+                VStack(spacing: 24) {
                     // Header Profile Section
-                    VStack(spacing: themeModel.spacingSM) {
+                    VStack(spacing: 8) {
                         ZStack {
                             Circle()
                                 .fill(viewModel.getColor(for: currentRoleName).opacity(0.15))
@@ -47,83 +47,83 @@ struct EmployeeDetailView: View {
                         .padding(.bottom, 8)
                         
                         Text(currentProfile.fullName)
-                            .font(themeModel.largeTitle(28))
-                            .foregroundColor(themeModel.textPrimary)
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundColor(Color.primary)
                         
                         Text(currentRoleName)
-                            .font(themeModel.bodyMedium(14))
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
                             .foregroundColor(viewModel.getColor(for: currentRoleName))
                             .padding(.horizontal, 16)
                             .padding(.vertical, 6)
                             .background(viewModel.getColor(for: currentRoleName).opacity(0.15))
                             .clipShape(Capsule())
                     }
-                    .padding(.top, themeModel.spacingXL)
+                    .padding(.top, 32)
                     
                     // Information Cards
-                    VStack(spacing: themeModel.spacingMD) {
+                    VStack(spacing: 16) {
                         InfoRowView(icon: "person.fill", title: "Full Name", value: currentProfile.fullName)
                         
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         InfoRowView(icon: "envelope.fill", title: "Email", value: currentProfile.email)
                         
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         InfoRowView(icon: "phone.fill", title: "Phone", value: currentProfile.phone ?? "Not Provided")
                         
                         if currentProfile.role == "driver" {
-                            Divider().background(themeModel.divider)
+                            Divider().background(Color(UIColor.separator))
                             InfoRowView(icon: "lanyardcard.fill", title: "Driver License", value: currentProfile.licenseNumber ?? "Not Provided")
                         }
                         
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         let status = currentProfile.userStatus ?? .active
                         InfoRowView(
                             icon: status == .active ? "checkmark.circle.fill" : "xmark.circle.fill",
                             title: "Status / State",
                             value: status.rawValue.capitalized,
-                            valueColor: status == .active ? themeModel.success : themeModel.textSecondary
+                            valueColor: status == .active ? Color.green : Color.secondary
                         )
                         
                         if let date = currentProfile.createdAt {
-                            Divider().background(themeModel.divider)
+                            Divider().background(Color(UIColor.separator))
                             InfoRowView(icon: "calendar", title: "Joined", value: date.formatted(date: .abbreviated, time: .omitted))
                         }
                     }
-//                    .padding(themeModel.spacingMD)
-//                    .background(themeModel.backgroundElevated)
-//                    .cornerRadius(themeModel.radiusLG)
-//                    .padding(.horizontal, themeModel.spacingMD)
-                    .padding(themeModel.spacingMD)
+//                    .padding(16)
+//                    .background(Color(UIColor.systemBackground))
+//                    .cornerRadius(20)
+//                    .padding(.horizontal, 16)
+                    .padding(16)
                     .background(
-                        themeModel.surfaceTertiary.opacity(0.35)
+                        Color(UIColor.tertiarySystemBackground).opacity(0.35)
                     )
                     .clipShape(
                         RoundedRectangle(
-                            cornerRadius: themeModel.radiusLG,
+                            cornerRadius: 20,
                             style: .continuous
                         )
                     )
                     .glassEffect(
                         in: RoundedRectangle(
-                            cornerRadius: themeModel.radiusLG,
+                            cornerRadius: 20,
                             style: .continuous
                         )
                     )
                     .overlay(
                         RoundedRectangle(
-                            cornerRadius: themeModel.radiusLG,
+                            cornerRadius: 20,
                             style: .continuous
                         )
                         .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                     )
-                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                    .padding(.horizontal, themeModel.spacingMD)
+                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                    .padding(.horizontal, 16)
                 }
             }
         }
         .navigationTitle("Details")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
+        .toolbarBackground(Color(UIColor.systemGroupedBackground), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -151,7 +151,7 @@ struct EmployeeDetailView: View {
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 13, weight: .regular))
-                        .foregroundColor(themeModel.textPrimary)
+                        .foregroundColor(Color.primary)
                         .padding(8)
                 }
             }
@@ -166,23 +166,23 @@ struct InfoRowView: View {
     let icon: String
     let title: String
     let value: String
-    var valueColor: Color = themeModel.textPrimary
+    var valueColor: Color = Color.primary
     
     var body: some View {
-        HStack(spacing: themeModel.spacingMD) {
+        HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 18))
-                .foregroundColor(themeModel.textTertiary)
+                .foregroundColor(Color(UIColor.tertiaryLabel))
                 .frame(width: 24)
             
             Text(title)
-                .font(themeModel.bodyMedium(16))
-                .foregroundColor(themeModel.textSecondary)
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundColor(Color.secondary)
             
             Spacer()
             
             Text(value)
-                .font(themeModel.body(16))
+                .font(.system(size: 16, weight: .regular, design: .rounded))
                 .foregroundColor(valueColor)
         }
         .padding(.vertical, 8)

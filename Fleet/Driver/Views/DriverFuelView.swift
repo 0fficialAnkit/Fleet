@@ -28,54 +28,54 @@ struct DriverFuelView: View {
                 VStack(spacing: 24) {
 
                     // MARK: - Input Form
-                    VStack(alignment: .leading, spacing: themeModel.spacingLG) {
+                    VStack(alignment: .leading, spacing: 24) {
                         Text("Log Fuel Expense")
-                            .font(themeModel.title(22))
-                            .foregroundStyle(themeModel.textPrimary)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.primary)
 
                         // Volume
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                        VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Image(systemName: "drop.fill")
-                                    .foregroundStyle(themeModel.textSecondary)
+                                    .foregroundStyle(Color.secondary)
                                 Text("Fuel Volume (Liters)")
-                                    .font(themeModel.bodyMedium())
-                                    .foregroundStyle(themeModel.textSecondary)
+                                    .font(.system(size: , weight: .medium, design: .rounded))
+                                    .foregroundStyle(Color.secondary)
                             }
                             TextField("0.0", text: $volume)
                                 .keyboardType(.decimalPad)
-                                .padding(themeModel.spacingMD)
-                                .background(themeModel.inputBackground)
-                                .cornerRadius(themeModel.radiusSM)
+                                .padding(16)
+                                .background(Color(UIColor.secondarySystemBackground))
+                                .cornerRadius(12)
                         }
 
                         // Price
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                        VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Image(systemName: "indianrupeesign")
-                                    .foregroundStyle(themeModel.textSecondary)
+                                    .foregroundStyle(Color.secondary)
                                 Text("Total Price Paid")
-                                    .font(themeModel.bodyMedium())
-                                    .foregroundStyle(themeModel.textSecondary)
+                                    .font(.system(size: , weight: .medium, design: .rounded))
+                                    .foregroundStyle(Color.secondary)
                             }
                             TextField("0.00", text: $price)
                                 .keyboardType(.decimalPad)
-                                .padding(themeModel.spacingMD)
-                                .background(themeModel.inputBackground)
-                                .cornerRadius(themeModel.radiusSM)
+                                .padding(16)
+                                .background(Color(UIColor.secondarySystemBackground))
+                                .cornerRadius(12)
                         }
 
                         // MARK: - Bill Photo (mandatory)
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                        VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Image(systemName: "camera.fill")
-                                    .foregroundStyle(themeModel.textSecondary)
+                                    .foregroundStyle(Color.secondary)
                                 Text("Fuel Bill Photo")
-                                    .font(themeModel.bodyMedium())
-                                    .foregroundStyle(themeModel.textSecondary)
+                                    .font(.system(size: , weight: .medium, design: .rounded))
+                                    .foregroundStyle(Color.secondary)
                                 Text("(Required)")
-                                    .font(themeModel.caption())
-                                    .foregroundStyle(themeModel.danger)
+                                    .font(.system(size: , weight: .regular, design: .rounded))
+                                    .foregroundStyle(Color.red)
                             }
 
                             if let billImage {
@@ -85,10 +85,10 @@ struct DriverFuelView: View {
                                         .scaledToFill()
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 200)
-                                        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD))
+                                        .clipShape(RoundedRectangle(cornerRadius: 16))
                                         .overlay(
-                                            RoundedRectangle(cornerRadius: themeModel.radiusMD)
-                                                .stroke(themeModel.success.opacity(0.5), lineWidth: 1.5)
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .stroke(Color.green.opacity(0.5), lineWidth: 1.5)
                                         )
 
                                     Button {
@@ -98,7 +98,7 @@ struct DriverFuelView: View {
                                         Image(systemName: "xmark.circle.fill")
                                             .font(.title2)
                                             .symbolRenderingMode(.palette)
-                                            .foregroundStyle(.white, themeModel.danger)
+                                            .foregroundStyle(.white, Color.red)
                                     }
                                     .padding(8)
                                 }
@@ -108,24 +108,24 @@ struct DriverFuelView: View {
                                     matching: .images,
                                     photoLibrary: .shared()
                                 ) {
-                                    VStack(spacing: themeModel.spacingSM) {
+                                    VStack(spacing: 8) {
                                         Image(systemName: "doc.viewfinder")
                                             .font(.system(size: 32))
-                                            .foregroundStyle(themeModel.driverPrimary)
+                                            .foregroundStyle(Color.green)
                                         Text("Tap to attach bill photo")
-                                            .font(themeModel.bodyMedium())
-                                            .foregroundStyle(themeModel.driverPrimary)
+                                            .font(.system(size: , weight: .medium, design: .rounded))
+                                            .foregroundStyle(Color.green)
                                         Text("Photo will be sent to Fleet Manager")
-                                            .font(themeModel.caption())
-                                            .foregroundStyle(themeModel.textTertiary)
+                                            .font(.system(size: , weight: .regular, design: .rounded))
+                                            .foregroundStyle(Color(UIColor.tertiaryLabel))
                                     }
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 140)
-                                    .background(themeModel.driverPrimary.opacity(0.06))
-                                    .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD))
+                                    .background(Color.green.opacity(0.06))
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: themeModel.radiusMD)
-                                            .stroke(themeModel.driverPrimary.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [8]))
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .stroke(Color.green.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [8]))
                                     )
                                 }
                             }
@@ -144,64 +144,64 @@ struct DriverFuelView: View {
                                     Text("Submit Fuel Log")
                                 }
                             }
-                            .font(themeModel.bodyMedium())
+                            .font(.system(size: , weight: .medium, design: .rounded))
                             .frame(maxWidth: .infinity)
-                            .padding(themeModel.spacingMD)
-                            .background(!isFormValid || isSubmitting ? themeModel.buttonDisabled : themeModel.driverPrimary)
-                            .foregroundColor(!isFormValid || isSubmitting ? themeModel.buttonDisabledText : themeModel.buttonPrimaryText)
-                            .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusSM))
+                            .padding(16)
+                            .background(!isFormValid || isSubmitting ? Color(UIColor.tertiarySystemFill) : Color.green)
+                            .foregroundColor(!isFormValid || isSubmitting ? Color(UIColor.tertiaryLabel) : Color(UIColor.systemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                         .disabled(!isFormValid || isSubmitting)
                     }
-                    .padding(themeModel.spacingMD)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                    .padding(16)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                     )
-                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
 
                     // MARK: - Success Banner
                     if showSuccess {
                         HStack {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(themeModel.success)
+                                .foregroundColor(Color.green)
                             Text("Synced with Fleet Manager")
-                                .font(themeModel.bodyMedium())
-                                .foregroundStyle(themeModel.textPrimary)
+                                .font(.system(size: , weight: .medium, design: .rounded))
+                                .foregroundStyle(Color.primary)
                             Spacer()
                         }
-                        .padding(themeModel.spacingMD)
-                        .background(themeModel.success.opacity(0.15))
-                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                        .padding(16)
+                        .background(Color.green.opacity(0.15))
+                        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .transition(.move(edge: .top).combined(with: .opacity))
                     }
 
                     // MARK: - History
-                    VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+                    VStack(alignment: .leading, spacing: 16) {
                         SectionHeader(title: "Recent Logs")
 
                         if viewModel.fuelLogs.isEmpty {
                             Text("No fuel logs recorded yet.")
-                                .font(themeModel.body())
-                                .foregroundStyle(themeModel.textSecondary)
+                                .font(.system(size: , weight: .regular, design: .rounded))
+                                .foregroundStyle(Color.secondary)
                         } else {
                             ForEach(viewModel.fuelLogs) { log in
                                 HStack {
-                                    VStack(alignment: .leading, spacing: themeModel.spacingXS) {
+                                    VStack(alignment: .leading, spacing: 4) {
                                         HStack {
                                             Image(systemName: "drop.fill")
-                                                .foregroundColor(themeModel.success)
+                                                .foregroundColor(Color.green)
                                             Text("\(String(format: "%.1f", log.litersUsed ?? 0.0)) Liters")
-                                                .font(themeModel.headline())
-                                                .foregroundColor(themeModel.textPrimary)
+                                                .font(.system(size: , weight: .semibold, design: .rounded))
+                                                .foregroundColor(Color.primary)
                                         }
                                         HStack {
                                             Image(systemName: "calendar")
-                                                .foregroundColor(themeModel.textSecondary)
+                                                .foregroundColor(Color.secondary)
                                             Text((log.recordedAt ?? Date()).formatted(date: .abbreviated, time: .shortened))
-                                                .font(themeModel.caption())
-                                                .foregroundColor(themeModel.textSecondary)
+                                                .font(.system(size: , weight: .regular, design: .rounded))
+                                                .foregroundColor(Color.secondary)
                                         }
                                     }
 
@@ -209,26 +209,26 @@ struct DriverFuelView: View {
 
                                     HStack(spacing: 2) {
                                         Image(systemName: "indianrupeesign")
-                                            .foregroundColor(themeModel.textSecondary)
+                                            .foregroundColor(Color.secondary)
                                         Text("\(Int(log.fuelCost ?? 0.0))")
-                                            .font(themeModel.title(22))
-                                            .foregroundColor(themeModel.textPrimary)
+                                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                                            .foregroundColor(Color.primary)
                                     }
                                 }
-                                .padding(themeModel.spacingMD)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                                .padding(16)
+                                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                                         .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                                 )
-                                .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
                             }
                         }
                     }
                 }
                 .padding()
             }
-            .background(themeModel.backgroundPrimary.ignoresSafeArea())
+            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Fuel")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -236,13 +236,13 @@ struct DriverFuelView: View {
                     NavigationLink(destination: NotificationsView()) {
                         Image(systemName: "bell.badge")
                             .font(.title3)
-                            .foregroundStyle(themeModel.driverPrimary)
+                            .foregroundStyle(Color.green)
                     }
 
                     NavigationLink(destination: DriverProfileView()) {
                         Image(systemName: "person.crop.circle.fill")
                             .font(.title2)
-                            .foregroundStyle(themeModel.driverPrimary)
+                            .foregroundStyle(Color.green)
                     }
                 }
             }

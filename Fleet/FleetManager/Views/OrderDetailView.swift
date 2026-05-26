@@ -36,21 +36,21 @@ struct OrderDetailView: View {
     
     var orderColor: Color {
         switch trip.orderType {
-        case .bulkOrderShip: return themeModel.maintenancePrimary
-        case .pickUpAndDrop: return themeModel.accent
-        case .travel: return themeModel.success
-        case .none: return themeModel.textTertiary
+        case .bulkOrderShip: return Color.orange
+        case .pickUpAndDrop: return Color.blue
+        case .travel: return Color.green
+        case .none: return Color(UIColor.tertiaryLabel)
         }
     }
     
     var body: some View {
         ZStack {
-            themeModel.backgroundPrimary.ignoresSafeArea()
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
             
             ScrollView(showsIndicators: false) {
-                VStack(spacing: themeModel.spacingLG) {
+                VStack(spacing: 24) {
                     // Header Section
-                    VStack(spacing: themeModel.spacingSM) {
+                    VStack(spacing: 8) {
                         ZStack {
                             Circle()
                                 .fill(orderColor.opacity(0.15))
@@ -63,63 +63,63 @@ struct OrderDetailView: View {
                         .padding(.bottom, 8)
                         
                         Text(route?.routeName ?? "Unknown Route")
-                            .font(themeModel.largeTitle(24))
-                            .foregroundColor(themeModel.textPrimary)
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .foregroundColor(Color.primary)
                             .multilineTextAlignment(.center)
-                            .padding(.horizontal, themeModel.spacingMD)
+                            .padding(.horizontal, 16)
                         
                         StatusBadge(text: trip.status?.rawValue.capitalized ?? "Unknown", color: viewModel.getStatusColor(for: trip.status))
                     }
-                    .padding(.top, themeModel.spacingXL)
+                    .padding(.top, 32)
                     
                     // Information Cards
-                    VStack(spacing: themeModel.spacingMD) {
+                    VStack(spacing: 16) {
                         OrderDetailInfoRow(icon: "number", title: "Order ID", value: "#\(trip.id.uuidString.prefix(8).uppercased())")
                         
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         OrderDetailInfoRow(icon: "shippingbox.fill", title: "Order Type", value: trip.orderType?.displayName ?? "N/A")
                         
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         OrderDetailInfoRow(icon: "mappin.and.ellipse", title: "Destination", value: route?.endLocation ?? "N/A")
                         
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         OrderDetailInfoRow(icon: "calendar", title: "Start Date", value: formattedDate)
                         
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         OrderDetailInfoRow(icon: "person.crop.circle.fill", title: "Driver", value: driverName)
                         
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         OrderDetailInfoRow(icon: "car.fill", title: "Vehicle", value: vehicleInfo)
                     }
-//                    .padding(themeModel.spacingMD)
-//                    .background(themeModel.backgroundElevated)
-//                    .cornerRadius(themeModel.radiusLG)
-//                    .padding(.horizontal, themeModel.spacingMD)
-                    .padding(themeModel.spacingMD)
+//                    .padding(16)
+//                    .background(Color(UIColor.systemBackground))
+//                    .cornerRadius(20)
+//                    .padding(.horizontal, 16)
+                    .padding(16)
                     .background(
-                        themeModel.surfaceTertiary.opacity(0.35)
+                        Color(UIColor.tertiarySystemBackground).opacity(0.35)
                     )
                     .clipShape(
                         RoundedRectangle(
-                            cornerRadius: themeModel.radiusLG,
+                            cornerRadius: 20,
                             style: .continuous
                         )
                     )
                     .glassEffect(
                         in: RoundedRectangle(
-                            cornerRadius: themeModel.radiusLG,
+                            cornerRadius: 20,
                             style: .continuous
                         )
                     )
                     .overlay(
                         RoundedRectangle(
-                            cornerRadius: themeModel.radiusLG,
+                            cornerRadius: 20,
                             style: .continuous
                         )
                         .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                     )
-                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                    .padding(.horizontal, themeModel.spacingMD)
+                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                    .padding(.horizontal, 16)
                 }
             }
         }
@@ -144,7 +144,7 @@ struct OrderDetailView: View {
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(themeModel.textPrimary)
+                        .foregroundStyle(Color.primary)
                         .padding(8)
                 }
             }
@@ -156,23 +156,23 @@ struct OrderDetailInfoRow: View {
     let icon: String
     let title: String
     let value: String
-    var valueColor: Color = themeModel.textPrimary
+    var valueColor: Color = Color.primary
     
     var body: some View {
-        HStack(spacing: themeModel.spacingMD) {
+        HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 18))
-                .foregroundColor(themeModel.textTertiary)
+                .foregroundColor(Color(UIColor.tertiaryLabel))
                 .frame(width: 24)
             
             Text(title)
-                .font(themeModel.bodyMedium(16))
-                .foregroundColor(themeModel.textSecondary)
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundColor(Color.secondary)
             
             Spacer()
             
             Text(value)
-                .font(themeModel.body(16))
+                .font(.system(size: 16, weight: .regular, design: .rounded))
                 .foregroundColor(valueColor)
         }
         .padding(.vertical, 8)

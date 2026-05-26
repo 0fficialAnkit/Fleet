@@ -13,36 +13,36 @@ struct VehicleSelectionView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
                 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: themeModel.spacingMD) {
+                    VStack(spacing: 16) {
                         
                         if availableVehicles.isEmpty {
                             Text("No active vehicles match this order type.")
-                                .font(themeModel.body(16))
-                                .foregroundColor(themeModel.textSecondary)
+                                .font(.system(size: 16, weight: .regular, design: .rounded))
+                                .foregroundColor(Color.secondary)
                                 .padding(.top, 40)
                         } else {
                             ForEach(availableVehicles) { vehicle in
                                 VehicleSelectionRow(vehicle: vehicle, orderType: orderType, viewModel: viewModel, selectedOrderType: $selectedOrderType)
                             }
-                            .padding(.horizontal, themeModel.spacingMD)
+                            .padding(.horizontal, 16)
                         }
                     }
-                    .padding(.vertical, themeModel.spacingMD)
+                    .padding(.vertical, 16)
                 }
             }
             .navigationTitle("Select Vehicle")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
+            .toolbarBackground(Color(UIColor.systemGroupedBackground), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(Color.blue)
                 }
             }
             .onChange(of: selectedOrderType) { _, newValue in
@@ -65,30 +65,30 @@ struct VehicleSelectionRow: View {
             HStack {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
-                        .font(themeModel.headline(16))
-                        .foregroundColor(themeModel.textPrimary)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundColor(Color.primary)
                     
                     HStack(spacing: 8) {
-                        StatusBadge(text: vehicle.licensePlate ?? "No Plate", color: themeModel.accent)
+                        StatusBadge(text: vehicle.licensePlate ?? "No Plate", color: Color.blue)
                         
                         if vehicle.assignedDriverId == nil {
-                            StatusBadge(text: "No Driver", color: themeModel.warning)
+                            StatusBadge(text: "No Driver", color: Color.yellow)
                         }
                     }
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .foregroundColor(themeModel.textTertiary)
+                    .foregroundColor(Color(UIColor.tertiaryLabel))
                     .font(.system(size: 14, weight: .bold))
             }
             .contentShape(Rectangle())
-            .padding(themeModel.spacingMD)
-            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .padding(16)
+            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
             )
-            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
         }
         .buttonStyle(.plain)
     }

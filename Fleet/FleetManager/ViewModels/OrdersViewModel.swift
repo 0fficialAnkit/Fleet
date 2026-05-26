@@ -44,11 +44,11 @@ final class OrdersViewModel {
 
     func getStatusColor(for status: TripStatus?) -> Color {
         switch status {
-        case .scheduled: return themeModel.info
-        case .active: return themeModel.warning
-        case .completed: return themeModel.success
-        case .cancelled: return themeModel.danger
-        case .none: return themeModel.textDisabled
+        case .scheduled: return Color.blue
+        case .active: return Color.yellow
+        case .completed: return Color.green
+        case .cancelled: return Color.red
+        case .none: return Color(UIColor.quaternaryLabel)
         }
     }
 

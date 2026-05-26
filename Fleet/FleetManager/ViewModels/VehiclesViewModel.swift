@@ -45,10 +45,10 @@ final class VehiclesViewModel {
 
     func getStatusColor(_ status: VehicleStatus?) -> Color {
         switch status {
-        case .active: return themeModel.activeVehicle
-        case .maintenance: return themeModel.maintenanceVehicle
-        case .inactive: return themeModel.inactiveVehicle
-        case nil: return themeModel.textTertiary
+        case .active: return Color.green
+        case .maintenance: return Color.yellow
+        case .inactive: return Color(UIColor.tertiaryLabel)
+        case nil: return Color(UIColor.tertiaryLabel)
         }
     }
 

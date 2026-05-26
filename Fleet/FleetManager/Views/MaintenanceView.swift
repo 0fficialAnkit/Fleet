@@ -6,13 +6,13 @@ struct MaintenanceView: View {
     var body: some View {
         Group {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
                 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: themeModel.spacingMD) {
+                    VStack(spacing: 16) {
                         if viewModel.tasks.isEmpty {
                             Text("No maintenance tasks found.")
-                                .foregroundColor(themeModel.textSecondary)
+                                .foregroundColor(Color.secondary)
                                 .padding(.top, 40)
                         } else {
                             ForEach(viewModel.tasks) { task in
@@ -20,8 +20,8 @@ struct MaintenanceView: View {
                             }
                         }
                     }
-                    .padding(.vertical, themeModel.spacingMD)
-                    .padding(.horizontal, themeModel.spacingMD)
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, 16)
                 }
             }
         }
@@ -38,46 +38,46 @@ struct MaintenanceRowView: View {
     }
     
     var body: some View {
-        HStack(spacing: themeModel.spacingMD) {
+        HStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(themeModel.surfaceTertiary)
+                    .fill(Color(UIColor.tertiarySystemBackground))
                     .frame(width: 48, height: 48)
                 
                 Image(systemName: "wrench.and.screwdriver.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(themeModel.textPrimary)
+                    .foregroundColor(Color.primary)
             }
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(vehicleName)
-                    .font(themeModel.headline(16))
-                    .foregroundColor(themeModel.textPrimary)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundColor(Color.primary)
                 
                 Text(task.taskType?.rawValue.capitalized.replacingOccurrences(of: "_", with: " ") ?? "Unknown Task")
-                    .font(themeModel.bodyMedium(14))
-                    .foregroundColor(themeModel.textSecondary)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundColor(Color.secondary)
                 
                 if let date = task.scheduledDate {
                     Text(date.formatted(date: .abbreviated, time: .omitted))
-                        .font(themeModel.caption(12))
-                        .foregroundColor(themeModel.textTertiary)
+                        .font(.system(size: 12, weight: .regular, design: .rounded))
+                        .foregroundColor(Color(UIColor.tertiaryLabel))
                 }
             }
             
             Spacer()
             
             Text(task.status?.rawValue.capitalized.replacingOccurrences(of: "_", with: " ") ?? "Unknown")
-                .font(themeModel.caption(12))
+                .font(.system(size: 12, weight: .regular, design: .rounded))
                 .foregroundColor(viewModel.getStatusColor(task.status))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
                 .background(viewModel.getStatusColor(task.status).opacity(0.15))
                 .clipShape(Capsule())
         }
-        .padding(themeModel.spacingMD)
-        .background(themeModel.backgroundElevated)
-        .cornerRadius(themeModel.radiusLG)
+        .padding(16)
+        .background(Color(UIColor.systemBackground))
+        .cornerRadius(20)
     }
 }
 

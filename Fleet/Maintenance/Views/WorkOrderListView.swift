@@ -23,61 +23,61 @@ struct WorkOrderListView: View {
 
     var body: some View {
         ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
 
                 if isLoading && workOrders.isEmpty {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
                     ScrollView {
-                        VStack(spacing: themeModel.spacingMD) {
+                        VStack(spacing: 16) {
 
                             // MARK: - Summary Strip
-                            HStack(spacing: themeModel.spacingMD) {
+                            HStack(spacing: 16) {
                                 MiniStatBadge(
                                     count: workOrders.filter { $0.unifiedStatus == .open }.count,
                                     label: "Open",
-                                    color: themeModel.info
+                                    color: Color.blue
                                 )
                                 MiniStatBadge(
                                     count: workOrders.filter { $0.unifiedStatus == .inProgress }.count,
                                     label: "In Progress",
-                                    color: themeModel.warning
+                                    color: Color.yellow
                                 )
                                 MiniStatBadge(
                                     count: workOrders.filter { $0.unifiedStatus == .completed }.count,
                                     label: "Done",
-                                    color: themeModel.success
+                                    color: Color.green
                                 )
                             }
-                            .padding(.horizontal, themeModel.spacingMD)
+                            .padding(.horizontal, 16)
 
                             // MARK: - Filter Picker
                             ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: themeModel.spacingSM) {
-                                    FilterChip(label: "All",        isSelected: selectedFilter == nil,              color: themeModel.maintenancePrimary) { selectedFilter = nil }
-                                    FilterChip(label: "Open",       isSelected: selectedFilter == .open,            color: themeModel.info)     { selectedFilter = .open }
-                                    FilterChip(label: "In Progress",isSelected: selectedFilter == .inProgress,      color: themeModel.warning)  { selectedFilter = .inProgress }
-                                    FilterChip(label: "Completed",  isSelected: selectedFilter == .completed,       color: themeModel.success)  { selectedFilter = .completed }
-                                    FilterChip(label: "Cancelled",  isSelected: selectedFilter == .cancelled,       color: themeModel.danger)   { selectedFilter = .cancelled }
+                                HStack(spacing: 8) {
+                                    FilterChip(label: "All",        isSelected: selectedFilter == nil,              color: Color.orange) { selectedFilter = nil }
+                                    FilterChip(label: "Open",       isSelected: selectedFilter == .open,            color: Color.blue)     { selectedFilter = .open }
+                                    FilterChip(label: "In Progress",isSelected: selectedFilter == .inProgress,      color: Color.yellow)  { selectedFilter = .inProgress }
+                                    FilterChip(label: "Completed",  isSelected: selectedFilter == .completed,       color: Color.green)  { selectedFilter = .completed }
+                                    FilterChip(label: "Cancelled",  isSelected: selectedFilter == .cancelled,       color: Color.red)   { selectedFilter = .cancelled }
                                 }
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .padding(.horizontal, 16)
                             }
 
                             // MARK: - Order List
                             if filteredOrders.isEmpty {
-                                VStack(spacing: themeModel.spacingMD) {
+                                VStack(spacing: 16) {
                                     Image(systemName: "tray")
                                         .font(.system(size: 44))
-                                        .foregroundStyle(themeModel.textTertiary)
+                                        .foregroundStyle(Color(UIColor.tertiaryLabel))
                                     Text("No orders found")
-                                        .font(themeModel.bodyMedium())
-                                        .foregroundStyle(themeModel.textSecondary)
+                                        .font(.system(size: , weight: .medium, design: .rounded))
+                                        .foregroundStyle(Color.secondary)
                                 }
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, themeModel.spacingXXL)
+                                .padding(.vertical, 40)
                             } else {
-                                LazyVStack(spacing: themeModel.spacingMD) {
+                                LazyVStack(spacing: 16) {
                                     ForEach(filteredOrders) { item in
                                         NavigationLink(value: getDestination(for: item)) {
                                             UnifiedWorkItemRow(item: item)
@@ -85,10 +85,10 @@ struct WorkOrderListView: View {
                                         .buttonStyle(.plain)
                                     }
                                 }
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .padding(.horizontal, 16)
                             }
                         }
-                        .padding(.vertical, themeModel.spacingMD)
+                        .padding(.vertical, 16)
                     }
                 }
             }
@@ -97,7 +97,7 @@ struct WorkOrderListView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showNewOrderSheet = true }) {
                         Image(systemName: "plus.circle.fill")
-                            .foregroundStyle(themeModel.maintenancePrimary)
+                            .foregroundStyle(Color.orange)
                             .font(.system(size: 20))
                     }
                 }
@@ -153,17 +153,17 @@ private struct MiniStatBadge: View {
     var body: some View {
         VStack(spacing: 4) {
             Text("\(count)")
-                .font(themeModel.title(20))
+                .font(.system(size: 20, weight: .bold, design: .rounded))
                 .foregroundStyle(color)
             Text(label)
-                .font(themeModel.small())
-                .foregroundStyle(themeModel.textTertiary)
+                .font(.system(size: , weight: .medium, design: .rounded))
+                .foregroundStyle(Color(UIColor.tertiaryLabel))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
+        .padding(.vertical, 16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(color.opacity(0.2), lineWidth: 0.8)
         )
     }
@@ -179,12 +179,12 @@ private struct FilterChip: View {
     var body: some View {
         Button(action: action) {
             Text(label)
-                .font(themeModel.caption())
+                .font(.system(size: , weight: .regular, design: .rounded))
                 .fontWeight(isSelected ? .semibold : .regular)
-                .foregroundStyle(isSelected ? color : themeModel.textSecondary)
+                .foregroundStyle(isSelected ? color : Color.secondary)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(isSelected ? color.opacity(0.15) : themeModel.surfaceSecondary)
+                .background(isSelected ? color.opacity(0.15) : Color(UIColor.secondarySystemBackground))
                 .clipShape(Capsule())
                 .overlay(
                     Capsule().stroke(isSelected ? color.opacity(0.4) : Color.clear, lineWidth: 1)
@@ -199,7 +199,7 @@ struct UnifiedWorkItemRow: View {
     let item: UnifiedMaintenanceItem
 
     var body: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
                 // Priority Indicator
                 HStack(spacing: 6) {
@@ -207,8 +207,8 @@ struct UnifiedWorkItemRow: View {
                         .fill(priorityColor(item.unifiedPriority))
                         .frame(width: 8, height: 8)
                     Text(item.title)
-                        .font(themeModel.headline())
-                        .foregroundStyle(themeModel.textPrimary)
+                        .font(.system(size: , weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.primary)
                 }
                 Spacer()
                 StatusBadge(
@@ -220,8 +220,8 @@ struct UnifiedWorkItemRow: View {
             HStack {
                 Label {
                     Text(priorityLabel(item.unifiedPriority))
-                        .font(themeModel.bodyMedium())
-                        .foregroundStyle(themeModel.textSecondary)
+                        .font(.system(size: , weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.secondary)
                 } icon: {
                     Image(systemName: priorityIcon(item.unifiedPriority))
                         .foregroundStyle(priorityColor(item.unifiedPriority))
@@ -233,21 +233,21 @@ struct UnifiedWorkItemRow: View {
                     HStack(spacing: 4) {
                         Image(systemName: "clock")
                             .font(.caption2)
-                            .foregroundStyle(themeModel.textTertiary)
+                            .foregroundStyle(Color(UIColor.tertiaryLabel))
                         Text(date, style: .relative)
-                            .font(themeModel.caption())
-                            .foregroundStyle(themeModel.textTertiary)
+                            .font(.system(size: , weight: .regular, design: .rounded))
+                            .foregroundStyle(Color(UIColor.tertiaryLabel))
                     }
                 }
             }
         }
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
         )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
     }
 
     func statusLabel(_ status: WorkOrderStatus?) -> String {
@@ -262,11 +262,11 @@ struct UnifiedWorkItemRow: View {
 
     func statusColor(_ status: WorkOrderStatus?) -> Color {
         switch status {
-        case .open:       return themeModel.info
-        case .inProgress: return themeModel.warning
-        case .completed:  return themeModel.success
-        case .cancelled:  return themeModel.danger
-        case .none:       return themeModel.textSecondary
+        case .open:       return Color.blue
+        case .inProgress: return Color.yellow
+        case .completed:  return Color.green
+        case .cancelled:  return Color.red
+        case .none:       return Color.secondary
         }
     }
 
@@ -292,11 +292,11 @@ struct UnifiedWorkItemRow: View {
 
     func priorityColor(_ priority: WorkOrderPriority?) -> Color {
         switch priority {
-        case .critical: return themeModel.danger
-        case .high:     return themeModel.warning
-        case .medium:   return themeModel.info
-        case .low:      return themeModel.success
-        case .none:     return themeModel.textSecondary
+        case .critical: return Color.red
+        case .high:     return Color.yellow
+        case .medium:   return Color.blue
+        case .low:      return Color.green
+        case .none:     return Color.secondary
         }
     }
 }

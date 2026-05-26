@@ -8,67 +8,67 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
                 
                 if let user = viewModel.currentUser {
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: themeModel.spacingLG) {
+                        VStack(spacing: 24) {
                             // Header Profile Image
                             ProfileHeader(
                                 icon: "shield.checkered",
                                 name: user.fullName,
                                 role: viewModel.roleName,
-                                accentColor: themeModel.analyticsPurple
+                                accentColor: Color.purple
                             )
-                            .padding(.top, themeModel.spacingXL)
+                            .padding(.top, 32)
                             
                             // Info Cards
                             
                                 VStack(spacing: 0) {
                                     InfoRow(icon: "envelope.fill", label: "Email", value: user.email)
                                     
-                                    Divider().background(themeModel.divider)
+                                    Divider().background(Color(UIColor.separator))
                                     InfoRow(icon: "phone.fill", label: "Phone", value: user.phone ?? "N/A")
                                     
                                     if let status = user.userStatus {
-                                        Divider().background(themeModel.divider)
+                                        Divider().background(Color(UIColor.separator))
                                         InfoRow(
                                             icon: status == .active ? "checkmark.seal.fill" : "xmark.seal.fill",
                                             label: "Status",
                                             value: status.rawValue.capitalized,
-                                            valueColor: status == .active ? themeModel.success : themeModel.textSecondary
+                                            valueColor: status == .active ? Color.green : Color.secondary
                                         )
                                     }
                                     
                                     if let date = user.createdAt {
-                                        Divider().background(themeModel.divider)
+                                        Divider().background(Color(UIColor.separator))
                                         InfoRow(icon: "calendar", label: "Joined", value: date.formatted(date: .abbreviated, time: .omitted))
                                     }
                                 }
-                                .padding(themeModel.spacingMD)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                                .padding(16)
+                                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                                         .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                                 )
-                                .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
+                                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                            .padding(.horizontal, 16)
                             
                             // Settings & Support Sections
                             
                                 VStack(spacing: 0) {
                                     ActionRow(icon: "gearshape.fill", title: "Settings")
-                                    Divider().background(themeModel.divider)
+                                    Divider().background(Color(UIColor.separator))
                                     ActionRow(icon: "questionmark.circle.fill", title: "Help & Support")
                                 }
-                                .padding(themeModel.spacingMD)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                                .padding(16)
+                                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                                         .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                                 )
-                                .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
+                                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                            .padding(.horizontal, 16)
                             
                             // Logout Button
                             
@@ -81,21 +81,21 @@ VStack(spacing: 0) {
                                     ActionRow(icon: "door.left.hand.open", title: "Logout", isDestructive: true)
                                 }
                             }
-                            .padding(themeModel.spacingMD)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .padding(16)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
                                     .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                             )
-                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
-                            .padding(.top, themeModel.spacingMD)
+                            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 16)
                         }
-                        .padding(.vertical, themeModel.spacingMD)
+                        .padding(.vertical, 16)
                     }
                 } else {
                     Text("Profile not found")
-                        .foregroundColor(themeModel.textSecondary)
+                        .foregroundColor(Color.secondary)
                 }
             }
             .navigationTitle("Profile")
@@ -104,7 +104,7 @@ VStack(spacing: 0) {
                     Button("Edit") {
                         isEditing = true
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(Color.blue)
                 }
             }
             .sheet(isPresented: $isEditing) {

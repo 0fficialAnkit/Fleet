@@ -25,54 +25,54 @@ struct EditEmployeeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: themeModel.spacingLG) {
+                    VStack(spacing: 24) {
                         
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                        VStack(alignment: .leading, spacing: 8) {
                             SectionHeader(title: "Personal Details")
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .padding(.horizontal, 16)
                             
                                 VStack(spacing: 0) {
                                     TextField("Full Name", text: $fullName)
                                         .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
+                                        .foregroundColor(Color.primary)
                                     
-                                    Divider().background(themeModel.divider)
+                                    Divider().background(Color(UIColor.separator))
                                     
                                     TextField("Email", text: $email)
                                         .keyboardType(.emailAddress)
                                         .autocapitalization(.none)
                                         .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
+                                        .foregroundColor(Color.primary)
                                     
-                                    Divider().background(themeModel.divider)
+                                    Divider().background(Color(UIColor.separator))
                                     
                                     TextField("Phone", text: $phone)
                                         .keyboardType(.phonePad)
                                         .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
+                                        .foregroundColor(Color.primary)
                                     
                                     if isDriverSelected {
-                                        Divider().background(themeModel.divider)
+                                        Divider().background(Color(UIColor.separator))
                                         
                                         TextField("Driver License Number", text: $licenseNumber)
                                             .padding(.vertical, 12)
-                                            .foregroundColor(themeModel.textPrimary)
+                                            .foregroundColor(Color.primary)
                                     }
                                 }
-                                .padding(themeModel.spacingMD)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                                .padding(16)
+                                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                                         .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                                 )
-                                .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
+                                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                            .padding(.horizontal, 16)
                         }
                     }
-                    .padding(.vertical, themeModel.spacingMD)
+                    .padding(.vertical, 16)
                 }
             }
             .navigationTitle(isDriverSelected ? "Edit Driver" : "Edit Maintenance Staff")
@@ -82,7 +82,7 @@ struct EditEmployeeView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(Color.blue)
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
@@ -104,7 +104,7 @@ struct EditEmployeeView: View {
                             }
                         }
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(Color.blue)
                     .bold()
                     .disabled(fullName.isEmpty)
                 }

@@ -177,40 +177,40 @@ final class MaintenanceDashboardViewModel {
     
     func taskStatusColor(_ status: MaintenanceTaskStatus?) -> Color {
         switch status {
-        case .pending: return themeModel.warning
-        case .inProgress: return themeModel.info
-        case .completed: return themeModel.success
-        case .cancelled: return themeModel.danger
-        case .none: return themeModel.textTertiary
+        case .pending: return Color.yellow
+        case .inProgress: return Color.blue
+        case .completed: return Color.green
+        case .cancelled: return Color.red
+        case .none: return Color(UIColor.tertiaryLabel)
         }
     }
     
     func woStatusColor(_ status: WorkOrderStatus?) -> Color {
         switch status {
-        case .open: return themeModel.info
-        case .inProgress: return themeModel.warning
-        case .completed: return themeModel.success
-        case .cancelled: return themeModel.danger
-        case .none: return themeModel.textTertiary
+        case .open: return Color.blue
+        case .inProgress: return Color.yellow
+        case .completed: return Color.green
+        case .cancelled: return Color.red
+        case .none: return Color(UIColor.tertiaryLabel)
         }
     }
     
     func irStatusColor(_ status: String) -> Color {
         switch status.lowercased() {
-        case "open", "assigned": return themeModel.info
-        case "in_progress": return themeModel.warning
-        case "resolved", "closed": return themeModel.success
-        default: return themeModel.textTertiary
+        case "open", "assigned": return Color.blue
+        case "in_progress": return Color.yellow
+        case "resolved", "closed": return Color.green
+        default: return Color(UIColor.tertiaryLabel)
         }
     }
 
     func irSeverityColor(_ severity: String) -> Color {
         switch severity.lowercased() {
-        case "critical": return themeModel.danger
-        case "high": return themeModel.warning
-        case "medium": return themeModel.info
-        case "low": return themeModel.success
-        default: return themeModel.textTertiary
+        case "critical": return Color.red
+        case "high": return Color.yellow
+        case "medium": return Color.blue
+        case "low": return Color.green
+        default: return Color(UIColor.tertiaryLabel)
         }
     }
     
@@ -226,10 +226,10 @@ final class MaintenanceDashboardViewModel {
     
     func woPriorityColor(_ priority: WorkOrderPriority?) -> Color? {
         switch priority {
-        case .critical: return themeModel.danger
-        case .high: return themeModel.warning
-        case .medium: return themeModel.info
-        case .low: return themeModel.success
+        case .critical: return Color.red
+        case .high: return Color.yellow
+        case .medium: return Color.blue
+        case .low: return Color.green
         case nil: return nil
         }
     }

@@ -21,7 +21,7 @@ struct SignInView: View {
     // MARK: - Body
     var body: some View {
         ZStack {
-            themeModel.backgroundPrimary
+            Color(UIColor.systemGroupedBackground)
                 .ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 0) {
@@ -49,11 +49,11 @@ struct SignInView: View {
     var appIcon: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 22)
-                .fill(themeModel.accent)
+                .fill(Color.blue)
                 .frame(width: 80, height: 80)
             Image(systemName: "truck.box.fill")
                 .font(.system(size: 36))
-                .foregroundColor(themeModel.accentForeground)
+                .foregroundColor(Color(UIColor.systemBackground))
         }
     }
     // MARK: - Title
@@ -61,10 +61,10 @@ struct SignInView: View {
         VStack(spacing: 8) {
             Text("GoFleet")
                 .font(.system(size: 34, weight: .bold))
-                .foregroundColor(themeModel.textPrimary)
+                .foregroundColor(Color.primary)
             Text("Sign in to GoFleet")
             .font(.system(size: 16))
-            .foregroundColor(themeModel.textSecondary)
+            .foregroundColor(Color.secondary)
         }
     }
 
@@ -73,7 +73,7 @@ struct SignInView: View {
         VStack(spacing: 14) {
             if let errorMessage = authViewModel.errorMessage {
                 Text(errorMessage)
-                    .foregroundColor(themeModel.danger)
+                    .foregroundColor(Color.red)
                     .font(.caption)
                     .multilineTextAlignment(.center)
             }
@@ -81,18 +81,18 @@ struct SignInView: View {
                 "",
                 text: $emailOrPhone,
                 prompt: Text("Enter email or phone")
-                    .foregroundColor(themeModel.placeholder)
+                    .foregroundColor(Color(UIColor.placeholderText))
             )
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
-                .foregroundColor(themeModel.textPrimary)
+                .foregroundColor(Color.primary)
                 .padding(.horizontal, 18)
                 .frame(height: 56)
-                .background(themeModel.inputBackground)
+                .background(Color(UIColor.secondarySystemBackground))
                 .cornerRadius(14)
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
-                        .stroke(themeModel.divider, lineWidth: 1)
+                        .stroke(Color(UIColor.separator), lineWidth: 1)
                 )
 
             HStack {
@@ -101,31 +101,31 @@ struct SignInView: View {
                         "",
                         text: $password,
                         prompt: Text("Password")
-                            .foregroundColor(themeModel.placeholder)
+                            .foregroundColor(Color(UIColor.placeholderText))
                     )
                 } else {
                     SecureField(
                         "",
                         text: $password,
                         prompt: Text("Password")
-                            .foregroundColor(themeModel.placeholder)
+                            .foregroundColor(Color(UIColor.placeholderText))
                     )
                 }
                 Button {
                     isPasswordVisible.toggle()
                 } label: {
                     Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
-                        .foregroundColor(themeModel.textSecondary)
+                        .foregroundColor(Color.secondary)
                 }
             }
-            .foregroundColor(themeModel.textPrimary)
+            .foregroundColor(Color.primary)
             .padding(.horizontal, 18)
             .frame(height: 56)
-            .background(themeModel.inputBackground)
+            .background(Color(UIColor.secondarySystemBackground))
             .cornerRadius(14)
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(themeModel.divider, lineWidth: 1)
+                    .stroke(Color(UIColor.separator), lineWidth: 1)
             )
         }
     }
@@ -139,18 +139,18 @@ struct SignInView: View {
         } label: {
             if authViewModel.isLoading {
                 ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: isButtonDisabled ? themeModel.buttonDisabledText : themeModel.accentForeground))
+                    .progressViewStyle(CircularProgressViewStyle(tint: isButtonDisabled ? Color(UIColor.tertiaryLabel) : Color(UIColor.systemBackground)))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(isButtonDisabled ? themeModel.buttonDisabled : themeModel.accent)
+                    .background(isButtonDisabled ? Color(UIColor.tertiarySystemFill) : Color.blue)
                     .cornerRadius(16)
             } else {
                 Text("Sign In")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(isButtonDisabled ? themeModel.buttonDisabledText : themeModel.accentForeground)
+                    .foregroundColor(isButtonDisabled ? Color(UIColor.tertiaryLabel) : Color(UIColor.systemBackground))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(isButtonDisabled ? themeModel.buttonDisabled : themeModel.accent)
+                    .background(isButtonDisabled ? Color(UIColor.tertiarySystemFill) : Color.blue)
                     .cornerRadius(16)
             }
         }

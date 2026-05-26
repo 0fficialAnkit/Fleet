@@ -25,82 +25,82 @@ struct AddEmployeeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: themeModel.spacingLG) {
+                    VStack(spacing: 24) {
                         
                         // Error message
                         if let error = viewModel.errorMessage {
                             Text(error)
-                                .font(themeModel.caption(14))
-                                .foregroundColor(themeModel.danger)
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .font(.system(size: 14, weight: .regular, design: .rounded))
+                                .foregroundColor(Color.red)
+                                .padding(.horizontal, 16)
                         }
                         
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                        VStack(alignment: .leading, spacing: 8) {
                             SectionHeader(title: "Personal Details")
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .padding(.horizontal, 16)
                             
                                 VStack(spacing: 0) {
                                     TextField("Full Name", text: $fullName)
                                         .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
+                                        .foregroundColor(Color.primary)
                                     
-                                    Divider().background(themeModel.divider)
+                                    Divider().background(Color(UIColor.separator))
                                     
                                     TextField("Email", text: $email)
                                         .keyboardType(.emailAddress)
                                         .autocapitalization(.none)
                                         .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
+                                        .foregroundColor(Color.primary)
                                         
-                                    Divider().background(themeModel.divider)
+                                    Divider().background(Color(UIColor.separator))
                                     
                                     HStack {
                                         if isPasswordVisible {
                                             TextField("Password", text: $password)
-                                                .foregroundColor(themeModel.textPrimary)
+                                                .foregroundColor(Color.primary)
                                         } else {
                                             SecureField("Password", text: $password)
-                                                .foregroundColor(themeModel.textPrimary)
+                                                .foregroundColor(Color.primary)
                                         }
                                         
                                         Button(action: {
                                             isPasswordVisible.toggle()
                                         }) {
                                             Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
-                                                .foregroundColor(themeModel.textSecondary)
+                                                .foregroundColor(Color.secondary)
                                         }
                                     }
                                     .padding(.vertical, 12)
                                     
-                                    Divider().background(themeModel.divider)
+                                    Divider().background(Color(UIColor.separator))
                                     
                                     TextField("Phone", text: $phone)
                                         .keyboardType(.phonePad)
                                         .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
+                                        .foregroundColor(Color.primary)
                                     
                                     if isDriverSelected {
-                                        Divider().background(themeModel.divider)
+                                        Divider().background(Color(UIColor.separator))
                                         
                                         TextField("Driver License Number", text: $licenseNumber)
                                             .padding(.vertical, 12)
-                                            .foregroundColor(themeModel.textPrimary)
+                                            .foregroundColor(Color.primary)
                                     }
                                 }
-                                .padding(themeModel.spacingMD)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                                .padding(16)
+                                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                                         .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                                 )
-                                .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
+                                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                            .padding(.horizontal, 16)
                         }
                     }
-                    .padding(.vertical, themeModel.spacingMD)
+                    .padding(.vertical, 16)
                 }
             }
             .navigationTitle(isDriverSelected ? "Add Driver" : "Add Maintenance Staff")
@@ -110,7 +110,7 @@ struct AddEmployeeView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(Color.blue)
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
@@ -149,7 +149,7 @@ struct AddEmployeeView: View {
                             }
                         }
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(Color.blue)
                     .bold()
                     .disabled(fullName.isEmpty || email.isEmpty || password.isEmpty || viewModel.isCreatingUser)
                 }
@@ -163,11 +163,11 @@ struct AddEmployeeView: View {
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .scaleEffect(1.2)
                             Text("Creating user...")
-                                .font(themeModel.bodyMedium())
+                                .font(.system(size: , weight: .medium, design: .rounded))
                                 .foregroundColor(.white)
                         }
                         .padding(32)
-                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     }
                 }
             }

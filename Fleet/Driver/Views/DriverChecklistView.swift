@@ -64,17 +64,17 @@ struct DriverChecklistView: View {
                 progressBar
 
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+                    VStack(alignment: .leading, spacing: 16) {
                         SectionHeader(title: checklistType == .preTrip ? "Pre-Trip Inspection" : "Post-Trip Inspection")
                             .padding(.top)
 
                         // Mandatory notice
                         HStack(spacing: 8) {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(themeModel.warning)
+                                .foregroundStyle(Color.yellow)
                             Text("Items marked with ● are mandatory")
-                                .font(themeModel.caption())
-                                .foregroundStyle(themeModel.textSecondary)
+                                .font(.system(size: , weight: .regular, design: .rounded))
+                                .foregroundStyle(Color.secondary)
                         }
                         .padding(.horizontal, 4)
 
@@ -92,24 +92,24 @@ struct DriverChecklistView: View {
                                 HStack {
                                     Image(systemName: item.icon)
                                         .font(.system(size: 20))
-                                        .foregroundColor(themeModel.driverPrimary)
+                                        .foregroundColor(Color.green)
                                         .frame(width: 30)
 
                                     VStack(alignment: .leading, spacing: 2) {
                                         HStack(spacing: 6) {
                                             Text(item.name)
-                                                .font(themeModel.body())
-                                                .foregroundColor(themeModel.textPrimary)
+                                                .font(.system(size: , weight: .regular, design: .rounded))
+                                                .foregroundColor(Color.primary)
                                             if item.mandatory {
                                                 Circle()
-                                                    .fill(themeModel.danger)
+                                                    .fill(Color.red)
                                                     .frame(width: 6, height: 6)
                                             }
                                         }
                                         if item.mandatory {
                                             Text("Required")
-                                                .font(themeModel.small())
-                                                .foregroundStyle(themeModel.danger)
+                                                .font(.system(size: , weight: .medium, design: .rounded))
+                                                .foregroundStyle(Color.red)
                                         }
                                     }
                                     .padding(.leading, 8)
@@ -117,39 +117,39 @@ struct DriverChecklistView: View {
                                     Spacer()
 
                                     Image(systemName: checkedItems.contains(item.name) ? "checkmark.circle.fill" : "circle")
-                                        .foregroundColor(checkedItems.contains(item.name) ? themeModel.success : themeModel.textTertiary)
+                                        .foregroundColor(checkedItems.contains(item.name) ? Color.green : Color(UIColor.tertiaryLabel))
                                         .font(.title3)
                                 }
-                                .padding(themeModel.spacingMD)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                                .padding(16)
+                                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                                         .stroke(
                                             checkedItems.contains(item.name)
-                                                ? themeModel.success.opacity(0.3)
+                                                ? Color.green.opacity(0.3)
                                                 : Color.white.opacity(0.15),
                                             lineWidth: checkedItems.contains(item.name) ? 1.0 : 0.5
                                         )
                                 )
-                                .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
                             }
                         }
 
                         // MARK: - Photo Upload Section
-                        Divider().background(themeModel.divider).padding(.vertical, 4)
+                        Divider().background(Color(UIColor.separator)).padding(.vertical, 4)
 
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                        VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Image(systemName: "camera.fill")
-                                    .foregroundStyle(themeModel.driverPrimary)
+                                    .foregroundStyle(Color.green)
                                 Text("Vehicle Inspection Photos")
-                                    .font(themeModel.headline())
-                                    .foregroundStyle(themeModel.textPrimary)
+                                    .font(.system(size: , weight: .semibold, design: .rounded))
+                                    .foregroundStyle(Color.primary)
                             }
 
                             Text("Upload photos of any damage or concerns found during inspection")
-                                .font(themeModel.caption())
-                                .foregroundStyle(themeModel.textSecondary)
+                                .font(.system(size: , weight: .regular, design: .rounded))
+                                .foregroundStyle(Color.secondary)
 
                             // Photo grid
                             if !capturedImages.isEmpty {
@@ -160,7 +160,7 @@ struct DriverChecklistView: View {
                                                 .resizable()
                                                 .scaledToFill()
                                                 .frame(height: 100)
-                                                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusSM))
+                                                .clipShape(RoundedRectangle(cornerRadius: 12))
 
                                             Button {
                                                 capturedImages.remove(at: index)
@@ -168,7 +168,7 @@ struct DriverChecklistView: View {
                                                 Image(systemName: "xmark.circle.fill")
                                                     .font(.title3)
                                                     .symbolRenderingMode(.palette)
-                                                    .foregroundStyle(.white, themeModel.danger)
+                                                    .foregroundStyle(.white, Color.red)
                                             }
                                             .padding(4)
                                         }
@@ -184,34 +184,34 @@ struct DriverChecklistView: View {
                             ) {
                                 HStack(spacing: 8) {
                                     Image(systemName: "plus.circle.fill")
-                                        .foregroundStyle(themeModel.driverPrimary)
+                                        .foregroundStyle(Color.green)
                                     Text(capturedImages.isEmpty ? "Add Photos" : "Add More Photos")
-                                        .font(themeModel.bodyMedium())
-                                        .foregroundStyle(themeModel.driverPrimary)
+                                        .font(.system(size: , weight: .medium, design: .rounded))
+                                        .foregroundStyle(Color.green)
                                 }
                                 .frame(maxWidth: .infinity)
-                                .padding(themeModel.spacingMD)
-                                .background(themeModel.driverPrimary.opacity(0.06))
-                                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD))
+                                .padding(16)
+                                .background(Color.green.opacity(0.06))
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: themeModel.radiusMD)
-                                        .stroke(themeModel.driverPrimary.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [8]))
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Color.green.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [8]))
                                 )
                             }
                         }
 
                         // MARK: - Additional Notes
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                        VStack(alignment: .leading, spacing: 8) {
                             Text("Additional Notes")
-                                .font(themeModel.headline())
-                                .foregroundStyle(themeModel.textPrimary)
+                                .font(.system(size: , weight: .semibold, design: .rounded))
+                                .foregroundStyle(Color.primary)
 
                             TextField("Note any issues, damage, or observations...", text: $additionalNotes, axis: .vertical)
                                 .lineLimit(3...6)
-                                .font(themeModel.body())
-                                .padding(themeModel.spacingMD)
-                                .background(themeModel.inputBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusSM))
+                                .font(.system(size: , weight: .regular, design: .rounded))
+                                .padding(16)
+                                .background(Color(UIColor.secondarySystemBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                     }
                     .padding(.horizontal)
@@ -222,8 +222,8 @@ struct DriverChecklistView: View {
                 VStack(spacing: 8) {
                     if !allMandatoryChecked {
                         Text("Complete all mandatory items to submit")
-                            .font(themeModel.caption())
-                            .foregroundStyle(themeModel.danger)
+                            .font(.system(size: , weight: .regular, design: .rounded))
+                            .foregroundStyle(Color.red)
                     }
 
                     Button(action: handleSubmit) {
@@ -235,12 +235,12 @@ struct DriverChecklistView: View {
                                 Text(isSubmitted ? "Submitted Successfully" : "Submit Inspection")
                             }
                         }
-                        .font(themeModel.headline())
-                        .foregroundColor(allMandatoryChecked && !isSubmitted ? themeModel.buttonPrimaryText : themeModel.buttonDisabledText)
+                        .font(.system(size: , weight: .semibold, design: .rounded))
+                        .foregroundColor(allMandatoryChecked && !isSubmitted ? Color(UIColor.systemBackground) : Color(UIColor.tertiaryLabel))
                         .frame(maxWidth: .infinity)
-                        .padding(themeModel.spacingMD)
-                        .background(allMandatoryChecked && !isSubmitted ? themeModel.driverPrimary : themeModel.buttonDisabled)
-                        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusSM))
+                        .padding(16)
+                        .background(allMandatoryChecked && !isSubmitted ? Color.green : Color(UIColor.tertiarySystemFill))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     .disabled(!allMandatoryChecked || isSubmitted || isSubmitting)
                 }
@@ -254,10 +254,10 @@ struct DriverChecklistView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundStyle(themeModel.textSecondary)
+                    .foregroundStyle(Color.secondary)
                 }
             }
-            .background(themeModel.backgroundPrimary.ignoresSafeArea())
+            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
             .onChange(of: selectedPhotos) { _, newItems in
                 Task {
                     for item in newItems {
@@ -279,10 +279,10 @@ struct DriverChecklistView: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(themeModel.surfaceTertiary)
+                        .fill(Color(UIColor.tertiarySystemBackground))
                         .frame(height: 6)
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(allMandatoryChecked ? themeModel.success : themeModel.driverPrimary)
+                        .fill(allMandatoryChecked ? Color.green : Color.green)
                         .frame(width: geo.size.width * Double(checkedCount) / Double(max(totalCount, 1)), height: 6)
                         .animation(.spring(response: 0.3), value: checkedCount)
                 }
@@ -291,13 +291,13 @@ struct DriverChecklistView: View {
 
             HStack {
                 Text("\(checkedCount)/\(totalCount) checked")
-                    .font(themeModel.caption())
-                    .foregroundStyle(themeModel.textTertiary)
+                    .font(.system(size: , weight: .regular, design: .rounded))
+                    .foregroundStyle(Color(UIColor.tertiaryLabel))
                 Spacer()
                 if allMandatoryChecked {
                     Text("All mandatory items ✓")
-                        .font(themeModel.caption())
-                        .foregroundStyle(themeModel.success)
+                        .font(.system(size: , weight: .regular, design: .rounded))
+                        .foregroundStyle(Color.green)
                 }
             }
         }

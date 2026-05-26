@@ -10,19 +10,19 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
                 
                 if viewModel.isLoading && viewModel.vehicles.isEmpty {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: themeModel.spacingLG) {
+                        VStack(spacing: 24) {
                             fleetOverviewCard
                             recentOrdersSection
                             maintenanceSection
                         }
-                        .padding(.bottom, themeModel.spacingXL)
+                        .padding(.bottom, 32)
                     }
                 }
             }
@@ -32,14 +32,14 @@ struct DashboardView: View {
                     Button(action: { showingNotifications = true }) {
                         Image(systemName: "bell")
                             .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(themeModel.textPrimary)
+                            .foregroundStyle(Color.primary)
                             .frame(width: 38, height: 38)
                     }
                     
                     Button(action: { isShowingProfile = true }) {
                         Image(systemName: "person.crop.circle.fill")
                             .font(.system(size: 22, weight: .medium))
-                            .foregroundStyle(themeModel.accent)
+                            .foregroundStyle(Color.blue)
                     }
                 }
             }
@@ -79,104 +79,104 @@ struct DashboardView: View {
         NavigationLink(value: DashboardDestination.vehiclesRoot) {
             VStack(spacing: 0) {
                 // Header: icon badge + count + chevron on top trailing
-                HStack(alignment: .top, spacing: themeModel.spacingMD) {
+                HStack(alignment: .top, spacing: 16) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: themeModel.radiusSM, style: .continuous)
-                            .fill(themeModel.accent.opacity(0.12))
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.blue.opacity(0.12))
                             .frame(width: 48, height: 48)
                         Image(systemName: "truck.box.fill")
                             .font(.system(size: 22, weight: .medium))
-                            .foregroundStyle(themeModel.accent)
+                            .foregroundStyle(Color.blue)
                     }
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Total Vehicle \(viewModel.totalVehicles)")
-                            .font(themeModel.title(26))
-                            .foregroundStyle(themeModel.textPrimary)
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .foregroundStyle(Color.primary)
                     }
                     
                     Spacer()
                     
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(themeModel.textSecondary)
+                        .foregroundStyle(Color.secondary)
                         .padding(.top, 4)
                 }
                 
                 Divider()
-                    .background(themeModel.divider)
-                    .padding(.vertical, themeModel.spacingMD)
+                    .background(Color(UIColor.separator))
+                    .padding(.vertical, 16)
                 
                 // Status breakdown row
-                HStack(spacing: themeModel.spacingSM) {
+                HStack(spacing: 8) {
                     FleetStatPill(
                         value: viewModel.driversOnTrip,
                         label: "Active",
-                        color: themeModel.success
+                        color: Color.green
                     )
                     FleetStatPill(
                         value: max(0, viewModel.totalVehicles - viewModel.driversOnTrip - viewModel.maintenanceVehicles.count),
                         label: "Idle",
-                        color: themeModel.warning
+                        color: Color.yellow
                     )
                     FleetStatPill(
                         value: viewModel.maintenanceVehicles.count,
                         label: "Service",
-                        color: themeModel.danger
+                        color: Color.red
                     )
                 }
             }
-            .padding(themeModel.spacingMD)
+            .padding(16)
             .background(
-                themeModel.surfaceTertiary.opacity(0.35)
+                Color(UIColor.tertiarySystemBackground).opacity(0.35)
             )
             .clipShape(
                 RoundedRectangle(
-                    cornerRadius: themeModel.radiusLG,
+                    cornerRadius: 20,
                     style: .continuous
                 )
             )
             .glassEffect(
                 in: RoundedRectangle(
-                    cornerRadius: themeModel.radiusLG,
+                    cornerRadius: 20,
                     style: .continuous
                 )
             )
             .overlay(
                 RoundedRectangle(
-                    cornerRadius: themeModel.radiusLG,
+                    cornerRadius: 20,
                     style: .continuous
                 )
                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
             )
-            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, themeModel.spacingMD)
+        .padding(.horizontal, 16)
     }
     
     // MARK: - Recent Orders
     
     private var recentOrdersSection: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
             SectionHeader(title: "Recent Orders", action: "See All") {
                 // Action
             }
-            .padding(.horizontal, themeModel.spacingMD)
+            .padding(.horizontal, 16)
             
             if viewModel.recentOrders.isEmpty {
                 Text("No orders yet.")
-                    .font(themeModel.body(16))
-                    .foregroundStyle(themeModel.textSecondary)
-                    .padding(.horizontal, themeModel.spacingMD)
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .foregroundStyle(Color.secondary)
+                    .padding(.horizontal, 16)
             } else {
                 ForEach(viewModel.recentOrders) { trip in
                     NavigationLink(value: DashboardDestination.orderDetail(trip)) {
                         TripCardView(trip: trip, viewModel: viewModel)
                     }
                     .buttonStyle(.plain)
-                    .padding(.horizontal, themeModel.spacingMD)
+                    .padding(.horizontal, 16)
                 }
             }
         }
@@ -185,19 +185,19 @@ struct DashboardView: View {
     // MARK: - Maintenance
     
     private var maintenanceSection: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
             SectionHeader(title: "Need Maintenance")
-                .padding(.horizontal, themeModel.spacingMD)
+                .padding(.horizontal, 16)
             
             if viewModel.maintenanceVehicles.isEmpty {
                 Text("All vehicles operational.")
-                    .font(themeModel.body(16))
-                    .foregroundStyle(themeModel.textSecondary)
-                    .padding(.horizontal, themeModel.spacingMD)
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .foregroundStyle(Color.secondary)
+                    .padding(.horizontal, 16)
             } else {
                 ForEach(viewModel.maintenanceVehicles) { vehicle in
                     MaintenanceCardView(vehicle: vehicle, viewModel: viewModel)
-                        .padding(.horizontal, themeModel.spacingMD)
+                        .padding(.horizontal, 16)
                 }
             }
         }
@@ -214,20 +214,20 @@ struct FleetStatPill: View {
     var body: some View {
         VStack(spacing: 5) {
             Text("\(value)")
-                .font(themeModel.headline(20))
-                .foregroundStyle(themeModel.textPrimary)
+                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.primary)
             Text(label)
-                .font(themeModel.small(11))
-                .foregroundStyle(themeModel.textSecondary)
+                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .foregroundStyle(Color.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, themeModel.spacingMD)
+        .padding(.vertical, 16)
         .background(color.opacity(0.08))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(color.opacity(0.25), lineWidth: 0.5)
         )
-        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -254,21 +254,21 @@ struct TripCardView: View {
     
     var statusColor: Color {
         switch trip.status {
-        case .scheduled: return themeModel.info
-        case .active:    return themeModel.warning
-        case .completed: return themeModel.success
-        case .cancelled: return themeModel.danger
-        case .none:      return themeModel.textDisabled
+        case .scheduled: return Color.blue
+        case .active:    return Color.yellow
+        case .completed: return Color.green
+        case .cancelled: return Color.red
+        case .none:      return Color(UIColor.quaternaryLabel)
         }
     }
     
     var body: some View {
-        HStack(spacing: themeModel.spacingMD) {
-            VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Text(displayTitle)
-                        .font(themeModel.headline(16))
-                        .foregroundStyle(themeModel.textPrimary)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.primary)
                         .lineLimit(1)
                     Spacer()
                     StatusBadge(text: trip.status?.rawValue.capitalized ?? "Unknown", color: statusColor)
@@ -277,21 +277,21 @@ struct TripCardView: View {
                 HStack {
                     HStack(spacing: 6) {
                         Image(systemName: "person.crop.circle.fill")
-                            .foregroundStyle(themeModel.accent)
+                            .foregroundStyle(Color.blue)
                             .font(.system(size: 16))
                         Text(driverName)
-                            .font(themeModel.caption(14))
-                            .foregroundStyle(themeModel.textSecondary)
+                            .font(.system(size: 14, weight: .regular, design: .rounded))
+                            .foregroundStyle(Color.secondary)
                     }
                     Spacer()
                     if let distance = trip.distance {
                         HStack(spacing: 6) {
                             Image(systemName: "ruler.fill")
-                                .foregroundStyle(themeModel.textTertiary)
+                                .foregroundStyle(Color(UIColor.tertiaryLabel))
                                 .font(.system(size: 14))
                             Text(String(format: "%.1f km", distance))
-                                .font(themeModel.caption(14))
-                                .foregroundStyle(themeModel.textSecondary)
+                                .font(.system(size: 14, weight: .regular, design: .rounded))
+                                .foregroundStyle(Color.secondary)
                         }
                     }
                 }
@@ -299,15 +299,15 @@ struct TripCardView: View {
             
             Image(systemName: "chevron.right")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(themeModel.textSecondary)
+                .foregroundStyle(Color.secondary)
         }
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
         )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
     }
 }
 
@@ -322,39 +322,39 @@ struct MaintenanceCardView: View {
     }
     
     var body: some View {
-        HStack(spacing: themeModel.spacingMD) {
+        HStack(spacing: 16) {
             Image(systemName: "wrench.and.screwdriver.fill")
                 .font(.system(size: 24))
-                .foregroundStyle(themeModel.warning)
+                .foregroundStyle(Color.yellow)
                 .frame(width: 44, height: 44)
-                .background(themeModel.warning.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusSM, style: .continuous))
+                .background(Color.yellow.opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
-                    .font(themeModel.headline(16))
-                    .foregroundStyle(themeModel.textPrimary)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.primary)
                 
                 Text(vehicle.licensePlate ?? "No Plate")
-                    .font(themeModel.bodyMedium(14))
-                    .foregroundStyle(themeModel.textSecondary)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.secondary)
                 
                 if let task = maintenanceTask {
                     Text(task.description ?? "Needs maintenance")
-                        .font(themeModel.caption(12))
-                        .foregroundStyle(themeModel.danger)
+                        .font(.system(size: 12, weight: .regular, design: .rounded))
+                        .foregroundStyle(Color.red)
                         .lineLimit(2)
                 }
             }
             Spacer()
         }
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
         )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
     }
 }
 

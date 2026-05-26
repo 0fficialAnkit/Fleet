@@ -12,18 +12,18 @@ struct IssueReportDetailView: View {
 
     var body: some View {
         ZStack {
-            themeModel.backgroundPrimary.ignoresSafeArea()
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: themeModel.spacingLG) {
+                VStack(spacing: 24) {
 
                     // MARK: - Status Banner
-                    HStack(spacing: themeModel.spacingSM) {
+                    HStack(spacing: 8) {
                         Image(systemName: statusIcon(currentStatus))
                             .font(.system(size: 20, weight: .semibold))
                             .foregroundStyle(statusColor(currentStatus))
                         Text(statusLabel(currentStatus))
-                            .font(themeModel.headline())
+                            .font(.system(size: , weight: .semibold, design: .rounded))
                             .foregroundStyle(statusColor(currentStatus))
                         Spacer()
                         StatusBadge(
@@ -32,11 +32,11 @@ struct IssueReportDetailView: View {
                             icon: severityIcon(report.severity)
                         )
                     }
-                    .padding(themeModel.spacingMD)
+                    .padding(16)
                     .background(statusColor(currentStatus).opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .stroke(statusColor(currentStatus).opacity(0.25), lineWidth: 1)
                     )
 
@@ -57,39 +57,39 @@ struct IssueReportDetailView: View {
                     if let desc = report.description, !desc.isEmpty {
                         GlassSection(title: "Description") {
                             Text(desc)
-                                .font(themeModel.body())
-                                .foregroundStyle(themeModel.textPrimary)
+                                .font(.system(size: , weight: .regular, design: .rounded))
+                                .foregroundStyle(Color.primary)
                         }
                     }
 
                     // MARK: - Action Buttons
-                    VStack(spacing: themeModel.spacingMD) {
+                    VStack(spacing: 16) {
                         if currentStatus.lowercased() == "open" || currentStatus.lowercased() == "assigned" {
-                            ActionButton(title: "Start Work", icon: "play.circle.fill", color: themeModel.maintenancePrimary) {
+                            ActionButton(title: "Start Work", icon: "play.circle.fill", color: Color.orange) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = "in_progress" }
                             }
                         }
                         if currentStatus.lowercased() == "in_progress" {
-                            ActionButton(title: "Mark as Resolved", icon: "checkmark.circle.fill", color: themeModel.success) {
+                            ActionButton(title: "Mark as Resolved", icon: "checkmark.circle.fill", color: Color.green) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = "resolved" }
                             }
                         }
                         if currentStatus.lowercased() == "resolved" || currentStatus.lowercased() == "closed" {
-                            ActionButton(title: "Reopen Issue", icon: "arrow.counterclockwise.circle.fill", color: themeModel.warning) {
+                            ActionButton(title: "Reopen Issue", icon: "arrow.counterclockwise.circle.fill", color: Color.yellow) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = "in_progress" }
                             }
                         }
                     }
-                    .padding(.bottom, themeModel.spacingLG)
+                    .padding(.bottom, 24)
                 }
-                .padding(themeModel.spacingMD)
+                .padding(16)
             }
         }
         .navigationTitle("Issue Report")
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private var divider: some View { Divider().background(themeModel.divider) }
+    private var divider: some View { Divider().background(Color(UIColor.separator)) }
 
     // MARK: - Helpers
     func statusIcon(_ s: String) -> String {
@@ -114,10 +114,10 @@ struct IssueReportDetailView: View {
     
     func statusColor(_ s: String) -> Color {
         switch s.lowercased() {
-        case "open", "assigned": return themeModel.info
-        case "in_progress": return themeModel.warning
-        case "resolved", "closed": return themeModel.success
-        default: return themeModel.textSecondary
+        case "open", "assigned": return Color.blue
+        case "in_progress": return Color.yellow
+        case "resolved", "closed": return Color.green
+        default: return Color.secondary
         }
     }
     
@@ -143,11 +143,11 @@ struct IssueReportDetailView: View {
     
     func severityColor(_ p: String) -> Color {
         switch p.lowercased() {
-        case "critical": return themeModel.danger
-        case "high": return themeModel.warning
-        case "medium": return themeModel.info
-        case "low": return themeModel.success
-        default: return themeModel.textSecondary
+        case "critical": return Color.red
+        case "high": return Color.yellow
+        case "medium": return Color.blue
+        case "low": return Color.green
+        default: return Color.secondary
         }
     }
 }
@@ -158,18 +158,18 @@ private struct GlassSection<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
             SectionHeader(title: title)
-            VStack(spacing: themeModel.spacingMD) {
+            VStack(spacing: 16) {
                 content()
             }
-            .padding(themeModel.spacingMD)
-            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .padding(16)
+            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
             )
-            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
         }
     }
 }
@@ -183,17 +183,17 @@ private struct ActionButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: themeModel.spacingSM) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
                 Text(title)
             }
-            .font(themeModel.headline())
+            .font(.system(size: , weight: .semibold, design: .rounded))
             .foregroundStyle(color)
             .frame(maxWidth: .infinity)
-            .padding(themeModel.spacingMD)
-            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .padding(16)
+            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(color.opacity(0.3), lineWidth: 1)
             )
             .shadow(color: color.opacity(0.15), radius: 8, y: 4)

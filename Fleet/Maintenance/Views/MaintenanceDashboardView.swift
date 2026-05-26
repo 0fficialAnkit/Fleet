@@ -10,14 +10,14 @@ struct MaintenanceDashboardView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
 
                 ScrollView {
-                    VStack(spacing: themeModel.spacingLG) {
+                    VStack(spacing: 24) {
 
                         // MARK: - KPI Summary Cards
-                        VStack(spacing: themeModel.spacingMD) {
-                            HStack(spacing: themeModel.spacingMD) {
+                        VStack(spacing: 16) {
+                            HStack(spacing: 16) {
                                 NavigationLink(value: MaintenanceDestination.workOrderList(filter: nil, assignedTo: viewModel.currentUserId, priority: nil)) {
                                     DashboardCard(
                                         title: "OPEN WORK\nORDERS",
@@ -50,70 +50,70 @@ struct MaintenanceDashboardView: View {
                             }
                             .buttonStyle(.plain)
                         }
-                        .padding(.horizontal, themeModel.spacingMD)
+                        .padding(.horizontal, 16)
 
                         // MARK: - Upcoming Scheduled Tasks
-                        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+                        VStack(alignment: .leading, spacing: 16) {
                             SectionHeader(title: "Upcoming Maintenance")
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .padding(.horizontal, 16)
 
                             if viewModel.upcomingItems.isEmpty {
                                 HStack {
                                     Spacer()
-                                    VStack(spacing: themeModel.spacingSM) {
+                                    VStack(spacing: 8) {
                                         Image(systemName: "calendar.badge.checkmark")
                                             .font(.system(size: 32))
-                                            .foregroundStyle(themeModel.textTertiary)
+                                            .foregroundStyle(Color(UIColor.tertiaryLabel))
                                         Text("No upcoming tasks")
-                                            .font(themeModel.bodyMedium())
-                                            .foregroundStyle(themeModel.textSecondary)
+                                            .font(.system(size: , weight: .medium, design: .rounded))
+                                            .foregroundStyle(Color.secondary)
                                     }
                                     Spacer()
                                 }
-                                .padding(.vertical, themeModel.spacingLG)
+                                .padding(.vertical, 24)
                             } else {
-                                VStack(spacing: themeModel.spacingMD) {
+                                VStack(spacing: 16) {
                                     ForEach(viewModel.upcomingItems) { item in
                                         UpcomingMaintenanceCard(item: item)
                                     }
                                 }
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .padding(.horizontal, 16)
                             }
                         }
 
                         // MARK: - Priority Queue
-                        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+                        VStack(alignment: .leading, spacing: 16) {
                             SectionHeader(title: "Priority Queue", action: "View All") {
                                 // Navigate to all unified items, maybe workOrderList with priority filter
                             }
-                            .padding(.horizontal, themeModel.spacingMD)
+                            .padding(.horizontal, 16)
 
                             if viewModel.priorityQueueItems.isEmpty {
                                 HStack {
                                     Spacer()
-                                    VStack(spacing: themeModel.spacingSM) {
+                                    VStack(spacing: 8) {
                                         Image(systemName: "checkmark.circle")
                                             .font(.system(size: 32))
-                                            .foregroundStyle(themeModel.success)
+                                            .foregroundStyle(Color.green)
                                         Text("No priority tasks")
-                                            .font(themeModel.bodyMedium())
-                                            .foregroundStyle(themeModel.textSecondary)
+                                            .font(.system(size: , weight: .medium, design: .rounded))
+                                            .foregroundStyle(Color.secondary)
                                     }
                                     Spacer()
                                 }
-                                .padding(.vertical, themeModel.spacingLG)
+                                .padding(.vertical, 24)
                             } else {
-                                VStack(spacing: themeModel.spacingMD) {
+                                VStack(spacing: 16) {
                                     ForEach(viewModel.priorityQueueItems) { item in
                                         PriorityQueueCard(item: item, viewModel: viewModel)
                                     }
                                 }
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .padding(.horizontal, 16)
                             }
                         }
 
                     }
-                    .padding(.vertical, themeModel.spacingMD)
+                    .padding(.vertical, 16)
                 }
             }
             .navigationTitle("Dashboard")
@@ -122,7 +122,7 @@ struct MaintenanceDashboardView: View {
                     Button(action: { isShowingProfile = true }) {
                         Image(systemName: "person.crop.circle")
                             .font(.system(size: 28, weight: .medium))
-//                            .foregroundStyle(themeModel.maintenancePrimary)
+//                            .foregroundStyle(Color.orange)
                     }
                 }
             }
@@ -159,12 +159,12 @@ struct UpcomingMaintenanceCard: View {
             ZStack(alignment: .topLeading) {
                 // Placeholder Image
                 Rectangle()
-                    .fill(themeModel.surfaceTertiary)
+                    .fill(Color(UIColor.tertiarySystemBackground))
                     .frame(height: 180)
                     .overlay(
                         Image(systemName: "box.truck.fill")
                             .font(.system(size: 60))
-                            .foregroundStyle(themeModel.textTertiary.opacity(0.3))
+                            .foregroundStyle(Color(UIColor.tertiaryLabel).opacity(0.3))
                     )
                 
                 // Priority Badge
@@ -186,18 +186,18 @@ struct UpcomingMaintenanceCard: View {
                 HStack(spacing: 8) {
                     Text(item.referenceId)
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(themeModel.textSecondary)
+                        .foregroundStyle(Color.secondary)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(themeModel.surfaceTertiary)
+                        .background(Color(UIColor.tertiarySystemBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                     
                     Text(item.assignmentTag)
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(themeModel.maintenancePrimary)
+                        .foregroundStyle(Color.orange)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(themeModel.maintenancePrimary.opacity(0.15))
+                        .background(Color.orange.opacity(0.15))
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
                 
@@ -205,11 +205,11 @@ struct UpcomingMaintenanceCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.vehicleName)
                         .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(themeModel.textPrimary)
+                        .foregroundStyle(Color.primary)
                     
                     Text(item.taskDescription)
                         .font(.system(size: 16, weight: .regular))
-                        .foregroundStyle(themeModel.textSecondary)
+                        .foregroundStyle(Color.secondary)
                 }
                 
                 // Meta Info
@@ -224,7 +224,7 @@ struct UpcomingMaintenanceCard: View {
                     }
                 }
                 .font(.system(size: 14))
-                .foregroundStyle(themeModel.textSecondary)
+                .foregroundStyle(Color.secondary)
                 .padding(.vertical, 4)
                 
                 // Action Buttons
@@ -240,7 +240,7 @@ struct UpcomingMaintenanceCard: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(themeModel.maintenancePrimary)
+                        .background(Color.orange)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                     
@@ -248,13 +248,13 @@ struct UpcomingMaintenanceCard: View {
                         NavigationLink(value: destination) {
                             Text("View Details")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(themeModel.textPrimary)
+                                .foregroundStyle(Color.primary)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
                                 .background(Color.clear)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 10)
-                                        .stroke(themeModel.border, lineWidth: 1)
+                                        .stroke(Color(UIColor.opaqueSeparator), lineWidth: 1)
                                 )
                         }
                     }
@@ -262,10 +262,10 @@ struct UpcomingMaintenanceCard: View {
                 .padding(.top, 4)
             }
             .padding(16)
-            .background(themeModel.surfacePrimary)
+            .background(Color(UIColor.systemBackground))
         }
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: themeModel.shadowPrimary, radius: 10, y: 4)
+        .shadow(color: Color.black.opacity(0.1), radius: 10, y: 4)
     }
 }
 
@@ -299,7 +299,7 @@ struct DashboardCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(backgroundColor)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
     }
 }
 
@@ -336,7 +336,7 @@ struct AvailablePartsCard: View {
         .padding(20)
         .background(Color(UIColor.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
     }
 }
 
@@ -354,10 +354,10 @@ struct PriorityQueueCard: View {
     
     var priorityColor: Color {
         switch item.unifiedPriority {
-        case .critical, .high: return themeModel.danger
-        case .medium: return themeModel.info
-        case .low: return themeModel.textSecondary
-        case nil: return themeModel.textSecondary
+        case .critical, .high: return Color.red
+        case .medium: return Color.blue
+        case .low: return Color.secondary
+        case nil: return Color.secondary
         }
     }
     
@@ -372,9 +372,9 @@ struct PriorityQueueCard: View {
     }
     
     var body: some View {
-        HStack(spacing: themeModel.spacingMD) {
+        HStack(spacing: 16) {
             ZStack {
-                RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(priorityColor.opacity(0.15))
                     .frame(width: 52, height: 52)
                 Image(systemName: iconName)
@@ -384,12 +384,12 @@ struct PriorityQueueCard: View {
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(viewModel.vehiclePlate(for: item.vehicleId))
-                    .font(themeModel.headline(16))
-                    .foregroundStyle(themeModel.textPrimary)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.primary)
                 
                 Text(item.subtitle)
-                    .font(themeModel.bodyMedium(14))
-                    .foregroundStyle(themeModel.textSecondary)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.secondary)
                     .lineLimit(1)
             }
             
@@ -406,13 +406,13 @@ struct PriorityQueueCard: View {
                 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(themeModel.textTertiary)
+                    .foregroundColor(Color(UIColor.tertiaryLabel))
             }
         }
-        .padding(themeModel.spacingMD)
+        .padding(16)
         .background(Color(UIColor.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
     }
 }
 

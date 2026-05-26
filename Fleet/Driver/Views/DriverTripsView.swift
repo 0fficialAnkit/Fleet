@@ -32,22 +32,22 @@ struct DriverTripsView: View {
                 if viewModel.isLoading && viewModel.trips.isEmpty {
                     Spacer()
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: themeModel.driverPrimary))
+                        .progressViewStyle(CircularProgressViewStyle(tint: Color.green))
                     Spacer()
                 } else if filteredTrips.isEmpty {
                     Spacer()
-                    VStack(spacing: themeModel.spacingSM) {
+                    VStack(spacing: 8) {
                         Image(systemName: "road.lanes")
                             .font(.system(size: 40))
-                            .foregroundStyle(themeModel.textTertiary)
+                            .foregroundStyle(Color(UIColor.tertiaryLabel))
                         Text("No trips found")
-                            .font(themeModel.body())
-                            .foregroundStyle(themeModel.textSecondary)
+                            .font(.system(size: , weight: .regular, design: .rounded))
+                            .foregroundStyle(Color.secondary)
                     }
                     Spacer()
                 } else {
                     ScrollView(showsIndicators: false) {
-                        LazyVStack(spacing: themeModel.spacingMD) {
+                        LazyVStack(spacing: 16) {
                             ForEach(filteredTrips) { trip in
                                 NavigationLink(destination: TripDetailView(
                                     trip: trip,
@@ -63,12 +63,12 @@ struct DriverTripsView: View {
                                 .buttonStyle(.plain)
                             }
                         }
-                        .padding(.horizontal, themeModel.spacingMD)
-                        .padding(.vertical, themeModel.spacingSM)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
                     }
                 }
             }
-            .background(themeModel.backgroundPrimary.ignoresSafeArea())
+            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Assigned Routes")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -76,13 +76,13 @@ struct DriverTripsView: View {
                     NavigationLink(destination: NotificationsView()) {
                         Image(systemName: "bell.badge")
                             .font(.title3)
-                            .foregroundStyle(themeModel.driverPrimary)
+                            .foregroundStyle(Color.green)
                     }
 
                     NavigationLink(destination: DriverProfileView()) {
                         Image(systemName: "person.crop.circle.fill")
                             .font(.title2)
-                            .foregroundStyle(themeModel.driverPrimary)
+                            .foregroundStyle(Color.green)
                     }
                 }
             }
@@ -101,14 +101,14 @@ struct DriverTripsView: View {
             HStack(spacing: 12) {
                 ForEach(TripFilter.allCases, id: \.self) { filter in
                     Text(filter.rawValue)
-                        .font(themeModel.bodyMedium())
+                        .font(.system(size: , weight: .medium, design: .rounded))
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .background(
                             Capsule()
-                                .fill(selectedFilter == filter ? themeModel.driverPrimary : Color.gray.opacity(0.15))
+                                .fill(selectedFilter == filter ? Color.green : Color.gray.opacity(0.15))
                         )
-                        .foregroundStyle(selectedFilter == filter ? .white : themeModel.textPrimary)
+                        .foregroundStyle(selectedFilter == filter ? .white : Color.primary)
                         .onTapGesture {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                 selectedFilter = filter
@@ -116,7 +116,7 @@ struct DriverTripsView: View {
                         }
                 }
             }
-            .padding(.horizontal, themeModel.spacingMD)
+            .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
     }

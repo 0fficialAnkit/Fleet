@@ -67,18 +67,18 @@ struct WorkOrderDetailView: View {
 
     var body: some View {
         ZStack {
-            themeModel.backgroundPrimary.ignoresSafeArea()
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
 
             ScrollView {
-                VStack(spacing: themeModel.spacingLG) {
+                VStack(spacing: 24) {
 
                     // MARK: - Status Banner
-                    HStack(spacing: themeModel.spacingSM) {
+                    HStack(spacing: 8) {
                         Image(systemName: statusIcon(currentStatus))
                             .font(.system(size: 20, weight: .semibold))
                             .foregroundStyle(statusColor(currentStatus))
                         Text(statusLabel(currentStatus))
-                            .font(themeModel.headline())
+                            .font(.system(size: , weight: .semibold, design: .rounded))
                             .foregroundStyle(statusColor(currentStatus))
                         Spacer()
                         StatusBadge(
@@ -87,11 +87,11 @@ struct WorkOrderDetailView: View {
                             icon: priorityIcon(data.priority)
                         )
                     }
-                    .padding(themeModel.spacingMD)
+                    .padding(16)
                     .background(statusColor(currentStatus).opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .stroke(statusColor(currentStatus).opacity(0.25), lineWidth: 1)
                     )
 
@@ -110,9 +110,9 @@ struct WorkOrderDetailView: View {
 
                     // MARK: - Labor & Notes
                     GlassSection(title: "Labor & Financials") {
-                        HStack(spacing: themeModel.spacingMD) {
-                            LaborStat(label: "Est. Hours", value: data.laborHours, icon: "clock.fill",           color: themeModel.info)
-                            LaborStat(label: "Labor Cost",  value: data.laborCost,  icon: "indianrupeesign.circle.fill", color: themeModel.success)
+                        HStack(spacing: 16) {
+                            LaborStat(label: "Est. Hours", value: data.laborHours, icon: "clock.fill",           color: Color.blue)
+                            LaborStat(label: "Labor Cost",  value: data.laborCost,  icon: "indianrupeesign.circle.fill", color: Color.green)
                         }
                     }
 
@@ -122,25 +122,25 @@ struct WorkOrderDetailView: View {
                             ActionRow(
                                 icon: "plus.circle.fill",
                                 title: "Add Part from Inventory",
-                                iconColor: themeModel.maintenancePrimary
+                                iconColor: Color.orange
                             )
                         }
                         .buttonStyle(.plain)
 
                         if !localParts.isEmpty {
-                            Divider().background(themeModel.divider)
+                            Divider().background(Color(UIColor.separator))
                             ForEach(Array(localParts.enumerated()), id: \.offset) { idx, part in
-                                HStack(spacing: themeModel.spacingMD) {
+                                HStack(spacing: 16) {
                                     Image(systemName: "gearshape.2.fill")
-                                        .foregroundStyle(themeModel.maintenancePrimary)
+                                        .foregroundStyle(Color.orange)
                                         .frame(width: 20)
                                     Text(part)
-                                        .font(themeModel.body())
-                                        .foregroundStyle(themeModel.textPrimary)
+                                        .font(.system(size: , weight: .regular, design: .rounded))
+                                        .foregroundStyle(Color.primary)
                                     Spacer()
                                 }
                                 if idx < localParts.count - 1 {
-                                    Divider().background(themeModel.divider)
+                                    Divider().background(Color(UIColor.separator))
                                 }
                             }
                         }
@@ -150,53 +150,53 @@ struct WorkOrderDetailView: View {
                     GlassSection(title: "Service Notes") {
                         TextField("Add service details, notes or observations...", text: $notes, axis: .vertical)
                             .lineLimit(4...8)
-                            .font(themeModel.body())
-                            .foregroundStyle(themeModel.textPrimary)
+                            .font(.system(size: , weight: .regular, design: .rounded))
+                            .foregroundStyle(Color.primary)
                     }
 
                     // MARK: - Action Buttons
-                    VStack(spacing: themeModel.spacingMD) {
+                    VStack(spacing: 16) {
                         if currentStatus == .open {
-                            ActionButton(title: "Start Work Order", icon: "play.circle.fill", color: themeModel.maintenancePrimary) {
+                            ActionButton(title: "Start Work Order", icon: "play.circle.fill", color: Color.orange) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .inProgress }
                             }
                         }
                         if currentStatus == .inProgress {
-                            ActionButton(title: "Mark as Completed", icon: "checkmark.circle.fill", color: themeModel.success) {
+                            ActionButton(title: "Mark as Completed", icon: "checkmark.circle.fill", color: Color.green) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .completed }
                             }
                         }
                         if currentStatus == .completed {
-                            ActionButton(title: "Reopen Order", icon: "arrow.counterclockwise.circle.fill", color: themeModel.warning) {
+                            ActionButton(title: "Reopen Order", icon: "arrow.counterclockwise.circle.fill", color: Color.yellow) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .inProgress }
                             }
                         }
                         if currentStatus != .cancelled {
-                            ActionButton(title: "Cancel Order", icon: "xmark.circle", color: themeModel.danger) {
+                            ActionButton(title: "Cancel Order", icon: "xmark.circle", color: Color.red) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .cancelled }
                             }
                         }
                     }
-                    .padding(.bottom, themeModel.spacingLG)
+                    .padding(.bottom, 24)
                 }
-                .padding(themeModel.spacingMD)
+                .padding(16)
             }
         }
         .navigationTitle("Work Order")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showAddPartSheet) {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
                 VStack(spacing: 20) {
                     Text("Add Spare Part")
-                        .font(themeModel.headline())
-                        .foregroundStyle(themeModel.textPrimary)
+                        .font(.system(size: , weight: .semibold, design: .rounded))
+                        .foregroundStyle(Color.primary)
                         .padding(.top, 24)
 
                     TextField("Part Name (e.g. Air Filter)", text: $newPartName)
-                        .font(themeModel.body())
+                        .font(.system(size: , weight: .regular, design: .rounded))
                         .padding(12)
-                        .background(themeModel.surfaceTertiary)
+                        .background(Color(UIColor.tertiarySystemBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                         .padding(.horizontal)
 
@@ -207,11 +207,11 @@ struct WorkOrderDetailView: View {
                         showAddPartSheet = false
                     } label: {
                         Text("Add to Consumed Parts")
-                            .font(themeModel.headline())
+                            .font(.system(size: , weight: .semibold, design: .rounded))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(themeModel.maintenancePrimary)
+                            .background(Color.orange)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                             .padding(.horizontal)
                     }
@@ -223,7 +223,7 @@ struct WorkOrderDetailView: View {
         }
     }
 
-    private var divider: some View { Divider().background(themeModel.divider) }
+    private var divider: some View { Divider().background(Color(UIColor.separator)) }
 
     // MARK: - Helpers
     func statusIcon(_ s: WorkOrderStatus?) -> String {
@@ -246,11 +246,11 @@ struct WorkOrderDetailView: View {
     }
     func statusColor(_ s: WorkOrderStatus?) -> Color {
         switch s {
-        case .open:       return themeModel.info
-        case .inProgress: return themeModel.warning
-        case .completed:  return themeModel.success
-        case .cancelled:  return themeModel.danger
-        case .none:       return themeModel.textSecondary
+        case .open:       return Color.blue
+        case .inProgress: return Color.yellow
+        case .completed:  return Color.green
+        case .cancelled:  return Color.red
+        case .none:       return Color.secondary
         }
     }
     func priorityLabel(_ p: WorkOrderPriority?) -> String {
@@ -273,11 +273,11 @@ struct WorkOrderDetailView: View {
     }
     func priorityColor(_ p: WorkOrderPriority?) -> Color {
         switch p {
-        case .critical: return themeModel.danger
-        case .high:     return themeModel.warning
-        case .medium:   return themeModel.info
-        case .low:      return themeModel.success
-        case .none:     return themeModel.textSecondary
+        case .critical: return Color.red
+        case .high:     return Color.yellow
+        case .medium:   return Color.blue
+        case .low:      return Color.green
+        case .none:     return Color.secondary
         }
     }
 }
@@ -288,18 +288,18 @@ private struct GlassSection<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
             SectionHeader(title: title)
-            VStack(spacing: themeModel.spacingMD) {
+            VStack(spacing: 16) {
                 content()
             }
-            .padding(themeModel.spacingMD)
-            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .padding(16)
+            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
             )
-            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
         }
     }
 }
@@ -312,11 +312,11 @@ private struct PartRow: View {
     let color: Color
 
     var body: some View {
-        HStack(spacing: themeModel.spacingMD) {
+        HStack(spacing: 16) {
             Image(systemName: icon).foregroundStyle(color).frame(width: 22)
-            Text(name).font(themeModel.body()).foregroundStyle(themeModel.textPrimary)
+            Text(name).font(.system(size: , weight: .regular, design: .rounded)).foregroundStyle(Color.primary)
             Spacer()
-            Text("×\(qty)").font(themeModel.bodyMedium()).foregroundStyle(themeModel.textSecondary)
+            Text("×\(qty)").font(.system(size: , weight: .medium, design: .rounded)).foregroundStyle(Color.secondary)
         }
     }
 }
@@ -329,17 +329,17 @@ private struct LaborStat: View {
     let color: Color
 
     var body: some View {
-        HStack(spacing: themeModel.spacingSM) {
+        HStack(spacing: 8) {
             Image(systemName: icon).foregroundStyle(color)
             VStack(alignment: .leading, spacing: 2) {
-                Text(value).font(themeModel.headline()).foregroundStyle(themeModel.textPrimary)
-                Text(label).font(themeModel.caption()).foregroundStyle(themeModel.textTertiary)
+                Text(value).font(.system(size: , weight: .semibold, design: .rounded)).foregroundStyle(Color.primary)
+                Text(label).font(.system(size: , weight: .regular, design: .rounded)).foregroundStyle(Color(UIColor.tertiaryLabel))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(themeModel.spacingMD)
+        .padding(16)
         .background(color.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -352,17 +352,17 @@ private struct ActionButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: themeModel.spacingSM) {
+            HStack(spacing: 8) {
                 Image(systemName: icon)
                 Text(title)
             }
-            .font(themeModel.headline())
+            .font(.system(size: , weight: .semibold, design: .rounded))
             .foregroundStyle(color)
             .frame(maxWidth: .infinity)
-            .padding(themeModel.spacingMD)
-            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .padding(16)
+            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(color.opacity(0.3), lineWidth: 1)
             )
             .shadow(color: color.opacity(0.15), radius: 8, y: 4)

@@ -21,7 +21,7 @@ struct ReportDetailView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 24) {
@@ -30,12 +30,12 @@ struct ReportDetailView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(report.vehicleName)
                                 .font(.system(size: 26, weight: .bold, design: .rounded))
-                                .foregroundStyle(themeModel.textPrimary)
+                                .foregroundStyle(Color.primary)
                             
                             HStack {
                                 Text(report.licensePlate)
                                     .font(.system(size: 16, weight: .semibold, design: .monospaced))
-                                    .foregroundStyle(themeModel.accent)
+                                    .foregroundStyle(Color.blue)
                                 
                                 Spacer()
                                 
@@ -48,7 +48,7 @@ struct ReportDetailView: View {
                         }
                         .padding(.top, 8)
                         
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         
                         // Driver and DateTime Details
                         VStack(alignment: .leading, spacing: 16) {
@@ -56,27 +56,27 @@ struct ReportDetailView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Reported By")
                                     .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(themeModel.textTertiary)
+                                    .foregroundStyle(Color(UIColor.tertiaryLabel))
                                     .textCase(.uppercase)
                                 
                                 if let driver = driverProfile {
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(driver.fullName)
                                             .font(.system(size: 16, weight: .semibold))
-                                            .foregroundStyle(themeModel.textPrimary)
+                                            .foregroundStyle(Color.primary)
                                         Text(driver.email)
                                             .font(.system(size: 14))
-                                            .foregroundStyle(themeModel.textSecondary)
+                                            .foregroundStyle(Color.secondary)
                                         if let phone = driver.phone {
                                             Text(phone)
                                                 .font(.system(size: 14))
-                                                .foregroundStyle(themeModel.textSecondary)
+                                                .foregroundStyle(Color.secondary)
                                         }
                                     }
                                 } else {
                                     Text(report.driverName)
                                         .font(.system(size: 16, weight: .semibold))
-                                        .foregroundStyle(themeModel.textPrimary)
+                                        .foregroundStyle(Color.primary)
                                 }
                             }
                             
@@ -84,37 +84,37 @@ struct ReportDetailView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Reported On")
                                     .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(themeModel.textTertiary)
+                                    .foregroundStyle(Color(UIColor.tertiaryLabel))
                                     .textCase(.uppercase)
                                 Text(report.submittedAt.formatted(date: .abbreviated, time: .shortened))
                                     .font(.system(size: 15))
-                                    .foregroundStyle(themeModel.textSecondary)
+                                    .foregroundStyle(Color.secondary)
                             }
                         }
                         
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         
                         // Description Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Issue Description")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(themeModel.textTertiary)
+                                .foregroundStyle(Color(UIColor.tertiaryLabel))
                                 .textCase(.uppercase)
                             
                             Text(report.description)
                                 .font(.system(size: 16, weight: .regular))
-                                .foregroundStyle(themeModel.textSecondary)
+                                .foregroundStyle(Color.secondary)
                                 .lineSpacing(4)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         
                         // Assignment Section (iOS Native Drop Down)
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Assign Maintenance Staff")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(themeModel.textTertiary)
+                                .foregroundStyle(Color(UIColor.tertiaryLabel))
                                 .textCase(.uppercase)
                             
                             Menu {
@@ -150,23 +150,23 @@ struct ReportDetailView: View {
                                 HStack {
                                     Image(systemName: "wrench.and.screwdriver.fill")
                                         .font(.system(size: 16))
-                                        .foregroundStyle(themeModel.accent)
+                                        .foregroundStyle(Color.blue)
                                     
                                     if let selectedStaffId = selectedStaffId {
                                         Text(viewModel.staffName(selectedStaffId))
                                             .font(.system(size: 16, weight: .medium))
-                                            .foregroundStyle(themeModel.textPrimary)
+                                            .foregroundStyle(Color.primary)
                                     } else {
                                         Text("Unassigned")
                                             .font(.system(size: 16, weight: .medium))
-                                            .foregroundStyle(themeModel.textSecondary)
+                                            .foregroundStyle(Color.secondary)
                                     }
                                     
                                     Spacer()
                                     
                                     Image(systemName: "chevron.up.chevron.down")
                                         .font(.system(size: 14))
-                                        .foregroundStyle(themeModel.textTertiary)
+                                        .foregroundStyle(Color(UIColor.tertiaryLabel))
                                 }
                                 .padding(.vertical, 12)
                                 .padding(.horizontal, 16)
@@ -191,13 +191,13 @@ struct ReportDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundStyle(themeModel.textSecondary)
+                        .foregroundStyle(Color.secondary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         handleSave()
                     }
-                    .foregroundStyle(themeModel.accent)
+                    .foregroundStyle(Color.blue)
                     .fontWeight(.semibold)
                 }
             }

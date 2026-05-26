@@ -38,7 +38,7 @@ struct FleetManagerMainView: View {
                 }
                 .tag(3)
         }
-        .tint(themeModel.accent)
+        .tint(Color.blue)
     }
 }
 

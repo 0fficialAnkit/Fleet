@@ -23,7 +23,7 @@ struct MaintenanceRootView: View {
                 }
                 .tag(2)
         }
-        .tint(themeModel.maintenancePrimary)
+        .tint(Color.orange)
     }
 }
 

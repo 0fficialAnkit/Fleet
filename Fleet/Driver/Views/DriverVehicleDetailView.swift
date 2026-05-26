@@ -7,10 +7,10 @@ struct DriverVehicleDetailView: View {
 
     var body: some View {
         ZStack {
-            themeModel.backgroundPrimary.ignoresSafeArea()
+            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: themeModel.spacingLG) {
+                VStack(spacing: 24) {
 
                     // MARK: - Hero Header
                     vehicleHeroHeader
@@ -27,8 +27,8 @@ struct DriverVehicleDetailView: View {
                     // MARK: - Report Issue Button
                     reportIssueButton
                 }
-                .padding(themeModel.spacingMD)
-                .padding(.bottom, themeModel.spacingXXL)
+                .padding(16)
+                .padding(.bottom, 40)
             }
         }
         .navigationTitle("Vehicle Details")
@@ -40,31 +40,31 @@ struct DriverVehicleDetailView: View {
 
     // MARK: - Hero Header
     private var vehicleHeroHeader: some View {
-        VStack(spacing: themeModel.spacingMD) {
+        VStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(themeModel.driverPrimary.opacity(0.12))
+                    .fill(Color.green.opacity(0.12))
                     .frame(width: 110, height: 110)
                 Circle()
-                    .fill(themeModel.driverPrimary.opacity(0.06))
+                    .fill(Color.green.opacity(0.06))
                     .frame(width: 140, height: 140)
                 Image(systemName: "truck.box.fill")
                     .font(.system(size: 52))
-                    .foregroundStyle(themeModel.driverPrimary)
+                    .foregroundStyle(Color.green)
             }
-            .padding(.top, themeModel.spacingSM)
+            .padding(.top, 8)
 
             VStack(spacing: 6) {
                 Text("\(vehicle.make ?? "Unknown") \(vehicle.model ?? "")")
-                    .font(themeModel.largeTitle(26))
-                    .foregroundStyle(themeModel.textPrimary)
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.primary)
 
                 Text(vehicle.licensePlate ?? "—")
-                    .font(themeModel.bodyMedium())
-                    .foregroundStyle(themeModel.driverPrimary)
+                    .font(.system(size: , weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.green)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 5)
-                    .background(themeModel.driverPrimary.opacity(0.12))
+                    .background(Color.green.opacity(0.12))
                     .clipShape(Capsule())
             }
         }
@@ -72,15 +72,15 @@ struct DriverVehicleDetailView: View {
 
     // MARK: - Status Chips Row
     private var statusChipsRow: some View {
-        HStack(spacing: themeModel.spacingSM) {
+        HStack(spacing: 8) {
             StatusBadge(
                 text: vehicle.status?.rawValue.capitalized ?? "Unknown",
-                color: vehicle.status == .active ? themeModel.success : themeModel.warning,
+                color: vehicle.status == .active ? Color.green : Color.yellow,
                 icon: vehicle.status == .active ? "checkmark.circle.fill" : "exclamationmark.circle.fill"
             )
 
             if let year = vehicle.year {
-                StatusBadge(text: String(year), color: themeModel.info, icon: "calendar")
+                StatusBadge(text: String(year), color: Color.blue, icon: "calendar")
             }
 
             Spacer()
@@ -89,101 +89,101 @@ struct DriverVehicleDetailView: View {
 
     // MARK: - Vehicle Info Card
     private var vehicleInfoCard: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
             Label("Vehicle Info", systemImage: "info.circle.fill")
-                .font(themeModel.headline())
-                .foregroundStyle(themeModel.textPrimary)
+                .font(.system(size: , weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.primary)
 
             VStack(spacing: 0) {
                 InfoRow(icon: "building.2", label: "Manufacturer", value: vehicle.make ?? "N/A")
-                Divider().background(themeModel.divider)
+                Divider().background(Color(UIColor.separator))
                 InfoRow(icon: "tag", label: "Model", value: vehicle.model ?? "N/A")
-                Divider().background(themeModel.divider)
+                Divider().background(Color(UIColor.separator))
                 InfoRow(icon: "calendar", label: "Year", value: vehicle.year.map(String.init) ?? "N/A")
-                Divider().background(themeModel.divider)
+                Divider().background(Color(UIColor.separator))
                 InfoRow(
                     icon: "fuelpump",
                     label: "Tank Capacity",
                     value: vehicle.tankCapacity.map { String(format: "%.1f L", $0) } ?? "N/A"
                 )
                 if let vin = vehicle.vin {
-                    Divider().background(themeModel.divider)
+                    Divider().background(Color(UIColor.separator))
                     InfoRow(icon: "qrcode", label: "VIN", value: vin)
                 }
             }
-            .padding(themeModel.spacingMD)
-            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .padding(16)
+            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
             )
-            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
         }
     }
 
     // MARK: - Health Card
     private var vehicleHealthCard: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
             Label("Quick Stats", systemImage: "heart.text.clipboard.fill")
-                .font(themeModel.headline())
-                .foregroundStyle(themeModel.textPrimary)
+                .font(.system(size: , weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.primary)
 
-            HStack(spacing: themeModel.spacingMD) {
+            HStack(spacing: 16) {
                 statCard(
                     icon: "gauge.open.with.lines.needle.33percent",
                     value: vehicle.mileage.map { String(format: "%.1f", $0) } ?? "—",
                     label: "km/l Economy",
-                    color: themeModel.success
+                    color: Color.green
                 )
                 statCard(
                     icon: "fuelpump.fill",
                     value: "72%",
                     label: "Fuel Level",
-                    color: themeModel.driverPrimary
+                    color: Color.green
                 )
             }
         }
     }
 
     private func statCard(icon: String, value: String, label: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+        VStack(alignment: .leading, spacing: 8) {
             Image(systemName: icon)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(color)
                 .frame(width: 32, height: 32)
                 .background(color.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusXS, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             Text(value)
-                .font(themeModel.title(22))
-                .foregroundStyle(themeModel.textPrimary)
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.primary)
 
             Text(label)
-                .font(themeModel.caption())
-                .foregroundStyle(themeModel.textTertiary)
+                .font(.system(size: , weight: .regular, design: .rounded))
+                .foregroundStyle(Color(UIColor.tertiaryLabel))
         }
-        .padding(themeModel.spacingMD)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
         )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
     }
 
     // MARK: - Report Issue Button
     private var reportIssueButton: some View {
         Button(action: { navigateToReport = true }) {
-            HStack(spacing: themeModel.spacingMD) {
+            HStack(spacing: 16) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 18, weight: .semibold))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Report an Issue")
-                        .font(themeModel.bodyMedium())
+                        .font(.system(size: , weight: .medium, design: .rounded))
                         .fontWeight(.semibold)
                     Text("Notify maintenance about a problem")
-                        .font(themeModel.caption())
+                        .font(.system(size: , weight: .regular, design: .rounded))
                         .opacity(0.75)
                 }
                 Spacer()
@@ -192,16 +192,16 @@ struct DriverVehicleDetailView: View {
                     .opacity(0.7)
             }
             .foregroundStyle(.white)
-            .padding(themeModel.spacingMD)
+            .padding(16)
             .background(
                 LinearGradient(
-                    colors: [themeModel.danger, themeModel.danger.opacity(0.75)],
+                    colors: [Color.red, Color.red.opacity(0.75)],
                     startPoint: .leading,
                     endPoint: .trailing
                 )
             )
-            .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-            .shadow(color: themeModel.danger.opacity(0.35), radius: 12, y: 6)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .shadow(color: Color.red.opacity(0.35), radius: 12, y: 6)
         }
         .buttonStyle(.plain)
     }

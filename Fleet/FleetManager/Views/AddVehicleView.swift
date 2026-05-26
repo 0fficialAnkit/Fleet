@@ -16,86 +16,86 @@ struct AddVehicleView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: themeModel.spacingLG) {
+                    VStack(spacing: 24) {
                         
                         // Error message
                         if let error = errorMessage {
                             Text(error)
-                                .font(themeModel.caption(14))
-                                .foregroundColor(themeModel.danger)
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .font(.system(size: 14, weight: .regular, design: .rounded))
+                                .foregroundColor(Color.red)
+                                .padding(.horizontal, 16)
                         }
                         
                         // Basic Details Section
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                        VStack(alignment: .leading, spacing: 8) {
                             SectionHeader(title: "Basic Details")
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .padding(.horizontal, 16)
                                                         VStack(spacing: 0) {
-                                TextField("", text: $make, prompt: Text("Manufacturer (e.g. Ford)").foregroundColor(themeModel.placeholder))
+                                TextField("", text: $make, prompt: Text("Manufacturer (e.g. Ford)").foregroundColor(Color(UIColor.placeholderText)))
                                     .padding(.vertical, 12)
-                                    .foregroundColor(themeModel.textPrimary)
+                                    .foregroundColor(Color.primary)
                                 
-                                Divider().background(themeModel.divider)
+                                Divider().background(Color(UIColor.separator))
                                 
-                                TextField("", text: $model, prompt: Text("Model (e.g. Transit)").foregroundColor(themeModel.placeholder))
+                                TextField("", text: $model, prompt: Text("Model (e.g. Transit)").foregroundColor(Color(UIColor.placeholderText)))
                                     .padding(.vertical, 12)
-                                    .foregroundColor(themeModel.textPrimary)
+                                    .foregroundColor(Color.primary)
                                     
-                                Divider().background(themeModel.divider)
+                                Divider().background(Color(UIColor.separator))
                                 
-                                TextField("", text: $year, prompt: Text("Year (e.g. 2024)").foregroundColor(themeModel.placeholder))
+                                TextField("", text: $year, prompt: Text("Year (e.g. 2024)").foregroundColor(Color(UIColor.placeholderText)))
                                     .keyboardType(.numberPad)
                                     .padding(.vertical, 12)
-                                    .foregroundColor(themeModel.textPrimary)
+                                    .foregroundColor(Color.primary)
                                 
-                                Divider().background(themeModel.divider)
+                                Divider().background(Color(UIColor.separator))
                                 
-                                TextField("", text: $licensePlate, prompt: Text("License Plate").foregroundColor(themeModel.placeholder))
+                                TextField("", text: $licensePlate, prompt: Text("License Plate").foregroundColor(Color(UIColor.placeholderText)))
                                     .textInputAutocapitalization(.characters)
                                     .padding(.vertical, 12)
-                                    .foregroundColor(themeModel.textPrimary)
+                                    .foregroundColor(Color.primary)
                             }
-                            .padding(themeModel.spacingMD)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .padding(16)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
                                     .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                             )
-                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
+                            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                            .padding(.horizontal, 16)
                         }
                         
                         // Specifications Section
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                        VStack(alignment: .leading, spacing: 8) {
                             SectionHeader(title: "Specifications")
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .padding(.horizontal, 16)
                                                         VStack(spacing: 0) {
-                                TextField("", text: $tankCapacity, prompt: Text("Tank Capacity (L)").foregroundColor(themeModel.placeholder))
+                                TextField("", text: $tankCapacity, prompt: Text("Tank Capacity (L)").foregroundColor(Color(UIColor.placeholderText)))
                                     .keyboardType(.decimalPad)
                                     .padding(.vertical, 12)
-                                    .foregroundColor(themeModel.textPrimary)
+                                    .foregroundColor(Color.primary)
                                 
-                                Divider().background(themeModel.divider)
+                                Divider().background(Color(UIColor.separator))
                                 
-                                TextField("", text: $mileage, prompt: Text("Mileage (km/l)").foregroundColor(themeModel.placeholder))
+                                TextField("", text: $mileage, prompt: Text("Mileage (km/l)").foregroundColor(Color(UIColor.placeholderText)))
                                     .keyboardType(.decimalPad)
                                     .padding(.vertical, 12)
-                                    .foregroundColor(themeModel.textPrimary)
+                                    .foregroundColor(Color.primary)
                             }
-                            .padding(themeModel.spacingMD)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .padding(16)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
                                     .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                             )
-                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
+                            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                            .padding(.horizontal, 16)
                         }
                     }
-                    .padding(.vertical, themeModel.spacingMD)
+                    .padding(.vertical, 16)
                 }
             }
             .navigationTitle("Add Vehicle")
@@ -105,7 +105,7 @@ struct AddVehicleView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(Color.blue)
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
@@ -143,7 +143,7 @@ struct AddVehicleView: View {
                             isSaving = false
                         }
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(Color.blue)
                     .bold()
                     .disabled(isSaving)
                 }
@@ -157,11 +157,11 @@ struct AddVehicleView: View {
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .scaleEffect(1.2)
                             Text("Adding vehicle...")
-                                .font(themeModel.bodyMedium())
+                                .font(.system(size: , weight: .medium, design: .rounded))
                                 .foregroundColor(.white)
                         }
                         .padding(32)
-                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     }
                 }
             }

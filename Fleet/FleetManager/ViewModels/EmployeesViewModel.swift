@@ -54,10 +54,10 @@ final class EmployeesViewModel {
 
     func getColor(for roleName: String) -> Color {
         switch roleName.lowercased() {
-        case "fleet_manager", "fleet manager": return themeModel.analyticsPurple
-        case "driver": return themeModel.info
-        case "maintenance": return themeModel.warning
-        default: return themeModel.textSecondary
+        case "fleet_manager", "fleet manager": return Color.purple
+        case "driver": return Color.blue
+        case "maintenance": return Color.yellow
+        default: return Color.secondary
         }
     }
 
