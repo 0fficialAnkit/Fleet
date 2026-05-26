@@ -8,7 +8,7 @@ struct DriverFuelView: View {
     @State private var showSuccess: Bool = false
     @State private var isSubmitting: Bool = false
     @State private var errorMessage: String?
-    
+
     @State private var viewModel = DriverFuelViewModel()
     @State private var assignedVehicleId: UUID?
     @Environment(AuthViewModel.self) private var authViewModel
@@ -17,53 +17,53 @@ struct DriverFuelView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    
+
                     // Input Form
-                    
-                        VStack(alignment: .leading, spacing: themeModel.spacingLG) {
+
+                        VStack(alignment: .leading, spacing: 24) {
                             Text("Log Fuel Expense")
-                                .font(themeModel.title(22))
-                                .foregroundStyle(themeModel.textPrimary)
-                            
-                            VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                                .font(.title3.bold())
+                                .foregroundStyle(Color.primary)
+
+                            VStack(alignment: .leading, spacing: 8) {
                                 HStack {
                                     Image(systemName: "drop.fill")
-                                        .foregroundStyle(themeModel.textSecondary)
+                                        .foregroundStyle(Color.secondary)
                                     Text("Fuel Volume (Liters)")
-                                        .font(themeModel.bodyMedium())
-                                        .foregroundStyle(themeModel.textSecondary)
+                                        .font(.body.weight(.medium))
+                                        .foregroundStyle(Color.secondary)
                                 }
                                 TextField("0.0", text: $volume)
                                     .keyboardType(.decimalPad)
-                                    .padding(themeModel.spacingMD)
-                                    .background(themeModel.inputBackground)
-                                    .cornerRadius(themeModel.radiusSM)
+                                    .padding(16)
+                                    .background(Color(.secondarySystemBackground))
+                                    .cornerRadius(12)
                             }
-                            
-                            VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+
+                            VStack(alignment: .leading, spacing: 8) {
                                 HStack {
                                     Image(systemName: "indianrupeesign")
-                                        .foregroundStyle(themeModel.textSecondary)
+                                        .foregroundStyle(Color.secondary)
                                     Text("Total Price Paid")
-                                        .font(themeModel.bodyMedium())
-                                        .foregroundStyle(themeModel.textSecondary)
+                                        .font(.body.weight(.medium))
+                                        .foregroundStyle(Color.secondary)
                                 }
                                 TextField("0.00", text: $price)
                                     .keyboardType(.decimalPad)
-                                    .padding(themeModel.spacingMD)
-                                    .background(themeModel.inputBackground)
-                                    .cornerRadius(themeModel.radiusSM)
+                                    .padding(16)
+                                    .background(Color(.secondarySystemBackground))
+                                    .cornerRadius(12)
                             }
-                            
+
                             // Auto-captured Location
                             HStack {
                                 Image(systemName: "location.fill.viewfinder")
-                                    .foregroundStyle(themeModel.driverPrimary)
+                                    .foregroundStyle(Color.green)
                                 Text("Current Location: Downtown Station")
-                                    .font(themeModel.caption())
-                                    .foregroundStyle(themeModel.textTertiary)
+                                    .font(.footnote)
+                                    .foregroundStyle(Color(.tertiaryLabel))
                             }
-                            
+
                             Button(action: submitFuelLog) {
                                 HStack {
                                     if isSubmitting {
@@ -74,97 +74,96 @@ struct DriverFuelView: View {
                                         Text("Submit")
                                     }
                                 }
-                                    .font(themeModel.bodyMedium())
+                                    .font(.body.weight(.medium))
                                     .frame(maxWidth: .infinity)
-                                    .padding(themeModel.spacingMD)
-                                    .background(volume.isEmpty || price.isEmpty || isSubmitting ? themeModel.buttonDisabled : themeModel.driverPrimary)
-                                    .foregroundColor(volume.isEmpty || price.isEmpty || isSubmitting ? themeModel.buttonDisabledText : themeModel.buttonPrimaryText)
-                                    .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusSM))
+                                    .padding(16)
+                                    .background(volume.isEmpty || price.isEmpty || isSubmitting ? Color(.tertiarySystemFill) : Color.green)
+                                    .foregroundColor(volume.isEmpty || price.isEmpty || isSubmitting ? Color(.tertiaryLabel) : Color(.systemBackground))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
                             .disabled(volume.isEmpty || price.isEmpty || isSubmitting)
                         }
-                        .padding(themeModel.spacingMD)
-                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                        .padding(16)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
                                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                         )
-                        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                    
+
                     if showSuccess {
-                        
+
                             HStack {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(themeModel.success)
+                                    .foregroundColor(Color.green)
                                 Text("Synced with Fleet Manager")
-                                    .font(themeModel.bodyMedium())
-                                    .foregroundStyle(themeModel.textPrimary)
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(Color.primary)
                                 Spacer()
                             }
-                            .padding(themeModel.spacingMD)
-                            .background(themeModel.success.opacity(0.15))
+                            .padding(16)
+                            .background(Color.green.opacity(0.15))
                             .padding(0)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
                                     .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                             )
-                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+
                     }
-                    
+
                     // History Section
-                    VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+                    VStack(alignment: .leading, spacing: 16) {
                         SectionHeader(title: "Recent Logs")
-                        
+
                         if viewModel.fuelLogs.isEmpty {
                             Text("No fuel logs recorded yet.")
-                                .font(themeModel.body())
-                                .foregroundStyle(themeModel.textSecondary)
+                                .font(.body)
+                                .foregroundStyle(Color.secondary)
                         } else {
                             ForEach(viewModel.fuelLogs) { log in
-                                
+
                                     HStack {
-                                        VStack(alignment: .leading, spacing: themeModel.spacingXS) {
+                                        VStack(alignment: .leading, spacing: 4) {
                                             HStack {
                                                 Image(systemName: "drop.fill")
-                                                    .foregroundColor(themeModel.success)
+                                                    .foregroundColor(Color.green)
                                                 Text("\(String(format: "%.1f", log.litersUsed ?? 0.0)) Liters")
-                                                    .font(themeModel.headline())
-                                                    .foregroundColor(themeModel.textPrimary)
+                                                    .font(.headline)
+                                                    .foregroundColor(Color.primary)
                                             }
                                             HStack {
                                                 Image(systemName: "calendar")
-                                                    .foregroundColor(themeModel.textSecondary)
+                                                    .foregroundColor(Color.secondary)
                                                 Text((log.recordedAt ?? Date()).formatted(date: .abbreviated, time: .shortened))
-                                                    .font(themeModel.caption())
-                                                    .foregroundColor(themeModel.textSecondary)
+                                                    .font(.footnote)
+                                                    .foregroundColor(Color.secondary)
                                             }
                                         }
-                                        
+
                                         Spacer()
-                                        
+
                                         HStack(spacing: 2) {
                                             Image(systemName: "indianrupeesign")
-                                                .foregroundColor(themeModel.textSecondary)
+                                                .foregroundColor(Color.secondary)
                                             Text("\(Int(log.fuelCost ?? 0.0))")
-                                                .font(themeModel.title(22))
-                                                .foregroundColor(themeModel.textPrimary)
+                                                .font(.title3.bold())
+                                                .foregroundColor(Color.primary)
                                         }
                                     }
-                                    .padding(themeModel.spacingMD)
-                                    .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                                    .padding(16)
+                                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                        RoundedRectangle(cornerRadius: 20, style: .continuous)
                                             .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                                     )
-                                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+
                             }
                         }
                     }
                 }
                 .padding()
             }
-            .background(themeModel.backgroundPrimary.ignoresSafeArea())
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Fuel")
         }
         .alert("Error", isPresented: Binding(
@@ -186,20 +185,20 @@ struct DriverFuelView: View {
             }
         }
     }
-    
+
     private func submitFuelLog() {
         let liters = Double(volume) ?? 0.0
         let cost = Double(price) ?? 0.0
         let vehicleId = assignedVehicleId ?? UUID()
-        
+
         isSubmitting = true
         showSuccess = false
         errorMessage = nil
-        
+
         Task {
             do {
                 try await viewModel.addFuelLog(liters: liters, cost: cost, vehicleId: vehicleId)
-                
+
                 await MainActor.run {
                     isSubmitting = false
                     showSuccess = true
@@ -220,4 +219,3 @@ struct DriverFuelView: View {
     DriverFuelView()
         .environment(AuthViewModel())
 }
-

@@ -14,15 +14,15 @@ struct FleetView: View {
     @State private var navigationPath = NavigationPath()
 
     init() {
-        UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(themeModel.info)
+        UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(Color.blue)
         UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
-        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor(themeModel.textSecondary)], for: .normal)
+        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor(Color.secondary)], for: .normal)
     }
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     Picker("Fleet Section", selection: $selectedTab) {
@@ -31,8 +31,8 @@ struct FleetView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    .padding(.horizontal, themeModel.spacingMD)
-                    .padding(.vertical, themeModel.spacingMD)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
 
                     switch selectedTab {
                     case .drivers:
@@ -52,7 +52,7 @@ struct FleetView: View {
                     }) {
                         Image(systemName: "plus")
                             .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(themeModel.textPrimary)
+                            .foregroundStyle(Color.primary)
                             .frame(width: 38, height: 38)
 //                            .glassEffect(in: Circle())
                     }

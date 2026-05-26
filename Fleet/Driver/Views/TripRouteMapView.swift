@@ -32,7 +32,7 @@ struct TripRouteMapView: View {
                     liveMap
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .frame(height: 260)
 
             // "Navigate" pill shown when destination is known
@@ -96,8 +96,8 @@ struct TripRouteMapView: View {
             VStack(spacing: 10) {
                 ProgressView()
                 Text("Loading route…")
-                    .font(themeModel.caption())
-                    .foregroundStyle(themeModel.textSecondary)
+                    .font(.footnote)
+                    .foregroundStyle(Color.secondary)
             }
         }
     }
@@ -108,10 +108,10 @@ struct TripRouteMapView: View {
             VStack(spacing: 10) {
                 Image(systemName: "map.fill")
                     .font(.system(size: 36))
-                    .foregroundStyle(themeModel.driverPrimary.opacity(0.4))
+                    .foregroundStyle(Color.green.opacity(0.4))
                 Text(msg)
-                    .font(themeModel.caption())
-                    .foregroundStyle(themeModel.textSecondary)
+                    .font(.footnote)
+                    .foregroundStyle(Color.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
             }
@@ -123,14 +123,14 @@ struct TripRouteMapView: View {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
                 Text("Navigate in Maps")
-                    .font(themeModel.bodyMedium())
+                    .font(.body.weight(.medium))
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
-            .background(themeModel.driverPrimary)
+            .background(Color.green)
             .clipShape(Capsule())
-            .shadow(color: themeModel.driverPrimary.opacity(0.4), radius: 8, y: 4)
+
         }
     }
 

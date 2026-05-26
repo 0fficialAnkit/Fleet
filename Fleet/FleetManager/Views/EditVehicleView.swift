@@ -4,7 +4,7 @@ struct EditVehicleView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: VehiclesViewModel
     var vehicle: Vehicle
-    
+
     @State private var make: String
     @State private var model: String
     @State private var year: String
@@ -12,11 +12,11 @@ struct EditVehicleView: View {
     @State private var tankCapacity: String
     @State private var mileage: String
     @State private var purchaseDate: Date
-    
+
     init(viewModel: VehiclesViewModel, vehicle: Vehicle) {
         self.viewModel = viewModel
         self.vehicle = vehicle
-        
+
         _make = State(initialValue: vehicle.make ?? "")
         _model = State(initialValue: vehicle.model ?? "")
         _year = State(initialValue: vehicle.year != nil ? String(vehicle.year!) : "")
@@ -25,91 +25,91 @@ struct EditVehicleView: View {
         _mileage = State(initialValue: vehicle.mileage != nil ? String(vehicle.mileage!) : "")
         _purchaseDate = State(initialValue: vehicle.purchaseDate ?? Date())
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
-                
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 ScrollView {
-                    VStack(spacing: themeModel.spacingLG) {
-                        
+                    VStack(spacing: 24) {
+
                         // Basic Details Section
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                        VStack(alignment: .leading, spacing: 8) {
                             SectionHeader(title: "Basic Details")
-                                .padding(.horizontal, themeModel.spacingMD)
-                            
+                                .padding(.horizontal, 16)
+
                             VStack(spacing: 0) {
-                                TextField("", text: $make, prompt: Text("Manufacturer (e.g. Ford)").foregroundColor(themeModel.placeholder))
+                                TextField("", text: $make, prompt: Text("Manufacturer (e.g. Ford)").foregroundColor(Color(.placeholderText)))
                                     .padding(.vertical, 12)
-                                    .foregroundColor(themeModel.textPrimary)
-                                
-                                Divider().background(themeModel.divider)
-                                
-                                TextField("", text: $model, prompt: Text("Model (e.g. Transit)").foregroundColor(themeModel.placeholder))
+                                    .foregroundColor(Color.primary)
+
+                                Divider().background(Color(.separator))
+
+                                TextField("", text: $model, prompt: Text("Model (e.g. Transit)").foregroundColor(Color(.placeholderText)))
                                     .padding(.vertical, 12)
-                                    .foregroundColor(themeModel.textPrimary)
-                                    
-                                Divider().background(themeModel.divider)
-                                
-                                TextField("", text: $year, prompt: Text("Year (e.g. 2024)").foregroundColor(themeModel.placeholder))
+                                    .foregroundColor(Color.primary)
+
+                                Divider().background(Color(.separator))
+
+                                TextField("", text: $year, prompt: Text("Year (e.g. 2024)").foregroundColor(Color(.placeholderText)))
                                     .keyboardType(.numberPad)
                                     .padding(.vertical, 12)
-                                    .foregroundColor(themeModel.textPrimary)
-                                
-                                Divider().background(themeModel.divider)
-                                
-                                TextField("", text: $licensePlate, prompt: Text("License Plate").foregroundColor(themeModel.placeholder))
+                                    .foregroundColor(Color.primary)
+
+                                Divider().background(Color(.separator))
+
+                                TextField("", text: $licensePlate, prompt: Text("License Plate").foregroundColor(Color(.placeholderText)))
                                     .textInputAutocapitalization(.characters)
                                     .padding(.vertical, 12)
-                                    .foregroundColor(themeModel.textPrimary)
+                                    .foregroundColor(Color.primary)
                             }
-                            .padding(themeModel.spacingMD)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .padding(16)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
                                     .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                             )
-                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
+
+                            .padding(.horizontal, 16)
                         }
-                        
+
                         // Specifications Section
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                        VStack(alignment: .leading, spacing: 8) {
                             SectionHeader(title: "Specifications")
-                                .padding(.horizontal, themeModel.spacingMD)
-                            
+                                .padding(.horizontal, 16)
+
                             VStack(spacing: 0) {
-                                TextField("", text: $tankCapacity, prompt: Text("Tank Capacity (L)").foregroundColor(themeModel.placeholder))
+                                TextField("", text: $tankCapacity, prompt: Text("Tank Capacity (L)").foregroundColor(Color(.placeholderText)))
                                     .keyboardType(.decimalPad)
                                     .padding(.vertical, 12)
-                                    .foregroundColor(themeModel.textPrimary)
-                                
-                                Divider().background(themeModel.divider)
-                                
-                                TextField("", text: $mileage, prompt: Text("Mileage (km/l)").foregroundColor(themeModel.placeholder))
+                                    .foregroundColor(Color.primary)
+
+                                Divider().background(Color(.separator))
+
+                                TextField("", text: $mileage, prompt: Text("Mileage (km/l)").foregroundColor(Color(.placeholderText)))
                                     .keyboardType(.decimalPad)
                                     .padding(.vertical, 12)
-                                    .foregroundColor(themeModel.textPrimary)
-                                
-                                Divider().background(themeModel.divider)
-                                
+                                    .foregroundColor(Color.primary)
+
+                                Divider().background(Color(.separator))
+
                                 DatePicker("Purchase Date", selection: $purchaseDate, displayedComponents: .date)
                                     .padding(.vertical, 12)
-                                    .foregroundColor(themeModel.textPrimary)
-                                    .tint(themeModel.accent)
+                                    .foregroundColor(Color.primary)
+                                    .tint(Color.teal)
                             }
-                            .padding(themeModel.spacingMD)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .padding(16)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
                                     .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                             )
-                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
+
+                            .padding(.horizontal, 16)
                         }
                     }
-                    .padding(.vertical, themeModel.spacingMD)
+                    .padding(.vertical, 16)
                 }
             }
             .navigationTitle("Edit Vehicle")
@@ -119,15 +119,15 @@ struct EditVehicleView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(Color.teal)
                 }
-                
+
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         let yearInt = Int(year.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 2024
                         let cap = Double(tankCapacity.trimmingCharacters(in: .whitespacesAndNewlines))
                         let mil = Double(mileage.trimmingCharacters(in: .whitespacesAndNewlines))
-                        
+
                         var updatedVehicle = vehicle
                         updatedVehicle.make = make.isEmpty ? "Unknown" : make
                         updatedVehicle.model = model.isEmpty ? "Unknown" : model
@@ -136,7 +136,7 @@ struct EditVehicleView: View {
                         updatedVehicle.tankCapacity = cap
                         updatedVehicle.mileage = mil
                         updatedVehicle.purchaseDate = purchaseDate
-                        
+
                         Task {
                             do {
                                 try await viewModel.updateVehicle(updatedVehicle)
@@ -146,7 +146,7 @@ struct EditVehicleView: View {
                             }
                         }
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(Color.teal)
                     .bold()
                 }
             }

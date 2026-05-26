@@ -22,11 +22,11 @@ struct AddMaintenanceView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 Form {
                     // Vehicle picker
-                    Section(header: Text("Vehicle").foregroundColor(themeModel.textSecondary)) {
+                    Section(header: Text("Vehicle").foregroundColor(Color.secondary)) {
                         Picker("Select Vehicle", selection: $selectedVehicleId) {
                             Text("Select a vehicle").tag(UUID?.none)
                             ForEach(viewModel.vehicles) { vehicle in
@@ -34,16 +34,16 @@ struct AddMaintenanceView: View {
                                     .tag(UUID?.some(vehicle.id))
                             }
                         }
-                        .foregroundColor(themeModel.textPrimary)
+                        .foregroundColor(Color.primary)
                     }
-                    .listRowBackground(themeModel.backgroundElevated)
+                    .listRowBackground(Color(.systemBackground))
 
                     // Assign to Maintenance Staff
-                    Section(header: Text("Assign To").foregroundColor(themeModel.textSecondary)) {
+                    Section(header: Text("Assign To").foregroundColor(Color.secondary)) {
                         if viewModel.maintenanceStaff.isEmpty {
                             Text("No maintenance staff found. Add staff in Supabase.")
                                 .font(.caption)
-                                .foregroundColor(themeModel.textTertiary)
+                                .foregroundColor(Color(.tertiaryLabel))
                         } else {
                             Picker("Assign to", selection: $selectedAssignedTo) {
                                 Text("Unassigned").tag(UUID?.none)
@@ -51,14 +51,14 @@ struct AddMaintenanceView: View {
                                     Text(staff.fullName).tag(UUID?.some(staff.id))
                                 }
                             }
-                            .foregroundColor(themeModel.textPrimary)
+                            .foregroundColor(Color.primary)
                         }
                     }
-                    .listRowBackground(themeModel.backgroundElevated)
+                    .listRowBackground(Color(.systemBackground))
 
                     // Link to Work Order (optional)
                     if !viewModel.workOrders.isEmpty {
-                        Section(header: Text("Link Work Order (Optional)").foregroundColor(themeModel.textSecondary)) {
+                        Section(header: Text("Link Work Order (Optional)").foregroundColor(Color.secondary)) {
                             Picker("Work Order", selection: $selectedWorkOrderId) {
                                 Text("None").tag(UUID?.none)
                                 ForEach(viewModel.workOrders) { wo in
@@ -66,49 +66,49 @@ struct AddMaintenanceView: View {
                                         .tag(UUID?.some(wo.id))
                                 }
                             }
-                            .foregroundColor(themeModel.textPrimary)
+                            .foregroundColor(Color.primary)
                         }
-                        .listRowBackground(themeModel.backgroundElevated)
+                        .listRowBackground(Color(.systemBackground))
                     }
 
                     // Task Details
-                    Section(header: Text("Task Details").foregroundColor(themeModel.textSecondary)) {
+                    Section(header: Text("Task Details").foregroundColor(Color.secondary)) {
                         Picker("Task Type", selection: $selectedTaskType) {
                             ForEach(MaintenanceTaskType.allCases, id: \.self) { type in
                                 Text(type.rawValue.replacingOccurrences(of: "_", with: " ").capitalized)
                                     .tag(type)
                             }
                         }
-                        .foregroundColor(themeModel.textPrimary)
+                        .foregroundColor(Color.primary)
 
-                        TextField("", text: $description, prompt: Text("Description").foregroundColor(themeModel.placeholder))
-                            .foregroundColor(themeModel.textPrimary)
+                        TextField("", text: $description, prompt: Text("Description").foregroundColor(Color(.placeholderText)))
+                            .foregroundColor(Color.primary)
 
                         DatePicker("Scheduled Date", selection: $scheduledDate, displayedComponents: .date)
-                            .foregroundColor(themeModel.textPrimary)
-                            .tint(themeModel.accent)
+                            .foregroundColor(Color.primary)
+                            .tint(Color.teal)
                     }
-                    .listRowBackground(themeModel.backgroundElevated)
+                    .listRowBackground(Color(.systemBackground))
 
                     // Error
                     if let err = saveError {
                         Section {
                             Text(err)
                                 .font(.caption)
-                                .foregroundColor(themeModel.danger)
+                                .foregroundColor(Color.red)
                         }
-                        .listRowBackground(themeModel.backgroundElevated)
+                        .listRowBackground(Color(.systemBackground))
                     }
                 }
                 .scrollContentBackground(.hidden)
-                .background(themeModel.backgroundPrimary)
+                .background(Color(.systemGroupedBackground))
             }
             .navigationTitle("Add Maintenance Task")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(themeModel.accent)
+                        .foregroundColor(Color.teal)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -135,7 +135,7 @@ struct AddMaintenanceView: View {
                             isSaving = false
                         }
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(Color.teal)
                     .bold()
                     .disabled(!isFormValid || isSaving)
                 }
@@ -148,7 +148,7 @@ struct AddMaintenanceView: View {
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             .foregroundColor(.white)
                             .padding(32)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     }
                 }
             }

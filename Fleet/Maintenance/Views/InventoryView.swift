@@ -27,96 +27,96 @@ struct InventoryView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 if isLoading && inventoryItems.isEmpty {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
                     ScrollView {
-                        VStack(spacing: themeModel.spacingMD) {
+                        VStack(spacing: 16) {
 
                             // MARK: - Summary Strip
-                            HStack(spacing: themeModel.spacingMD) {
+                            HStack(spacing: 16) {
                                 InventoryStat(
                                     value: "\(inventoryItems.count)",
                                     label: "Total Parts",
-                                    color: themeModel.maintenancePrimary
+                                    color: Color.brown
                                 )
                                 InventoryStat(
                                     value: "\(lowStockCount)",
                                     label: "Low Stock",
-                                    color: themeModel.danger
+                                    color: Color.red
                                 )
                                 InventoryStat(
                                     value: "₹\(String(format: "%.0f", inventoryItems.compactMap(\.unitCost).reduce(0, +)))",
                                     label: "Est. Value",
-                                    color: themeModel.success
+                                    color: Color.green
                                 )
                             }
-                            .padding(.horizontal, themeModel.spacingMD)
+                            .padding(.horizontal, 16)
 
                             // MARK: - AI Forecast Banner
-                            HStack(alignment: .top, spacing: themeModel.spacingMD) {
+                            HStack(alignment: .top, spacing: 16) {
                                 Image(systemName: "sparkles")
-                                    .foregroundStyle(themeModel.warning)
+                                    .foregroundStyle(Color.yellow)
                                     .font(.system(size: 18, weight: .semibold))
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("AI Forecast")
-                                        .font(themeModel.bodyMedium())
-                                        .foregroundStyle(themeModel.warning)
+                                        .font(.body.weight(.medium))
+                                        .foregroundStyle(Color.yellow)
                                     Text("High demand for **Oil Filters** expected next week. Consider restocking soon.")
-                                        .font(themeModel.caption())
-                                        .foregroundStyle(themeModel.textSecondary)
+                                        .font(.footnote)
+                                        .foregroundStyle(Color.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                                 Spacer(minLength: 0)
                             }
-                            .padding(themeModel.spacingMD)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .padding(16)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                                    .stroke(themeModel.warning.opacity(0.25), lineWidth: 0.8)
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                    .stroke(Color.yellow.opacity(0.25), lineWidth: 0.8)
                             )
-                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
+
+                            .padding(.horizontal, 16)
 
                             // MARK: - Low Stock Filter Toggle
                             if lowStockCount > 0 {
                                 Button(action: { withAnimation { showLowStockOnly.toggle() } }) {
                                     HStack {
                                         Image(systemName: showLowStockOnly ? "checkmark.circle.fill" : "exclamationmark.triangle")
-                                            .foregroundStyle(themeModel.danger)
+                                            .foregroundStyle(Color.red)
                                         Text(showLowStockOnly ? "Showing Low Stock Only" : "Show Low Stock Only (\(lowStockCount))")
-                                            .font(themeModel.bodyMedium())
-                                            .foregroundStyle(themeModel.danger)
+                                            .font(.body.weight(.medium))
+                                            .foregroundStyle(Color.red)
                                         Spacer()
                                     }
-                                    .padding(themeModel.spacingMD)
-                                    .background(themeModel.danger.opacity(showLowStockOnly ? 0.15 : 0.07))
-                                    .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
+                                    .padding(16)
+                                    .background(Color.red.opacity(showLowStockOnly ? 0.15 : 0.07))
+                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
-                                            .stroke(themeModel.danger.opacity(0.3), lineWidth: showLowStockOnly ? 1 : 0.5)
+                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                            .stroke(Color.red.opacity(0.3), lineWidth: showLowStockOnly ? 1 : 0.5)
                                     )
                                 }
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .padding(.horizontal, 16)
                             }
 
                             // MARK: - Items List
                             if searchResults.isEmpty {
-                                VStack(spacing: themeModel.spacingMD) {
+                                VStack(spacing: 16) {
                                     Image(systemName: "magnifyingglass")
                                         .font(.system(size: 40))
-                                        .foregroundStyle(themeModel.textTertiary)
+                                        .foregroundStyle(Color(.tertiaryLabel))
                                     Text("No parts found")
-                                        .font(themeModel.bodyMedium())
-                                        .foregroundStyle(themeModel.textSecondary)
+                                        .font(.body.weight(.medium))
+                                        .foregroundStyle(Color.secondary)
                                 }
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, themeModel.spacingXXL)
+                                .padding(.vertical, 40)
                             } else {
-                                LazyVStack(spacing: themeModel.spacingMD) {
+                                LazyVStack(spacing: 16) {
                                     ForEach(searchResults) { item in
                                         Button(action: {
                                             selectedItem = item
@@ -127,10 +127,10 @@ struct InventoryView: View {
                                         .buttonStyle(.plain)
                                     }
                                 }
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .padding(.horizontal, 16)
                             }
                         }
-                        .padding(.vertical, themeModel.spacingMD)
+                        .padding(.vertical, 16)
                     }
                 }
             }
@@ -179,17 +179,17 @@ private struct InventoryStat: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(themeModel.headline())
+                .font(.headline)
                 .foregroundStyle(color)
             Text(label)
-                .font(themeModel.small())
-                .foregroundStyle(themeModel.textTertiary)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color(.tertiaryLabel))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
+        .padding(.vertical, 16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(color.opacity(0.2), lineWidth: 0.8)
         )
     }
@@ -210,24 +210,24 @@ struct InventoryRow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.partName ?? "Unknown Part")
-                        .font(themeModel.headline())
-                        .foregroundStyle(themeModel.textPrimary)
+                        .font(.headline)
+                        .foregroundStyle(Color.primary)
                     Text("Unit Cost: ₹\(String(format: "%.2f", item.unitCost ?? 0.0))")
-                        .font(themeModel.caption())
-                        .foregroundStyle(themeModel.textSecondary)
+                        .font(.footnote)
+                        .foregroundStyle(Color.secondary)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("\(item.stockQuantity ?? 0)")
-                        .font(themeModel.title(20))
-                        .foregroundStyle(isLowStock ? themeModel.danger : themeModel.textPrimary)
+                        .font(.title3.bold())
+                        .foregroundStyle(isLowStock ? Color.red : Color.primary)
                     Text("in stock")
-                        .font(themeModel.small())
-                        .foregroundStyle(themeModel.textTertiary)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color(.tertiaryLabel))
                 }
             }
 
@@ -235,10 +235,10 @@ struct InventoryRow: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(themeModel.surfaceTertiary)
+                        .fill(Color(.tertiarySystemBackground))
                         .frame(height: 6)
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(isLowStock ? themeModel.danger : themeModel.success)
+                        .fill(isLowStock ? Color.red : Color.green)
                         .frame(width: geo.size.width * stockFraction, height: 6)
                         .animation(.spring(response: 0.5), value: stockFraction)
                 }
@@ -249,20 +249,20 @@ struct InventoryRow: View {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.caption2)
-                        .foregroundStyle(themeModel.danger)
+                        .foregroundStyle(Color.red)
                     Text("Below reorder level (\(item.reorderLevel ?? 0)). Restock recommended.")
-                        .font(themeModel.small())
-                        .foregroundStyle(themeModel.danger)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.red)
                 }
             }
         }
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                .stroke(isLowStock ? themeModel.danger.opacity(0.3) : Color.white.opacity(0.12), lineWidth: isLowStock ? 1 : 0.5)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(isLowStock ? Color.red.opacity(0.3) : Color.white.opacity(0.12), lineWidth: isLowStock ? 1 : 0.5)
         )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+
     }
 }
 
@@ -273,137 +273,137 @@ struct InventoryRow: View {
 // MARK: - InventoryItemSheet
 struct InventoryItemSheet: View {
     @Environment(\.dismiss) private var dismiss
-    
+
     let editingItem: Inventory?
     let onSave: () -> Void
-    
+
     @State private var partName: String = ""
     @State private var stockQuantity: String = ""
     @State private var reorderLevel: String = ""
     @State private var unitCost: String = ""
-    
+
     @State private var isSaving = false
     @State private var errorMessage: String?
-    
+
     @State private var showingDeleteAlert = false
     @State private var isDeleting = false
-    
+
     var isFormValid: Bool {
         !partName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
-                
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 ScrollView {
                     VStack(spacing: 20) {
-                        
+
                         if let errorMessage {
                             HStack(spacing: 10) {
                                 Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(themeModel.danger)
+                                    .foregroundStyle(Color.red)
                                 Text(errorMessage)
                                     .font(.system(size: 14))
-                                    .foregroundStyle(themeModel.danger)
+                                    .foregroundStyle(Color.red)
                             }
                             .padding()
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(themeModel.danger.opacity(0.1))
+                            .background(Color.red.opacity(0.1))
                             .cornerRadius(12)
                             .padding(.horizontal, 24)
                         }
-                        
+
                         VStack(alignment: .leading, spacing: 16) {
                             // Part Name
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("PART NAME")
                                     .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(themeModel.textSecondary)
+                                    .foregroundColor(Color.secondary)
                                     .kerning(1.2)
-                                
-                                TextField("", text: $partName, prompt: Text("e.g. Brake Pads").foregroundColor(themeModel.placeholder))
-                                    .foregroundColor(themeModel.textPrimary)
+
+                                TextField("", text: $partName, prompt: Text("e.g. Brake Pads").foregroundColor(Color(.placeholderText)))
+                                    .foregroundColor(Color.primary)
                                     .padding(.horizontal, 18)
                                     .frame(height: 56)
-                                    .background(themeModel.inputBackground)
+                                    .background(Color(.secondarySystemBackground))
                                     .cornerRadius(14)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 14)
-                                            .stroke(themeModel.divider, lineWidth: 1)
+                                            .stroke(Color(.separator), lineWidth: 1)
                                     )
                             }
-                            
+
                             // Stock Quantity & Reorder Level (Side by Side)
                             HStack(spacing: 16) {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("STOCK QUANTITY")
                                         .font(.system(size: 12, weight: .bold))
-                                        .foregroundColor(themeModel.textSecondary)
+                                        .foregroundColor(Color.secondary)
                                         .kerning(1.2)
-                                    
-                                    TextField("", text: $stockQuantity, prompt: Text("0").foregroundColor(themeModel.placeholder))
+
+                                    TextField("", text: $stockQuantity, prompt: Text("0").foregroundColor(Color(.placeholderText)))
                                         .keyboardType(.numberPad)
-                                        .foregroundColor(themeModel.textPrimary)
+                                        .foregroundColor(Color.primary)
                                         .padding(.horizontal, 18)
                                         .frame(height: 56)
-                                        .background(themeModel.inputBackground)
+                                        .background(Color(.secondarySystemBackground))
                                         .cornerRadius(14)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 14)
-                                                .stroke(themeModel.divider, lineWidth: 1)
+                                                .stroke(Color(.separator), lineWidth: 1)
                                         )
                                 }
-                                
+
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text("REORDER LEVEL")
                                         .font(.system(size: 12, weight: .bold))
-                                        .foregroundColor(themeModel.textSecondary)
+                                        .foregroundColor(Color.secondary)
                                         .kerning(1.2)
-                                    
-                                    TextField("", text: $reorderLevel, prompt: Text("0").foregroundColor(themeModel.placeholder))
+
+                                    TextField("", text: $reorderLevel, prompt: Text("0").foregroundColor(Color(.placeholderText)))
                                         .keyboardType(.numberPad)
-                                        .foregroundColor(themeModel.textPrimary)
+                                        .foregroundColor(Color.primary)
                                         .padding(.horizontal, 18)
                                         .frame(height: 56)
-                                        .background(themeModel.inputBackground)
+                                        .background(Color(.secondarySystemBackground))
                                         .cornerRadius(14)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 14)
-                                                .stroke(themeModel.divider, lineWidth: 1)
+                                                .stroke(Color(.separator), lineWidth: 1)
                                         )
                                 }
                             }
-                            
+
                             // Unit Cost
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("UNIT COST (₹)")
                                     .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(themeModel.textSecondary)
+                                    .foregroundColor(Color.secondary)
                                     .kerning(1.2)
-                                
-                                TextField("", text: $unitCost, prompt: Text("0.00").foregroundColor(themeModel.placeholder))
+
+                                TextField("", text: $unitCost, prompt: Text("0.00").foregroundColor(Color(.placeholderText)))
                                     .keyboardType(.decimalPad)
-                                    .foregroundColor(themeModel.textPrimary)
+                                    .foregroundColor(Color.primary)
                                     .padding(.horizontal, 18)
                                     .frame(height: 56)
-                                    .background(themeModel.inputBackground)
+                                    .background(Color(.secondarySystemBackground))
                                     .cornerRadius(14)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 14)
-                                            .stroke(themeModel.divider, lineWidth: 1)
+                                            .stroke(Color(.separator), lineWidth: 1)
                                     )
                             }
                         }
                         .padding(.horizontal, 24)
-                        
+
                         Spacer().frame(height: 20)
-                        
+
                         // Action Buttons
                         VStack(spacing: 14) {
                             let isButtonDisabled = !isFormValid || isSaving
-                            
+
                             Button(action: saveAction) {
                                 HStack {
                                     if isSaving {
@@ -414,14 +414,14 @@ struct InventoryItemSheet: View {
                                             .font(.system(size: 18, weight: .semibold))
                                     }
                                 }
-                                .foregroundColor(isButtonDisabled ? themeModel.buttonDisabledText : .white)
+                                .foregroundColor(isButtonDisabled ? Color(.tertiaryLabel) : .white)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 56)
-                                .background(isButtonDisabled ? themeModel.buttonDisabled : themeModel.maintenancePrimary)
+                                .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.brown)
                                 .cornerRadius(16)
                             }
                             .disabled(isButtonDisabled)
-                            
+
                             if editingItem != nil {
                                 Button(action: { showingDeleteAlert = true }) {
                                     HStack {
@@ -436,7 +436,7 @@ struct InventoryItemSheet: View {
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 56)
-                                    .background(themeModel.danger)
+                                    .background(Color.red)
                                     .cornerRadius(16)
                                 }
                                 .disabled(isDeleting)
@@ -454,7 +454,7 @@ struct InventoryItemSheet: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundStyle(themeModel.textSecondary)
+                    .foregroundStyle(Color.secondary)
                 }
             }
             .alert("Delete Item?", isPresented: $showingDeleteAlert) {
@@ -475,16 +475,16 @@ struct InventoryItemSheet: View {
             }
         }
     }
-    
+
     private func saveAction() {
         guard isFormValid else { return }
         isSaving = true
         errorMessage = nil
-        
+
         let qty = Int(stockQuantity) ?? 0
         let reorder = Int(reorderLevel) ?? 0
         let cost = Double(unitCost) ?? 0.0
-        
+
         Task {
             do {
                 if let item = editingItem {
@@ -514,12 +514,12 @@ struct InventoryItemSheet: View {
             isSaving = false
         }
     }
-    
+
     private func deleteAction() {
         guard let item = editingItem else { return }
         isDeleting = true
         errorMessage = nil
-        
+
         Task {
             do {
                 try await InventoryService.deleteItem(id: item.id)

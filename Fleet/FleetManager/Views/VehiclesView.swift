@@ -2,14 +2,14 @@ import SwiftUI
 
 struct VehiclesView: View {
     var viewModel: VehiclesViewModel
-    
+
     var body: some View {
         Group {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
-                
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: themeModel.spacingMD) {
+                    VStack(spacing: 16) {
                         ForEach(viewModel.vehicles) { vehicle in
                             NavigationLink(value: vehicle) {
                                 VehicleRowView(
@@ -20,53 +20,52 @@ struct VehiclesView: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(.vertical, themeModel.spacingMD)
-                    .padding(.horizontal, themeModel.spacingMD)
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, 16)
                 }
             }
             }
         }
     }
 
-
 struct VehicleRowView: View {
     let vehicle: Vehicle
     let statusColor: Color
-    
+
     var body: some View {
-        
-            HStack(spacing: themeModel.spacingMD) {
+
+            HStack(spacing: 16) {
                 ZStack {
                     Circle()
-                        .fill(themeModel.accent.opacity(0.1))
+                        .fill(Color.teal.opacity(0.1))
                         .frame(width: 48, height: 48)
-                    
+
                     Image(systemName: "truck.box.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(themeModel.accent)
+                        .foregroundColor(Color.teal)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(vehicle.make ?? "Unknown") \(vehicle.model ?? "")")
-                        .font(themeModel.headline(18))
-                        .foregroundColor(themeModel.textPrimary)
-                    
+                        .font(.headline)
+                        .foregroundColor(Color.primary)
+
                     Text(vehicle.licensePlate ?? "No License Plate")
-                        .font(themeModel.caption(14))
-                        .foregroundColor(themeModel.textSecondary)
+                        .font(.subheadline)
+                        .foregroundColor(Color.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 StatusBadge(text: vehicle.status?.rawValue.capitalized ?? "Unknown", color: statusColor)
             }
-            .padding(themeModel.spacingMD)
-            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+            .padding(16)
+            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
             )
-            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+
     }
 }
 

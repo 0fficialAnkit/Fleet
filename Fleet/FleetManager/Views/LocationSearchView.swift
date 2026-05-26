@@ -105,7 +105,7 @@ struct LocationSearchView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundStyle(themeModel.accent)
+                        .foregroundStyle(Color.teal)
                 }
             }
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search address or place")
@@ -121,10 +121,10 @@ struct LocationSearchView: View {
         VStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 38))
-                .foregroundStyle(themeModel.accent.opacity(0.5))
+                .foregroundStyle(Color.teal.opacity(0.5))
             Text("Start typing to search for an address or place")
-                .font(themeModel.body())
-                .foregroundStyle(themeModel.textSecondary)
+                .font(.body)
+                .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
@@ -136,10 +136,10 @@ struct LocationSearchView: View {
         VStack(spacing: 12) {
             Image(systemName: "map")
                 .font(.system(size: 38))
-                .foregroundStyle(themeModel.textDisabled)
+                .foregroundStyle(Color(.quaternaryLabel))
             Text("No results for \"\(query)\"")
-                .font(themeModel.body())
-                .foregroundStyle(themeModel.textSecondary)
+                .font(.body)
+                .foregroundStyle(Color.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
@@ -150,21 +150,21 @@ struct LocationSearchView: View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(themeModel.accent.opacity(0.12))
+                    .fill(Color.teal.opacity(0.12))
                     .frame(width: 36, height: 36)
                 Image(systemName: "mappin")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(themeModel.accent)
+                    .foregroundStyle(Color.teal)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(completion.title)
-                    .font(themeModel.bodyMedium())
-                    .foregroundStyle(themeModel.textPrimary)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Color.primary)
                 if !completion.subtitle.isEmpty {
                     Text(completion.subtitle)
-                        .font(themeModel.caption())
-                        .foregroundStyle(themeModel.textSecondary)
+                        .font(.footnote)
+                        .foregroundStyle(Color.secondary)
                         .lineLimit(1)
                 }
             }
@@ -173,7 +173,7 @@ struct LocationSearchView: View {
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 12))
-                .foregroundStyle(themeModel.textDisabled)
+                .foregroundStyle(Color(.quaternaryLabel))
         }
         .padding(.vertical, 4)
     }

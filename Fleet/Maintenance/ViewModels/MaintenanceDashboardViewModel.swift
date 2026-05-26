@@ -31,7 +31,7 @@ final class MaintenanceDashboardViewModel {
 
     var upcomingItems: [UpcomingDisplayItem] {
         var items: [UpcomingDisplayItem] = []
-        
+
         let tItems = tasks.filter { $0.status != .completed }.map { task -> UpcomingDisplayItem in
             return UpcomingDisplayItem(
                 id: task.id,
@@ -50,7 +50,7 @@ final class MaintenanceDashboardViewModel {
             )
         }
         items.append(contentsOf: tItems)
-        
+
         let woItems = workOrders.filter { $0.status != .completed && $0.status != .cancelled }.map { wo -> UpcomingDisplayItem in
             return UpcomingDisplayItem(
                 id: wo.id,
@@ -69,7 +69,7 @@ final class MaintenanceDashboardViewModel {
             )
         }
         items.append(contentsOf: woItems)
-        
+
         let irItems = issueReports.filter { $0.status.lowercased() != "resolved" && $0.status.lowercased() != "closed" }.map { ir -> UpcomingDisplayItem in
             return UpcomingDisplayItem(
                 id: ir.id,
@@ -88,7 +88,7 @@ final class MaintenanceDashboardViewModel {
             )
         }
         items.append(contentsOf: irItems)
-        
+
         return Array(items.prefix(3))
     }
 
@@ -174,46 +174,46 @@ final class MaintenanceDashboardViewModel {
         case .none: return "Unknown"
         }
     }
-    
+
     func taskStatusColor(_ status: MaintenanceTaskStatus?) -> Color {
         switch status {
-        case .pending: return themeModel.warning
-        case .inProgress: return themeModel.info
-        case .completed: return themeModel.success
-        case .cancelled: return themeModel.danger
-        case .none: return themeModel.textTertiary
+        case .pending: return Color.yellow
+        case .inProgress: return Color.blue
+        case .completed: return Color.green
+        case .cancelled: return Color.red
+        case .none: return Color(.tertiaryLabel)
         }
     }
-    
+
     func woStatusColor(_ status: WorkOrderStatus?) -> Color {
         switch status {
-        case .open: return themeModel.info
-        case .inProgress: return themeModel.warning
-        case .completed: return themeModel.success
-        case .cancelled: return themeModel.danger
-        case .none: return themeModel.textTertiary
+        case .open: return Color.blue
+        case .inProgress: return Color.yellow
+        case .completed: return Color.green
+        case .cancelled: return Color.red
+        case .none: return Color(.tertiaryLabel)
         }
     }
-    
+
     func irStatusColor(_ status: String) -> Color {
         switch status.lowercased() {
-        case "open", "assigned": return themeModel.info
-        case "in_progress": return themeModel.warning
-        case "resolved", "closed": return themeModel.success
-        default: return themeModel.textTertiary
+        case "open", "assigned": return Color.blue
+        case "in_progress": return Color.yellow
+        case "resolved", "closed": return Color.green
+        default: return Color(.tertiaryLabel)
         }
     }
 
     func irSeverityColor(_ severity: String) -> Color {
         switch severity.lowercased() {
-        case "critical": return themeModel.danger
-        case "high": return themeModel.warning
-        case "medium": return themeModel.info
-        case "low": return themeModel.success
-        default: return themeModel.textTertiary
+        case "critical": return Color.red
+        case "high": return Color.yellow
+        case "medium": return Color.blue
+        case "low": return Color.green
+        default: return Color(.tertiaryLabel)
         }
     }
-    
+
     func woPriorityLabel(_ priority: WorkOrderPriority?) -> String? {
         switch priority {
         case .critical: return "CRITICAL"
@@ -223,13 +223,13 @@ final class MaintenanceDashboardViewModel {
         case nil: return nil
         }
     }
-    
+
     func woPriorityColor(_ priority: WorkOrderPriority?) -> Color? {
         switch priority {
-        case .critical: return themeModel.danger
-        case .high: return themeModel.warning
-        case .medium: return themeModel.info
-        case .low: return themeModel.success
+        case .critical: return Color.red
+        case .high: return Color.yellow
+        case .medium: return Color.blue
+        case .low: return Color.green
         case nil: return nil
         }
     }

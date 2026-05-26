@@ -13,7 +13,7 @@ struct DriverDashboardView: View {
         NavigationStack(path: $navigationPath) {
 
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 if viewModel.isLoading && viewModel.vehicle == nil {
                     ProgressView()
@@ -28,8 +28,8 @@ struct DriverDashboardView: View {
                                 .buttonStyle(.plain)
                             } else {
                                 Text("No vehicle assigned.")
-                                    .font(themeModel.body())
-                                    .foregroundStyle(themeModel.textSecondary)
+                                    .font(.body)
+                                    .foregroundStyle(Color.secondary)
                                     .padding()
                             }
 
@@ -44,19 +44,19 @@ struct DriverDashboardView: View {
             .navigationTitle("Driver Portal")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: themeModel.spacingMD) {
+                    HStack(spacing: 16) {
                         Button(action: {
                             showingNotifications = true
                         }) {
                             Image(systemName: "bell")
                                 .font(.title3)
-                                .foregroundStyle(themeModel.textPrimary)
+                                .foregroundStyle(Color.primary)
                         }
 
                         NavigationLink(value: DriverDestination.profile) {
                             Image(systemName: "person.crop.circle.fill")
                                 .font(.title2)
-                                .foregroundStyle(themeModel.driverPrimary)
+                                .foregroundStyle(Color.green)
                         }
                     }
                 }
@@ -97,78 +97,78 @@ struct DriverDashboardView: View {
 extension DriverDashboardView {
 
     func vehicleCard(_ vehicle: Vehicle) -> some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
 
             HStack {
 
-                VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                VStack(alignment: .leading, spacing: 8) {
 
                     Text("Assigned Vehicle")
-                        .font(themeModel.bodyMedium())
-                        .foregroundStyle(themeModel.textSecondary)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(Color.secondary)
 
                     Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
-                        .font(themeModel.title())
-                        .foregroundStyle(themeModel.textPrimary)
+                        .font(.title.bold())
+                        .foregroundStyle(Color.primary)
 
                     Text(vehicle.licensePlate ?? "")
-                        .font(themeModel.bodyMedium())
-                        .foregroundStyle(themeModel.driverPrimary)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(Color.green)
                 }
 
                 Spacer()
 
-                VStack(alignment: .trailing, spacing: themeModel.spacingSM) {
+                VStack(alignment: .trailing, spacing: 8) {
                     Image(systemName: "truck.box.fill")
                         .font(.system(size: 36))
-                        .foregroundStyle(themeModel.driverPrimary.opacity(0.7))
+                        .foregroundStyle(Color.green.opacity(0.7))
                     HStack(spacing: 4) {
                         Text("View Details")
-                            .font(themeModel.caption())
-                            .foregroundStyle(themeModel.driverPrimary)
+                            .font(.footnote)
+                            .foregroundStyle(Color.green)
                         Image(systemName: "chevron.right")
                             .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(themeModel.driverPrimary)
+                            .foregroundStyle(Color.green)
                     }
                 }
             }
 
-            HStack(spacing: themeModel.spacingLG) {
+            HStack(spacing: 24) {
 
                 Label("\(Int(vehicle.mileage ?? 0))km", systemImage: "location.fill")
-                    .font(themeModel.bodyMedium())
-                    .foregroundStyle(themeModel.driverPrimary)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Color.green)
             }
         }
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                .stroke(themeModel.driverPrimary.opacity(0.2), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.green.opacity(0.2), lineWidth: 1)
         )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+
     }
 
     var summaryCardsSection: some View {
 
-        VStack(spacing: themeModel.spacingMD) {
-            HStack(spacing: themeModel.spacingMD) {
-                MetricCard(icon: "point.topleft.down.to.point.bottomright.curvepath", value: "\(viewModel.todaysTrips.count)", label: "Today's Trips", color: themeModel.warning)
-                MetricCard(icon: "timer", value: "\(viewModel.trips.filter { $0.status == .completed }.count)", label: "Completed", color: themeModel.analyticsPurple)
+        VStack(spacing: 16) {
+            HStack(spacing: 16) {
+                MetricCard(icon: "point.topleft.down.to.point.bottomright.curvepath", value: "\(viewModel.todaysTrips.count)", label: "Today's Trips", color: Color.yellow)
+                MetricCard(icon: "timer", value: "\(viewModel.trips.filter { $0.status == .completed }.count)", label: "Completed", color: Color.purple)
             }
         }
     }
 
     var tripsSection: some View {
 
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
 
             SectionHeader(title: "Today's Trips")
 
             if viewModel.todaysTrips.isEmpty {
                 Text("No trips scheduled for today.")
-                    .font(themeModel.body())
-                    .foregroundStyle(themeModel.textSecondary)
+                    .font(.body)
+                    .foregroundStyle(Color.secondary)
             } else {
                 ForEach(viewModel.todaysTrips) { trip in
                     NavigationLink(value: DriverDestination.tripDetail(trip)) {
@@ -184,11 +184,11 @@ extension DriverDashboardView {
     func tripCard(_ trip: Trip) -> some View {
         let statusColor: Color = {
             switch trip.status {
-            case .scheduled: return themeModel.warning
-            case .active:    return themeModel.driverPrimary
-            case .completed: return themeModel.success
-            case .cancelled: return themeModel.danger
-            default:         return themeModel.textDisabled
+            case .scheduled: return Color.yellow
+            case .active:    return Color.green
+            case .completed: return Color.green
+            case .cancelled: return Color.red
+            default:         return Color(.quaternaryLabel)
             }
         }()
 
@@ -202,12 +202,12 @@ extension DriverDashboardView {
             }
         }()
 
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
 
             HStack {
                 Text("Route #\(trip.id.uuidString.prefix(6).uppercased())")
-                    .font(themeModel.headline())
-                    .foregroundStyle(themeModel.driverPrimary)
+                    .font(.headline)
+                    .foregroundStyle(Color.green)
 
                 Spacer()
 
@@ -219,27 +219,27 @@ extension DriverDashboardView {
                     trip.startTime?.formatted(date: .omitted, time: .shortened) ?? "N/A",
                     systemImage: "clock"
                 )
-                .font(themeModel.caption())
-                .foregroundStyle(themeModel.textSecondary)
+                .font(.footnote)
+                .foregroundStyle(Color.secondary)
 
                 Spacer()
 
                 HStack(spacing: 4) {
                     Text("View Details")
-                        .font(themeModel.caption())
-                        .foregroundStyle(themeModel.driverPrimary)
+                        .font(.footnote)
+                        .foregroundStyle(Color.green)
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(themeModel.driverPrimary)
+                        .foregroundStyle(Color.green)
                 }
             }
         }
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
         )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+
     }
 }

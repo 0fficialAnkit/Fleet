@@ -5,26 +5,26 @@ struct OrdersView: View {
     @State private var selectedFilter: TripStatus? = nil
     @State private var selectedOrderType: OrderType? = nil
     @State private var navigationPath = [Trip]()
-    
+
     var filteredTrips: [Trip] {
         if let status = selectedFilter {
             return viewModel.trips.filter { $0.status == status }
         }
         return viewModel.trips
     }
-    
+
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
-                
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 if viewModel.isLoading && viewModel.trips.isEmpty {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: themeModel.spacingMD) {
-                            
+                        VStack(spacing: 16) {
+
                             // Filters
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
@@ -40,15 +40,15 @@ struct OrdersView: View {
                                         }
                                     }
                                 }
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .padding(.horizontal, 16)
                             }
-                            .padding(.vertical, themeModel.spacingSM)
-                            
+                            .padding(.vertical, 8)
+
                             // Orders List
                             if filteredTrips.isEmpty {
                                 Text("No orders found.")
-                                    .font(themeModel.body(16))
-                                    .foregroundColor(themeModel.textSecondary)
+                                    .font(.body)
+                                    .foregroundColor(Color.secondary)
                                     .padding(.top, 40)
                             } else {
                                 ForEach(filteredTrips) { trip in
@@ -57,10 +57,10 @@ struct OrdersView: View {
                                     }
                                     .buttonStyle(.plain)
                                 }
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .padding(.horizontal, 16)
                             }
                         }
-                        .padding(.bottom, themeModel.spacingXXL)
+                        .padding(.bottom, 40)
                     }
                 }
             }
@@ -78,7 +78,7 @@ struct OrdersView: View {
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(themeModel.textPrimary)
+                            .foregroundStyle(Color.primary)
                     }
                 }
             }
@@ -104,11 +104,11 @@ struct OrdersView: View {
 struct OrderCardView: View {
     let trip: Trip
     let viewModel: OrdersViewModel
-    
+
     var route: Route? {
         viewModel.route(for: trip.routeId)
     }
-    
+
     var formattedDate: String {
         guard let date = trip.startTime else { return "Not Scheduled" }
         let formatter = DateFormatter()
@@ -116,72 +116,72 @@ struct OrderCardView: View {
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
-    
+
     var body: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+        VStack(alignment: .leading, spacing: 8) {
             // Header: Order ID & Status
             HStack {
                 Text("ORDER #\(trip.id.uuidString.prefix(8).uppercased())")
-                    .font(themeModel.caption(12))
-                    .foregroundColor(themeModel.textTertiary)
-                
+                    .font(.caption)
+                    .foregroundColor(Color(.tertiaryLabel))
+
                 Spacer()
-                
+
                 StatusBadge(text: trip.status?.rawValue.capitalized ?? "Unknown", color: viewModel.getStatusColor(for: trip.status))
             }
-            
+
             // Route Name & Chevron
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(trip.orderType?.displayName ?? route?.routeName ?? "Unknown Route")
-                        .font(themeModel.headline(16))
-                        .foregroundColor(themeModel.textPrimary)
-                    
+                        .font(.body.bold())
+                        .foregroundColor(Color.primary)
+
                     if let dest = route?.endLocation {
                         Text(dest)
-                            .font(themeModel.caption(13))
-                            .foregroundColor(themeModel.textSecondary)
+                            .font(.footnote)
+                            .foregroundColor(Color.secondary)
                             .lineLimit(1)
                     }
                 }
-                
+
                 Spacer()
-                
+
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(themeModel.textTertiary)
+                    .foregroundColor(Color(.tertiaryLabel))
             }
             .padding(.vertical, 2)
-            
-            Divider().background(themeModel.divider)
-            
+
+            Divider().background(Color(.separator))
+
             // Footer: Date & Order Type Badge
             HStack {
                 Label(formattedDate, systemImage: "calendar")
-                    .font(themeModel.caption(12))
-                    .foregroundColor(themeModel.textTertiary)
-                
+                    .font(.caption)
+                    .foregroundColor(Color(.tertiaryLabel))
+
                 Spacer()
-                
+
                 if let type = trip.orderType {
                     Text(type.displayName)
-                        .font(themeModel.small(11))
-                        .foregroundColor(themeModel.accent)
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(Color.teal)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(themeModel.accent.opacity(0.1))
+                        .background(Color.teal.opacity(0.1))
                         .clipShape(Capsule())
                 }
             }
         }
         .contentShape(Rectangle())
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
         )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+
     }
 }
 

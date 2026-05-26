@@ -3,23 +3,23 @@ import SwiftUI
 struct EmployeesView: View {
     var viewModel: EmployeesViewModel
     let roleFilter: String
-    
+
     var filteredEmployees: [Profile] {
         viewModel.employees.filter { profile in
             profile.role.lowercased() == roleFilter.lowercased()
         }
     }
-    
+
     var body: some View {
         Group {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
-                
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: themeModel.spacingMD) {
+                    VStack(spacing: 16) {
                         ForEach(filteredEmployees) { profile in
                             let roleName = viewModel.getRole(for: profile)
-                            
+
                             NavigationLink(destination: EmployeeDetailView(profile: profile, viewModel: viewModel)) {
                                 EmployeeRowView(
                                     profile: profile,
@@ -31,73 +31,72 @@ struct EmployeesView: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(.vertical, themeModel.spacingMD)
-                    .padding(.horizontal, themeModel.spacingMD)
+                    .padding(.vertical, 16)
+                    .padding(.horizontal, 16)
                 }
             }
             }
         }
     }
 
-
 struct EmployeeRowView: View {
     let profile: Profile
     let roleName: String
     let icon: String
     let iconColor: Color
-    
+
     var body: some View {
-        HStack(spacing: themeModel.spacingMD) {
+        HStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(profile.fullName)
-                    .font(themeModel.headline(18))
-                    .foregroundColor(themeModel.textPrimary)
-                
+                    .font(.headline)
+                    .foregroundColor(Color.primary)
+
                 Text(roleName)
-                    .font(themeModel.caption(14))
-                    .foregroundColor(themeModel.textSecondary)
+                    .font(.subheadline)
+                    .foregroundColor(Color.secondary)
             }
-            
+
             Spacer()
-            
+
             Image(systemName: icon)
                 .font(.system(size: 18))
                 .foregroundColor(iconColor)
                 .padding(10)
                 .background(iconColor.opacity(0.15))
                 .clipShape(Circle())
-            
+
             Image(systemName: "chevron.right")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(themeModel.textTertiary)
+                .foregroundColor(Color(.tertiaryLabel))
         }
-//        .padding(themeModel.spacingMD)
-//        .background(themeModel.backgroundElevated)
-//        .cornerRadius(themeModel.radiusLG)
-        .padding(themeModel.spacingMD)
+//        .padding(16)
+//        .background(Color(.systemBackground))
+//        .cornerRadius(20)
+        .padding(16)
         .background(
-            themeModel.surfaceTertiary.opacity(0.35)
+            Color(.tertiarySystemBackground).opacity(0.35)
         )
         .clipShape(
             RoundedRectangle(
-                cornerRadius: themeModel.radiusLG,
+                cornerRadius: 20,
                 style: .continuous
             )
         )
         .glassEffect(
             in: RoundedRectangle(
-                cornerRadius: themeModel.radiusLG,
+                cornerRadius: 20,
                 style: .continuous
             )
         )
         .overlay(
             RoundedRectangle(
-                cornerRadius: themeModel.radiusLG,
+                cornerRadius: 20,
                 style: .continuous
             )
             .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
         )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+
     }
 }
 

@@ -91,7 +91,7 @@ enum UserService {
             role_name: roleName,
             license_number: licenseNumber
         )
-        
+
         let data: Data = try await supabase.functions.invoke(
             "create-user",
             options: FunctionInvokeOptions(body: request)
@@ -113,7 +113,7 @@ enum UserService {
         struct DeleteParams: Encodable {
             let target_user_id: UUID
         }
-        
+
         try await supabase
             .rpc("delete_user_auth", params: DeleteParams(target_user_id: id))
             .execute()
@@ -139,4 +139,3 @@ enum UserService {
             .value
     }
 }
-

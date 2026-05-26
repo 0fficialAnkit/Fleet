@@ -8,7 +8,7 @@ struct DriverChecklistView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var checkedItems: Set<String> = []
     @State private var isSubmitted = false
-    
+
     let preTripItems = [
         "Tire Pressure & Condition",
         "Brake System Test",
@@ -16,18 +16,18 @@ struct DriverChecklistView: View {
         "Lights & Signals",
         "Mirrors & Windshield"
     ]
-    
+
     let postTripItems = [
         "Vehicle Cleanliness",
         "New Damage Inspection",
         "Fuel Level Check",
         "Cargo Area Secured"
     ]
-    
+
     var currentItems: [String] {
         checklistType == .preTrip ? preTripItems : postTripItems
     }
-    
+
     var isFormValid: Bool {
         checkedItems.count == currentItems.count
     }
@@ -51,15 +51,15 @@ struct DriverChecklistView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+                    VStack(alignment: .leading, spacing: 16) {
                         SectionHeader(title: checklistType == .preTrip ? "Pre-Trip Inspection" : "Post-Trip Inspection")
                             .padding(.top)
-                            
+
                         Text("Mandatory Safety Checks")
-                            .font(themeModel.headline())
-                            .foregroundStyle(themeModel.textSecondary)
+                            .font(.headline)
+                            .foregroundStyle(Color.secondary)
                             .padding(.horizontal, 4)
-                        
+
                         ForEach(currentItems, id: \.self) { item in
                             Button(action: {
                                 if checkedItems.contains(item) {
@@ -68,37 +68,37 @@ struct DriverChecklistView: View {
                                     checkedItems.insert(item)
                                 }
                             }) {
-                                
+
                                     HStack {
                                         Image(systemName: iconFor(item: item))
                                             .font(.system(size: 20))
-                                            .foregroundColor(themeModel.driverPrimary)
+                                            .foregroundColor(Color.green)
                                             .frame(width: 30)
 
                                         Text(item)
-                                            .font(themeModel.body())
-                                            .foregroundColor(themeModel.textPrimary)
+                                            .font(.body)
+                                            .foregroundColor(Color.primary)
                                             .padding(.leading, 8)
-                                        
+
                                         Spacer()
-                                        
+
                                         Image(systemName: checkedItems.contains(item) ? "checkmark.circle.fill" : "circle")
-                                            .foregroundColor(checkedItems.contains(item) ? themeModel.success : themeModel.textTertiary)
+                                            .foregroundColor(checkedItems.contains(item) ? Color.green : Color(.tertiaryLabel))
                                             .font(.title3)
                                     }
-                                    .padding(themeModel.spacingMD)
-                                    .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                                    .padding(16)
+                                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                        RoundedRectangle(cornerRadius: 20, style: .continuous)
                                             .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                                     )
-                                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+
                             }
                         }
                     }
                     .padding(.horizontal)
                 }
-                
+
                 Button(action: {
                     isSubmitted = true
                     let notes = "Checked items: " + checkedItems.joined(separator: ", ")
@@ -106,12 +106,12 @@ struct DriverChecklistView: View {
                     dismiss()
                 }) {
                     Text(isSubmitted ? "Submitted Successfully" : "Submit Checklist")
-                        .font(themeModel.headline())
-                        .foregroundColor(isFormValid && !isSubmitted ? themeModel.buttonPrimaryText : themeModel.buttonDisabledText)
+                        .font(.headline)
+                        .foregroundColor(isFormValid && !isSubmitted ? Color(.systemBackground) : Color(.tertiaryLabel))
                         .frame(maxWidth: .infinity)
-                        .padding(themeModel.spacingMD)
-                        .background(isFormValid && !isSubmitted ? themeModel.driverPrimary : themeModel.buttonDisabled)
-                        .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusSM))
+                        .padding(16)
+                        .background(isFormValid && !isSubmitted ? Color.green : Color(.tertiarySystemFill))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .disabled(!isFormValid || isSubmitted)
                 .padding()
@@ -123,10 +123,10 @@ struct DriverChecklistView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundStyle(themeModel.textSecondary)
+                    .foregroundStyle(Color.secondary)
                 }
             }
-            .background(themeModel.backgroundPrimary.ignoresSafeArea())
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
         }
     }
 }

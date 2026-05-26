@@ -16,84 +16,84 @@ struct MaintenanceProfileView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 ScrollView {
-                    VStack(spacing: themeModel.spacingLG) {
+                    VStack(spacing: 24) {
 
                         // MARK: - Profile Header
                         ProfileHeader(
                             icon: "person.crop.circle.fill",
                             name: profileVM.currentUser?.fullName ?? "Mechanic",
                             role: "Senior Mechanic",
-                            accentColor: themeModel.maintenancePrimary
+                            accentColor: Color.brown
                         )
-                        .padding(.top, themeModel.spacingMD)
+                        .padding(.top, 16)
 
                         // MARK: - Stats Strip
-                        HStack(spacing: themeModel.spacingMD) {
-                            StatPill(value: "—", label: "Orders Done", color: themeModel.maintenancePrimary)
-                            StatPill(value: "—", label: "Accuracy", color: themeModel.success)
-                            StatPill(value: "—", label: "Rating", color: themeModel.warning)
+                        HStack(spacing: 16) {
+                            StatPill(value: "—", label: "Orders Done", color: Color.brown)
+                            StatPill(value: "—", label: "Accuracy", color: Color.green)
+                            StatPill(value: "—", label: "Rating", color: Color.yellow)
                         }
-                        .padding(.horizontal, themeModel.spacingMD)
+                        .padding(.horizontal, 16)
 
                         // MARK: - Personal Information
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Personal Information")
-                                .font(themeModel.headline(16))
-                                .foregroundStyle(themeModel.textPrimary)
+                                .font(.body.bold())
+                                .foregroundStyle(Color.primary)
                                 .padding(.bottom, 4)
-                            
+
                             InfoRow(
                                 icon: "person.fill",
                                 label: "Full Name",
                                 value: profileVM.currentUser?.fullName ?? "—",
-                                iconColor: themeModel.maintenancePrimary
+                                iconColor: Color.brown
                             )
 
-                            Divider().background(themeModel.divider)
+                            Divider().background(Color(.separator))
                             InfoRow(
                                 icon: "envelope.fill",
                                 label: "Email",
                                 value: profileVM.currentUser?.email ?? "—",
-                                iconColor: themeModel.maintenancePrimary
+                                iconColor: Color.brown
                             )
-                            
-                            Divider().background(themeModel.divider)
+
+                            Divider().background(Color(.separator))
                             InfoRow(
                                 icon: "phone.fill",
                                 label: "Phone",
                                 value: profileVM.currentUser?.phone ?? "Not Provided",
-                                iconColor: themeModel.maintenancePrimary
+                                iconColor: Color.brown
                             )
-                            
-                            Divider().background(themeModel.divider)
+
+                            Divider().background(Color(.separator))
                             let status = profileVM.currentUser?.userStatus ?? .active
                             InfoRow(
                                 icon: status == .active ? "checkmark.circle.fill" : "xmark.circle.fill",
                                 label: "Status / State",
                                 value: status.rawValue.capitalized,
-                                iconColor: status == .active ? themeModel.success : themeModel.textSecondary,
-                                valueColor: status == .active ? themeModel.success : themeModel.textSecondary
+                                iconColor: status == .active ? Color.green : Color.secondary,
+                                valueColor: status == .active ? Color.green : Color.secondary
                             )
-                            
-                            Divider().background(themeModel.divider)
+
+                            Divider().background(Color(.separator))
                             InfoRow(
                                 icon: "calendar",
                                 label: "Joined",
                                 value: profileVM.currentUser?.createdAt?.formatted(date: .abbreviated, time: .omitted) ?? "—",
-                                iconColor: themeModel.maintenancePrimary
+                                iconColor: Color.brown
                             )
                         }
-                        .padding(themeModel.spacingMD)
-                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                        .padding(16)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
                                 .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
                         )
-                        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                        .padding(.horizontal, themeModel.spacingMD)
+
+                        .padding(.horizontal, 16)
 
                         // MARK: - Menu
                         VStack(spacing: 0) {
@@ -102,7 +102,7 @@ struct MaintenanceProfileView: View {
                                     ActionRow(
                                         icon: item.icon,
                                         title: item.title,
-                                        iconColor: themeModel.maintenancePrimary,
+                                        iconColor: Color.brown,
                                         isDestructive: item.isDestructive
                                     )
                                 }
@@ -110,20 +110,20 @@ struct MaintenanceProfileView: View {
 
                                 if item.title != menuItems.last?.title {
                                     Divider()
-                                        .background(themeModel.divider)
+                                        .background(Color(.separator))
                                         .padding(.leading, 42)
                                 }
                             }
                         }
-                        .padding(.horizontal, themeModel.spacingMD)
-                        .padding(.vertical, themeModel.spacingSM)
-                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .overlay(
-                            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
                                 .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
                         )
-                        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                        .padding(.horizontal, themeModel.spacingMD)
+
+                        .padding(.horizontal, 16)
 
                         // MARK: - Logout
                         Button(action: {
@@ -133,19 +133,19 @@ struct MaintenanceProfileView: View {
                                 Image(systemName: "rectangle.portrait.and.arrow.right")
                                 Text("Sign Out")
                             }
-                            .font(themeModel.bodyMedium())
-                            .foregroundStyle(themeModel.danger)
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.red)
                             .frame(maxWidth: .infinity)
-                            .padding(themeModel.spacingMD)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                            .padding(16)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                                    .stroke(themeModel.danger.opacity(0.25), lineWidth: 0.8)
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                    .stroke(Color.red.opacity(0.25), lineWidth: 0.8)
                             )
-                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+
                         }
-                        .padding(.horizontal, themeModel.spacingMD)
-                        .padding(.bottom, themeModel.spacingLG)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 24)
                     }
                 }
             }
@@ -166,17 +166,17 @@ private struct StatPill: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(themeModel.headline())
+                .font(.headline)
                 .foregroundStyle(color)
             Text(label)
-                .font(themeModel.small())
-                .foregroundStyle(themeModel.textTertiary)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color(.tertiaryLabel))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
+        .padding(.vertical, 16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(color.opacity(0.2), lineWidth: 0.8)
         )
     }

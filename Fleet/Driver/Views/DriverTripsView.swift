@@ -30,14 +30,14 @@ struct DriverTripsView: View {
             HStack(spacing: 12) {
                 ForEach(TripFilter.allCases, id: \.self) { filter in
                     Text(filter.rawValue)
-                        .font(themeModel.bodyMedium())
+                        .font(.body.weight(.medium))
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .background(
                             Capsule()
-                                .fill(selectedFilter == filter ? themeModel.driverPrimary : Color.gray.opacity(0.15))
+                                .fill(selectedFilter == filter ? Color.green : Color.gray.opacity(0.15))
                         )
-                        .foregroundStyle(selectedFilter == filter ? .white : themeModel.textPrimary)
+                        .foregroundStyle(selectedFilter == filter ? .white : Color.primary)
                         .onTapGesture {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                 selectedFilter = filter
@@ -63,8 +63,8 @@ struct DriverTripsView: View {
                 } else if filteredTrips.isEmpty {
                     Spacer()
                     Text("No trips found.")
-                        .font(themeModel.body())
-                        .foregroundStyle(themeModel.textSecondary)
+                        .font(.body)
+                        .foregroundStyle(Color.secondary)
                     Spacer()
                 } else {
                     ScrollView {
@@ -80,7 +80,7 @@ struct DriverTripsView: View {
                     }
                 }
             }
-            .background(themeModel.backgroundPrimary.ignoresSafeArea())
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Assigned Routes")
             .navigationDestination(for: DriverDestination.self) { destination in
                 switch destination {
@@ -110,11 +110,11 @@ struct DriverTripCardView: View {
 
     var statusColor: Color {
         switch trip.status {
-        case .scheduled: return themeModel.warning
-        case .active:    return themeModel.driverPrimary
-        case .completed: return themeModel.success
-        case .cancelled: return themeModel.danger
-        case .none:      return themeModel.textDisabled
+        case .scheduled: return Color.yellow
+        case .active:    return Color.green
+        case .completed: return Color.green
+        case .cancelled: return Color.red
+        case .none:      return Color(.quaternaryLabel)
         }
     }
 
@@ -129,12 +129,12 @@ struct DriverTripCardView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
 
             HStack {
                 Text("Route #\(trip.id.uuidString.prefix(6).uppercased())")
-                    .font(themeModel.headline())
-                    .foregroundStyle(themeModel.textPrimary)
+                    .font(.headline)
+                    .foregroundStyle(Color.primary)
 
                 Spacer()
 
@@ -146,28 +146,28 @@ struct DriverTripCardView: View {
                     trip.startTime?.formatted(date: .omitted, time: .shortened) ?? "N/A",
                     systemImage: "clock"
                 )
-                .font(themeModel.caption())
-                .foregroundStyle(themeModel.textTertiary)
+                .font(.footnote)
+                .foregroundStyle(Color(.tertiaryLabel))
 
                 Spacer()
 
                 HStack(spacing: 4) {
                     Text("Tap for details")
-                        .font(themeModel.caption())
-                        .foregroundStyle(themeModel.driverPrimary)
+                        .font(.footnote)
+                        .foregroundStyle(Color.green)
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(themeModel.driverPrimary)
+                        .foregroundStyle(Color.green)
                 }
             }
         }
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
         )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+
     }
 }
 

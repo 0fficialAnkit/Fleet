@@ -38,13 +38,11 @@ struct FleetManagerMainView: View {
                 }
                 .tag(3)
         }
-        .tint(themeModel.accent)
+        .tint(Color.teal)
     }
 }
-
 
 #Preview {
     FleetManagerMainView()
         .environment(AuthViewModel())
 }
-
