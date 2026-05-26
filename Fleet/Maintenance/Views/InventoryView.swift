@@ -160,12 +160,15 @@ struct InventoryView: View {
                     }
                 }
             }
-            .sheet(isPresented: $isShowingSheet) {
+            .sheet(isPresented: $isShowingSheet, onDismiss: {
+                selectedItem = nil
+            }) {
                 InventoryItemSheet(editingItem: selectedItem) {
                     Task {
                         await loadInventory()
                     }
                 }
+                .id(selectedItem?.id)
             }
             .task {
                 await loadInventory()
