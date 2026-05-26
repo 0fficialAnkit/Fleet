@@ -383,8 +383,8 @@ struct InventoryItemSheet: View {
                                     .foregroundColor(Color.secondary)
                                     .kerning(1.2)
 
-                                TextField("", text: $unitCost, prompt: Text("0.00").foregroundColor(Color(.placeholderText)))
-                                    .keyboardType(.decimalPad)
+                                TextField("", text: $unitCost, prompt: Text("0").foregroundColor(Color(.placeholderText)))
+                                    .keyboardType(.numberPad)
                                     .foregroundColor(Color.primary)
                                     .padding(.horizontal, 18)
                                     .frame(height: 56)
@@ -470,7 +470,25 @@ struct InventoryItemSheet: View {
                     partName = item.partName ?? ""
                     stockQuantity = "\(item.stockQuantity ?? 0)"
                     reorderLevel = "\(item.reorderLevel ?? 0)"
-                    unitCost = item.unitCost != nil ? String(format: "%.2f", item.unitCost!) : ""
+                    unitCost = item.unitCost != nil ? "\(Int(item.unitCost!))" : ""
+                }
+            }
+            .onChange(of: stockQuantity) { _, newValue in
+                let filtered = newValue.filter { "0123456789".contains($0) }
+                if filtered != newValue {
+                    stockQuantity = filtered
+                }
+            }
+            .onChange(of: reorderLevel) { _, newValue in
+                let filtered = newValue.filter { "0123456789".contains($0) }
+                if filtered != newValue {
+                    reorderLevel = filtered
+                }
+            }
+            .onChange(of: unitCost) { _, newValue in
+                let filtered = newValue.filter { "0123456789".contains($0) }
+                if filtered != newValue {
+                    unitCost = filtered
                 }
             }
         }
