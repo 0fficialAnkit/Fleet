@@ -8,50 +8,51 @@ struct DriverDashboardView: View {
     @State private var selectedTrip: Trip?
 
     var body: some View {
-        ZStack {
-            themeModel.backgroundPrimary.ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                themeModel.backgroundPrimary.ignoresSafeArea()
 
-            if viewModel.isLoading && viewModel.trips.isEmpty {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: themeModel.driverPrimary))
-            } else {
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: themeModel.spacingLG) {
-                        greetingHeader
-                        activeTripBanner
-                        statsRow
-                        upcomingTripSection
-                        quickActionsSection
+                if viewModel.isLoading && viewModel.trips.isEmpty {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: themeModel.driverPrimary))
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: themeModel.spacingLG) {
+                            greetingHeader
+                            activeTripBanner
+                            statsRow
+                            upcomingTripSection
+                            quickActionsSection
+                        }
+                        .padding(.horizontal, themeModel.spacingMD)
+                        .padding(.top, themeModel.spacingSM)
+                        .padding(.bottom, themeModel.spacingXXL)
                     }
-                    .padding(.horizontal, themeModel.spacingMD)
-                    .padding(.top, themeModel.spacingSM)
-                    .padding(.bottom, themeModel.spacingXXL)
                 }
             }
-        }
-        .navigationTitle("Dashboard")
-        .navigationBarTitleDisplayMode(.large)
-        .navigationDestination(for: DriverDestination.self) { destination in
-            switch destination {
-            case .profile:
-                DriverProfileView()
-            case .tripDetail(let t):
-                TripDetailView(
-                    trip: t,
-                    onStart: { id, vId, notes, urls in viewModel.startTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) },
-                    onEnd:   { id, vId, notes, urls in viewModel.endTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) }
-                )
-            case .vehicleDetail(let v):
-                DriverVehicleDetailView(vehicle: v)
-            case .reportIssue(let v):
-                DriverReportIssueView(vehicle: v)
+            .navigationTitle("Dashboard")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: NotificationsView()) {
+                        Image(systemName: "bell.badge")
+                            .font(.title3)
+                            .foregroundStyle(themeModel.driverPrimary)
+                    }
+
+                    NavigationLink(destination: DriverProfileView()) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(themeModel.driverPrimary)
+                    }
+                }
             }
-        }
-        .task {
-            viewModel.currentUserId = authViewModel.currentUser?.id
-            viewModel.driverName = authViewModel.currentProfile?.fullName ?? "Driver"
-            await viewModel.loadData()
-            viewModel.setupRealtime()
+            .task {
+                viewModel.currentUserId = authViewModel.currentUser?.id
+                viewModel.driverName = authViewModel.currentProfile?.fullName ?? "Driver"
+                await viewModel.loadData()
+                viewModel.setupRealtime()
+            }
         }
     }
 }
@@ -86,7 +87,11 @@ extension DriverDashboardView {
             let route = viewModel.routeForTrip(trip)
             let vehicle = viewModel.vehicleForTrip(trip)
 
-            NavigationLink(value: DriverDestination.tripDetail(trip)) {
+            NavigationLink(destination: TripDetailView(
+                trip: trip,
+                onStart: { id, vId, notes, urls in viewModel.startTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) },
+                onEnd:   { id, vId, notes, urls in viewModel.endTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) }
+            )) {
                 VStack(alignment: .leading, spacing: themeModel.spacingMD) {
                     HStack {
                         HStack(spacing: 8) {
@@ -245,7 +250,11 @@ extension DriverDashboardView {
             SectionHeader(title: "Upcoming Assignment")
 
             if let trip = viewModel.upcomingTrip {
-                NavigationLink(value: DriverDestination.tripDetail(trip)) {
+                NavigationLink(destination: TripDetailView(
+                    trip: trip,
+                    onStart: { id, vId, notes, urls in viewModel.startTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) },
+                    onEnd:   { id, vId, notes, urls in viewModel.endTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) }
+                )) {
                     EnrichedTripCard(
                         trip: trip,
                         route: viewModel.routeForTrip(trip),
@@ -280,7 +289,7 @@ extension DriverDashboardView {
 
             if let vehicle = viewModel.assignedVehicle {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: themeModel.spacingMD) {
-                    NavigationLink(value: DriverDestination.vehicleDetail(vehicle)) {
+                    NavigationLink(destination: DriverVehicleDetailView(vehicle: vehicle)) {
                         QuickActionCard(
                             icon: "info.circle.fill",
                             title: "Vehicle Info",
@@ -290,7 +299,7 @@ extension DriverDashboardView {
                     }
                     .buttonStyle(.plain)
 
-                    NavigationLink(value: DriverDestination.reportIssue(vehicle)) {
+                    NavigationLink(destination: DriverReportIssueView(vehicle: vehicle)) {
                         QuickActionCard(
                             icon: "exclamationmark.triangle.fill",
                             title: "Report Issue",
