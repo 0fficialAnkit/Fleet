@@ -448,8 +448,8 @@ struct TripDetailView: View {
                 status: .scheduled,
                 orderType: .pickUpAndDrop
             ),
-            onStart: { _, _, _ in },
-            onEnd:   { _, _, _ in }
+            onStart: { _, _, _, _ in },
+            onEnd:   { _, _, _, _ in }
         )
     }
     .environment(AuthViewModel())
