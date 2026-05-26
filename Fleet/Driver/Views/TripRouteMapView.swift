@@ -12,8 +12,8 @@ struct TripRouteMapView: View {
     // Resolved state
     @State private var originCoord: CLLocationCoordinate2D?
     @State private var destinationCoord: CLLocationCoordinate2D?
-    @State private var originMapItem: MKMapItem?       // used for Navigate in Maps (source)
-    @State private var destinationMapItem: MKMapItem?  // used for Navigate in Maps (destination)
+    @State private var originMapItem: MKMapItem?
+    @State private var destinationMapItem: MKMapItem?
     @State private var mkRoute: MKRoute?
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var isLoading = true
@@ -35,15 +35,16 @@ struct TripRouteMapView: View {
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .frame(height: 260)
 
-            // "Navigate" pill — shown once both addresses are resolved
             if originMapItem != nil && destinationMapItem != nil {
                 openInMapsButton
                     .padding(.bottom, 12)
             }
         }
-        .onAppear {
+        // Re-runs automatically whenever startAddress or endAddress changes,
+        // which handles the case where route loads after the view appears.
+        .task(id: "\(startAddress ?? "")|\(endAddress ?? "")") {
             locationManager.requestPermission()
-            Task { await resolveRoute() }
+            await resolveRoute()
         }
         .onDisappear {
             locationManager.stopUpdating()
@@ -54,25 +55,20 @@ struct TripRouteMapView: View {
 
     private var liveMap: some View {
         Map(position: $cameraPosition) {
-
-            // Driver's live blue dot
             UserAnnotation()
 
-            // Origin pin
             if let o = originCoord {
                 Annotation("Pickup", coordinate: o, anchor: .bottom) {
                     pinView(color: .green, icon: "circle.fill")
                 }
             }
 
-            // Destination pin
             if let d = destinationCoord {
                 Annotation("Drop-off", coordinate: d, anchor: .bottom) {
                     pinView(color: .red, icon: "mappin.circle.fill")
                 }
             }
 
-            // Driving-directions polyline
             if let route = mkRoute {
                 MapPolyline(route.polyline)
                     .stroke(Color.blue, style: StrokeStyle(
@@ -96,7 +92,7 @@ struct TripRouteMapView: View {
             VStack(spacing: 10) {
                 ProgressView()
                 Text("Loading route…")
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .font(.subheadline)
                     .foregroundStyle(Color.secondary)
             }
         }
@@ -110,7 +106,7 @@ struct TripRouteMapView: View {
                     .font(.system(size: 36))
                     .foregroundStyle(Color.green.opacity(0.4))
                 Text(msg)
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .font(.subheadline)
                     .foregroundStyle(Color.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
@@ -123,7 +119,7 @@ struct TripRouteMapView: View {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
                 Text("Navigate in Maps")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .font(.subheadline.weight(.medium))
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 20)
@@ -148,24 +144,38 @@ struct TripRouteMapView: View {
     // MARK: - Geocoding
 
     private func resolveRoute() async {
-        // Geocode both addresses concurrently
-        async let originItem = geocodeAddress(startAddress)
-        async let destItem   = geocodeAddress(endAddress)
+        // Reset state for fresh resolution
+        isLoading = true
+        errorMessage = nil
+        mkRoute = nil
+        originCoord = nil
+        destinationCoord = nil
+        originMapItem = nil
+        destinationMapItem = nil
 
-        let (origin, destination) = await (originItem, destItem)
+        guard let start = startAddress, !start.isEmpty,
+              let end   = endAddress,   !end.isEmpty
+        else {
+            errorMessage = "No route assigned to this trip."
+            isLoading = false
+            return
+        }
+
+        // Geocode both addresses concurrently
+        async let originResult = geocodeAddress(start)
+        async let destResult   = geocodeAddress(end)
+        let (origin, destination) = await (originResult, destResult)
 
         guard let origin, let destination else {
-            errorMessage = startAddress == nil && endAddress == nil
-                ? "No route assigned to this trip."
-                : "Could not resolve route addresses."
+            errorMessage = "Could not find route locations on the map."
             isLoading = false
             return
         }
 
         originCoord        = origin.location.coordinate
         destinationCoord   = destination.location.coordinate
-        originMapItem      = origin       // store for Navigate in Maps
-        destinationMapItem = destination  // store for Navigate in Maps
+        originMapItem      = origin
+        destinationMapItem = destination
 
         guard let oCoord = originCoord, let dCoord = destinationCoord else {
             errorMessage = "Could not read route coordinates."
@@ -173,14 +183,14 @@ struct TripRouteMapView: View {
             return
         }
 
-        // Calculate driving directions
-        let request = MKDirections.Request()
-        request.source        = origin
-        request.destination   = destination
-        request.transportType = .automobile
+        // Request driving directions
+        let directionsRequest = MKDirections.Request()
+        directionsRequest.source        = origin
+        directionsRequest.destination   = destination
+        directionsRequest.transportType = .automobile
 
         do {
-            let response = try await MKDirections(request: request).calculate()
+            let response = try await MKDirections(request: directionsRequest).calculate()
             mkRoute = response.routes.first
 
             if let polyline = response.routes.first?.polyline {
@@ -196,36 +206,34 @@ struct TripRouteMapView: View {
                 longitude: (oCoord.longitude + dCoord.longitude) / 2
             )
             cameraPosition = .region(
-                MKCoordinateRegion(center: center,
-                                   latitudinalMeters: 30_000,
-                                   longitudinalMeters: 30_000)
+                MKCoordinateRegion(
+                    center: center,
+                    latitudinalMeters: 30_000,
+                    longitudinalMeters: 30_000
+                )
             )
         }
 
         isLoading = false
     }
 
-    private func geocodeAddress(_ address: String?) async -> MKMapItem? {
-        guard let address, !address.isEmpty else { return nil }
+    private func geocodeAddress(_ address: String) async -> MKMapItem? {
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = address
         request.resultTypes = .address
         return try? await MKLocalSearch(request: request).start().mapItems.first
     }
 
-    // MARK: - Open Apple Maps with exact fleet-manager-specified route
+    // MARK: - Open Apple Maps
 
     func openAppleMapsNavigation() {
         guard let sourceItem = originMapItem,
               let destItem   = destinationMapItem
         else { return }
 
-        // Label with the real addresses from the order
         sourceItem.name = startAddress ?? "Pickup"
         destItem.name   = endAddress   ?? "Destination"
 
-        // Pass BOTH points so Apple Maps routes from the fleet-manager's
-        // start location to the fleet-manager's end location exactly
         MKMapItem.openMaps(
             with: [sourceItem, destItem],
             launchOptions: [
@@ -234,4 +242,22 @@ struct TripRouteMapView: View {
             ]
         )
     }
+}
+
+// MARK: - Preview
+
+#Preview("With Route") {
+    TripRouteMapView(
+        startAddress: "Connaught Place, New Delhi",
+        endAddress: "Indira Gandhi International Airport, Delhi"
+    )
+    .padding()
+}
+
+#Preview("No Route") {
+    TripRouteMapView(
+        startAddress: nil,
+        endAddress: nil
+    )
+    .padding()
 }
