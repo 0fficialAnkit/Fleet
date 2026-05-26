@@ -18,7 +18,7 @@ struct ProfileView: View {
                                 icon: "shield.checkered",
                                 name: user.fullName,
                                 role: viewModel.roleName,
-                                accentColor: Color.purple
+                                accentColor: Color.blue
                             )
                             .padding(.top, 32)
 
@@ -46,11 +46,8 @@ struct ProfileView: View {
                                     }
                                 }
                                 .padding(16)
-                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                        .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                                )
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                             .padding(.horizontal, 16)
 
@@ -62,11 +59,8 @@ struct ProfileView: View {
                                     ActionRow(icon: "questionmark.circle.fill", title: "Help & Support")
                                 }
                                 .padding(16)
-                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                        .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                                )
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                             .padding(.horizontal, 16)
 
@@ -82,12 +76,8 @@ VStack(spacing: 0) {
                                 }
                             }
                             .padding(16)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                            )
-
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                             .padding(.horizontal, 16)
                             .padding(.top, 16)
                         }

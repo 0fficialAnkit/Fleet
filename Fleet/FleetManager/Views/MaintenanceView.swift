@@ -76,8 +76,8 @@ struct MaintenanceRowView: View {
                 .clipShape(Capsule())
         }
         .padding(16)
-        .background(Color(.systemBackground))
-        .cornerRadius(20)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
