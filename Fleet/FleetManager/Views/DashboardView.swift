@@ -168,7 +168,7 @@ struct DashboardView: View {
         let activeTrips = viewModel.trips.filter { $0.status == .active }
         return VStack(alignment: .leading, spacing: 16) {
             HStack {
-                SectionHeader(title: "Live Vehicles")
+                SectionHeader(title: "Live Fleet")
                 Spacer()
                 if !activeTrips.isEmpty {
                     HStack(spacing: 4) {
@@ -183,36 +183,44 @@ struct DashboardView: View {
             }
             .padding(.horizontal, 16)
 
-            if activeTrips.isEmpty {
-                Text("No active trips right now.")
-                    .font(.body)
-                    .foregroundStyle(Color.secondary)
-                    .padding(.horizontal, 16)
-            } else {
+            // Map is ALWAYS visible — same Apple Maps style as driver's trip detail.
+            // Shows fleet manager's blue dot + green/red pins for every active trip.
+            DashboardMapView(
+                activeTrips: activeTrips,
+                routes: viewModel.routes,
+                profiles: viewModel.profiles,
+                vehicleLocations: viewModel.vehicleLocations
+            )
+            .padding(.horizontal, 16)
+
+            // Active trip cards below the map
+            if !activeTrips.isEmpty {
                 ForEach(activeTrips) { trip in
                     let route = viewModel.routes.first { $0.id == trip.routeId }
                     let driverName = viewModel.driverName(for: trip.driverId)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        // Driver + vehicle label
-                        HStack(spacing: 8) {
-                            Image(systemName: "person.crop.circle.fill")
-                                .foregroundStyle(Color.blue)
+                    HStack(spacing: 10) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .foregroundStyle(Color.teal)
+                            .font(.system(size: 16))
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(driverName)
                                 .font(.subheadline.bold())
                                 .foregroundStyle(Color.primary)
-                            Spacer()
-                            StatusBadge(text: "Active", color: Color.green)
+                            if let start = route?.startLocation, let end = route?.endLocation {
+                                Text("\(start) → \(end)")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.secondary)
+                                    .lineLimit(1)
+                            }
                         }
-                        .padding(.horizontal, 16)
-
-                        // Reuse the exact same map from the driver's TripDetailView
-                        TripRouteMapView(
-                            startAddress: route?.startLocation,
-                            endAddress: route?.endLocation
-                        )
-                        .padding(.horizontal, 16)
+                        Spacer()
+                        StatusBadge(text: "Active", color: .green)
                     }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .padding(.horizontal, 16)
                 }
             }
         }

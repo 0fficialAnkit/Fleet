@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 @MainActor
 @Observable
@@ -10,6 +11,10 @@ final class DriverTripsViewModel {
     var isLoading = false
     var errorMessage: String?
     var currentUserId: UUID?
+
+    // MARK: - Live location tracking
+    private var locationManager = LocationManager()
+    private var trackingTask: Task<Void, Never>?
 
     var sortedTrips: [Trip] {
         trips.sorted(by: { ($0.startTime ?? Date.distantFuture) < ($1.startTime ?? Date.distantFuture) })
@@ -76,6 +81,7 @@ final class DriverTripsViewModel {
                     try? await InspectionService.createInspectionPhoto(photo)
                 }
                 await loadData()
+                startLocationTracking(vehicleId: vehicleId)
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -86,6 +92,7 @@ final class DriverTripsViewModel {
         Task {
             do {
                 try await TripService.endTrip(id: id)
+                stopLocationTracking()
                 let inspectionId = UUID()
                 let inspection = VehicleInspection(id: inspectionId, vehicleId: vehicleId, driverId: currentUserId, tripId: id, inspectionType: .postTrip, notes: notes, createdAt: Date())
                 try? await InspectionService.createInspection(inspection)
@@ -98,6 +105,31 @@ final class DriverTripsViewModel {
                 errorMessage = error.localizedDescription
             }
         }
+    }
+
+    // MARK: - Location tracking
+
+    private func startLocationTracking(vehicleId: UUID) {
+        stopLocationTracking()
+        locationManager.requestPermission()
+        trackingTask = Task { [weak self] in
+            while !Task.isCancelled {
+                if let coord = self?.locationManager.coordinate {
+                    await VehicleLocationService.insertLocation(
+                        vehicleId: vehicleId,
+                        latitude: coord.latitude,
+                        longitude: coord.longitude,
+                        speed: nil
+                    )
+                }
+                try? await Task.sleep(for: .seconds(10))
+            }
+        }
+    }
+
+    private func stopLocationTracking() {
+        trackingTask?.cancel()
+        trackingTask = nil
     }
 
     // MARK: - Helpers
