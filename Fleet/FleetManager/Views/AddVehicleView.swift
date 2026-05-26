@@ -33,28 +33,27 @@ struct AddVehicleView: View {
                         VStack(alignment: .leading, spacing: themeModel.spacingSM) {
                             SectionHeader(title: "Basic Details")
                                 .padding(.horizontal, themeModel.spacingMD)
-                            
-                            VStack(spacing: 0) {
-                                TextField("Manufacturer (e.g. Ford)", text: $make)
+                                                        VStack(spacing: 0) {
+                                TextField("", text: $make, prompt: Text("Manufacturer (e.g. Ford)").foregroundColor(themeModel.placeholder))
                                     .padding(.vertical, 12)
                                     .foregroundColor(themeModel.textPrimary)
                                 
                                 Divider().background(themeModel.divider)
                                 
-                                TextField("Model (e.g. Transit)", text: $model)
+                                TextField("", text: $model, prompt: Text("Model (e.g. Transit)").foregroundColor(themeModel.placeholder))
                                     .padding(.vertical, 12)
                                     .foregroundColor(themeModel.textPrimary)
                                     
                                 Divider().background(themeModel.divider)
                                 
-                                TextField("Year (e.g. 2024)", text: $year)
+                                TextField("", text: $year, prompt: Text("Year (e.g. 2024)").foregroundColor(themeModel.placeholder))
                                     .keyboardType(.numberPad)
                                     .padding(.vertical, 12)
                                     .foregroundColor(themeModel.textPrimary)
                                 
                                 Divider().background(themeModel.divider)
                                 
-                                TextField("License Plate", text: $licensePlate)
+                                TextField("", text: $licensePlate, prompt: Text("License Plate").foregroundColor(themeModel.placeholder))
                                     .textInputAutocapitalization(.characters)
                                     .padding(.vertical, 12)
                                     .foregroundColor(themeModel.textPrimary)
@@ -73,16 +72,15 @@ struct AddVehicleView: View {
                         VStack(alignment: .leading, spacing: themeModel.spacingSM) {
                             SectionHeader(title: "Specifications")
                                 .padding(.horizontal, themeModel.spacingMD)
-                            
-                            VStack(spacing: 0) {
-                                TextField("Tank Capacity (L)", text: $tankCapacity)
+                                                        VStack(spacing: 0) {
+                                TextField("", text: $tankCapacity, prompt: Text("Tank Capacity (L)").foregroundColor(themeModel.placeholder))
                                     .keyboardType(.decimalPad)
                                     .padding(.vertical, 12)
                                     .foregroundColor(themeModel.textPrimary)
                                 
                                 Divider().background(themeModel.divider)
                                 
-                                TextField("Mileage (km/l)", text: $mileage)
+                                TextField("", text: $mileage, prompt: Text("Mileage (km/l)").foregroundColor(themeModel.placeholder))
                                     .keyboardType(.decimalPad)
                                     .padding(.vertical, 12)
                                     .foregroundColor(themeModel.textPrimary)
@@ -102,15 +100,12 @@ struct AddVehicleView: View {
             }
             .navigationTitle("Add Vehicle")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(themeModel.info)
+                    .foregroundColor(themeModel.accent)
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
@@ -148,7 +143,7 @@ struct AddVehicleView: View {
                             isSaving = false
                         }
                     }
-                    .foregroundColor(themeModel.info)
+                    .foregroundColor(themeModel.accent)
                     .bold()
                     .disabled(isSaving)
                 }
@@ -171,7 +166,6 @@ struct AddVehicleView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 }
 

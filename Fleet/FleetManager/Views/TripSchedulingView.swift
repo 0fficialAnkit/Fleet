@@ -160,3 +160,36 @@ struct SummaryRow: View {
         }
     }
 }
+
+#Preview {
+    NavigationStack {
+        TripSchedulingView(
+            orderType: .bulkOrderShip,
+            selectedVehicle: Vehicle(
+                id: UUID(),
+                make: "Ford",
+                model: "Transit",
+                year: 2024,
+                vin: "12345",
+                licensePlate: "FL-99-TR",
+                tankCapacity: 80.0,
+                mileage: 12.4,
+                purchaseDate: Date(),
+                assignedDriverId: nil,
+                status: .active
+            ),
+            selectedDriver: Profile(
+                id: UUID(),
+                fullName: "John Doe",
+                email: "john@example.com",
+                phone: "1234567890",
+                licenseNumber: "LIC12345",
+                role: "driver",
+                status: "active",
+                createdAt: Date()
+            ),
+            viewModel: OrdersViewModel(),
+            selectedOrderType: .constant(.bulkOrderShip)
+        )
+    }
+}

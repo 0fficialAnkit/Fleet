@@ -8,6 +8,13 @@ final class OrdersViewModel {
     private(set) var profiles: [Profile] = []
     private(set) var vehicles: [Vehicle] = []
 
+    init(trips: [Trip] = [], routes: [Route] = [], profiles: [Profile] = [], vehicles: [Vehicle] = []) {
+        self.trips = trips
+        self.routes = routes
+        self.profiles = profiles
+        self.vehicles = vehicles
+    }
+
     var isLoading = false
     var errorMessage: String?
 

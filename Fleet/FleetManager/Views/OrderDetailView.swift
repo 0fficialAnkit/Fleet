@@ -118,7 +118,7 @@ struct OrderDetailView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 17, weight: .medium))
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(themeModel.textPrimary)
                         .padding(8)
                 }
@@ -154,4 +154,21 @@ struct OrderDetailInfoRow: View {
     }
 }
 
-
+#Preview {
+    NavigationStack {
+        OrderDetailView(
+            trip: Trip(
+                id: UUID(),
+                vehicleId: UUID(),
+                driverId: UUID(),
+                routeId: UUID(),
+                startTime: Date(),
+                endTime: Date().addingTimeInterval(3600),
+                distance: 42.5,
+                status: .active,
+                orderType: .bulkOrderShip
+            ),
+            viewModel: OrdersViewModel()
+        )
+    }
+}

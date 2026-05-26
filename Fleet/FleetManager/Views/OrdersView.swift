@@ -72,7 +72,7 @@ struct OrdersView: View {
                             Button(action: {
                                 selectedOrderType = type
                             }) {
-                                Text(type.rawValue)
+                                Text(type.displayName)
                             }
                         }
                     } label: {
@@ -152,7 +152,7 @@ struct OrderCardView: View {
             // Route Name & Chevron
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(route?.routeName ?? "Unknown Route")
+                    Text(trip.orderType?.displayName ?? route?.routeName ?? "Unknown Route")
                         .font(themeModel.headline(16))
                         .foregroundColor(themeModel.textPrimary)
                     
@@ -183,7 +183,7 @@ struct OrderCardView: View {
                 Spacer()
                 
                 if let type = trip.orderType {
-                    Text(type.rawValue)
+                    Text(type.displayName)
                         .font(themeModel.small(11))
                         .foregroundColor(themeModel.accent)
                         .padding(.horizontal, 8)
