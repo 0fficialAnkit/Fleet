@@ -52,6 +52,8 @@ struct DriverDashboardView: View {
                 viewModel.currentUserId = userId
                 viewModel.driverName = authViewModel.currentProfile?.fullName ?? "Driver"
                 Task {
+                    viewModel.requestLocationPermission()
+                    
                     await viewModel.loadData()
                     viewModel.setupRealtime()
                 }
