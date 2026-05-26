@@ -3,19 +3,26 @@ import SwiftUI
 struct WorkOrderListView: View {
     @State private var selectedFilter: WorkOrderStatus? = nil
     @State private var showNewOrderSheet = false
-    @State private var workOrders: [WorkOrder] = []
+    @State private var workOrders: [UnifiedMaintenanceItem] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
-    @State private var navigationPath = [MaintenanceDestination]()
+    
+    let assignedUserId: UUID?
+    let priorityFilter: WorkOrderPriority?
+    
+    init(initialFilter: WorkOrderStatus? = nil, assignedUserId: UUID? = nil, priorityFilter: WorkOrderPriority? = nil) {
+        self.assignedUserId = assignedUserId
+        self.priorityFilter = priorityFilter
+        self._selectedFilter = State(initialValue: initialFilter)
+    }
 
-    var filteredOrders: [WorkOrder] {
+    var filteredOrders: [UnifiedMaintenanceItem] {
         guard let filter = selectedFilter else { return workOrders }
-        return workOrders.filter { $0.status == filter }
+        return workOrders.filter { $0.unifiedStatus == filter }
     }
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            ZStack {
+        ZStack {
                 themeModel.backgroundPrimary.ignoresSafeArea()
 
                 if isLoading && workOrders.isEmpty {
@@ -28,17 +35,17 @@ struct WorkOrderListView: View {
                             // MARK: - Summary Strip
                             HStack(spacing: themeModel.spacingMD) {
                                 MiniStatBadge(
-                                    count: workOrders.filter { $0.status == .open }.count,
+                                    count: workOrders.filter { $0.unifiedStatus == .open }.count,
                                     label: "Open",
                                     color: themeModel.info
                                 )
                                 MiniStatBadge(
-                                    count: workOrders.filter { $0.status == .inProgress }.count,
+                                    count: workOrders.filter { $0.unifiedStatus == .inProgress }.count,
                                     label: "In Progress",
                                     color: themeModel.warning
                                 )
                                 MiniStatBadge(
-                                    count: workOrders.filter { $0.status == .completed }.count,
+                                    count: workOrders.filter { $0.unifiedStatus == .completed }.count,
                                     label: "Done",
                                     color: themeModel.success
                                 )
@@ -71,9 +78,9 @@ struct WorkOrderListView: View {
                                 .padding(.vertical, themeModel.spacingXXL)
                             } else {
                                 LazyVStack(spacing: themeModel.spacingMD) {
-                                    ForEach(filteredOrders) { order in
-                                        NavigationLink(value: MaintenanceDestination.workOrderDetail(order)) {
-                                            WorkOrderRow(workOrder: order)
+                                    ForEach(filteredOrders) { item in
+                                        NavigationLink(value: getDestination(for: item)) {
+                                            UnifiedWorkItemRow(item: item)
                                         }
                                         .buttonStyle(.plain)
                                     }
@@ -95,22 +102,41 @@ struct WorkOrderListView: View {
                     }
                 }
             }
-            .navigationDestination(for: MaintenanceDestination.self) { destination in
-                switch destination {
-                case .workOrderDetail(let order):
-                    WorkOrderDetailView(workOrder: order)
-                }
-            }
             .task {
                 await loadWorkOrders()
             }
+        }
+    
+
+    private func getDestination(for item: UnifiedMaintenanceItem) -> MaintenanceDestination {
+        switch item {
+        case .workOrder(let wo): return .workOrderDetail(wo)
+        case .issueReport(let ir): return .issueReportDetail(ir)
         }
     }
 
     private func loadWorkOrders() async {
         isLoading = true
         do {
-            workOrders = try await WorkOrderService.fetchAllWorkOrders()
+            var rawWOs: [WorkOrder] = []
+            var rawIRs: [IssueReportRecord] = []
+            
+            if let assignedTo = assignedUserId {
+                rawWOs = try await WorkOrderService.fetchWorkOrdersForUser(assignedTo: assignedTo)
+                rawIRs = try await IssueReportService.fetchIssueReportsAssignedTo(userId: assignedTo)
+            } else {
+                rawWOs = try await WorkOrderService.fetchAllWorkOrders()
+                // If no user ID, fetch all reports? Or just leave empty for now
+            }
+            
+            var unified = rawWOs.map { UnifiedMaintenanceItem.workOrder($0) } +
+                          rawIRs.map { UnifiedMaintenanceItem.issueReport($0) }
+            
+            if let pFilter = priorityFilter {
+                unified = unified.filter { $0.unifiedPriority == pFilter }
+            }
+            
+            workOrders = unified
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -168,9 +194,9 @@ private struct FilterChip: View {
     }
 }
 
-// MARK: - Work Order Row
-struct WorkOrderRow: View {
-    let workOrder: WorkOrder
+// MARK: - Unified Work Item Row
+struct UnifiedWorkItemRow: View {
+    let item: UnifiedMaintenanceItem
 
     var body: some View {
         VStack(alignment: .leading, spacing: themeModel.spacingMD) {
@@ -178,32 +204,32 @@ struct WorkOrderRow: View {
                 // Priority Indicator
                 HStack(spacing: 6) {
                     Circle()
-                        .fill(priorityColor(workOrder.priority))
+                        .fill(priorityColor(item.unifiedPriority))
                         .frame(width: 8, height: 8)
-                    Text("WO-\(workOrder.id.uuidString.prefix(6).uppercased())")
+                    Text(item.title)
                         .font(themeModel.headline())
                         .foregroundStyle(themeModel.textPrimary)
                 }
                 Spacer()
                 StatusBadge(
-                    text: statusLabel(workOrder.status),
-                    color: statusColor(workOrder.status)
+                    text: statusLabel(item.unifiedStatus),
+                    color: statusColor(item.unifiedStatus)
                 )
             }
 
             HStack {
                 Label {
-                    Text(priorityLabel(workOrder.priority))
+                    Text(priorityLabel(item.unifiedPriority))
                         .font(themeModel.bodyMedium())
                         .foregroundStyle(themeModel.textSecondary)
                 } icon: {
-                    Image(systemName: priorityIcon(workOrder.priority))
-                        .foregroundStyle(priorityColor(workOrder.priority))
+                    Image(systemName: priorityIcon(item.unifiedPriority))
+                        .foregroundStyle(priorityColor(item.unifiedPriority))
                 }
 
                 Spacer()
 
-                if let date = workOrder.createdAt {
+                if let date = item.createdAt {
                     HStack(spacing: 4) {
                         Image(systemName: "clock")
                             .font(.caption2)

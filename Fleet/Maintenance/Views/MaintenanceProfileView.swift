@@ -38,6 +38,63 @@ struct MaintenanceProfileView: View {
                         }
                         .padding(.horizontal, themeModel.spacingMD)
 
+                        // MARK: - Personal Information
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Personal Information")
+                                .font(themeModel.headline(16))
+                                .foregroundStyle(themeModel.textPrimary)
+                                .padding(.bottom, 4)
+                            
+                            InfoRow(
+                                icon: "person.fill",
+                                label: "Full Name",
+                                value: profileVM.currentUser?.fullName ?? "—",
+                                iconColor: themeModel.maintenancePrimary
+                            )
+
+                            Divider().background(themeModel.divider)
+                            InfoRow(
+                                icon: "envelope.fill",
+                                label: "Email",
+                                value: profileVM.currentUser?.email ?? "—",
+                                iconColor: themeModel.maintenancePrimary
+                            )
+                            
+                            Divider().background(themeModel.divider)
+                            InfoRow(
+                                icon: "phone.fill",
+                                label: "Phone",
+                                value: profileVM.currentUser?.phone ?? "Not Provided",
+                                iconColor: themeModel.maintenancePrimary
+                            )
+                            
+                            Divider().background(themeModel.divider)
+                            let status = profileVM.currentUser?.userStatus ?? .active
+                            InfoRow(
+                                icon: status == .active ? "checkmark.circle.fill" : "xmark.circle.fill",
+                                label: "Status / State",
+                                value: status.rawValue.capitalized,
+                                iconColor: status == .active ? themeModel.success : themeModel.textSecondary,
+                                valueColor: status == .active ? themeModel.success : themeModel.textSecondary
+                            )
+                            
+                            Divider().background(themeModel.divider)
+                            InfoRow(
+                                icon: "calendar",
+                                label: "Joined",
+                                value: profileVM.currentUser?.createdAt?.formatted(date: .abbreviated, time: .omitted) ?? "—",
+                                iconColor: themeModel.maintenancePrimary
+                            )
+                        }
+                        .padding(themeModel.spacingMD)
+                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+                        )
+                        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                        .padding(.horizontal, themeModel.spacingMD)
+
                         // MARK: - Menu
                         VStack(spacing: 0) {
                             ForEach(menuItems, id: \.title) { item in

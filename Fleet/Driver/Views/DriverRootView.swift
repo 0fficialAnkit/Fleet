@@ -27,4 +27,5 @@ struct DriverRootView: View {
 
 #Preview {
     DriverRootView()
+        .environment(AuthViewModel())
 }

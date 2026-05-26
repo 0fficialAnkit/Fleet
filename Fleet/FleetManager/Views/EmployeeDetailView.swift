@@ -62,36 +62,61 @@ struct EmployeeDetailView: View {
                     
                     // Information Cards
                     VStack(spacing: themeModel.spacingMD) {
+                        InfoRowView(icon: "person.fill", title: "Full Name", value: currentProfile.fullName)
+                        
+                        Divider().background(themeModel.divider)
                         InfoRowView(icon: "envelope.fill", title: "Email", value: currentProfile.email)
                         
-                        if let phone = currentProfile.phone {
+                        Divider().background(themeModel.divider)
+                        InfoRowView(icon: "phone.fill", title: "Phone", value: currentProfile.phone ?? "Not Provided")
+                        
+                        if currentProfile.role == "driver" {
                             Divider().background(themeModel.divider)
-                            InfoRowView(icon: "phone.fill", title: "Phone", value: phone)
+                            InfoRowView(icon: "lanyardcard.fill", title: "Driver License", value: currentProfile.licenseNumber ?? "Not Provided")
                         }
                         
-                        if currentProfile.role == "driver", let license = currentProfile.licenseNumber, !license.isEmpty {
-                            Divider().background(themeModel.divider)
-                            InfoRowView(icon: "lanyardcard.fill", title: "License", value: license)
-                        }
-                        
-                        if let status = currentProfile.userStatus {
-                            Divider().background(themeModel.divider)
-                            InfoRowView(
-                                icon: status == .active ? "checkmark.circle.fill" : "xmark.circle.fill",
-                                title: "Status",
-                                value: status.rawValue.capitalized,
-                                valueColor: status == .active ? themeModel.success : themeModel.textSecondary
-                            )
-                        }
+                        Divider().background(themeModel.divider)
+                        let status = currentProfile.userStatus ?? .active
+                        InfoRowView(
+                            icon: status == .active ? "checkmark.circle.fill" : "xmark.circle.fill",
+                            title: "Status / State",
+                            value: status.rawValue.capitalized,
+                            valueColor: status == .active ? themeModel.success : themeModel.textSecondary
+                        )
                         
                         if let date = currentProfile.createdAt {
                             Divider().background(themeModel.divider)
                             InfoRowView(icon: "calendar", title: "Joined", value: date.formatted(date: .abbreviated, time: .omitted))
                         }
                     }
+//                    .padding(themeModel.spacingMD)
+//                    .background(themeModel.backgroundElevated)
+//                    .cornerRadius(themeModel.radiusLG)
+//                    .padding(.horizontal, themeModel.spacingMD)
                     .padding(themeModel.spacingMD)
-                    .background(themeModel.backgroundElevated)
-                    .cornerRadius(themeModel.radiusLG)
+                    .background(
+                        themeModel.surfaceTertiary.opacity(0.35)
+                    )
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: themeModel.radiusLG,
+                            style: .continuous
+                        )
+                    )
+                    .glassEffect(
+                        in: RoundedRectangle(
+                            cornerRadius: themeModel.radiusLG,
+                            style: .continuous
+                        )
+                    )
+                    .overlay(
+                        RoundedRectangle(
+                            cornerRadius: themeModel.radiusLG,
+                            style: .continuous
+                        )
+                        .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                    )
+                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
                     .padding(.horizontal, themeModel.spacingMD)
                 }
             }

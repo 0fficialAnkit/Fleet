@@ -31,6 +31,30 @@ struct StatusBadge: View {
 }
 
 // ======================================================
+// MARK: - Filter Button
+// Capsule button for horizontal filters
+// ======================================================
+
+struct FilterButton: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(themeModel.bodyMedium(14))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(isSelected ? themeModel.accent : themeModel.surfaceTertiary)
+                .foregroundColor(isSelected ? .white : themeModel.textSecondary)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// ======================================================
 // MARK: - Metric Card
 // KPI display with icon, value, and label
 // ======================================================

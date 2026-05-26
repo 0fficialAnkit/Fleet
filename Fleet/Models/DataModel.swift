@@ -349,6 +349,7 @@ struct Trip: Codable, Identifiable, Hashable, Sendable {
   var distance: Double?
   var status: TripStatus?
   var orderType: OrderType?
+  var createdAt: Date?
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -359,6 +360,7 @@ struct Trip: Codable, Identifiable, Hashable, Sendable {
       case endTime = "end_time"
       case distance, status
       case orderType = "order_type"
+      case createdAt = "created_at"
   }
 }
 

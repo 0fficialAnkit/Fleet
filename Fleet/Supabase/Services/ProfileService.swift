@@ -189,15 +189,44 @@ enum ProfileService {
         }
         
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        guard let userDict = json?["user"] as? [String: Any],
-              let idString = userDict["id"] as? String,
-              let newUserId = UUID(uuidString: idString) else {
-            
-            // Sometimes signup returns the user object directly at root if email confirmation is disabled
-            if let idString = json?["id"] as? String, let newUserId = UUID(uuidString: idString) {
-                return newUserId
-            }
+        let newUserId: UUID
+        if let userDict = json?["user"] as? [String: Any],
+           let idString = userDict["id"] as? String,
+           let parsedId = UUID(uuidString: idString) {
+            newUserId = parsedId
+        } else if let idString = json?["id"] as? String,
+                  let parsedId = UUID(uuidString: idString) {
+            newUserId = parsedId
+        } else {
             throw NSError(domain: "ProfileService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Could not parse new user ID"])
+        }
+        
+        // 4. Directly upsert into public.users table to ensure phone and license_number are stored correctly
+        let newUserRow = User(
+            id: newUserId,
+            fullName: fullName,
+            email: email,
+            passwordHash: "auth_managed",
+            phone: phone?.isEmpty == false ? phone : nil,
+            licenseNumber: licenseNumber?.isEmpty == false ? licenseNumber : nil,
+            roleId: roleId,
+            status: .active,
+            createdAt: Date()
+        )
+        
+        do {
+            try await supabase
+                .from("users")
+                .upsert(newUserRow)
+                .execute()
+            print("[ProfileService] Successfully upserted user \(newUserId) in public.users table.")
+        } catch {
+            print("[ProfileService] Public users upsert failed: \(error). Trying standard update...")
+            try? await supabase
+                .from("users")
+                .update(newUserRow)
+                .eq("id", value: newUserId)
+                .execute()
         }
         
         return newUserId

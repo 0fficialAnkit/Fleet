@@ -87,4 +87,5 @@ final class DashboardViewModel {
 
 enum DashboardDestination: Hashable {
     case vehiclesRoot
+    case orderDetail(Trip)
 }
