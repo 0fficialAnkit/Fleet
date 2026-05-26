@@ -432,4 +432,27 @@ struct TripDetailView: View {
     }
 }
 
+// MARK: - Preview
+
+#Preview {
+    NavigationStack {
+        TripDetailView(
+            trip: Trip(
+                id: UUID(),
+                vehicleId: UUID(),
+                driverId: UUID(),
+                routeId: UUID(),
+                startTime: Date(),
+                endTime: nil,
+                distance: nil,
+                status: .scheduled,
+                orderType: .pickUpAndDrop
+            ),
+            onStart: { _, _, _, _ in },
+            onEnd:   { _, _, _, _ in }
+        )
+    }
+    .environment(AuthViewModel())
+}
+
 

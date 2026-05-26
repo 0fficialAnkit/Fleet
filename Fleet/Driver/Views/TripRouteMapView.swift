@@ -2,107 +2,88 @@ import SwiftUI
 import MapKit
 import CoreLocation
 
-/// Shows a live Apple Maps view for a trip route.
-/// Geocodes start + end addresses from Supabase — no hardcoded coordinates.
+/// Shows an Apple Maps preview for a trip.
+/// Geocodes the fleet-manager-entered start + end addresses and places
+/// two pins — green for pickup, red for drop-off. No route polyline.
+/// The "Navigate in Maps" button sends both points to Apple Maps.
 struct TripRouteMapView: View {
 
     let startAddress: String?
     let endAddress: String?
 
-    // Resolved state
     @State private var originCoord: CLLocationCoordinate2D?
     @State private var destinationCoord: CLLocationCoordinate2D?
-    @State private var originMapItem: MKMapItem?       // used for Navigate in Maps (source)
-    @State private var destinationMapItem: MKMapItem?  // used for Navigate in Maps (destination)
-    @State private var mkRoute: MKRoute?
+    @State private var originMapItem: MKMapItem?
+    @State private var destinationMapItem: MKMapItem?
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var isLoading = true
     @State private var errorMessage: String?
-
-    @State private var locationManager = LocationManager()
 
     var body: some View {
         ZStack(alignment: .bottom) {
             Group {
                 if isLoading {
-                    loadingPlaceholder
+                    loadingView
                 } else if let error = errorMessage {
-                    errorPlaceholder(error)
+                    errorView(error)
                 } else {
-                    liveMap
+                    mapView
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .frame(height: 260)
 
-            // "Navigate" pill — shown once both addresses are resolved
+            // Show navigate button only when both endpoints are resolved
             if originMapItem != nil && destinationMapItem != nil {
-                openInMapsButton
+                navigateButton
                     .padding(.bottom, 12)
             }
         }
-        .onAppear {
-            locationManager.requestPermission()
-            Task { await resolveRoute() }
-        }
-        .onDisappear {
-            locationManager.stopUpdating()
+        // Re-runs whenever addresses change (handles late-arriving route data)
+        .task(id: "\(startAddress ?? "")|\(endAddress ?? "")") {
+            await resolvePoints()
         }
     }
 
-    // MARK: - Sub-views
+    // MARK: - Map
 
-    private var liveMap: some View {
+    private var mapView: some View {
         Map(position: $cameraPosition) {
-
-            // Driver's live blue dot
-            UserAnnotation()
-
-            // Origin pin
+            // Pickup pin — green
             if let o = originCoord {
                 Annotation("Pickup", coordinate: o, anchor: .bottom) {
                     pinView(color: .green, icon: "circle.fill")
                 }
             }
-
-            // Destination pin
+            // Drop-off pin — red
             if let d = destinationCoord {
                 Annotation("Drop-off", coordinate: d, anchor: .bottom) {
                     pinView(color: .red, icon: "mappin.circle.fill")
                 }
             }
-
-            // Driving-directions polyline
-            if let route = mkRoute {
-                MapPolyline(route.polyline)
-                    .stroke(Color.blue, style: StrokeStyle(
-                        lineWidth: 5,
-                        lineCap: .round,
-                        lineJoin: .round
-                    ))
-            }
         }
         .mapStyle(.standard(elevation: .realistic))
         .mapControls {
-            MapUserLocationButton()
             MapCompass()
             MapScaleView()
         }
     }
 
-    private var loadingPlaceholder: some View {
+    // MARK: - Loading / Error
+
+    private var loadingView: some View {
         ZStack {
             Color(.secondarySystemBackground)
             VStack(spacing: 10) {
                 ProgressView()
-                Text("Loading route…")
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                Text("Loading map…")
+                    .font(.subheadline)
                     .foregroundStyle(Color.secondary)
             }
         }
     }
 
-    private func errorPlaceholder(_ msg: String) -> some View {
+    private func errorView(_ msg: String) -> some View {
         ZStack {
             Color(.secondarySystemBackground)
             VStack(spacing: 10) {
@@ -110,7 +91,7 @@ struct TripRouteMapView: View {
                     .font(.system(size: 36))
                     .foregroundStyle(Color.green.opacity(0.4))
                 Text(msg)
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .font(.subheadline)
                     .foregroundStyle(Color.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
@@ -118,12 +99,14 @@ struct TripRouteMapView: View {
         }
     }
 
-    private var openInMapsButton: some View {
-        Button(action: openAppleMapsNavigation) {
+    // MARK: - Navigate button
+
+    private var navigateButton: some View {
+        Button(action: openAppleMaps) {
             HStack(spacing: 8) {
                 Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
                 Text("Navigate in Maps")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .font(.subheadline.weight(.medium))
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 20)
@@ -145,93 +128,93 @@ struct TripRouteMapView: View {
         }
     }
 
-    // MARK: - Geocoding
+    // MARK: - Geocoding (two pins only — no driving directions needed)
 
-    private func resolveRoute() async {
-        // Geocode both addresses concurrently
-        async let originItem = geocodeAddress(startAddress)
-        async let destItem   = geocodeAddress(endAddress)
+    private func resolvePoints() async {
+        isLoading          = true
+        errorMessage       = nil
+        originCoord        = nil
+        destinationCoord   = nil
+        originMapItem      = nil
+        destinationMapItem = nil
 
-        let (origin, destination) = await (originItem, destItem)
+        guard let start = startAddress, !start.isEmpty,
+              let end   = endAddress,   !end.isEmpty
+        else {
+            errorMessage = "No locations assigned to this trip."
+            isLoading = false
+            return
+        }
 
-        guard let origin, let destination else {
-            errorMessage = startAddress == nil && endAddress == nil
-                ? "No route assigned to this trip."
-                : "Could not resolve route addresses."
+        // Geocode both concurrently
+        async let originResult = geocode(start)
+        async let destResult   = geocode(end)
+        let (origin, dest) = await (originResult, destResult)
+
+        guard let origin, let dest else {
+            errorMessage = "Could not find trip locations on the map."
             isLoading = false
             return
         }
 
         originCoord        = origin.location.coordinate
-        destinationCoord   = destination.location.coordinate
-        originMapItem      = origin       // store for Navigate in Maps
-        destinationMapItem = destination  // store for Navigate in Maps
+        destinationCoord   = dest.location.coordinate
+        originMapItem      = origin
+        destinationMapItem = dest
 
-        guard let oCoord = originCoord, let dCoord = destinationCoord else {
-            errorMessage = "Could not read route coordinates."
-            isLoading = false
-            return
-        }
-
-        // Calculate driving directions
-        let request = MKDirections.Request()
-        request.source        = origin
-        request.destination   = destination
-        request.transportType = .automobile
-
-        do {
-            let response = try await MKDirections(request: request).calculate()
-            mkRoute = response.routes.first
-
-            if let polyline = response.routes.first?.polyline {
-                let region = MKCoordinateRegion(
-                    polyline.boundingMapRect.insetBy(dx: -8_000, dy: -8_000)
-                )
-                cameraPosition = .region(region)
-            }
-        } catch {
-            // Directions failed — still show the two pins
-            let center = CLLocationCoordinate2D(
-                latitude:  (oCoord.latitude  + dCoord.latitude)  / 2,
-                longitude: (oCoord.longitude + dCoord.longitude) / 2
-            )
-            cameraPosition = .region(
-                MKCoordinateRegion(center: center,
-                                   latitudinalMeters: 30_000,
-                                   longitudinalMeters: 30_000)
-            )
-        }
+        // Fit camera to frame both pins with comfortable padding
+        let oCoord = origin.location.coordinate
+        let dCoord = dest.location.coordinate
+        let midLat = (oCoord.latitude  + dCoord.latitude)  / 2
+        let midLon = (oCoord.longitude + dCoord.longitude) / 2
+        let spanLat = max(abs(oCoord.latitude  - dCoord.latitude)  * 2.2, 0.02)
+        let spanLon = max(abs(oCoord.longitude - dCoord.longitude) * 2.2, 0.02)
+        cameraPosition = .region(MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: midLat, longitude: midLon),
+            span:   MKCoordinateSpan(latitudeDelta: spanLat, longitudeDelta: spanLon)
+        ))
 
         isLoading = false
     }
 
-    private func geocodeAddress(_ address: String?) async -> MKMapItem? {
-        guard let address, !address.isEmpty else { return nil }
+    private func geocode(_ address: String) async -> MKMapItem? {
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = address
         request.resultTypes = .address
         return try? await MKLocalSearch(request: request).start().mapItems.first
     }
 
-    // MARK: - Open Apple Maps with exact fleet-manager-specified route
+    // MARK: - Open Apple Maps with pickup → drop-off
 
-    func openAppleMapsNavigation() {
-        guard let sourceItem = originMapItem,
-              let destItem   = destinationMapItem
+    func openAppleMaps() {
+        guard let source = originMapItem,
+              let dest   = destinationMapItem
         else { return }
 
-        // Label with the real addresses from the order
-        sourceItem.name = startAddress ?? "Pickup"
-        destItem.name   = endAddress   ?? "Destination"
+        source.name = startAddress ?? "Pickup"
+        dest.name   = endAddress   ?? "Drop-off"
 
-        // Pass BOTH points so Apple Maps routes from the fleet-manager's
-        // start location to the fleet-manager's end location exactly
         MKMapItem.openMaps(
-            with: [sourceItem, destItem],
+            with: [source, dest],
             launchOptions: [
                 MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving,
-                MKLaunchOptionsShowsTrafficKey: true
+                MKLaunchOptionsShowsTrafficKey:   true
             ]
         )
     }
+}
+
+// MARK: - Previews
+
+#Preview("With Route") {
+    TripRouteMapView(
+        startAddress: "Connaught Place, New Delhi",
+        endAddress:   "Indira Gandhi International Airport, Delhi"
+    )
+    .padding()
+}
+
+#Preview("No Route") {
+    TripRouteMapView(startAddress: nil, endAddress: nil)
+        .padding()
 }

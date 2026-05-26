@@ -7,10 +7,14 @@
 
 import SwiftUI
 import Supabase
+import CoreLocation
 
 struct ContentView: View {
     @State private var authViewModel = AuthViewModel()
-    @Environment(\.scenePhase) private var scenePhase
+    // Single shared LocationManager at the app root.
+    // Requesting permission here fires the native dialog as soon as the user
+    // is authenticated — before any map view even renders.
+    @State private var locationManager = LocationManager()
 
     var body: some View {
         Group {
@@ -57,14 +61,10 @@ struct ContentView: View {
         .task {
             await authViewModel.checkUserSession()
             if authViewModel.isAuthenticated {
+                // Ask for location right after login resolves — shows the
+                // native "Allow location access" dialog immediately on first launch.
+                locationManager.requestPermission()
                 await RealtimeManager.shared.subscribeAll()
-            }
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active {
-                Task {
-                    await authViewModel.verifySessionStatus()
-                }
             }
         }
     }
