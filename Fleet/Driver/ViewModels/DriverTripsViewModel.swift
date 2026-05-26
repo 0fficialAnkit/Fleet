@@ -112,18 +112,36 @@ final class DriverTripsViewModel {
     private func startLocationTracking(vehicleId: UUID) {
         stopLocationTracking()
         locationManager.requestPermission()
+        print("[LocationTracking] 🚛 Started tracking for vehicle \(vehicleId)")
+
         trackingTask = Task { [weak self] in
+            // Wait up to 20 s for first GPS fix before entering the main loop.
+            var waited = 0
+            while !Task.isCancelled, waited < 20 {
+                if self?.locationManager.coordinate != nil { break }
+                print("[LocationTracking] ⏳ Waiting for GPS fix… (\(waited)s)")
+                try? await Task.sleep(for: .seconds(1))
+                waited += 1
+            }
+
+            // Push immediately on trip start, then every 15 seconds.
             while !Task.isCancelled {
                 if let coord = self?.locationManager.coordinate {
+                    print("[LocationTracking] 📍 Pushing location — lat:\(String(format: "%.5f", coord.latitude)) lon:\(String(format: "%.5f", coord.longitude))")
                     await VehicleLocationService.insertLocation(
                         vehicleId: vehicleId,
                         latitude: coord.latitude,
                         longitude: coord.longitude,
-                        speed: nil
+                        speed: self?.locationManager.speed
                     )
+                } else {
+                    print("[LocationTracking] ⚠️ No GPS fix yet — retrying in 5 s")
+                    try? await Task.sleep(for: .seconds(5))
+                    continue
                 }
-                try? await Task.sleep(for: .seconds(10))
+                try? await Task.sleep(for: .seconds(15))
             }
+            print("[LocationTracking] 🛑 Tracking stopped for vehicle \(vehicleId)")
         }
     }
 
