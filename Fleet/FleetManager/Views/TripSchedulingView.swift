@@ -26,10 +26,10 @@ struct TripSchedulingView: View {
 
     var body: some View {
         ZStack {
-            themeModel.backgroundPrimary.ignoresSafeArea()
+            Color(.systemGroupedBackground).ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: themeModel.spacingLG) {
+                VStack(spacing: 24) {
 
                     // ── Order Summary ──────────────────────────────────
                     cardSection(title: "Order Summary") {
@@ -47,16 +47,16 @@ struct TripSchedulingView: View {
                     }
 
                     // ── Route ──────────────────────────────────────────
-                    VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                    VStack(alignment: .leading, spacing: 8) {
                         SectionHeader(title: "Route")
-                            .padding(.horizontal, themeModel.spacingMD)
+                            .padding(.horizontal, 16)
 
                         VStack(alignment: .leading, spacing: 0) {
 
                             // Pickup
                             locationRow(
                                 icon: "circle.fill",
-                                iconColor: themeModel.success,
+                                iconColor: Color.green,
                                 label: "Pickup / Origin",
                                 value: pickupLocation?.title ?? "Search for pickup location",
                                 subtitle: pickupLocation?.subtitle,
@@ -67,14 +67,14 @@ struct TripSchedulingView: View {
 
                             // Connector line
                             Rectangle()
-                                .fill(themeModel.divider)
+                                .fill(Color(.separator))
                                 .frame(width: 2, height: 28)
-                                .padding(.leading, themeModel.spacingMD + 20)
+                                .padding(.leading, 16 + 20)
 
                             // Drop-off
                             locationRow(
                                 icon: "mappin.circle.fill",
-                                iconColor: themeModel.danger,
+                                iconColor: Color.red,
                                 label: "Drop-off / Destination",
                                 value: dropoffLocation?.title ?? "Search for drop-off location",
                                 subtitle: dropoffLocation?.subtitle,
@@ -83,27 +83,23 @@ struct TripSchedulingView: View {
                                 showingDropoffSearch = true
                             }
                         }
-                        .padding(themeModel.spacingMD)
-                        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                        )
-                        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                        .padding(.horizontal, themeModel.spacingMD)
+                        .padding(16)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .padding(.horizontal, 16)
                     }
 
                     // ── Mini Map Preview ───────────────────────────────
                     if pickupLocation != nil || dropoffLocation != nil {
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                        VStack(alignment: .leading, spacing: 8) {
                             SectionHeader(title: "Route Preview")
-                                .padding(.horizontal, themeModel.spacingMD)
+                                .padding(.horizontal, 16)
 
                             TripRouteMapView(
                                 startAddress: pickupLocation?.fullAddress,
                                 endAddress: dropoffLocation?.fullAddress
                             )
-                            .padding(.horizontal, themeModel.spacingMD)
+                            .padding(.horizontal, 16)
                         }
                     }
 
@@ -111,11 +107,11 @@ struct TripSchedulingView: View {
                     cardSection(title: "Schedule Date & Time") {
                         DatePicker("Start Time", selection: $startTime, in: Date()...)
                             .datePickerStyle(.graphical)
-                            .tint(themeModel.accent)
+                            .tint(Color.teal)
                             .padding(.vertical, 8)
                     }
                 }
-                .padding(.vertical, themeModel.spacingMD)
+                .padding(.vertical, 16)
             }
         }
         .navigationTitle("Schedule Trip")
@@ -124,12 +120,12 @@ struct TripSchedulingView: View {
             ToolbarItem(placement: .confirmationAction) {
                 if isSaving {
                     ProgressView()
-                        .tint(themeModel.accent)
+                        .tint(Color.teal)
                 } else {
                     Button("Save") {
                         Task { await save() }
                     }
-                    .foregroundStyle(canSave ? themeModel.accent : themeModel.textDisabled)
+                    .foregroundStyle(canSave ? Color.teal : Color(.quaternaryLabel))
                     .bold()
                     .disabled(!canSave)
                 }
@@ -194,26 +190,22 @@ struct TripSchedulingView: View {
     // MARK: - Helpers
 
     private var divider: some View {
-        Divider().background(themeModel.divider)
+        Divider().background(Color(.separator))
     }
 
     @ViewBuilder
     private func cardSection<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+        VStack(alignment: .leading, spacing: 8) {
             SectionHeader(title: title)
-                .padding(.horizontal, themeModel.spacingMD)
+                .padding(.horizontal, 16)
 
-            VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+            VStack(alignment: .leading, spacing: 16) {
                 content()
             }
-            .padding(themeModel.spacingMD)
-            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-            )
-            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-            .padding(.horizontal, themeModel.spacingMD)
+            .padding(16)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .padding(.horizontal, 16)
         }
     }
 
@@ -240,16 +232,16 @@ struct TripSchedulingView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(label)
-                        .font(themeModel.caption())
-                        .foregroundStyle(themeModel.textSecondary)
+                        .font(.footnote)
+                        .foregroundStyle(Color.secondary)
                     Text(value)
-                        .font(themeModel.bodyMedium())
-                        .foregroundStyle(placeholder ? themeModel.textDisabled : themeModel.textPrimary)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(placeholder ? Color(.quaternaryLabel) : Color.primary)
                         .lineLimit(1)
                     if let sub = subtitle, !sub.isEmpty {
                         Text(sub)
-                            .font(themeModel.caption())
-                            .foregroundStyle(themeModel.textSecondary)
+                            .font(.footnote)
+                            .foregroundStyle(Color.secondary)
                             .lineLimit(1)
                     }
                 }
@@ -258,7 +250,7 @@ struct TripSchedulingView: View {
 
                 Image(systemName: placeholder ? "plus.circle.fill" : "pencil.circle.fill")
                     .font(.system(size: 20))
-                    .foregroundStyle(themeModel.accent)
+                    .foregroundStyle(Color.teal)
             }
         }
         .buttonStyle(.plain)
@@ -276,16 +268,16 @@ struct SummaryRow: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 16))
-                .foregroundStyle(themeModel.accent)
+                .foregroundStyle(Color.teal)
                 .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(themeModel.caption(12))
-                    .foregroundStyle(themeModel.textTertiary)
+                    .font(.caption)
+                    .foregroundStyle(Color(.tertiaryLabel))
                 Text(value)
-                    .font(themeModel.bodyMedium(14))
-                    .foregroundStyle(themeModel.textPrimary)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.primary)
             }
             Spacer()
         }

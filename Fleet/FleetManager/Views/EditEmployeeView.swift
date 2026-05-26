@@ -3,15 +3,15 @@ import SwiftUI
 struct EditEmployeeView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: EmployeesViewModel
-    
+
     @State private var originalProfile: Profile
     @State private var fullName: String
     @State private var email: String
     @State private var phone: String
     @State private var licenseNumber: String
-    
+
     let isDriverSelected: Bool
-    
+
     init(profile: Profile, viewModel: EmployeesViewModel) {
         self.viewModel = viewModel
         _originalProfile = State(initialValue: profile)
@@ -21,58 +21,54 @@ struct EditEmployeeView: View {
         _licenseNumber = State(initialValue: profile.licenseNumber ?? "")
         self.isDriverSelected = (profile.role == "driver")
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
-                
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 ScrollView {
-                    VStack(spacing: themeModel.spacingLG) {
-                        
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                    VStack(spacing: 24) {
+
+                        VStack(alignment: .leading, spacing: 8) {
                             SectionHeader(title: "Personal Details")
-                                .padding(.horizontal, themeModel.spacingMD)
-                            
+                                .padding(.horizontal, 16)
+
                                 VStack(spacing: 0) {
                                     TextField("Full Name", text: $fullName)
                                         .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
-                                    
-                                    Divider().background(themeModel.divider)
-                                    
+                                        .foregroundColor(Color.primary)
+
+                                    Divider().background(Color(.separator))
+
                                     TextField("Email", text: $email)
                                         .keyboardType(.emailAddress)
                                         .autocapitalization(.none)
                                         .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
-                                    
-                                    Divider().background(themeModel.divider)
-                                    
+                                        .foregroundColor(Color.primary)
+
+                                    Divider().background(Color(.separator))
+
                                     TextField("Phone", text: $phone)
                                         .keyboardType(.phonePad)
                                         .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
-                                    
+                                        .foregroundColor(Color.primary)
+
                                     if isDriverSelected {
-                                        Divider().background(themeModel.divider)
-                                        
+                                        Divider().background(Color(.separator))
+
                                         TextField("Driver License Number", text: $licenseNumber)
                                             .padding(.vertical, 12)
-                                            .foregroundColor(themeModel.textPrimary)
+                                            .foregroundColor(Color.primary)
                                     }
                                 }
-                                .padding(themeModel.spacingMD)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                                        .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                                )
-                                .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
+                                .padding(16)
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .padding(.horizontal, 16)
                         }
                     }
-                    .padding(.vertical, themeModel.spacingMD)
+                    .padding(.vertical, 16)
                 }
             }
             .navigationTitle(isDriverSelected ? "Edit Driver" : "Edit Maintenance Staff")
@@ -82,9 +78,9 @@ struct EditEmployeeView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(Color.teal)
                 }
-                
+
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         guard !fullName.isEmpty else { return }
@@ -93,7 +89,7 @@ struct EditEmployeeView: View {
                         updatedProfile.email = email
                         updatedProfile.phone = phone.isEmpty ? nil : phone
                         updatedProfile.licenseNumber = isDriverSelected && !licenseNumber.isEmpty ? licenseNumber : nil
-                        
+
                         Task {
                             do {
                                 try await ProfileService.updateProfile(updatedProfile)
@@ -104,7 +100,7 @@ struct EditEmployeeView: View {
                             }
                         }
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(Color.teal)
                     .bold()
                     .disabled(fullName.isEmpty)
                 }

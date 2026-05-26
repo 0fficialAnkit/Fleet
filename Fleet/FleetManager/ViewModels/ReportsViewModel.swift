@@ -11,10 +11,10 @@ enum IssueReportStatus: String, CaseIterable, Identifiable {
 
     var color: Color {
         switch self {
-        case .open:       return themeModel.danger
-        case .assigned:   return themeModel.warning
-        case .inProgress: return themeModel.info
-        case .resolved:   return themeModel.success
+        case .open:       return Color.red
+        case .assigned:   return Color.yellow
+        case .inProgress: return Color.blue
+        case .resolved:   return Color.green
         }
     }
 
@@ -149,7 +149,6 @@ final class ReportsViewModel {
         }
     }
 
-
     // MARK: - Helpers
 
     private func profileName(_ id: UUID?) -> String {
@@ -180,25 +179,25 @@ final class ReportsViewModel {
             }
             return "Working on vehicle"
         }
-        
+
         let pendingTasks = maintenanceTasks.filter { $0.assignedTo == staffId && $0.status == .pending }
         if !pendingTasks.isEmpty {
             return "Assigned (Pending)"
         }
-        
+
         return "Available"
     }
 
     func staffWorkloadColor(_ staffId: UUID) -> Color {
         let activeTasks = maintenanceTasks.filter { $0.assignedTo == staffId && $0.status == .inProgress }
         if !activeTasks.isEmpty {
-            return themeModel.info
+            return Color.blue
         }
         let pendingTasks = maintenanceTasks.filter { $0.assignedTo == staffId && $0.status == .pending }
         if !pendingTasks.isEmpty {
-            return themeModel.warning
+            return Color.yellow
         }
-        return themeModel.success
+        return Color.green
     }
 
     // MARK: - Mutating Actions (now persists to Supabase)
@@ -237,10 +236,10 @@ final class ReportsViewModel {
     // MARK: - Severity helpers
     func severityColor(_ s: DefectSeverity) -> Color {
         switch s {
-        case .low:      return themeModel.success
-        case .medium:   return themeModel.warning
+        case .low:      return Color.green
+        case .medium:   return Color.yellow
         case .high:     return Color.orange
-        case .critical: return themeModel.danger
+        case .critical: return Color.red
         }
     }
 }

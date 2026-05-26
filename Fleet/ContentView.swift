@@ -10,7 +10,7 @@ import Supabase
 
 struct ContentView: View {
     @State private var authViewModel = AuthViewModel()
-    
+
     var body: some View {
         Group {
             if !authViewModel.isSessionChecked {

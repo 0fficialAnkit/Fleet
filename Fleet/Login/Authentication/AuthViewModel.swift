@@ -131,20 +131,20 @@ class AuthViewModel {
             let dbRole: String
             let roleIdStr: String
             switch role.lowercased() {
-            case "fleet manager": 
+            case "fleet manager":
                 dbRole = "fleet_manager"
                 roleIdStr = "cb66109f-e887-4586-baed-2761a9029c61"
-            case "driver": 
+            case "driver":
                 dbRole = "driver"
                 roleIdStr = "41d7aa4d-5ad4-4fda-82da-992b8ac14657"
-            case "maintenance": 
+            case "maintenance":
                 dbRole = "maintenance"
                 roleIdStr = "7cb95205-1a35-4ffb-889a-3f8067f43cb9"
-            default: 
+            default:
                 dbRole = "fleet_manager"
                 roleIdStr = "cb66109f-e887-4586-baed-2761a9029c61"
             }
-            
+
             let response = try await supabase.auth.signUp(
                 email: email,
                 password: password,
@@ -154,7 +154,7 @@ class AuthViewModel {
                     "role_id": .string(roleIdStr)
                 ]
             )
-            
+
             // Explicitly insert into the public.users table just in case there is no database trigger
             let user = response.user
             if let roleUUID = UUID(uuidString: roleIdStr) {
@@ -173,7 +173,7 @@ class AuthViewModel {
                     print("[AuthViewModel] Insert into users table failed (a trigger might have already done it): \(error)")
                 }
             }
-            
+
             // Ensure we don't automatically log in after sign up
             try? await supabase.auth.signOut()
             self.isAuthenticated = false

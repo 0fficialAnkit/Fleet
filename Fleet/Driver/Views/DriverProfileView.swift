@@ -11,109 +11,109 @@ struct DriverProfileView: View {
                     icon: "person.crop.circle.fill",
                     name: profileVM.currentUser?.fullName ?? "Driver",
                     role: "Fleet Driver",
-                    accentColor: themeModel.driverPrimary
+                    accentColor: Color.green
                 )
 
                 VStack(spacing: 20) {
                     // Personal Information Card
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Personal Information")
-                            .font(themeModel.headline(16))
-                            .foregroundStyle(themeModel.textPrimary)
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.primary)
                             .padding(.bottom, 4)
                         
                         InfoRow(
                             icon: "person.fill",
                             label: "Full Name",
                             value: profileVM.currentUser?.fullName ?? "—",
-                            iconColor: themeModel.driverPrimary
+                            iconColor: Color.green
                         )
 
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         InfoRow(
                             icon: "envelope.fill",
                             label: "Email",
                             value: profileVM.currentUser?.email ?? "—",
-                            iconColor: themeModel.driverPrimary
+                            iconColor: Color.green
                         )
                         
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         InfoRow(
                             icon: "phone.fill",
                             label: "Phone",
                             value: profileVM.currentUser?.phone ?? "Not Provided",
-                            iconColor: themeModel.driverPrimary
+                            iconColor: Color.green
                         )
                         
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         InfoRow(
                             icon: "lanyardcard.fill",
                             label: "License",
                             value: profileVM.currentUser?.licenseNumber ?? "Not Provided",
-                            iconColor: themeModel.driverPrimary
+                            iconColor: Color.green
                         )
                         
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         let status = profileVM.currentUser?.userStatus ?? .active
                         InfoRow(
                             icon: status == .active ? "checkmark.circle.fill" : "xmark.circle.fill",
                             label: "Status / State",
                             value: status.rawValue.capitalized,
-                            iconColor: status == .active ? themeModel.success : themeModel.textSecondary,
-                            valueColor: status == .active ? themeModel.success : themeModel.textSecondary
+                            iconColor: status == .active ? Color.green : Color.secondary,
+                            valueColor: status == .active ? Color.green : Color.secondary
                         )
                         
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         InfoRow(
                             icon: "calendar",
                             label: "Joined",
                             value: profileVM.currentUser?.createdAt?.formatted(date: .abbreviated, time: .omitted) ?? "—",
-                            iconColor: themeModel.driverPrimary
+                            iconColor: Color.green
                         )
                     }
-                    .padding(themeModel.spacingMD)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                    .padding(16)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                     )
-                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
 
                     // Preferences & Support Card
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Preferences & Support")
-                            .font(themeModel.headline(16))
-                            .foregroundStyle(themeModel.textPrimary)
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.primary)
                             .padding(.bottom, 4)
 
                         InfoRow(
                             icon: "bell",
                             label: "Notifications",
                             value: "Enabled",
-                            iconColor: themeModel.driverPrimary
+                            iconColor: Color.green
                         )
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         InfoRow(
                             icon: "doc.text.fill",
                             label: "Documents",
                             value: "Verified",
-                            iconColor: themeModel.driverPrimary
+                            iconColor: Color.green
                         )
-                        Divider().background(themeModel.divider)
+                        Divider().background(Color(UIColor.separator))
                         InfoRow(
                             icon: "lifepreserver",
                             label: "Support",
                             value: "Online",
-                            iconColor: themeModel.driverPrimary
+                            iconColor: Color.green
                         )
                     }
-                    .padding(themeModel.spacingMD)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                    .padding(16)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                     )
-                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
 
                     // Logout Button
                     Button(action: {
@@ -124,22 +124,22 @@ struct DriverProfileView: View {
                         ActionRow(
                             icon: "door.left.hand.open",
                             title: "Logout",
-                            iconColor: themeModel.driverPrimary,
+                            iconColor: Color.green,
                             isDestructive: true
                         )
                     }
-                    .padding(themeModel.spacingMD)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+                    .padding(16)
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
                     )
-                    .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
                 }
             }
             .padding()
         }
-        .background(themeModel.backgroundPrimary.ignoresSafeArea())
+        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Profile")
         .task {
             await profileVM.loadProfile()

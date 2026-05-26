@@ -51,7 +51,7 @@ final class DriverFuelViewModel {
             fuelCost: cost,
             recordedAt: Date()
         )
-        
+
         try await FuelLogService.createFuelLog(newLog)
         await loadData()
     }
