@@ -164,7 +164,7 @@ private struct GlassSection<Content: View>: View {
                 content()
             }
             .padding(16)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
@@ -191,7 +191,7 @@ private struct ActionButton: View {
             .foregroundStyle(color)
             .frame(maxWidth: .infinity)
             .padding(16)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(color.opacity(0.3), lineWidth: 1)

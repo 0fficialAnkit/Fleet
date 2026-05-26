@@ -105,12 +105,10 @@ struct OrderDetailView: View {
                             style: .continuous
                         )
                     )
-                    .glassEffect(
-                        in: RoundedRectangle(
+                    .background(.ultraThinMaterial, in: RoundedRectangle(
                             cornerRadius: 20,
                             style: .continuous
-                        )
-                    )
+                        ))
                     .overlay(
                         RoundedRectangle(
                             cornerRadius: 20,

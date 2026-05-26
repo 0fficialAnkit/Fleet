@@ -361,7 +361,7 @@ private struct TaskCard: View {
                 .padding(.leading, 16)
             }
         }
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(statusColor(task.status).opacity(0.5), lineWidth: 1.0)
@@ -431,7 +431,7 @@ private struct WorkOrderCard: View {
                 .padding(.leading, 16)
             }
         }
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(statusColor(workOrder.status).opacity(0.5), lineWidth: 1.0)
@@ -969,7 +969,7 @@ private struct SheetSection<Content: View>: View {
                 content()
             }
             .padding(16)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
@@ -1028,7 +1028,7 @@ private struct SheetActionButton: View {
             .foregroundStyle(color)
             .frame(maxWidth: .infinity)
             .padding(16)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(color.opacity(0.35), lineWidth: 1)
@@ -1056,7 +1056,7 @@ private struct SheetSecondaryButton: View {
             .foregroundStyle(Color.secondary)
             .frame(maxWidth: .infinity)
             .padding(16)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.1), lineWidth: 0.5)

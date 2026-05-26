@@ -326,7 +326,7 @@ struct AvailablePartsCard: View {
 
             ZStack {
                 Circle()
-                    .fill(Color(UIColor.secondarySystemBackground))
+                    .fill(Color(.secondarySystemBackground))
                     .frame(width: 60, height: 60)
                 Image(systemName: "shippingbox")
                     .font(.system(size: 24))
@@ -334,7 +334,7 @@ struct AvailablePartsCard: View {
             }
         }
         .padding(20)
-        .background(Color(UIColor.systemBackground))
+        .background(Color(.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
     }
@@ -410,7 +410,7 @@ struct PriorityQueueCard: View {
             }
         }
         .padding(16)
-        .background(Color(UIColor.systemBackground))
+        .background(Color(.systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 
     }

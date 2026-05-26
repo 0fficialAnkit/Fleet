@@ -160,7 +160,7 @@ private struct MiniStatBadge: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(color.opacity(0.2), lineWidth: 0.8)
@@ -241,7 +241,7 @@ struct UnifiedWorkItemRow: View {
             }
         }
         .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.12), lineWidth: 0.5)

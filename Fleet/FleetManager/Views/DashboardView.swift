@@ -136,12 +136,10 @@ struct DashboardView: View {
                     style: .continuous
                 )
             )
-            .glassEffect(
-                in: RoundedRectangle(
+            .background(.ultraThinMaterial, in: RoundedRectangle(
                     cornerRadius: 20,
                     style: .continuous
-                )
-            )
+                ))
             .overlay(
                 RoundedRectangle(
                     cornerRadius: 20,
@@ -302,7 +300,7 @@ struct TripCardView: View {
                 .foregroundStyle(Color.secondary)
         }
         .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
@@ -349,7 +347,7 @@ struct MaintenanceCardView: View {
             Spacer()
         }
         .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)

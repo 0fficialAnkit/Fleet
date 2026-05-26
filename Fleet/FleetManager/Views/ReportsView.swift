@@ -65,7 +65,7 @@ struct ReportsView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
@@ -193,7 +193,7 @@ struct ReportRowView: View {
             }
         }
         .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(report.status == .open ? Color.red.opacity(0.25) : Color.white.opacity(0.1), lineWidth: 1)

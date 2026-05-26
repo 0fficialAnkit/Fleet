@@ -63,7 +63,7 @@ struct EditEmployeeView: View {
                                     }
                                 }
                                 .padding(16)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 20, style: .continuous)
                                         .stroke(Color.white.opacity(0.15), lineWidth: 0.5)

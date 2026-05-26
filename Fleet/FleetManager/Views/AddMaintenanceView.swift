@@ -148,7 +148,7 @@ struct AddMaintenanceView: View {
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             .foregroundColor(.white)
                             .padding(32)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     }
                 }
             }

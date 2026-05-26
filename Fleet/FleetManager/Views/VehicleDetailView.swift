@@ -52,7 +52,7 @@ struct VehicleDetailView: View {
                             InfoRow(icon: "creditcard", label: "Purchase Date", value: vehicle.purchaseDate?.formatted(date: .abbreviated, time: .omitted) ?? "N/A")
                         }
                         .padding(16)
-                        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 20, style: .continuous)
                                 .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
@@ -82,7 +82,7 @@ struct VehicleDetailView: View {
                                 Spacer()
                             }
                             .padding(16)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                                     .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
@@ -181,7 +181,7 @@ struct TripHistoryRow: View {
                 }
             }
             .padding(16)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                     .stroke(Color.white.opacity(0.15), lineWidth: 0.5)

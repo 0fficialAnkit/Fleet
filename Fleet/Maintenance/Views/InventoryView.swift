@@ -73,7 +73,7 @@ struct InventoryView: View {
                                 Spacer(minLength: 0)
                             }
                             .padding(16)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                                     .stroke(Color.yellow.opacity(0.25), lineWidth: 0.8)
@@ -187,7 +187,7 @@ private struct InventoryStat: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(color.opacity(0.2), lineWidth: 0.8)
@@ -257,7 +257,7 @@ struct InventoryRow: View {
             }
         }
         .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(isLowStock ? Color.red.opacity(0.3) : Color.white.opacity(0.12), lineWidth: isLowStock ? 1 : 0.5)

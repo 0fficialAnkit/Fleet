@@ -17,7 +17,7 @@ struct VehiclesRootView: View {
                         .font(.system(size: 17, weight: .medium))
                         .foregroundStyle(Color.primary)
                         .frame(width: 38, height: 38)
-//                        .glassEffect(in: Circle())
+//                        .background(.ultraThinMaterial, in: Circle())
                 }
                 .buttonStyle(.plain)
             }
