@@ -20,11 +20,11 @@ struct AddOrderView: View {
 
     // MARK: - Derived
     private var availableVehicles: [Vehicle] {
-        viewModel.availableVehicles(for: orderType)
+        viewModel.availableVehicles(for: orderType, at: startTime)
     }
 
     private var availableDrivers: [Profile] {
-        viewModel.driversWithRole()
+        viewModel.availableDrivers(at: startTime)
     }
 
     private var canSave: Bool {
@@ -60,6 +60,7 @@ struct AddOrderView: View {
                                 .tag(type)
                         }
                     }
+                    .tint(.primary)
                 } header: {
                     Label("Order Type", systemImage: "shippingbox.fill")
                 }
@@ -116,6 +117,7 @@ struct AddOrderView: View {
                         } label: {
                             Label("Vehicle", systemImage: "car.fill")
                         }
+                        .tint(.primary)
                     }
 
                     // Driver picker
@@ -137,6 +139,7 @@ struct AddOrderView: View {
                         } label: {
                             Label("Driver", systemImage: "person.crop.circle.fill")
                         }
+                        .tint(.primary)
                     }
                 } header: {
                     Label("Assignment", systemImage: "person.badge.key.fill")
@@ -198,6 +201,17 @@ struct AddOrderView: View {
             .sheet(isPresented: $showingDropoffSearch) {
                 LocationSearchView(prompt: "Drop-off Location") { location in
                     dropoffLocation = location
+                }
+            }
+            // Clear vehicle/driver selection if they are no longer available on the new date
+            .onChange(of: startTime) { _, _ in
+                if let id = selectedVehicleId,
+                   !availableVehicles.contains(where: { $0.id == id }) {
+                    selectedVehicleId = nil
+                }
+                if let id = selectedDriverId,
+                   !availableDrivers.contains(where: { $0.id == id }) {
+                    selectedDriverId = nil
                 }
             }
             // Error alert
