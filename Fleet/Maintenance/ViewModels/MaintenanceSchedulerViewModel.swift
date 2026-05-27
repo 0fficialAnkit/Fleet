@@ -565,6 +565,9 @@ final class MaintenanceSchedulerViewModel {
                 taskType: taskType,
                 description: description,
                 scheduledDate: date,
+                targetMileage: nil,
+                serviceIntervalMonths: nil,
+                scheduleType: nil,
                 status: .pending
             )
         }
