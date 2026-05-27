@@ -19,10 +19,6 @@ struct DashboardView: View {
                             fleetOverviewCard
                         }
 
-                        Section {
-                            fleetActivityLogCard
-                        }
-
                         liveFleetSection
 
                         recentOrdersSection
@@ -80,73 +76,6 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - Fleet Activity Log Card
-
-    private var fleetActivityLogCard: some View {
-        let employees        = viewModel.profiles.filter { $0.role != "fleet_manager" }
-        let activeDriverIds  = Set(viewModel.trips.filter { $0.status == .active }.compactMap { $0.driverId })
-        let maintenanceCount = employees.filter { $0.role == "maintenance" }.count
-        let onTripCount      = employees.filter { $0.role == "driver" && activeDriverIds.contains($0.id) }.count
-        let activeCount      = onTripCount + maintenanceCount
-        let idleCount        = employees.filter { $0.role == "driver" && !activeDriverIds.contains($0.id) }.count
-
-        return ZStack {
-            NavigationLink {
-                FleetActivityLogView(profiles: employees, trips: viewModel.trips)
-            } label: {
-                EmptyView()
-            }
-            .opacity(0)
-
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 10) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Color.teal.opacity(0.12))
-                            .frame(width: 34, height: 34)
-                        Image(systemName: "person.3.fill")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Color.teal)
-                    }
-                    Text("Fleet Activity Log")
-                        .font(.body.bold())
-                        .foregroundStyle(Color.primary)
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color(.tertiaryLabel))
-                        .padding(.top, 4)
-                }
-
-                HStack(spacing: 12) {
-                    activityStatBox(value: activeCount, label: "Active", color: .green)
-                    activityStatBox(value: idleCount,   label: "Idle",   color: .orange)
-                }
-            }
-            .padding(.vertical, 4)
-        }
-    }
-
-    private func activityStatBox(value: Int, label: String, color: Color) -> some View {
-        VStack(spacing: 5) {
-            Text("\(value)")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(Color.primary)
-            Text(label)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Color.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(color.opacity(0.08))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(color.opacity(0.25), lineWidth: 0.5)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
 
     // MARK: - Fleet Overview Card (Idea 3)
 

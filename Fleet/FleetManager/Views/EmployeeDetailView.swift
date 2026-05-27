@@ -125,12 +125,10 @@ struct EmployeeDetailView: View {
                         .listRowBackground(Color.clear)
                     }
                 } else {
-                    // First trip carries the section header; the rest each get their own card
                     Section(header: Text("Trip History")) {
-                        tripCard(tripsSorted[0])
-                    }
-                    ForEach(tripsSorted.dropFirst()) { trip in
-                        Section { tripCard(trip) }
+                        ForEach(tripsSorted) { trip in
+                            tripCard(trip)
+                        }
                     }
                 }
             }
@@ -160,10 +158,9 @@ struct EmployeeDetailView: View {
                     }
                 } else {
                     Section(header: Text("Work History")) {
-                        maintenanceCard(tasksSorted[0])
-                    }
-                    ForEach(tasksSorted.dropFirst()) { task in
-                        Section { maintenanceCard(task) }
+                        ForEach(tasksSorted) { task in
+                            maintenanceCard(task)
+                        }
                     }
                 }
             }
@@ -190,7 +187,7 @@ struct EmployeeDetailView: View {
                         Label("Delete", systemImage: "trash")
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Image(systemName: "ellipsis")
                 }
             }
         }

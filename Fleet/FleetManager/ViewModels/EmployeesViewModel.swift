@@ -4,10 +4,16 @@ import SwiftUI
 @Observable
 final class EmployeesViewModel {
     private(set) var profiles: [Profile] = []
+    private(set) var trips:   [Trip]   = []
 
     var isLoading = false
     var errorMessage: String?
     var isCreatingUser = false
+
+    /// IDs of drivers currently on an active trip
+    var activeDriverIds: Set<UUID> {
+        Set(trips.filter { $0.status == .active }.compactMap { $0.driverId })
+    }
 
     /// All non-manager profiles
     var employees: [Profile] {
@@ -21,13 +27,19 @@ final class EmployeesViewModel {
         RealtimeManager.shared.addProfilesChangeHandler { [weak self] in
             Task { await self?.loadData() }
         }
+        RealtimeManager.shared.addTripsChangeHandler { [weak self] in
+            Task { await self?.loadData() }
+        }
     }
 
     func loadData() async {
         isLoading = true
         errorMessage = nil
         do {
-            profiles = try await ProfileService.fetchAllProfiles()
+            async let p = ProfileService.fetchAllProfiles()
+            async let t = TripService.fetchAllTrips()
+            profiles = try await p
+            trips    = try await t
         } catch {
             errorMessage = error.localizedDescription
         }
