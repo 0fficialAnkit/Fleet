@@ -87,15 +87,15 @@ enum SchedulerUnifiedItem: Identifiable, Hashable {
 
     var id: UUID {
         switch self {
-        case .task(let t):       return t.id
-        case .workOrder(let w):  return w.id
+        case .task(let t):      return t.id
+        case .workOrder(let w): return w.id
         }
     }
 
     var sortDate: Date {
         switch self {
-        case .task(let t):       return t.date
-        case .workOrder(let w):  return w.createdAt
+        case .task(let t):      return t.date
+        case .workOrder(let w): return w.createdAt
         }
     }
 }
