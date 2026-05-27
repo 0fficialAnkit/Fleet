@@ -6,6 +6,7 @@ struct DashboardView: View {
     @State private var showingNotifications = false
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var navigationPath = NavigationPath()
+    @State private var complianceStore = ComplianceSettingsStore.shared
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -19,6 +20,7 @@ struct DashboardView: View {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 24) {
                             fleetOverviewCard
+                            complianceExpiryAlertsSection
                             liveFleetSection
                             recentOrdersSection
                             maintenanceSection
@@ -54,7 +56,7 @@ struct DashboardView: View {
             .navigationDestination(for: DashboardDestination.self) { destination in
                 switch destination {
                 case .vehiclesRoot:
-                    VehiclesRootView()
+                    VehiclesRootView(path: $navigationPath)
                 case .orderDetail(let trip):
                     OrderDetailView(
                         trip: trip,
@@ -242,6 +244,97 @@ struct DashboardView: View {
                 ForEach(viewModel.maintenanceVehicles) { vehicle in
                     MaintenanceCardView(vehicle: vehicle, viewModel: viewModel)
                         .padding(.horizontal, 16)
+                }
+            }
+        }
+    }
+
+    // MARK: - Automatic Expiry Alerts
+
+    private var expiringVehicles: [(vehicle: Vehicle, type: String, status: ComplianceStatus, daysLeft: Int)] {
+        var alerts: [(vehicle: Vehicle, type: String, status: ComplianceStatus, daysLeft: Int)] = []
+        for vehicle in viewModel.vehicles {
+            let key = vehicle.licensePlate ?? vehicle.id.uuidString
+            let settings = complianceStore.settings(for: key)
+
+            if let date = settings.insuranceExpiry {
+                let days = complianceStore.daysUntilExpiry(for: date) ?? 0
+                if days <= 30 {
+                    let status = complianceStore.insuranceStatus(for: key)
+                    alerts.append((vehicle, "Insurance Expiry", status, days))
+                }
+            }
+
+            if let date = settings.serviceExpiry {
+                let days = complianceStore.daysUntilExpiry(for: date) ?? 0
+                if days <= 30 {
+                    let status = complianceStore.serviceStatus(for: key)
+                    alerts.append((vehicle, "Service Due", status, days))
+                }
+            }
+        }
+        return alerts.sorted(by: { $0.daysLeft < $1.daysLeft })
+    }
+
+    private var complianceExpiryAlertsSection: some View {
+        let alerts = expiringVehicles
+        return Group {
+            if !alerts.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionHeader(title: "Compliance Alerts", action: "Manage") {
+                        navigationPath.append(DashboardDestination.vehiclesRoot)
+                    }
+                    .padding(.horizontal, 16)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(0..<alerts.count, id: \.self) { idx in
+                                let alert = alerts[idx]
+                                let isExpired = alert.daysLeft < 0
+                                NavigationLink(value: DashboardDestination.vehiclesRoot) {
+                                    HStack(spacing: 12) {
+                                        ZStack {
+                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                                .fill(alert.status.color.opacity(0.15))
+                                                .frame(width: 40, height: 40)
+                                            Image(systemName: alert.status.icon)
+                                                .font(.system(size: 16, weight: .bold))
+                                                .foregroundStyle(alert.status.color)
+                                        }
+
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("\(alert.vehicle.make ?? "") \(alert.vehicle.model ?? "")")
+                                                .font(.subheadline.bold())
+                                                .foregroundStyle(Color.primary)
+                                            
+                                            Text("\(alert.type): \(isExpired ? "Expired" : "Expires in \(alert.daysLeft) day\(alert.daysLeft == 1 ? "" : "s")")")
+                                                .font(.caption)
+                                                .foregroundStyle(alert.status.color)
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Text(alert.vehicle.licensePlate ?? "No Plate")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(Color(.tertiarySystemGroupedBackground))
+                                            .clipShape(Capsule())
+                                    }
+                                    .padding(14)
+                                    .frame(width: 280)
+                                    .background(Color(.secondarySystemGroupedBackground))
+                                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                            .stroke(alert.status.color.opacity(0.25), lineWidth: 1)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                    }
                 }
             }
         }

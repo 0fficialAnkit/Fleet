@@ -52,7 +52,8 @@ final class VehiclesViewModel {
         }
     }
 
-    func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, licensePlate: String) async throws {
+    @discardableResult
+    func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, licensePlate: String) async throws -> Vehicle {
         print("[VehiclesViewModel] addVehicle: make=\(make) model=\(model) plate=\(licensePlate)")
         do {
             try await VehicleService.createVehicle(
@@ -68,6 +69,11 @@ final class VehiclesViewModel {
             )
             print("[VehiclesViewModel] addVehicle: success, reloading...")
             await loadData()
+            // Return the newly created vehicle (matched by license plate)
+            if let newVehicle = vehicles.first(where: { $0.licensePlate == licensePlate }) {
+                return newVehicle
+            }
+            throw NSError(domain: "Fleet", code: 1, userInfo: [NSLocalizedDescriptionKey: "Vehicle created but could not be found after reload."])
         } catch {
             print("[VehiclesViewModel] addVehicle ERROR: \(error)")
             throw error

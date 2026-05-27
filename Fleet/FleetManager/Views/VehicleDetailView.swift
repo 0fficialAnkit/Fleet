@@ -5,7 +5,12 @@ struct VehicleDetailView: View {
     let viewModel: VehiclesViewModel
 
     @State private var isShowingEdit = false
+    @State private var complianceStore = ComplianceSettingsStore.shared
     @Environment(\.dismiss) private var dismiss
+
+    private var vehicleKey: String {
+        vehicle.licensePlate ?? vehicle.id.uuidString
+    }
 
     var driverName: String {
         viewModel.getDriver(for: vehicle.assignedDriverId)?.fullName ?? "Unassigned"
@@ -21,69 +26,105 @@ struct VehicleDetailView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 24) {
-                    // Header Section
+
+                    // ── Header ───────────────────────────────────────────────────
                     VStack(spacing: 8) {
-                        Image(systemName: "truck.box.fill")
-                            .font(.system(size: 60))
-                            .foregroundColor(Color.teal)
-                            .padding(.bottom, 8)
+                        ZStack(alignment: .bottomTrailing) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.teal.opacity(0.1))
+                                    .frame(width: 88, height: 88)
+                                Image(systemName: "truck.box.fill")
+                                    .font(.system(size: 42))
+                                    .foregroundColor(Color.teal)
+                            }
+                            // Compliance status dot
+                            let overall = complianceStore.overallStatus(for: vehicleKey)
+                            if overall != .compliant {
+                                Circle()
+                                    .fill(overall.color)
+                                    .frame(width: 20, height: 20)
+                                    .overlay(
+                                        Image(systemName: overall == .nonCompliant ? "xmark" : "exclamationmark")
+                                            .font(.system(size: 9, weight: .bold))
+                                            .foregroundStyle(.white)
+                                    )
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color(.systemGroupedBackground), lineWidth: 2)
+                                    )
+                            }
+                        }
+                        .padding(.bottom, 4)
 
                         Text("\(vehicle.make ?? "Unknown") \(vehicle.model ?? "")")
                             .font(.title.bold())
                             .foregroundColor(Color.primary)
 
-                        StatusBadge(text: vehicle.licensePlate ?? "No License Plate", color: Color.teal)
+                        HStack(spacing: 8) {
+                            StatusBadge(text: vehicle.licensePlate ?? "No License Plate", color: Color.teal)
+                            ComplianceBadge(status: complianceStore.overallStatus(for: vehicleKey))
+                        }
                     }
                     .padding(.top, 32)
 
-                    // Vehicle Info Card
+                    // ── Live Compliance Status Card ──────────────────────────────
+                    VStack(alignment: .leading, spacing: 8) {
+                        SectionHeader(title: "Compliance Status")
+                            .padding(.horizontal, 16)
+                        VehicleComplianceStatusCard(vehicleId: vehicleKey)
+                    }
 
-                        VStack(spacing: 0) {
-                            InfoRow(icon: "building.2", label: "Manufacturer", value: vehicle.make ?? "N/A")
-                            Divider().background(Color(.separator))
-                            InfoRow(icon: "tag", label: "Model", value: vehicle.model ?? "N/A")
-                            Divider().background(Color(.separator))
-                            InfoRow(icon: "calendar", label: "Year", value: vehicle.year != nil ? String(vehicle.year!) : "N/A")
-                            Divider().background(Color(.separator))
-                            InfoRow(icon: "fuelpump", label: "Tank Capacity", value: vehicle.tankCapacity != nil ? "\(String(format: "%.1f", vehicle.tankCapacity!)) L" : "N/A")
-                            Divider().background(Color(.separator))
-                            InfoRow(icon: "gauge.open.with.lines.needle.33percent", label: "Mileage", value: vehicle.mileage != nil ? "\(String(format: "%.1f", vehicle.mileage!)) km/l" : "N/A")
-                            Divider().background(Color(.separator))
-                            InfoRow(icon: "creditcard", label: "Purchase Date", value: vehicle.purchaseDate?.formatted(date: .abbreviated, time: .omitted) ?? "N/A")
-                        }
-                        .padding(16)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    // ── Vehicle Info Card ────────────────────────────────────────
+                    VStack(spacing: 0) {
+                        InfoRow(icon: "building.2",    label: "Manufacturer", value: vehicle.make ?? "N/A")
+                        Divider().background(Color(.separator))
+                        InfoRow(icon: "tag",           label: "Model",        value: vehicle.model ?? "N/A")
+                        Divider().background(Color(.separator))
+                        InfoRow(icon: "calendar",      label: "Year",         value: vehicle.year != nil ? String(vehicle.year!) : "N/A")
+                        Divider().background(Color(.separator))
+                        InfoRow(icon: "fuelpump",      label: "Tank Capacity",
+                                value: vehicle.tankCapacity != nil ? "\(String(format: "%.1f", vehicle.tankCapacity!)) L" : "N/A")
+                        Divider().background(Color(.separator))
+                        InfoRow(icon: "gauge.open.with.lines.needle.33percent", label: "Mileage",
+                                value: vehicle.mileage != nil ? "\(String(format: "%.1f", vehicle.mileage!)) km/l" : "N/A")
+                        Divider().background(Color(.separator))
+                        InfoRow(icon: "creditcard",    label: "Purchase Date",
+                                value: vehicle.purchaseDate?.formatted(date: .abbreviated, time: .omitted) ?? "N/A")
+                    }
+                    .padding(16)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .padding(.horizontal, 16)
 
-                    // Assigned Driver Card
+                    // ── Assigned Driver Card ─────────────────────────────────────
                     VStack(alignment: .leading, spacing: 8) {
                         SectionHeader(title: "Current Driver")
                             .padding(.horizontal, 16)
 
-                            HStack(spacing: 16) {
-                                Circle()
-                                    .fill(Color.teal.opacity(0.1))
-                                    .frame(width: 40, height: 40)
-                                    .overlay(
-                                        Image(systemName: "person.crop.circle.fill")
-                                            .foregroundColor(Color.teal)
-                                            .font(.system(size: 20))
-                                    )
+                        HStack(spacing: 16) {
+                            Circle()
+                                .fill(Color.teal.opacity(0.1))
+                                .frame(width: 40, height: 40)
+                                .overlay(
+                                    Image(systemName: "person.crop.circle.fill")
+                                        .foregroundColor(Color.teal)
+                                        .font(.system(size: 20))
+                                )
 
-                                Text(driverName)
-                                    .font(.body)
-                                    .foregroundColor(Color.primary)
+                            Text(driverName)
+                                .font(.body)
+                                .foregroundColor(Color.primary)
 
-                                Spacer()
-                            }
-                            .padding(16)
-                            .background(Color(.secondarySystemGroupedBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            Spacer()
+                        }
+                        .padding(16)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .padding(.horizontal, 16)
                     }
 
-                    // Past Trips History
+                    // ── Past Trips History ───────────────────────────────────────
                     VStack(alignment: .leading, spacing: 8) {
                         SectionHeader(title: "Past Trips")
                             .padding(.horizontal, 16)
@@ -100,6 +141,8 @@ struct VehicleDetailView: View {
                             .padding(.horizontal, 16)
                         }
                     }
+
+                    Color.clear.frame(height: 24)
                 }
                 .padding(.bottom, 40)
             }
@@ -109,12 +152,9 @@ struct VehicleDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button(action: {
-                        isShowingEdit = true
-                    }) {
+                    Button(action: { isShowingEdit = true }) {
                         Label("Edit", systemImage: "pencil")
                     }
-
                     Button(role: .destructive, action: {
                         Task {
                             do {
@@ -149,32 +189,31 @@ struct TripHistoryRow: View {
     }
 
     var body: some View {
-
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Image(systemName: "map.fill")
-                        .foregroundColor(Color.blue)
-                    Text("Distance: \(String(format: "%.1f", trip.distance ?? 0)) km")
-                        .font(.body.bold())
-                        .foregroundColor(Color.primary)
-                    Spacer()
-                    Text(trip.endTime?.formatted(date: .abbreviated, time: .shortened) ?? "")
-                        .font(.caption)
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-
-                HStack {
-                    Image(systemName: "person.fill")
-                        .foregroundColor(Color.secondary)
-                        .font(.system(size: 14))
-                    Text("Driver: \(driverName)")
-                        .font(.subheadline)
-                        .foregroundColor(Color.secondary)
-                }
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "map.fill")
+                    .foregroundColor(Color.blue)
+                Text("Distance: \(String(format: "%.1f", trip.distance ?? 0)) km")
+                    .font(.body.bold())
+                    .foregroundColor(Color.primary)
+                Spacer()
+                Text(trip.endTime?.formatted(date: .abbreviated, time: .shortened) ?? "")
+                    .font(.caption)
+                    .foregroundColor(Color(.tertiaryLabel))
             }
-            .padding(16)
-            .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            HStack {
+                Image(systemName: "person.fill")
+                    .foregroundColor(Color.secondary)
+                    .font(.system(size: 14))
+                Text("Driver: \(driverName)")
+                    .font(.subheadline)
+                    .foregroundColor(Color.secondary)
+            }
+        }
+        .padding(16)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

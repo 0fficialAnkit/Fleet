@@ -285,10 +285,12 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 433L6U33WG;
+				DEVELOPMENT_TEAM = MJ29KZKSUT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Fleet uses your camera to scan insurance documents and service receipts.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet uses your location to show your position on the route map and guide you to your destination.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Fleet uses your photo library to select scanned documents.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -299,7 +301,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = fleet.study.cookies;
+				PRODUCT_BUNDLE_IDENTIFIER = fleet.study.cookies11;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -318,10 +320,12 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 433L6U33WG;
+				DEVELOPMENT_TEAM = MJ29KZKSUT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "Fleet uses your camera to scan insurance documents and service receipts.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet uses your location to show your position on the route map and guide you to your destination.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Fleet uses your photo library to select scanned documents.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -332,7 +336,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = fleet.study.cookies;
+				PRODUCT_BUNDLE_IDENTIFIER = fleet.study.cookies11;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

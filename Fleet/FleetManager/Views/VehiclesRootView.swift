@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct VehiclesRootView: View {
+    @Binding var path: NavigationPath
     @State private var vehiclesViewModel = VehiclesViewModel()
     @State private var isShowingAddVehicle = false
 
@@ -17,7 +18,6 @@ struct VehiclesRootView: View {
                         .font(.system(size: 17, weight: .medium))
                         .foregroundStyle(Color.primary)
                         .frame(width: 38, height: 38)
-//                        .background(.ultraThinMaterial, in: Circle())
                 }
                 .buttonStyle(.plain)
             }
@@ -26,7 +26,9 @@ struct VehiclesRootView: View {
             VehicleDetailView(vehicle: vehicle, viewModel: vehiclesViewModel)
         }
         .sheet(isPresented: $isShowingAddVehicle) {
-            AddVehicleView(viewModel: vehiclesViewModel)
+            AddVehicleView(viewModel: vehiclesViewModel) { newVehicle in
+                path.append(newVehicle)
+            }
         }
         .task {
             await vehiclesViewModel.loadData()
@@ -36,5 +38,8 @@ struct VehiclesRootView: View {
 }
 
 #Preview {
-    VehiclesRootView()
+    @State var path = NavigationPath()
+    return NavigationStack(path: $path) {
+        VehiclesRootView(path: $path)
+    }
 }

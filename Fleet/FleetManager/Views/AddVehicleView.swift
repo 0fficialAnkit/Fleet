@@ -1,17 +1,35 @@
 import SwiftUI
+import UserNotifications
 
 struct AddVehicleView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: VehiclesViewModel
 
-    @State private var make = ""
-    @State private var model = ""
-    @State private var year = ""
-    @State private var licensePlate = ""
-    @State private var tankCapacity = ""
-    @State private var mileage = ""
-    @State private var isSaving = false
+    /// Called with the newly created Vehicle after a successful save.
+    var onSaved: ((Vehicle) -> Void)? = nil
+
+    @State private var make          = ""
+    @State private var model         = ""
+    @State private var year          = ""
+    @State private var licensePlate  = ""
+    @State private var tankCapacity  = ""
+    @State private var mileage       = ""
+    @State private var isSaving      = false
     @State private var errorMessage: String?
+
+    // Temporary vehicleId so compliance settings can be linked on save
+    @State private var tempVehicleId = UUID()
+
+    // Compliance settings bound to the card
+    @State private var complianceSettings: ComplianceSettings
+
+    init(viewModel: VehiclesViewModel, onSaved: ((Vehicle) -> Void)? = nil) {
+        self.viewModel = viewModel
+        self.onSaved   = onSaved
+        let tempId = UUID()
+        _tempVehicleId       = State(initialValue: tempId)
+        _complianceSettings  = State(initialValue: ComplianceSettings(vehicleId: tempId.uuidString))
+    }
 
     var body: some View {
         NavigationStack {
@@ -21,42 +39,31 @@ struct AddVehicleView: View {
                 ScrollView {
                     VStack(spacing: 24) {
 
-                        // Error message
+                        // Error banner
                         if let error = errorMessage {
-                            Text(error)
-                                .font(.subheadline)
-                                .foregroundColor(Color.red)
-                                .padding(.horizontal, 16)
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .foregroundStyle(.red)
+                                Text(error)
+                                    .font(.subheadline)
+                                    .foregroundColor(.red)
+                            }
+                            .padding(.horizontal, 16)
                         }
 
-                        // Basic Details Section
+                        // ── Basic Details ───────────────────────────────────────
                         VStack(alignment: .leading, spacing: 8) {
                             SectionHeader(title: "Basic Details")
                                 .padding(.horizontal, 16)
-                                                        VStack(spacing: 0) {
-                                TextField("", text: $make, prompt: Text("Manufacturer (e.g. Ford)").foregroundColor(Color(.placeholderText)))
-                                    .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
 
+                            VStack(spacing: 0) {
+                                field(text: $make,         prompt: "Manufacturer (e.g. Ford)")
                                 Divider().background(Color(.separator))
-
-                                TextField("", text: $model, prompt: Text("Model (e.g. Transit)").foregroundColor(Color(.placeholderText)))
-                                    .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
-
+                                field(text: $model,        prompt: "Model (e.g. Transit)")
                                 Divider().background(Color(.separator))
-
-                                TextField("", text: $year, prompt: Text("Year (e.g. 2024)").foregroundColor(Color(.placeholderText)))
-                                    .keyboardType(.numberPad)
-                                    .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
-
+                                field(text: $year,         prompt: "Year (e.g. 2024)",  keyboard: .numberPad)
                                 Divider().background(Color(.separator))
-
-                                TextField("", text: $licensePlate, prompt: Text("License Plate").foregroundColor(Color(.placeholderText)))
-                                    .textInputAutocapitalization(.characters)
-                                    .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
+                                field(text: $licensePlate, prompt: "License Plate",      autocap: .characters)
                             }
                             .padding(16)
                             .background(Color(.secondarySystemGroupedBackground))
@@ -64,28 +71,32 @@ struct AddVehicleView: View {
                             .padding(.horizontal, 16)
                         }
 
-                        // Specifications Section
+                        // ── Specifications ──────────────────────────────────────
                         VStack(alignment: .leading, spacing: 8) {
                             SectionHeader(title: "Specifications")
                                 .padding(.horizontal, 16)
-                                                        VStack(spacing: 0) {
-                                TextField("", text: $tankCapacity, prompt: Text("Tank Capacity (L)").foregroundColor(Color(.placeholderText)))
-                                    .keyboardType(.decimalPad)
-                                    .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
 
+                            VStack(spacing: 0) {
+                                field(text: $tankCapacity, prompt: "Tank Capacity (L)",  keyboard: .decimalPad)
                                 Divider().background(Color(.separator))
-
-                                TextField("", text: $mileage, prompt: Text("Mileage (km/l)").foregroundColor(Color(.placeholderText)))
-                                    .keyboardType(.decimalPad)
-                                    .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
+                                field(text: $mileage,      prompt: "Mileage (km/l)",      keyboard: .decimalPad)
                             }
                             .padding(16)
                             .background(Color(.secondarySystemGroupedBackground))
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                             .padding(.horizontal, 16)
                         }
+
+                        // ── Compliance & Reminders ──────────────────────────────
+                        VStack(alignment: .leading, spacing: 8) {
+                            SectionHeader(title: "Compliance & Reminders")
+                                .padding(.horizontal, 16)
+
+                            ComplianceReminderCard(settings: $complianceSettings)
+                                .padding(.horizontal, 16)
+                        }
+
+                        Color.clear.frame(height: 16)
                     }
                     .padding(.vertical, 16)
                 }
@@ -94,50 +105,14 @@ struct AddVehicleView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundColor(Color.teal)
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(Color.teal)
                 }
-
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        Task {
-                            isSaving = true
-                            errorMessage = nil
-                            let yearInt = Int(year.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 2024
-                            let cap = Double(tankCapacity.trimmingCharacters(in: .whitespacesAndNewlines))
-                            let mil = Double(mileage.trimmingCharacters(in: .whitespacesAndNewlines))
-
-                            let makeTrimmed = make.trimmingCharacters(in: .whitespacesAndNewlines)
-                            let modelTrimmed = model.trimmingCharacters(in: .whitespacesAndNewlines)
-                            let plateTrimmed = licensePlate.trimmingCharacters(in: .whitespacesAndNewlines)
-
-                            guard !makeTrimmed.isEmpty, !modelTrimmed.isEmpty, !plateTrimmed.isEmpty else {
-                                errorMessage = "Make, model, and license plate are required."
-                                isSaving = false
-                                return
-                            }
-
-                            do {
-                                try await viewModel.addVehicle(
-                                    make: makeTrimmed,
-                                    model: modelTrimmed,
-                                    year: yearInt,
-                                    tankCapacity: cap,
-                                    mileage: mil,
-                                    licensePlate: plateTrimmed
-                                )
-                                dismiss()
-                            } catch {
-                                errorMessage = error.localizedDescription
-                            }
-                            isSaving = false
-                        }
-                    }
-                    .foregroundColor(Color.teal)
-                    .bold()
-                    .disabled(isSaving)
+                    Button("Save") { Task { await save() } }
+                        .foregroundColor(Color.teal)
+                        .bold()
+                        .disabled(isSaving)
                 }
             }
             .overlay {
@@ -157,7 +132,72 @@ struct AddVehicleView: View {
                     }
                 }
             }
+            .task {
+                _ = try? await UNUserNotificationCenter.current()
+                    .requestAuthorization(options: [.alert, .sound, .badge])
+            }
         }
+    }
+
+    // MARK: - Helper
+
+    @ViewBuilder
+    private func field(
+        text: Binding<String>,
+        prompt: String,
+        keyboard: UIKeyboardType = .default,
+        autocap: TextInputAutocapitalization = .sentences
+    ) -> some View {
+        TextField("", text: text,
+                  prompt: Text(prompt).foregroundColor(Color(.placeholderText)))
+            .keyboardType(keyboard)
+            .textInputAutocapitalization(autocap)
+            .padding(.vertical, 12)
+            .foregroundColor(Color.primary)
+    }
+
+    // MARK: - Save
+
+    private func save() async {
+        isSaving     = true
+        errorMessage = nil
+
+        let yearInt   = Int(year.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 2024
+        let cap       = Double(tankCapacity.trimmingCharacters(in: .whitespacesAndNewlines))
+        let mil       = Double(mileage.trimmingCharacters(in: .whitespacesAndNewlines))
+        let makeTrim  = make.trimmingCharacters(in: .whitespacesAndNewlines)
+        let modelTrim = model.trimmingCharacters(in: .whitespacesAndNewlines)
+        let plateTrim = licensePlate.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !makeTrim.isEmpty, !modelTrim.isEmpty, !plateTrim.isEmpty else {
+            errorMessage = "Make, model, and license plate are required."
+            isSaving = false
+            return
+        }
+
+        do {
+            let newVehicle = try await viewModel.addVehicle(
+                make:         makeTrim,
+                model:        modelTrim,
+                year:         yearInt,
+                tankCapacity: cap,
+                mileage:      mil,
+                licensePlate: plateTrim
+            )
+
+            // Persist compliance settings keyed by license plate
+            var finalSettings = complianceSettings
+            finalSettings.vehicleId = plateTrim
+            ComplianceSettingsStore.shared.upsert(finalSettings)
+
+            // Dismiss first, then navigate to the new vehicle's detail
+            dismiss()
+            onSaved?(newVehicle)
+
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isSaving = false
     }
 }
 
