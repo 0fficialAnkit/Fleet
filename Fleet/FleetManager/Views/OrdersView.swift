@@ -22,10 +22,8 @@ struct OrdersView: View {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 16) {
-
-                            // Filters
+                    List {
+                        Section {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
                                     FilterButton(title: "All", isSelected: selectedFilter == nil) {
@@ -43,25 +41,26 @@ struct OrdersView: View {
                                 .padding(.horizontal, 16)
                             }
                             .padding(.vertical, 8)
+                        }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
 
-                            // Orders List
+                        Section {
                             if filteredTrips.isEmpty {
                                 Text("No orders found.")
                                     .font(.body)
                                     .foregroundColor(Color.secondary)
-                                    .padding(.top, 40)
+                                    .padding(.vertical, 40)
                             } else {
                                 ForEach(filteredTrips) { trip in
                                     NavigationLink(value: trip) {
                                         OrderCardView(trip: trip, viewModel: viewModel)
                                     }
-                                    .buttonStyle(.plain)
                                 }
-                                .padding(.horizontal, 16)
                             }
                         }
-                        .padding(.bottom, 40)
                     }
+                    .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle("Orders")
@@ -146,10 +145,6 @@ struct OrderCardView: View {
                 }
 
                 Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color(.tertiaryLabel))
             }
             .padding(.vertical, 2)
 
@@ -174,10 +169,7 @@ struct OrderCardView: View {
                 }
             }
         }
-        .contentShape(Rectangle())
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.vertical, 4)
 
     }
 }

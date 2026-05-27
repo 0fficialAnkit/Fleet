@@ -16,14 +16,21 @@ struct ReportsView: View {
             ZStack {
                 Color(.systemGroupedBackground).ignoresSafeArea()
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 24) {
-                        summaryCards
-                        filterChips
-                        reportsList
+                List {
+                    Section {
+                        VStack(spacing: 16) {
+                            summaryCards
+                            filterChips
+                        }
                     }
-                    .padding(.vertical, 16)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+
+                    Section {
+                        reportsListContent
+                    }
                 }
+                .listStyle(.insetGrouped)
             }
             .navigationTitle("Issue Reports")
             .sheet(item: $selectedReport) { report in
@@ -95,28 +102,28 @@ struct ReportsView: View {
         .padding(.vertical, 8)
     }
 
-    // MARK: - Reports List
-    private var reportsList: some View {
-        LazyVStack(spacing: 16) {
-            if filteredReports.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "tray.fill")
-                        .font(.system(size: 40))
-                        .foregroundStyle(Color(.quaternaryLabel))
-                    Text("No reports found")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 60)
-            } else {
-                ForEach(filteredReports) { report in
+    @ViewBuilder
+    private var reportsListContent: some View {
+        if filteredReports.isEmpty {
+            VStack(spacing: 16) {
+                Image(systemName: "tray.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(Color(.quaternaryLabel))
+                Text("No reports found")
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(Color.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 40)
+            .listRowBackground(Color.clear)
+        } else {
+            ForEach(filteredReports) { report in
+                Button(action: { selectedReport = report }) {
                     ReportRowView(report: report, viewModel: viewModel)
-                        .onTapGesture { selectedReport = report }
                 }
+                .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 16)
     }
 }
 
@@ -189,10 +196,7 @@ struct ReportRowView: View {
                     .foregroundStyle(Color(.quaternaryLabel))
             }
         }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.vertical, 4)
     }
 }
 
