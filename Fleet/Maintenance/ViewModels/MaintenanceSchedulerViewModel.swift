@@ -47,7 +47,7 @@ struct ScheduledTask: Identifiable, Hashable {
     let priority: TaskPriority
     let scheduledTime: String
     let assignedBy: String
-    let estimatedDuration: String
+    var estimatedDuration: String
     var status: TaskDisplayStatus
     let description: String
     let date: Date
@@ -56,6 +56,8 @@ struct ScheduledTask: Identifiable, Hashable {
     let previousNote: String
     let aiRecommendation: String
     let sourceTaskId: UUID? // link to Supabase MaintenanceTask.id
+    var laborHours: String? = nil
+    var laborCost: String? = nil
 }
 
 // MARK: - ScheduledWorkOrder (UI display model)
@@ -74,6 +76,7 @@ struct ScheduledWorkOrder: Identifiable, Hashable {
     var partsUsed: [String]
     let sourceWorkOrderId: UUID? // link to Supabase WorkOrder.id
     var sourceIssueReportId: UUID? = nil // link to Supabase IssueReportRecord.id
+    let vehicleIssue: String
 }
 
 // MARK: - ViewModel
@@ -104,30 +107,36 @@ final class MaintenanceSchedulerViewModel {
     private var profiles: [Profile] = []
     private(set) var inventory: [Inventory] = []
 
-    // MARK: - Load Data
+    // MARK: - Date Navigation Helper
+
+    func selectDate(_ date: Date) {
+        selectedDate = Calendar.current.startOfDay(for: date)
+    }
+
+    // MARK: - Fetch Data from Supabase
 
     func loadData() async {
-        guard let userId = currentUserId else { return }
         isLoading = true
         errorMessage = nil
         do {
-            async let t = MaintenanceTaskService.fetchTasksForUser(assignedTo: userId)
-            async let w = WorkOrderService.fetchWorkOrdersForUser(assignedTo: userId)
-            async let ir = IssueReportService.fetchIssueReportsAssignedTo(userId: userId)
-            async let v = VehicleService.fetchAllVehicles()
-            async let p = ProfileService.fetchAllProfiles()
-            async let i = InventoryService.fetchAllInventory()
+            vehicles = try await VehicleService.fetchAllVehicles()
+            profiles = try await ProfileService.fetchAllProfiles()
+            inventory = try await InventoryService.fetchAllInventory()
 
-            rawTasks = try await t
-            rawWorkOrders = try await w
-            rawIssueReports = try await ir
-            vehicles = try await v
-            profiles = try await p
-            inventory = try await i
+            if let uid = currentUserId {
+                rawTasks = try await MaintenanceTaskService.fetchTasksForUser(assignedTo: uid)
+                rawWorkOrders = try await WorkOrderService.fetchWorkOrdersForUser(assignedTo: uid)
+                rawIssueReports = try await IssueReportService.fetchIssueReportsAssignedTo(userId: uid)
+            } else {
+                rawTasks = try await MaintenanceTaskService.fetchAllTasks()
+                rawWorkOrders = try await WorkOrderService.fetchAllWorkOrders()
+                rawIssueReports = try await IssueReportService.fetchAllIssueReports()
+            }
 
             buildDisplayModels()
         } catch {
             errorMessage = error.localizedDescription
+            print("[SchedulerViewModel] loadData error: \(error)")
         }
         isLoading = false
     }
@@ -184,7 +193,9 @@ final class MaintenanceSchedulerViewModel {
                 partsNeeded: [],
                 previousNote: "",
                 aiRecommendation: "",
-                sourceTaskId: task.id
+                sourceTaskId: task.id,
+                laborHours: nil,
+                laborCost: nil
             )
         }
 
@@ -204,7 +215,8 @@ final class MaintenanceSchedulerViewModel {
                 laborCost: "—",
                 notes: "",
                 partsUsed: [],
-                sourceWorkOrderId: wo.id
+                sourceWorkOrderId: wo.id,
+                vehicleIssue: "Scheduled maintenance / Service required."
             )
         }
 
@@ -242,7 +254,8 @@ final class MaintenanceSchedulerViewModel {
                 notes: ir.description ?? "",
                 partsUsed: [],
                 sourceWorkOrderId: nil,
-                sourceIssueReportId: ir.id
+                sourceIssueReportId: ir.id,
+                vehicleIssue: ir.description ?? "No description reported."
             )
         }
 
@@ -439,6 +452,68 @@ final class MaintenanceSchedulerViewModel {
                     try? await WorkOrderPartService.addPart(wop)
                 }
             }
+        }
+    }
+
+    var allVehicles: [Vehicle] { vehicles }
+
+    func updateTaskLabor(id: UUID, hours: String, cost: String) {
+        if let idx = allTasks.firstIndex(where: { $0.id == id }) {
+            allTasks[idx].laborHours = hours
+            allTasks[idx].laborCost = cost
+        }
+        if selectedTask?.id == id {
+            selectedTask?.laborHours = hours
+            selectedTask?.laborCost = cost
+        }
+    }
+
+    func updateTaskDuration(id: UUID, duration: String) {
+        if let idx = allTasks.firstIndex(where: { $0.id == id }) {
+            allTasks[idx].estimatedDuration = duration
+        }
+        if selectedTask?.id == id {
+            selectedTask?.estimatedDuration = duration
+        }
+    }
+
+    func createNewTask(vehicleId: UUID, taskType: MaintenanceTaskType, priority: TaskPriority, date: Date, description: String, estimatedDuration: String, laborHours: String, laborCost: String, currentUserId: UUID?) async {
+        guard let vehicle = vehicles.first(where: { $0.id == vehicleId }) else { return }
+        
+        let newTask = ScheduledTask(
+            id: UUID(),
+            vehicleNumber: vehicle.licensePlate ?? "Unknown",
+            vehicleName: "\(vehicle.make ?? "") \(vehicle.model ?? "")",
+            taskType: taskType,
+            priority: priority,
+            scheduledTime: DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .short),
+            assignedBy: "Maintenance Personnel",
+            estimatedDuration: estimatedDuration,
+            status: .pending,
+            description: description,
+            date: date,
+            checklistItems: [],
+            partsNeeded: [],
+            previousNote: "",
+            aiRecommendation: "Perform routine maintenance.",
+            sourceTaskId: nil,
+            laborHours: laborHours.isEmpty ? nil : laborHours,
+            laborCost: laborCost.isEmpty ? nil : laborCost
+        )
+        
+        allTasks.append(newTask)
+        
+        if let currentUserId {
+            try? await MaintenanceTaskService.createTask(
+                workOrderId: nil,
+                vehicleId: vehicleId,
+                scheduledBy: currentUserId,
+                assignedTo: currentUserId,
+                taskType: taskType,
+                description: description,
+                scheduledDate: date,
+                status: .pending
+            )
         }
     }
 }
