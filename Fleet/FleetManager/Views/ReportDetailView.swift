@@ -7,6 +7,8 @@ struct ReportDetailView: View {
 
     @State private var selectedStaffId: UUID?
     @Environment(\.dismiss) private var dismiss
+    
+    @State private var isExporting = false
 
     init(report: IssueReport, viewModel: ReportsViewModel) {
         self.report = report
@@ -184,30 +186,94 @@ struct ReportDetailView: View {
                     }
                     .padding(24)
                     .padding(.bottom, 40)
-                }
             }
             .navigationTitle("Issue Report")
             .navigationBarTitleDisplayMode(.inline)
+            .overlay {
+                if isExporting {
+                    ZStack {
+                        Color.black.opacity(0.15)
+                            .ignoresSafeArea()
+                        
+                        VStack(spacing: 12) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(1.2)
+                            Text("Generating Document...")
+                                .font(.subheadline)
+                                .foregroundStyle(.white)
+                                .fontWeight(.medium)
+                        }
+                        .padding(24)
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: Color.black.opacity(0.15), radius: 10, y: 5)
+                    }
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
                         .foregroundStyle(Color.secondary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Save") {
-                        handleSave()
+                    HStack(spacing: 16) {
+                        Menu {
+                            Button {
+                                exportCSV()
+                            } label: {
+                                Label("Export CSV", systemImage: "tablecells.fill")
+                            }
+                            
+                            Button {
+                                Task {
+                                    await exportPDF()
+                                }
+                            } label: {
+                                Label("Export PDF", systemImage: "doc.text.fill")
+                            }
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                                .foregroundStyle(Color.teal)
+                        }
+                        
+                        Button("Save") {
+                            handleSave()
+                        }
+                        .foregroundStyle(Color.teal)
+                        .fontWeight(.semibold)
                     }
-                    .foregroundStyle(Color.teal)
-                    .fontWeight(.semibold)
                 }
             }
         }
     }
+}
 
     private func handleSave() {
         let newStatus: IssueReportStatus = (selectedStaffId == nil) ? .open : .assigned
         viewModel.update(reportId: report.id, assignedTo: selectedStaffId, status: newStatus)
         dismiss()
+    }
+    
+    private func exportCSV() {
+        guard let url = CSVGenerator.generateCSV(from: [report]) else { return }
+        ShareSheet.share(items: [url])
+    }
+    
+    private func exportPDF() async {
+        isExporting = true
+        let vehicle = viewModel.allVehicles.first { $0.id == report.vehicleId }
+        let previous = viewModel.reports.filter { $0.vehicleId == report.vehicleId && $0.id != report.id }
+        
+        if let url = await PDFGenerator.generateSingleReportPDF(
+            report: report,
+            driverProfile: driverProfile,
+            vehicle: vehicle,
+            previousIssues: previous
+        ) {
+            ShareSheet.share(items: [url])
+        }
+        isExporting = false
     }
 }
 

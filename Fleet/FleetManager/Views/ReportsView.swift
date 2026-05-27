@@ -5,6 +5,8 @@ struct ReportsView: View {
     @State private var viewModel = ReportsViewModel()
     @State private var selectedReport: IssueReport?
     @State private var filterStatus: IssueReportStatus? = nil
+    
+    @State private var isExporting = false
 
     var filteredReports: [IssueReport] {
         guard let f = filterStatus else { return viewModel.reports }
@@ -29,12 +31,71 @@ struct ReportsView: View {
             .sheet(item: $selectedReport) { report in
                 ReportDetailView(report: report, viewModel: viewModel)
             }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            exportCSV()
+                        } label: {
+                            Label("Export CSV", systemImage: "tablecells.fill")
+                        }
+                        
+                        Button {
+                            Task {
+                                await exportPDF()
+                            }
+                        } label: {
+                            Label("Export PDF", systemImage: "doc.text.fill")
+                        }
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color.primary)
+                    }
+                }
+            }
+            .overlay {
+                if isExporting {
+                    ZStack {
+                        Color.black.opacity(0.15)
+                            .ignoresSafeArea()
+                        
+                        VStack(spacing: 12) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(1.2)
+                            Text("Generating Document...")
+                                .font(.subheadline)
+                                .foregroundStyle(.white)
+                                .fontWeight(.medium)
+                        }
+                        .padding(24)
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: Color.black.opacity(0.15), radius: 10, y: 5)
+                    }
+                }
+            }
             .task {
                 await viewModel.loadData()
                 viewModel.setupRealtime()
             }
         }
     }
+    
+    private func exportCSV() {
+        guard let url = CSVGenerator.generateCSV(from: filteredReports) else { return }
+        ShareSheet.share(items: [url])
+    }
+    
+    private func exportPDF() async {
+        isExporting = true
+        if let url = await PDFGenerator.generatePDF(from: filteredReports) {
+            ShareSheet.share(items: [url])
+        }
+        isExporting = false
+    }
+
 
     // MARK: - Summary Cards
     private var summaryCards: some View {

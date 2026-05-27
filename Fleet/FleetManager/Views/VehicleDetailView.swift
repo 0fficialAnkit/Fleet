@@ -5,6 +5,7 @@ struct VehicleDetailView: View {
     let viewModel: VehiclesViewModel
 
     @State private var isShowingEdit = false
+    @State private var isExporting = false
     @Environment(\.dismiss) private var dismiss
 
     var driverName: String {
@@ -103,6 +104,28 @@ struct VehicleDetailView: View {
                 }
                 .padding(.bottom, 40)
             }
+            .overlay {
+                if isExporting {
+                    ZStack {
+                        Color.black.opacity(0.15)
+                            .ignoresSafeArea()
+                        
+                        VStack(spacing: 12) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(1.2)
+                            Text("Generating Document...")
+                                .font(.subheadline)
+                                .foregroundStyle(.white)
+                                .fontWeight(.medium)
+                        }
+                        .padding(24)
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .shadow(color: Color.black.opacity(0.15), radius: 10, y: 5)
+                    }
+                }
+            }
         }
         .navigationTitle("Details")
         .navigationBarTitleDisplayMode(.inline)
@@ -113,6 +136,20 @@ struct VehicleDetailView: View {
                         isShowingEdit = true
                     }) {
                         Label("Edit", systemImage: "pencil")
+                    }
+                    
+                    Button(action: {
+                        exportCSV()
+                    }) {
+                        Label("Export CSV", systemImage: "tablecells.fill")
+                    }
+
+                    Button(action: {
+                        Task {
+                            await exportPDF()
+                        }
+                    }) {
+                        Label("Export PDF", systemImage: "doc.text.fill")
                     }
 
                     Button(role: .destructive, action: {
@@ -137,6 +174,32 @@ struct VehicleDetailView: View {
         .sheet(isPresented: $isShowingEdit) {
             EditVehicleView(viewModel: viewModel, vehicle: vehicle)
         }
+    }
+    
+    private func exportCSV() {
+        let driver = viewModel.getDriver(for: vehicle.assignedDriverId)
+        let name = driver?.fullName ?? "Unassigned"
+        guard let url = CSVGenerator.generateVehicleCSV(
+            vehicle: vehicle,
+            driverName: name,
+            pastTrips: pastTrips,
+            profiles: viewModel.profiles
+        ) else { return }
+        ShareSheet.share(items: [url])
+    }
+    
+    private func exportPDF() async {
+        isExporting = true
+        let driver = viewModel.getDriver(for: vehicle.assignedDriverId)
+        if let url = await PDFGenerator.generateVehicleReportPDF(
+            vehicle: vehicle,
+            driver: driver,
+            pastTrips: pastTrips,
+            profiles: viewModel.profiles
+        ) {
+            ShareSheet.share(items: [url])
+        }
+        isExporting = false
     }
 }
 
