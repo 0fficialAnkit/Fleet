@@ -56,62 +56,39 @@ struct VehicleDetailView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .padding(.horizontal, 16)
 
-                    // Maintenance Status
+                    // Usage Report
                     VStack(alignment: .leading, spacing: 8) {
-                        SectionHeader(title: "Maintenance Status")
+                        SectionHeader(title: "Usage Report")
                             .padding(.horizontal, 16)
                         
-                        let totalKM = viewModel.getTotalDistance(for: vehicle.id)
-                        let threshold = vehicle.vehicleType?.maintenanceThresholdKM ?? 10000
-                        let progress = min(totalKM / threshold, 1.0)
-                        
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
+                        NavigationLink(destination: UsageReportView(vehicle: vehicle, viewModel: viewModel)) {
+                            HStack(spacing: 16) {
+                                Circle()
+                                    .fill(Color.teal.opacity(0.1))
+                                    .frame(width: 44, height: 44)
+                                    .overlay(
+                                        Image(systemName: "chart.pie.fill")
+                                            .foregroundColor(Color.teal)
+                                            .font(.system(size: 20))
+                                    )
+                                
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("Total KM Traveled")
-                                        .font(.caption)
-                                        .foregroundColor(Color.secondary)
-                                    Text("\(String(format: "%.0f", totalKM)) km")
+                                    Text("View Analytics")
                                         .font(.headline)
                                         .foregroundColor(Color.primary)
+                                    Text("Distance, trips, and insights")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
                                 }
                                 Spacer()
-                                VStack(alignment: .trailing, spacing: 4) {
-                                    Text("Next Service At")
-                                        .font(.caption)
-                                        .foregroundColor(Color.secondary)
-                                    Text("\(String(format: "%.0f", threshold)) km")
-                                        .font(.headline)
-                                        .foregroundColor(Color.primary)
-                                }
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundColor(Color(.tertiaryLabel))
                             }
-                            
-                            GeometryReader { geometry in
-                                ZStack(alignment: .leading) {
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .fill(Color(.tertiarySystemFill))
-                                        .frame(height: 12)
-                                    
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .fill(progress >= 1.0 ? Color.red : (progress > 0.8 ? Color.orange : Color.green))
-                                        .frame(width: geometry.size.width * CGFloat(progress), height: 12)
-                                }
-                            }
-                            .frame(height: 12)
-                            
-                            if progress >= 1.0 {
-                                Text("⚠️ Preventive maintenance is due!")
-                                    .font(.caption.bold())
-                                    .foregroundColor(Color.red)
-                            } else if progress > 0.8 {
-                                Text("Maintenance approaching soon.")
-                                    .font(.caption)
-                                    .foregroundColor(Color.orange)
-                            }
+                            .padding(16)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
-                        .padding(16)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .padding(.horizontal, 16)
                     }
 
