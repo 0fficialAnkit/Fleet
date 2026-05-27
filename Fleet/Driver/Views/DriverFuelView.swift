@@ -19,7 +19,7 @@ struct DriverFuelView: View {
     @Environment(AuthViewModel.self) private var authViewModel
 
     private var isFormValid: Bool {
-        !volume.isEmpty && !price.isEmpty && billImage != nil
+        !volume.isEmpty && !price.isEmpty && billImage != nil && assignedVehicleId != nil
     }
 
     private var inputFormSection: some View {
@@ -27,6 +27,31 @@ struct DriverFuelView: View {
             Text("Log Fuel Expense")
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundStyle(Color.primary)
+
+            if assignedVehicleId == nil {
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.yellow)
+                        .font(.title3)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("No Assigned Vehicle")
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary)
+                        Text("You must have a vehicle assigned by your Fleet Manager to log fuel expenses.")
+                            .font(.system(size: 12, weight: .regular, design: .rounded))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.yellow.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
+                )
+            }
 
             // Volume
             VStack(alignment: .leading, spacing: 8) {
@@ -237,16 +262,10 @@ struct DriverFuelView: View {
             .navigationTitle("Fuel")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: NotificationsView()) {
-                        Image(systemName: "bell.badge")
-                            .font(.title3)
-                            .foregroundStyle(Color.green)
-                    }
-
-                    NavigationLink(destination: DriverProfileView()) {
-                        Image(systemName: "person.crop.circle.fill")
-                            .font(.title2)
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: DriverFuelAnalyticsView()) {
+                        Image(systemName: "chart.bar.xaxis")
+                            .font(.system(size: 17, weight: .medium))
                             .foregroundStyle(Color.green)
                     }
                 }
@@ -267,12 +286,13 @@ struct DriverFuelView: View {
             } message: {
                 Text(errorMessage ?? "Unknown error occurred")
             }
-            .task {
-                viewModel.currentUserId = authViewModel.currentUser?.id
-                await viewModel.loadData()
-                viewModel.setupRealtime()
-                // Fetch assigned vehicle
-                if let userId = authViewModel.currentUser?.id {
+            .onChange(of: authViewModel.currentUser?.id, initial: true) { _, newUserId in
+                guard let userId = newUserId else { return }
+                viewModel.currentUserId = userId
+                Task {
+                    await viewModel.loadData()
+                    viewModel.setupRealtime()
+                    // Fetch assigned vehicle
                     let vehicle = try? await VehicleService.fetchVehicleForDriver(driverId: userId)
                     assignedVehicleId = vehicle?.id
                 }
@@ -293,32 +313,51 @@ struct DriverFuelView: View {
 
         Task {
             do {
-                // Upload bill photo to Supabase Storage
+                // Upload bill photo to the `fuel` storage bucket with local error handling
                 var billUrl: String?
                 if let billImage, let imageData = billImage.jpegData(compressionQuality: 0.7) {
-                    let fileName = "fuel_bills/\(UUID().uuidString).jpg"
-                    try await supabase.storage
-                        .from("fleet-uploads")
-                        .upload(fileName, data: imageData, options: .init(contentType: "image/jpeg"))
-                    billUrl = try supabase.storage.from("fleet-uploads").getPublicURL(path: fileName).absoluteString
+                    let fileName = "bills/\(UUID().uuidString).jpg"
+                    do {
+                        try await supabase.storage
+                            .from("fuel")
+                            .upload(fileName, data: imageData, options: .init(contentType: "image/jpeg"))
+                        billUrl = try? supabase.storage
+                            .from("fuel")
+                            .getPublicURL(path: fileName)
+                            .absoluteString
+                    } catch {
+                        print("[DriverFuelView] Storage upload failed: \(error)")
+                    }
                 }
 
-                try await viewModel.addFuelLog(liters: liters, cost: cost, vehicleId: vehicleId)
+                // Save fuel log (with receipt URL if uploaded) to fuel_logs table
+                try await viewModel.addFuelLog(
+                    liters: liters,
+                    cost: cost,
+                    vehicleId: vehicleId,
+                    billUrl: billUrl
+                )
 
-                // Notify fleet managers about fuel log with bill
-                if let userId = authViewModel.currentUser?.id {
-                    let managers = try await ProfileService.fetchProfilesByRole(role: "fleet_manager")
-                    for manager in managers {
-                        let notification = Notification(
-                            id: UUID(),
-                            userId: manager.id,
-                            title: "Fuel Log Submitted",
-                            message: "Driver logged \(String(format: "%.1f", liters))L fuel — ₹\(Int(cost)). Bill photo attached.",
-                            type: .info,
-                            isRead: false,
-                            createdAt: Date()
-                        )
-                        try? await NotificationService.createNotification(notification)
+                // Dispatch notifications to managers in the background to prevent UI blocking
+                Task {
+                    do {
+                        if let userId = authViewModel.currentUser?.id {
+                            let managers = try await ProfileService.fetchProfilesByRole(role: "fleet_manager")
+                            for manager in managers {
+                                let notification = Notification(
+                                    id: UUID(),
+                                    userId: manager.id,
+                                    title: "Fuel Log Submitted",
+                                    message: "Driver logged \(String(format: "%.1f", liters))L fuel — ₹\(Int(cost)).",
+                                    type: .info,
+                                    isRead: false,
+                                    createdAt: Date()
+                                )
+                                try await NotificationService.createNotification(notification)
+                            }
+                        }
+                    } catch {
+                        print("[DriverFuelView] Failed to dispatch notifications: \(error)")
                     }
                 }
 

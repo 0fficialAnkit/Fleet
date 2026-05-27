@@ -5,6 +5,7 @@ struct DriverTripsView: View {
 
     @State private var viewModel = DriverTripsViewModel()
     @State private var selectedFilter: TripFilter = .all
+    @State private var showingSchedule = false
     @Environment(AuthViewModel.self) private var authViewModel
 
     enum TripFilter: String, CaseIterable {
@@ -72,24 +73,26 @@ struct DriverTripsView: View {
             .navigationTitle("Assigned Routes")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: NotificationsView()) {
-                        Image(systemName: "bell.badge")
-                            .font(.title3)
-                            .foregroundStyle(Color.green)
-                    }
-
-                    NavigationLink(destination: DriverProfileView()) {
-                        Image(systemName: "person.crop.circle.fill")
-                            .font(.title2)
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showingSchedule = true
+                    } label: {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 17, weight: .medium))
                             .foregroundStyle(Color.green)
                     }
                 }
             }
-            .task {
-                viewModel.currentUserId = authViewModel.currentUser?.id
-                await viewModel.loadData()
-                viewModel.setupRealtime()
+            .sheet(isPresented: $showingSchedule) {
+                DriverScheduleView(viewModel: viewModel)
+            }
+            .onChange(of: authViewModel.currentUser?.id, initial: true) { _, newUserId in
+                guard let userId = newUserId else { return }
+                viewModel.currentUserId = userId
+                Task {
+                    await viewModel.loadData()
+                    viewModel.setupRealtime()
+                }
             }
         }
     }
