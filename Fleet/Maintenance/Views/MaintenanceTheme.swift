@@ -89,7 +89,7 @@ extension View {
                         LinearGradient(
                             colors: [
                                 Color.white.opacity(0.55),
-                                Color(hex: "#93C5FD").opacity(0.25),
+                                Color("#93C5FD").opacity(0.25),
                                 Color.white.opacity(0.08)
                             ],
                             startPoint: .topLeading,
@@ -113,7 +113,7 @@ extension View {
                         LinearGradient(
                             colors: [
                                 Color.white.opacity(0.50),
-                                Color(hex: "#93C5FD").opacity(0.20),
+                                Color("#93C5FD").opacity(0.20),
                                 Color.white.opacity(0.06)
                             ],
                             startPoint: .topLeading,
