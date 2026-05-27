@@ -2,18 +2,17 @@ import SwiftUI
 import MapKit
 import CoreLocation
 
-/// Always-visible fleet manager dashboard map.
+// MARK: - Dashboard preview card
+
+/// Compact map card shown on the fleet manager dashboard.
+/// Tapping anywhere on the card opens a full-screen interactive map.
 ///
-/// Each active trip gets a unique color.  That same color is used for:
-///   • The driving-route polyline  (pickup → drop-off via real roads)
-///   • The pickup pin              (circle at the start address)
-///   • The drop-off pin            (mappin at the end address)
-///
-/// The teal truck pin is always teal — it shows the driver's LIVE GPS
-/// and is visually separate from the static route color.
-///
-/// When there is more than one active trip the bottom badge shows a row
-/// of colored dots so the fleet manager can match colors to trips.
+/// Pin / polyline legend:
+///   Colored polyline  = actual driving route per trip (unique color per trip)
+///   Matching circle   = pickup address
+///   Matching mappin   = drop-off address
+///   Teal truck        = driver's LIVE GPS (updates every ~15 s)
+///   Blue dot          = fleet manager's own location
 struct DashboardMapView: View {
 
     let activeTrips:      [Trip]
@@ -21,7 +20,7 @@ struct DashboardMapView: View {
     let profiles:         [Profile]
     let vehicleLocations: [VehicleLocation]
 
-    // Unique color per trip — cycles if there are more than 6 simultaneous trips
+    // 6 distinct colors — cycles for more than 6 simultaneous trips
     private let tripColors: [Color] = [
         Color(red: 0.20, green: 0.46, blue: 1.00),  // blue
         Color(red: 1.00, green: 0.55, blue: 0.00),  // orange
@@ -35,79 +34,82 @@ struct DashboardMapView: View {
         activeTrips.map { $0.id.uuidString }.sorted().joined()
     }
 
-    @State private var tripRoutes:          [TripRoute] = []
-    @State private var cameraPosition:      MapCameraPosition = .userLocation(fallback: .automatic)
-    @State private var locationManager      = LocationManager()
-    @State private var lastLocationUpdate:  Date? = nil
+    @State private var tripRoutes:         [TripRoute] = []
+    @State private var cameraPosition:     MapCameraPosition = .userLocation(fallback: .automatic)
+    @State private var locationManager     = LocationManager()
+    @State private var lastLocationUpdate: Date? = nil
+    @State private var showFullscreen      = false
 
-    // Driver live pins — real GPS, no geocoding
     private var driverPins: [DriverPin] {
-        vehicleLocations.compactMap { loc in
-            guard let lat = loc.latitude, let lon = loc.longitude else { return nil }
-            let trip = activeTrips.first { $0.vehicleId == loc.vehicleId }
-            let name = profiles.first { $0.id == trip?.driverId }?.fullName ?? "Driver"
-            return DriverPin(
-                id:         loc.vehicleId,
-                driverName: name,
-                coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon)
-            )
-        }
+        makeDriverPins(from: vehicleLocations, activeTrips: activeTrips, profiles: profiles)
     }
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            Map(position: $cameraPosition) {
-
-                // Fleet manager — native blue dot
-                UserAnnotation()
-
-                // ── Per-trip: polyline + pickup pin + drop-off pin ────────
-                ForEach(tripRoutes) { route in
-                    // Driving route polyline in the trip's unique color
-                    MapPolyline(route.polyline)
-                        .stroke(
-                            route.color.opacity(0.85),
-                            style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round)
-                        )
-
-                    // Pickup pin
-                    Annotation(route.pickupLabel, coordinate: route.pickupCoord, anchor: .bottom) {
-                        routePinView(color: route.color, icon: "circle.fill")
-                    }
-
-                    // Drop-off pin
-                    Annotation(route.dropoffLabel, coordinate: route.dropoffCoord, anchor: .bottom) {
-                        routePinView(color: route.color, icon: "mappin.circle.fill")
-                    }
-                }
-
-                // ── Driver live positions — teal truck ────────────────────
-                ForEach(driverPins) { pin in
-                    Annotation(pin.driverName, coordinate: pin.coordinate, anchor: .bottom) {
-                        driverPinView(name: pin.driverName)
-                    }
-                }
-            }
-            .mapStyle(.standard(elevation: .realistic))
-            .mapControls {
-                MapUserLocationButton()
-                MapCompass()
-                MapScaleView()
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .frame(height: 260)
-
+            mapCard
             bottomBadge
         }
         .onAppear { locationManager.requestPermission() }
-        // Rebuild routes (geocode + directions) only when the trip set changes
         .task(id: tripsKey) {
             await buildTripRoutes()
             fitCamera()
         }
-        // Driver pin slides to new position automatically — only update timestamp
         .onChange(of: vehicleLocations) { _, newLocs in
             if !newLocs.isEmpty { lastLocationUpdate = Date() }
+        }
+        .fullScreenCover(isPresented: $showFullscreen) {
+            DashboardMapFullscreenView(
+                tripRoutes:      tripRoutes,
+                activeTrips:     activeTrips,
+                profiles:        profiles,
+                vehicleLocations: vehicleLocations
+            )
+        }
+    }
+
+    // MARK: - Map card
+
+    private var mapCard: some View {
+        Map(position: $cameraPosition) {
+            UserAnnotation()
+
+            ForEach(tripRoutes) { route in
+                MapPolyline(route.polyline)
+                    .stroke(route.color.opacity(0.85),
+                            style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+                Annotation(route.pickupLabel, coordinate: route.pickupCoord, anchor: .bottom) {
+                    routePinView(color: .green, icon: "circle.fill", size: 32)
+                }
+                Annotation(route.dropoffLabel, coordinate: route.dropoffCoord, anchor: .bottom) {
+                    routePinView(color: .red, icon: "mappin.circle.fill", size: 32)
+                }
+            }
+
+            ForEach(driverPins) { pin in
+                Annotation(pin.driverName, coordinate: pin.coordinate, anchor: .bottom) {
+                    driverPinView(name: pin.driverName, size: 36)
+                }
+            }
+        }
+        .mapStyle(.standard(elevation: .realistic))
+        .mapControls { EmptyView() }          // controls live in the fullscreen view
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .frame(height: 260)
+        // Tap overlay — captures the whole card; map gesture still renders underneath
+        .overlay {
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture { showFullscreen = true }
+        }
+        // Expand icon badge — top-right corner
+        .overlay(alignment: .topTrailing) {
+            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.primary)
+                .padding(7)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .padding(10)
+                .allowsHitTesting(false)   // let taps pass through to the clear overlay
         }
     }
 
@@ -117,7 +119,6 @@ struct DashboardMapView: View {
     private var bottomBadge: some View {
         if !activeTrips.isEmpty || !driverPins.isEmpty {
             HStack(spacing: 8) {
-                // Live pulse dot
                 Circle()
                     .fill(driverPins.isEmpty ? Color.orange : Color.green)
                     .frame(width: 7, height: 7)
@@ -137,7 +138,6 @@ struct DashboardMapView: View {
                     }
                 }
 
-                // Color legend — one dot per trip when there are multiple
                 if tripRoutes.count > 1 {
                     Rectangle()
                         .fill(Color.secondary.opacity(0.3))
@@ -157,11 +157,10 @@ struct DashboardMapView: View {
         }
     }
 
-    // MARK: - Build trip routes (geocode addresses + request driving directions)
+    // MARK: - Route builder (geocode + MKDirections)
 
     private func buildTripRoutes() async {
         var resolved: [TripRoute] = []
-
         await withTaskGroup(of: TripRoute?.self) { group in
             for (index, trip) in activeTrips.enumerated() {
                 guard let route = routes.first(where: { $0.id == trip.routeId }) else { continue }
@@ -170,14 +169,10 @@ struct DashboardMapView: View {
                 let tripId     = trip.id
 
                 group.addTask {
-                    // Geocode pickup + drop-off concurrently
                     async let startItem = geocodeAddress(route.startLocation)
                     async let endItem   = geocodeAddress(route.endLocation)
+                    guard let origin = await startItem, let dest = await endItem else { return nil }
 
-                    guard let origin = await startItem,
-                          let dest   = await endItem else { return nil }
-
-                    // Request real driving route
                     let req = MKDirections.Request()
                     req.source                  = origin
                     req.destination             = dest
@@ -189,7 +184,6 @@ struct DashboardMapView: View {
                        let mkRoute  = response.routes.first {
                         polyline = mkRoute.polyline
                     } else {
-                        // Fallback: straight line so pins still appear even if directions fail
                         var coords = [origin.location.coordinate, dest.location.coordinate]
                         polyline = MKPolyline(coordinates: &coords, count: 2)
                     }
@@ -205,105 +199,246 @@ struct DashboardMapView: View {
                     )
                 }
             }
-
-            for await route in group {
-                if let route { resolved.append(route) }
-            }
+            for await route in group { if let route { resolved.append(route) } }
         }
-
         tripRoutes = resolved
     }
 
-    // MARK: - Camera — fits to the bounding box of all route polylines + driver pins
+    // MARK: - Camera
 
     private func fitCamera() {
-        var coords: [CLLocationCoordinate2D] = []
-
-        // Use every point in every polyline for a tight fit on the actual roads
-        for route in tripRoutes {
-            let pts = route.polyline.points()
-            for i in 0..<route.polyline.pointCount {
-                coords.append(pts[i].coordinate)
-            }
-        }
+        var coords = allPolylineCoords(from: tripRoutes)
         coords += driverPins.map(\.coordinate)
         if let mgr = locationManager.coordinate { coords.append(mgr) }
-
-        // If polylines haven't loaded yet fall back to pickup/drop-off points
-        if coords.isEmpty {
-            coords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] }
-        }
-
-        guard !coords.isEmpty else {
-            cameraPosition = .userLocation(fallback: .automatic)
-            return
-        }
-
-        var minLat =  90.0, maxLat = -90.0
-        var minLon = 180.0, maxLon = -180.0
-        for c in coords {
-            minLat = min(minLat, c.latitude);  maxLat = max(maxLat, c.latitude)
-            minLon = min(minLon, c.longitude); maxLon = max(maxLon, c.longitude)
-        }
-
-        cameraPosition = .region(MKCoordinateRegion(
-            center: CLLocationCoordinate2D(
-                latitude:  (minLat + maxLat) / 2,
-                longitude: (minLon + maxLon) / 2
-            ),
-            span: MKCoordinateSpan(
-                latitudeDelta:  max(maxLat - minLat, 0.02) * 1.35,
-                longitudeDelta: max(maxLon - minLon, 0.02) * 1.35
-            )
-        ))
+        if coords.isEmpty { coords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] } }
+        guard !coords.isEmpty else { cameraPosition = .userLocation(fallback: .automatic); return }
+        cameraPosition = .region(boundingRegion(for: coords, padding: 1.35))
     }
 
     // MARK: - Pin views
 
-    private func routePinView(color: Color, icon: String) -> some View {
+    private func routePinView(color: Color, icon: String, size: CGFloat) -> some View {
         ZStack {
-            Circle()
-                .fill(color.opacity(0.18))
-                .frame(width: 36, height: 36)
+            Circle().fill(color.opacity(0.18)).frame(width: size, height: size)
             Image(systemName: icon)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: size * 0.5, weight: .semibold))
                 .foregroundStyle(color)
         }
         .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
     }
 
-    private func driverPinView(name: String) -> some View {
+    private func driverPinView(name: String, size: CGFloat) -> some View {
         VStack(spacing: 2) {
             ZStack {
-                Circle()
-                    .fill(Color.teal.opacity(0.18))
-                    .frame(width: 44, height: 44)
+                Circle().fill(Color.teal.opacity(0.18)).frame(width: size, height: size)
                 Image(systemName: "truck.box.fill")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: size * 0.45, weight: .semibold))
                     .foregroundStyle(Color.teal)
             }
             .shadow(color: Color.teal.opacity(0.25), radius: 4, y: 2)
             Text(name)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.primary)
-                .padding(.horizontal, 6)
+                .padding(.horizontal, 5)
                 .padding(.vertical, 2)
                 .background(.regularMaterial, in: Capsule())
         }
     }
+}
 
-    private func relativeTime(_ date: Date) -> String {
-        let secs = Int(Date().timeIntervalSince(date))
-        if secs < 5  { return "just now" }
-        if secs < 60 { return "\(secs)s ago" }
-        return "\(secs / 60)m ago"
+// MARK: - Full-screen interactive map
+
+struct DashboardMapFullscreenView: View {
+
+    let tripRoutes:       [TripRoute]
+    let activeTrips:      [Trip]
+    let profiles:         [Profile]
+    let vehicleLocations: [VehicleLocation]
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var cameraPosition = MapCameraPosition.automatic
+    @State private var locationManager = LocationManager()
+
+    private var driverPins: [DriverPin] {
+        makeDriverPins(from: vehicleLocations, activeTrips: activeTrips, profiles: profiles)
+    }
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            // ── Full-screen map ──────────────────────────────────────────
+            Map(position: $cameraPosition) {
+                UserAnnotation()
+
+                ForEach(tripRoutes) { route in
+                    MapPolyline(route.polyline)
+                        .stroke(route.color.opacity(0.85),
+                                style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                    Annotation(route.pickupLabel, coordinate: route.pickupCoord, anchor: .bottom) {
+                        fullscreenPin(color: .green, icon: "circle.fill")
+                    }
+                    Annotation(route.dropoffLabel, coordinate: route.dropoffCoord, anchor: .bottom) {
+                        fullscreenPin(color: .red, icon: "mappin.circle.fill")
+                    }
+                }
+
+                ForEach(driverPins) { pin in
+                    Annotation(pin.driverName, coordinate: pin.coordinate, anchor: .bottom) {
+                        fullscreenDriverPin(name: pin.driverName)
+                    }
+                }
+            }
+            .mapStyle(.standard(elevation: .realistic))
+            .mapControls {
+                MapUserLocationButton()
+                MapCompass()
+                MapScaleView()
+            }
+            .ignoresSafeArea()
+
+            // ── Top bar ──────────────────────────────────────────────────
+            HStack(alignment: .center, spacing: 0) {
+                // Close button
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.primary)
+                        .frame(width: 38, height: 38)
+                        .background(.regularMaterial, in: Circle())
+                }
+
+                Spacer()
+
+                // Title
+                Text("Live Fleet")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 9)
+                    .background(.regularMaterial, in: Capsule())
+
+                Spacer()
+
+                // Trip color legend (multi-trip only) — mirrors close button width
+                if tripRoutes.count > 1 {
+                    HStack(spacing: 5) {
+                        ForEach(Array(tripRoutes.enumerated()), id: \.offset) { _, route in
+                            Circle()
+                                .fill(route.color)
+                                .frame(width: 11, height: 11)
+                                .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 0.5))
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 9)
+                    .background(.regularMaterial, in: Capsule())
+                } else {
+                    Color.clear.frame(width: 38, height: 38)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 56)
+
+            // ── Bottom legend panel ──────────────────────────────────────
+            VStack {
+                Spacer()
+                if !tripRoutes.isEmpty {
+                    bottomLegend
+                        .padding(.bottom, 36)
+                }
+            }
+        }
+        .onAppear {
+            locationManager.requestPermission()
+            fitCamera()
+        }
+    }
+
+    // MARK: - Bottom legend
+
+    private var bottomLegend: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(tripRoutes) { route in
+                HStack(spacing: 10) {
+                    // Colored route swatch
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(route.color)
+                        .frame(width: 24, height: 4)
+
+                    // Pickup → Drop-off label
+                    let pickup  = route.pickupLabel.replacingOccurrences(of: "Pickup · ", with: "")
+                    let dropoff = route.dropoffLabel.replacingOccurrences(of: "Drop-off · ", with: "")
+                    Text(pickup == dropoff ? pickup : "\(pickup)  →  \(dropoff)")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+
+                    Spacer()
+
+                    // Show truck if driver is live
+                    if driverPins.first(where: { pin in
+                        activeTrips.first { $0.routeId == nil || true }?.vehicleId == pin.id
+                    }) != nil {
+                        Image(systemName: "truck.box.fill")
+                            .font(.caption)
+                            .foregroundStyle(Color.teal)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal, 16)
+    }
+
+    // MARK: - Camera
+
+    private func fitCamera() {
+        var coords = allPolylineCoords(from: tripRoutes)
+        coords += driverPins.map(\.coordinate)
+        if let mgr = locationManager.coordinate { coords.append(mgr) }
+        if coords.isEmpty { coords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] } }
+        guard !coords.isEmpty else { return }
+        cameraPosition = .region(boundingRegion(for: coords, padding: 1.3))
+    }
+
+    // MARK: - Pin views
+
+    private func fullscreenPin(color: Color, icon: String) -> some View {
+        ZStack {
+            Circle().fill(color.opacity(0.18)).frame(width: 42, height: 42)
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(color)
+        }
+        .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
+    }
+
+    private func fullscreenDriverPin(name: String) -> some View {
+        VStack(spacing: 3) {
+            ZStack {
+                Circle().fill(Color.teal.opacity(0.18)).frame(width: 50, height: 50)
+                Image(systemName: "truck.box.fill")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(Color.teal)
+            }
+            .shadow(color: Color.teal.opacity(0.3), radius: 5, y: 2)
+            Text(name)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(.regularMaterial, in: Capsule())
+        }
     }
 }
 
-// MARK: - Models
+// MARK: - Shared model types
 
-private struct TripRoute: Identifiable {
-    let id:           UUID          // trip ID
+struct TripRoute: Identifiable {
+    let id:           UUID
     let polyline:     MKPolyline
     let color:        Color
     let pickupLabel:  String
@@ -312,15 +447,63 @@ private struct TripRoute: Identifiable {
     let dropoffCoord: CLLocationCoordinate2D
 }
 
-private struct DriverPin: Identifiable {
+struct DriverPin: Identifiable {
     let id:         UUID
     let driverName: String
     let coordinate: CLLocationCoordinate2D
 }
 
-// MARK: - Geocoding helper
+// MARK: - Shared helpers
 
-private func geocodeAddress(_ address: String?) async -> MKMapItem? {
+/// Builds driver GPS pins from the current vehicleLocations snapshot.
+func makeDriverPins(from vehicleLocations: [VehicleLocation],
+                    activeTrips: [Trip],
+                    profiles: [Profile]) -> [DriverPin] {
+    vehicleLocations.compactMap { loc in
+        guard let lat = loc.latitude, let lon = loc.longitude else { return nil }
+        let trip = activeTrips.first { $0.vehicleId == loc.vehicleId }
+        let name = profiles.first { $0.id == trip?.driverId }?.fullName ?? "Driver"
+        return DriverPin(id: loc.vehicleId, driverName: name,
+                         coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lon))
+    }
+}
+
+/// Extracts every coordinate from every polyline in a TripRoute array.
+func allPolylineCoords(from routes: [TripRoute]) -> [CLLocationCoordinate2D] {
+    routes.flatMap { route -> [CLLocationCoordinate2D] in
+        let pts = route.polyline.points()
+        return (0..<route.polyline.pointCount).map { pts[$0].coordinate }
+    }
+}
+
+/// Returns an MKCoordinateRegion that tightly wraps all given coordinates,
+/// expanded by `padding` (e.g. 1.35 = 35 % breathing room on each axis).
+func boundingRegion(for coords: [CLLocationCoordinate2D],
+                    padding: Double) -> MKCoordinateRegion {
+    var minLat =  90.0, maxLat = -90.0
+    var minLon = 180.0, maxLon = -180.0
+    for c in coords {
+        minLat = min(minLat, c.latitude);  maxLat = max(maxLat, c.latitude)
+        minLon = min(minLon, c.longitude); maxLon = max(maxLon, c.longitude)
+    }
+    return MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude:  (minLat + maxLat) / 2,
+                                       longitude: (minLon + maxLon) / 2),
+        span: MKCoordinateSpan(latitudeDelta:  max(maxLat - minLat, 0.02) * padding,
+                               longitudeDelta: max(maxLon - minLon, 0.02) * padding)
+    )
+}
+
+/// Returns a human-readable "Xs ago / Xm ago / just now" string.
+func relativeTime(_ date: Date) -> String {
+    let secs = Int(Date().timeIntervalSince(date))
+    if secs < 5  { return "just now" }
+    if secs < 60 { return "\(secs)s ago" }
+    return "\(secs / 60)m ago"
+}
+
+/// Geocodes a free-text address to the first matching MKMapItem.
+func geocodeAddress(_ address: String?) async -> MKMapItem? {
     guard let address, !address.isEmpty else { return nil }
     let request = MKLocalSearch.Request()
     request.naturalLanguageQuery = address
