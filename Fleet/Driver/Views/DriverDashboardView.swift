@@ -47,14 +47,21 @@ struct DriverDashboardView: View {
                     }
                 }
             }
-            .task {
-                viewModel.currentUserId = authViewModel.currentUser?.id
+            .onChange(of: authViewModel.currentUser?.id, initial: true) { _, newUserId in
+                guard let userId = newUserId else { return }
+                viewModel.currentUserId = userId
                 viewModel.driverName = authViewModel.currentProfile?.fullName ?? "Driver"
-                // Request location permission early so the system prompt appears on app load,
-                // not buried inside the "Start Trip" flow.
-                viewModel.requestLocationPermission()
-                await viewModel.loadData()
-                viewModel.setupRealtime()
+                Task {
+                    viewModel.requestLocationPermission()
+                    
+                    await viewModel.loadData()
+                    viewModel.setupRealtime()
+                }
+            }
+            .onChange(of: authViewModel.currentProfile?.fullName) { _, newName in
+                if let newName {
+                    viewModel.driverName = newName
+                }
             }
         }
     }

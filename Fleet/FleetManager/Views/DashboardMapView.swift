@@ -3,11 +3,17 @@ import MapKit
 import CoreLocation
 
 /// Always-visible Apple Map on the fleet manager dashboard.
-///   • Standard Apple Maps — same look as driver's trip detail
-///   • Fleet manager's live location — native iOS blue dot
-///   • Green pin  = pickup address for each active trip (geocoded once)
-///   • Red pin    = drop-off address for each active trip (geocoded once)
-///   • Teal truck = driver's LIVE GPS position (real coordinates, updates every 10 s)
+///
+/// Pin legend:
+///   🟢 circle.fill       = pickup address for each active trip (geocoded once per trip)
+///   🔴 mappin.circle.fill = drop-off address for each active trip (geocoded once per trip)
+///   🔵 UserAnnotation    = fleet manager's live location (native iOS blue dot)
+///   🟦 truck.box.fill    = driver's LIVE GPS position (updates every ~15 s from Supabase)
+///
+/// Camera behaviour:
+///   • Fits to all pins once when trips first load (or change).
+///   • Does NOT refit when driver positions update — the truck pin slides smoothly
+///     to its new position so the fleet manager's manual zoom/pan is preserved.
 struct DashboardMapView: View {
 
     let activeTrips: [Trip]
@@ -20,11 +26,13 @@ struct DashboardMapView: View {
         activeTrips.map { $0.id.uuidString }.sorted().joined()
     }
 
-    @State private var routePins: [RoutePin] = []   // geocoded pickup / drop-off
+    @State private var routePins: [RoutePin] = []
     @State private var cameraPosition: MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var locationManager = LocationManager()
+    @State private var lastLocationUpdate: Date? = nil
+    @State private var isGeocoding = false
 
-    // Driver live pins need no geocoding — vehicleLocations already has coordinates
+    // Driver live pins — derived directly from vehicleLocations (no geocoding needed)
     private var driverPins: [DriverPin] {
         vehicleLocations.compactMap { loc in
             guard let lat = loc.latitude, let lon = loc.longitude else { return nil }
@@ -45,14 +53,17 @@ struct DashboardMapView: View {
                 // Fleet manager — native blue dot
                 UserAnnotation()
 
-                // Static route pins (pickup green, drop-off red)
+                // Static route pins (pickup = green, drop-off = red)
+                // These are geocoded once and cached in routePins.
                 ForEach(routePins) { pin in
                     Annotation(pin.label, coordinate: pin.coordinate, anchor: .bottom) {
                         routePinView(color: pin.color, icon: pin.icon)
                     }
                 }
 
-                // Live driver positions — teal truck, updates every 10 s
+                // Live driver positions — teal truck, updates every ~15 s
+                // MapKit automatically animates the annotation to the new coordinate
+                // when the id is the same, so the pin slides smoothly across the map.
                 ForEach(driverPins) { pin in
                     Annotation(pin.driverName, coordinate: pin.coordinate, anchor: .bottom) {
                         driverPinView(name: pin.driverName)
@@ -68,36 +79,62 @@ struct DashboardMapView: View {
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .frame(height: 260)
 
-            // Badge shown when active trips exist
-            if !activeTrips.isEmpty {
-                HStack(spacing: 6) {
-                    Circle().fill(Color.green).frame(width: 7, height: 7)
-                    Text("\(activeTrips.count) active trip\(activeTrips.count == 1 ? "" : "s")")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color.secondary)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(Color(.secondarySystemGroupedBackground))
-                .clipShape(Capsule())
-                .padding(.bottom, 12)
-            }
+            // Bottom badge — shows active trip count + how fresh the data is
+            bottomBadge
         }
         .onAppear {
             locationManager.requestPermission()
         }
-        // Re-geocode only when trips change (addresses are static)
+        // Re-geocode and fit camera only when the set of active trips changes
         .task(id: tripsKey) {
+            isGeocoding = true
             await geocodeRoutePins()
-            fitCamera()
+            isGeocoding = false
+            fitCameraToAllPins(animated: false)
         }
-        // Refit camera whenever a driver pushes a new GPS position
-        .onChange(of: vehicleLocations) { _, _ in
-            fitCamera()
+        // When new driver GPS arrives: update the "last refreshed" timestamp.
+        // The truck pin slides to its new position automatically — NO camera refit.
+        .onChange(of: vehicleLocations) { _, newLocs in
+            guard !newLocs.isEmpty else { return }
+            lastLocationUpdate = Date()
         }
     }
 
-    // MARK: - Geocoding (pickup + drop-off addresses only)
+    // MARK: - Bottom badge
+
+    @ViewBuilder
+    private var bottomBadge: some View {
+        if !activeTrips.isEmpty || !driverPins.isEmpty {
+            HStack(spacing: 6) {
+                // Live indicator pulse dot
+                Circle()
+                    .fill(driverPins.isEmpty ? Color.orange : Color.green)
+                    .frame(width: 7, height: 7)
+
+                if driverPins.isEmpty {
+                    Text("\(activeTrips.count) trip\(activeTrips.count == 1 ? "" : "s") — awaiting driver GPS")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.secondary)
+                } else {
+                    Text("\(driverPins.count) driver\(driverPins.count == 1 ? "" : "s") live")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.secondary)
+
+                    if let ts = lastLocationUpdate {
+                        Text("· updated \(relativeTime(ts))")
+                            .font(.caption)
+                            .foregroundStyle(Color.secondary.opacity(0.8))
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(.regularMaterial, in: Capsule())
+            .padding(.bottom, 12)
+        }
+    }
+
+    // MARK: - Geocoding (pickup + drop-off addresses — fires once per trip set)
 
     private func geocodeRoutePins() async {
         var resolved: [RoutePin] = []
@@ -141,9 +178,9 @@ struct DashboardMapView: View {
         routePins = resolved
     }
 
-    // MARK: - Camera fit
+    // MARK: - Camera — called only once when trips load (not on every GPS update)
 
-    private func fitCamera() {
+    private func fitCameraToAllPins(animated: Bool) {
         var coords: [CLLocationCoordinate2D] = []
         coords += routePins.map(\.coordinate)
         coords += driverPins.map(\.coordinate)
@@ -161,17 +198,23 @@ struct DashboardMapView: View {
             minLon = min(minLon, c.longitude); maxLon = max(maxLon, c.longitude)
         }
 
-        withAnimation(.easeInOut(duration: 0.5)) {
-            cameraPosition = .region(MKCoordinateRegion(
-                center: CLLocationCoordinate2D(
-                    latitude:  (minLat + maxLat) / 2,
-                    longitude: (minLon + maxLon) / 2
-                ),
-                span: MKCoordinateSpan(
-                    latitudeDelta:  max(maxLat - minLat, 0.05) * 2.2,
-                    longitudeDelta: max(maxLon - minLon, 0.05) * 2.2
-                )
-            ))
+        let region = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(
+                latitude:  (minLat + maxLat) / 2,
+                longitude: (minLon + maxLon) / 2
+            ),
+            span: MKCoordinateSpan(
+                latitudeDelta:  max(maxLat - minLat, 0.05) * 2.2,
+                longitudeDelta: max(maxLon - minLon, 0.05) * 2.2
+            )
+        )
+
+        if animated {
+            withAnimation(.easeInOut(duration: 0.5)) {
+                cameraPosition = .region(region)
+            }
+        } else {
+            cameraPosition = .region(region)
         }
     }
 
@@ -186,6 +229,7 @@ struct DashboardMapView: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(color)
         }
+        .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
     }
 
     private func driverPinView(name: String) -> some View {
@@ -193,19 +237,29 @@ struct DashboardMapView: View {
             ZStack {
                 Circle()
                     .fill(Color.teal.opacity(0.18))
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                 Image(systemName: "truck.box.fill")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(Color.teal)
             }
-            .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
+            .shadow(color: Color.teal.opacity(0.25), radius: 4, y: 2)
+
             Text(name)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.primary)
-                .padding(.horizontal, 5)
+                .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(.regularMaterial, in: Capsule())
         }
+    }
+
+    // MARK: - Helpers
+
+    private func relativeTime(_ date: Date) -> String {
+        let secs = Int(Date().timeIntervalSince(date))
+        if secs < 5  { return "just now" }
+        if secs < 60 { return "\(secs)s ago" }
+        return "\(secs / 60)m ago"
     }
 }
 
@@ -224,6 +278,8 @@ private struct DriverPin: Identifiable {
     let driverName: String
     let coordinate: CLLocationCoordinate2D
 }
+
+// MARK: - Geocoding helper
 
 private func geocodeAddress(_ address: String?) async -> MKMapItem? {
     guard let address, !address.isEmpty else { return nil }

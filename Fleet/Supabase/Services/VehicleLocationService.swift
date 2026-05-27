@@ -15,11 +15,12 @@ enum VehicleLocationService {
     }
 
     /// Called by the driver's ViewModel every N seconds during an active trip.
-    /// Silently swallows errors so a network blip never crashes the trip.
+    /// Logs detailed errors to help diagnose RLS / network issues.
+    @discardableResult
     static func insertLocation(vehicleId: UUID,
                                latitude: Double,
                                longitude: Double,
-                               speed: Double?) async {
+                               speed: Double?) async -> Bool {
         let payload = LocationInsert(
             id: UUID(),
             vehicle_id: vehicleId,
@@ -33,8 +34,13 @@ enum VehicleLocationService {
                 .from("vehicle_locations")
                 .insert(payload)
                 .execute()
+            print("[VehicleLocationService] ✅ Inserted location for vehicle \(vehicleId) — lat:\(latitude) lon:\(longitude)")
+            return true
         } catch {
-            print("[VehicleLocationService] insertLocation error: \(error.localizedDescription)")
+            print("[VehicleLocationService] ❌ INSERT FAILED for vehicle \(vehicleId)")
+            print("[VehicleLocationService]    Error: \(error)")
+            print("[VehicleLocationService]    Localized: \(error.localizedDescription)")
+            return false
         }
     }
 

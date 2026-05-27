@@ -11,6 +11,9 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     /// The driver's most recent coordinate, or nil before first fix.
     var coordinate: CLLocationCoordinate2D?
 
+    /// Speed in m/s from the last location fix, or nil if unavailable.
+    var speed: Double?
+
     /// Current authorization status.
     var authorizationStatus: CLAuthorizationStatus = .notDetermined
 
@@ -49,7 +52,10 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
 
     func locationManager(_ manager: CLLocationManager,
                          didUpdateLocations locations: [CLLocation]) {
-        coordinate = locations.last?.coordinate
+        guard let loc = locations.last else { return }
+        coordinate = loc.coordinate
+        // speed is negative when invalid (e.g. no fix) — store nil in that case
+        speed = loc.speed >= 0 ? loc.speed : nil
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
