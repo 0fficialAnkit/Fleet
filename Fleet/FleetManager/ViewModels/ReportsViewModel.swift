@@ -11,10 +11,10 @@ enum IssueReportStatus: String, CaseIterable, Identifiable {
 
     var color: Color {
         switch self {
-        case .open:       return themeModel.danger
-        case .assigned:   return themeModel.warning
-        case .inProgress: return themeModel.info
-        case .resolved:   return themeModel.success
+        case .open:       return Color.red
+        case .assigned:   return Color.yellow
+        case .inProgress: return Color.blue
+        case .resolved:   return Color.green
         }
     }
 
@@ -26,12 +26,32 @@ enum IssueReportStatus: String, CaseIterable, Identifiable {
         case .resolved:   return "checkmark.circle.fill"
         }
     }
+
+    var dbValue: String {
+        switch self {
+        case .open:       return "open"
+        case .assigned:   return "assigned"
+        case .inProgress: return "in_progress"
+        case .resolved:   return "resolved"
+        }
+    }
+
+    static func from(dbValue: String) -> IssueReportStatus {
+        switch dbValue {
+        case "open":        return .open
+        case "assigned":    return .assigned
+        case "in_progress": return .inProgress
+        case "resolved":    return .resolved
+        default:            return .open
+        }
+    }
 }
 
-// MARK: - Issue Report Model
+// MARK: - Issue Report Model (view model for display)
 struct IssueReport: Identifiable {
     let id: UUID
     let vehicleId: UUID
+    let reportedBy: UUID
     let vehicleName: String
     let licensePlate: String
     let driverName: String
@@ -52,70 +72,88 @@ struct StatusHistoryEntry: Identifiable {
 }
 
 // MARK: - Reports ViewModel
+@MainActor
 @Observable
 final class ReportsViewModel {
 
-    // All maintenance staff
-    private let allUsers: [User] = MockData.users
-    private let allRoles: [Role] = MockData.roles
-    private let allVehicles: [Vehicle] = MockData.vehicles
+    private(set) var profiles: [Profile] = []
+    private(set) var allVehicles: [Vehicle] = []
+    var maintenanceTasks: [MaintenanceTask] = []
 
-    // In-memory issue reports built from DefectReport mock data
-    var reports: [IssueReport]
+    var reports: [IssueReport] = []
+    var isLoading = false
+    var errorMessage: String?
 
-    init() {
-        let users    = MockData.users
-        let _ = MockData.roles
-        let vehicles = MockData.vehicles
-        let inspections = MockData.vehicleInspections
-        let defects  = MockData.defectReports
+    func loadData() async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            async let p = ProfileService.fetchAllProfiles()
+            async let v = VehicleService.fetchAllVehicles()
+            async let ir = IssueReportService.fetchAllIssueReports()
+            async let t = MaintenanceTaskService.fetchAllTasks()
 
-        // Resolve role IDs for maintenance
-        func userName(_ id: UUID?) -> String {
-            guard let id else { return "Unknown" }
-            return users.first { $0.id == id }?.fullName ?? "Unknown"
-        }
+            profiles = try await p
+            allVehicles = try await v
+            let issueRecords = try await ir
+            maintenanceTasks = (try? await t) ?? []
 
-        func vehicleFor(_ inspectionId: UUID) -> Vehicle? {
-            guard let insp = inspections.first(where: { $0.id == inspectionId }) else { return nil }
-            return vehicles.first { $0.id == insp.vehicleId }
-        }
+            // Build display reports from issue_reports table
+            self.reports = issueRecords.map { record in
+                let vehicle = allVehicles.first { $0.id == record.vehicleId }
+                let make = vehicle?.make ?? "Vehicle"
+                let model = vehicle?.model ?? ""
+                let plate = vehicle?.licensePlate ?? "—"
+                let driver = profileName(record.reportedBy)
 
-        self.reports = defects.enumerated().map { idx, defect in
-            let vehicle = vehicleFor(defect.inspectionId)
-            let make    = vehicle?.make ?? "Vehicle"
-            let model   = vehicle?.model ?? ""
-            let plate   = vehicle?.licensePlate ?? "—"
-            let driver  = userName(defect.reportedBy)
+                let severity: DefectSeverity
+                switch record.severity {
+                case "low": severity = .low
+                case "medium": severity = .medium
+                case "high": severity = .high
+                case "critical": severity = .critical
+                default: severity = .medium
+                }
 
-            // Assign category from index cycling through IssueCategory
-            let categories = ["Engine Problem", "Tire Issue", "Brake Issue",
-                              "Electrical Fault", "Fuel Leak", "Body Damage", "Other"]
-            let category = categories[idx % categories.count]
-
-            // Derive initial status from defect status
-            let status: IssueReportStatus
-            switch defect.status {
-            case .open:     status = .open
-            case .resolved: status = .resolved
-            case .closed:   status = .resolved
-            case .none:     status = .open
+                return IssueReport(
+                    id: record.id,
+                    vehicleId: record.vehicleId,
+                    reportedBy: record.reportedBy,
+                    vehicleName: "\(make) \(model)",
+                    licensePlate: plate,
+                    driverName: driver,
+                    issueCategory: record.category,
+                    severity: severity,
+                    description: record.description ?? "No description provided.",
+                    submittedAt: record.createdAt ?? Date(),
+                    assignedTo: record.assignedTo,
+                    status: IssueReportStatus.from(dbValue: record.status)
+                )
             }
-
-            return IssueReport(
-                id: defect.id,
-                vehicleId: vehicle?.id ?? UUID(),
-                vehicleName: "\(make) \(model)",
-                licensePlate: plate,
-                driverName: driver,
-                issueCategory: category,
-                severity: defect.severity ?? .medium,
-                description: defect.description ?? "No description provided.",
-                submittedAt: Calendar.current.date(byAdding: .hour, value: -(idx + 1) * 4, to: Date())!,
-                assignedTo: nil,
-                status: status
-            )
+        } catch {
+            errorMessage = error.localizedDescription
         }
+        isLoading = false
+    }
+
+    func setupRealtime() {
+        let rt = RealtimeManager.shared
+        rt.addDefectReportsChangeHandler { [weak self] in
+            Task { await self?.loadData() }
+        }
+        rt.addIssueReportsChangeHandler { [weak self] in
+            Task { await self?.loadData() }
+        }
+        rt.addMaintenanceTasksChangeHandler { [weak self] in
+            Task { await self?.loadData() }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func profileName(_ id: UUID?) -> String {
+        guard let id else { return "Unknown" }
+        return profiles.first { $0.id == id }?.fullName ?? "Unknown"
     }
 
     // MARK: - Computed Counts
@@ -124,32 +162,84 @@ final class ReportsViewModel {
     var resolvedCount: Int   { reports.filter { $0.status == .resolved }.count }
 
     // MARK: - Maintenance Staff
-    var maintenanceStaff: [User] {
-        allUsers.filter { user in
-            let role = allRoles.first { $0.id == user.roleId }
-            return role?.roleName.lowercased() == "maintenance"
-        }
+    var maintenanceStaff: [Profile] {
+        profiles.filter { $0.role == "maintenance" }
     }
 
     func staffName(_ id: UUID?) -> String {
         guard let id else { return "Unassigned" }
-        return allUsers.first { $0.id == id }?.fullName ?? "Unknown"
+        return profiles.first { $0.id == id }?.fullName ?? "Unknown"
     }
 
-    // MARK: - Mutating Actions
+    func staffWorkloadStatus(_ staffId: UUID) -> String {
+        let activeTasks = maintenanceTasks.filter { $0.assignedTo == staffId && $0.status == .inProgress }
+        if let activeTask = activeTasks.first {
+            if let vehicle = allVehicles.first(where: { $0.id == activeTask.vehicleId }) {
+                return "Working on \(vehicle.make ?? "") \(vehicle.model ?? "")"
+            }
+            return "Working on vehicle"
+        }
+
+        let pendingTasks = maintenanceTasks.filter { $0.assignedTo == staffId && $0.status == .pending }
+        if !pendingTasks.isEmpty {
+            return "Assigned (Pending)"
+        }
+
+        return "Available"
+    }
+
+    func staffWorkloadColor(_ staffId: UUID) -> Color {
+        let activeTasks = maintenanceTasks.filter { $0.assignedTo == staffId && $0.status == .inProgress }
+        if !activeTasks.isEmpty {
+            return Color.blue
+        }
+        let pendingTasks = maintenanceTasks.filter { $0.assignedTo == staffId && $0.status == .pending }
+        if !pendingTasks.isEmpty {
+            return Color.yellow
+        }
+        return Color.green
+    }
+
+    // MARK: - Mutating Actions (now persists to Supabase)
     func update(reportId: UUID, assignedTo: UUID?, status: IssueReportStatus) {
         guard let idx = reports.firstIndex(where: { $0.id == reportId }) else { return }
         reports[idx].assignedTo = assignedTo
         reports[idx].status = status
+
+        // Persist to Supabase
+        Task {
+            do {
+                try await IssueReportService.updateIssueReport(
+                    id: reportId,
+                    assignedTo: assignedTo,
+                    status: status.dbValue
+                )
+                // Notify assigned maintenance staff
+                if let staffId = assignedTo {
+                    let notification = Notification(
+                        id: UUID(),
+                        userId: staffId,
+                        title: "Issue Assigned",
+                        message: "A new issue report has been assigned to you: \(reports[idx].issueCategory) on \(reports[idx].vehicleName)",
+                        type: .maintenance,
+                        isRead: false,
+                        createdAt: Date()
+                    )
+                    try? await NotificationService.createNotification(notification)
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     // MARK: - Severity helpers
     func severityColor(_ s: DefectSeverity) -> Color {
         switch s {
-        case .low:      return themeModel.success
-        case .medium:   return themeModel.warning
+        case .low:      return Color.green
+        case .medium:   return Color.yellow
         case .high:     return Color.orange
-        case .critical: return themeModel.danger
+        case .critical: return Color.red
         }
     }
 }

@@ -1,131 +1,170 @@
 import SwiftUI
+import Supabase
 
 struct AddEmployeeView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: EmployeesViewModel
-    
+    let roleName: String
+
     @State private var fullName = ""
     @State private var email = ""
+    @State private var password = ""
     @State private var phone = ""
     @State private var licenseNumber = ""
-    @State private var selectedRoleId: UUID?
-    
+    @State private var isPasswordVisible = false
+
     var isDriverSelected: Bool {
-        guard let id = selectedRoleId, let role = viewModel.roles.first(where: { $0.id == id }) else { return false }
-        return role.roleName.lowercased() == "driver"
+        return roleName.lowercased() == "driver"
     }
-    
-    var assignableRoles: [Role] {
-        viewModel.roles.filter { $0.roleName.lowercased() != "fleet manager" }
+
+    /// Map display role to database role string
+    var dbRole: String {
+        isDriverSelected ? "driver" : "maintenance"
     }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
-                
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 ScrollView {
-                    VStack(spacing: themeModel.spacingLG) {
-                        
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+                    VStack(spacing: 24) {
+
+                        // Error message
+                        if let error = viewModel.errorMessage {
+                            Text(error)
+                                .font(.subheadline)
+                                .foregroundColor(Color.red)
+                                .padding(.horizontal, 16)
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
                             SectionHeader(title: "Personal Details")
-                                .padding(.horizontal, themeModel.spacingMD)
-                            
-                            
+                                .padding(.horizontal, 16)
+
                                 VStack(spacing: 0) {
                                     TextField("Full Name", text: $fullName)
                                         .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
-                                    
-                                    Divider().background(themeModel.divider)
-                                    
+                                        .foregroundColor(Color.primary)
+
+                                    Divider().background(Color(.separator))
+
                                     TextField("Email", text: $email)
                                         .keyboardType(.emailAddress)
                                         .autocapitalization(.none)
                                         .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
-                                    
-                                    Divider().background(themeModel.divider)
-                                    
+                                        .foregroundColor(Color.primary)
+
+                                    Divider().background(Color(.separator))
+
+                                    HStack {
+                                        if isPasswordVisible {
+                                            TextField("Password", text: $password)
+                                                .foregroundColor(Color.primary)
+                                        } else {
+                                            SecureField("Password", text: $password)
+                                                .foregroundColor(Color.primary)
+                                        }
+
+                                        Button(action: {
+                                            isPasswordVisible.toggle()
+                                        }) {
+                                            Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                                                .foregroundColor(Color.secondary)
+                                        }
+                                    }
+                                    .padding(.vertical, 12)
+
+                                    Divider().background(Color(.separator))
+
                                     TextField("Phone", text: $phone)
                                         .keyboardType(.phonePad)
                                         .padding(.vertical, 12)
-                                        .foregroundColor(themeModel.textPrimary)
-                                    
-                                    Divider().background(themeModel.divider)
-                                    
-                                    TextField("Driver License Number", text: $licenseNumber)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(isDriverSelected ? themeModel.textPrimary : themeModel.textDisabled)
-                                        .disabled(!isDriverSelected)
-                                }
-                                .padding(themeModel.spacingMD)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                                        .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                                )
-                                .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
-                            SectionHeader(title: "Role & Access")
-                                .padding(.horizontal, themeModel.spacingMD)
-                            
-                            
-VStack(spacing: 0) {
-                                Picker("Select Role", selection: $selectedRoleId) {
-                                    Text("Select a role").tag(UUID?.none)
-                                    ForEach(assignableRoles) { role in
-                                        Text(role.roleName).tag(UUID?.some(role.id))
+                                        .foregroundColor(Color.primary)
+
+                                    if isDriverSelected {
+                                        Divider().background(Color(.separator))
+
+                                        TextField("Driver License Number", text: $licenseNumber)
+                                            .padding(.vertical, 12)
+                                            .foregroundColor(Color.primary)
                                     }
                                 }
-                                .pickerStyle(.menu)
-                                .tint(themeModel.textPrimary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 8)
-                            
-                            }
-                            .padding(themeModel.spacingMD)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                            )
-                            .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-                            .padding(.horizontal, themeModel.spacingMD)
+                                .padding(16)
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .padding(.horizontal, 16)
                         }
                     }
-                    .padding(.vertical, themeModel.spacingMD)
+                    .padding(.vertical, 16)
                 }
             }
-            .navigationTitle("Add Employee")
+            .navigationTitle(isDriverSelected ? "Add Driver" : "Add Maintenance Staff")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(Color.teal)
                 }
-                
+
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        if let roleId = selectedRoleId, !fullName.isEmpty {
-                            viewModel.addEmployee(
-                                fullName: fullName,
-                                email: email,
-                                phone: phone,
-                                licenseNumber: isDriverSelected && !licenseNumber.isEmpty ? licenseNumber : nil,
-                                roleId: roleId
-                            )
-                            dismiss()
+                        guard !fullName.isEmpty, !email.isEmpty, !password.isEmpty else { return }
+                        Task {
+                            do {
+                                try await viewModel.addEmployee(
+                                    fullName: fullName,
+                                    email: email,
+                                    password: password,
+                                    phone: phone,
+                                    licenseNumber: isDriverSelected && !licenseNumber.isEmpty ? licenseNumber : nil,
+                                    role: dbRole
+                                )
+                                dismiss()
+                            } catch let error as NSError where error.domain == "ProfileService" {
+                                viewModel.errorMessage = error.localizedDescription
+                            } catch {
+                                // Supabase functions error might contain a body
+                                if let functionsError = error as? FunctionsError {
+                                    switch functionsError {
+                                    case .httpError(let code, let data):
+                                        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                                           let serverError = json["error"] as? String {
+                                            viewModel.errorMessage = "Server Error (\(code)): \(serverError)"
+                                        } else {
+                                            viewModel.errorMessage = "HTTP Error \(code)"
+                                        }
+                                    case .relayError:
+                                        viewModel.errorMessage = "Network relay error"
+                                    }
+                                } else {
+                                    viewModel.errorMessage = error.localizedDescription
+                                }
+                            }
                         }
                     }
-                    .foregroundColor(themeModel.accent)
+                    .foregroundColor(Color.teal)
                     .bold()
-                    .disabled(fullName.isEmpty || selectedRoleId == nil)
+                    .disabled(fullName.isEmpty || email.isEmpty || password.isEmpty || viewModel.isCreatingUser)
+                }
+            }
+            .overlay {
+                if viewModel.isCreatingUser {
+                    ZStack {
+                        Color.black.opacity(0.4).ignoresSafeArea()
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(1.2)
+                            Text("Creating user...")
+                                .font(.body.weight(.medium))
+                                .foregroundColor(.white)
+                        }
+                        .padding(32)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    }
                 }
             }
         }
@@ -133,5 +172,5 @@ VStack(spacing: 0) {
 }
 
 #Preview {
-    AddEmployeeView(viewModel: EmployeesViewModel())
+    AddEmployeeView(viewModel: EmployeesViewModel(), roleName: "driver")
 }

@@ -14,106 +14,98 @@ struct ReportsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: themeModel.spacingLG) {
+                    VStack(spacing: 24) {
                         summaryCards
                         filterChips
                         reportsList
                     }
-                    .padding(.vertical, themeModel.spacingMD)
+                    .padding(.vertical, 16)
                 }
             }
             .navigationTitle("Issue Reports")
             .sheet(item: $selectedReport) { report in
                 ReportDetailView(report: report, viewModel: viewModel)
             }
+            .task {
+                await viewModel.loadData()
+                viewModel.setupRealtime()
+            }
         }
     }
 
     // MARK: - Summary Cards
     private var summaryCards: some View {
-        HStack(spacing: themeModel.spacingMD) {
-            summaryCard(label: "Open",     count: viewModel.openCount,     color: themeModel.danger,  icon: "exclamationmark.circle.fill")
-            summaryCard(label: "Active",   count: viewModel.assignedCount, color: themeModel.warning, icon: "wrench.and.screwdriver.fill")
-            summaryCard(label: "Resolved", count: viewModel.resolvedCount, color: themeModel.success, icon: "checkmark.circle.fill")
+        HStack(spacing: 16) {
+            summaryCard(label: "Open",     count: viewModel.openCount,     color: Color.red,  icon: "exclamationmark.circle.fill")
+            summaryCard(label: "Active",   count: viewModel.assignedCount, color: Color.yellow, icon: "wrench.and.screwdriver.fill")
+            summaryCard(label: "Resolved", count: viewModel.resolvedCount, color: Color.green, icon: "checkmark.circle.fill")
         }
-        .padding(.horizontal, themeModel.spacingMD)
+        .padding(.horizontal, 16)
     }
 
     private func summaryCard(label: String, count: Int, color: Color, icon: String) -> some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+        VStack(alignment: .leading, spacing: 8) {
             Image(systemName: icon)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(color)
                 .frame(width: 32, height: 32)
                 .background(color.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusXS, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             Text("\(count)")
-                .font(themeModel.title(22))
-                .foregroundStyle(themeModel.textPrimary)
+                .font(.title3.bold())
+                .foregroundStyle(Color.primary)
 
             Text(label)
-                .font(themeModel.caption())
-                .foregroundStyle(themeModel.textTertiary)
+                .font(.footnote)
+                .foregroundStyle(Color(.tertiaryLabel))
         }
-        .padding(themeModel.spacingMD)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-        )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
     }
 
     // MARK: - Filter Chips
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: themeModel.spacingSM) {
-                filterChip(label: "All", status: nil)
+            HStack(spacing: 12) {
+                FilterButton(title: "All", isSelected: filterStatus == nil) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        filterStatus = nil
+                    }
+                }
                 ForEach(IssueReportStatus.allCases) { status in
-                    filterChip(label: status.rawValue, status: status)
+                    FilterButton(
+                        title: status.rawValue,
+                        isSelected: filterStatus == status
+                    ) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            filterStatus = status
+                        }
+                    }
                 }
             }
-            .padding(.horizontal, themeModel.spacingMD)
+            .padding(.horizontal, 16)
         }
-    }
-
-    private func filterChip(label: String, status: IssueReportStatus?) -> some View {
-        let isSelected = filterStatus == status
-        let color: Color = status?.color ?? themeModel.accent
-        return Button(action: {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                filterStatus = isSelected ? nil : status
-            }
-        }) {
-            Text(label)
-                .font(themeModel.caption())
-                .fontWeight(isSelected ? .semibold : .regular)
-                .foregroundStyle(isSelected ? color : themeModel.textSecondary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(Capsule().fill(isSelected ? color.opacity(0.15) : Color.white.opacity(0.05)))
-                .overlay(Capsule().stroke(isSelected ? color.opacity(0.5) : Color.white.opacity(0.1), lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.2), value: isSelected)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Reports List
     private var reportsList: some View {
-        LazyVStack(spacing: themeModel.spacingMD) {
+        LazyVStack(spacing: 16) {
             if filteredReports.isEmpty {
-                VStack(spacing: themeModel.spacingMD) {
+                VStack(spacing: 16) {
                     Image(systemName: "tray.fill")
                         .font(.system(size: 40))
-                        .foregroundStyle(themeModel.textDisabled)
+                        .foregroundStyle(Color(.quaternaryLabel))
                     Text("No reports found")
-                        .font(themeModel.bodyMedium())
-                        .foregroundStyle(themeModel.textSecondary)
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(Color.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 60)
@@ -124,7 +116,7 @@ struct ReportsView: View {
                 }
             }
         }
-        .padding(.horizontal, themeModel.spacingMD)
+        .padding(.horizontal, 16)
     }
 }
 
@@ -141,16 +133,16 @@ struct ReportRowView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
+        VStack(alignment: .leading, spacing: 16) {
             // Top row
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(report.vehicleName)
-                        .font(themeModel.headline())
-                        .foregroundStyle(themeModel.textPrimary)
+                        .font(.headline)
+                        .foregroundStyle(Color.primary)
                     Text(report.licensePlate)
-                        .font(themeModel.caption())
-                        .foregroundStyle(themeModel.accent)
+                        .font(.footnote)
+                        .foregroundStyle(Color.teal)
                 }
                 Spacer()
                 StatusBadge(
@@ -161,8 +153,8 @@ struct ReportRowView: View {
             }
 
             // Category + severity
-            HStack(spacing: themeModel.spacingSM) {
-                StatusBadge(text: report.issueCategory, color: themeModel.info)
+            HStack(spacing: 8) {
+                StatusBadge(text: report.issueCategory, color: Color.blue)
                 StatusBadge(
                     text: report.severity.rawValue.capitalized,
                     color: viewModel.severityColor(report.severity)
@@ -171,381 +163,36 @@ struct ReportRowView: View {
 
             // Description preview
             Text(report.description)
-                .font(themeModel.body())
-                .foregroundStyle(themeModel.textSecondary)
+                .font(.body)
+                .foregroundStyle(Color.secondary)
                 .lineLimit(2)
 
             // Footer
             HStack {
                 Label(report.driverName, systemImage: "steeringwheel")
-                    .font(themeModel.caption())
-                    .foregroundStyle(themeModel.textTertiary)
+                    .font(.footnote)
+                    .foregroundStyle(Color(.tertiaryLabel))
                 Spacer()
                 if let assignedId = report.assignedTo {
                     Label(viewModel.staffName(assignedId), systemImage: "wrench.fill")
-                        .font(themeModel.caption())
-                        .foregroundStyle(themeModel.warning)
+                        .font(.footnote)
+                        .foregroundStyle(Color.yellow)
                 } else {
                     Text("Unassigned")
-                        .font(themeModel.caption())
-                        .foregroundStyle(themeModel.textDisabled)
+                        .font(.footnote)
+                        .foregroundStyle(Color(.quaternaryLabel))
                 }
                 Text("·")
-                    .foregroundStyle(themeModel.textDisabled)
+                    .foregroundStyle(Color(.quaternaryLabel))
                 Text(timeAgo)
-                    .font(themeModel.caption())
-                    .foregroundStyle(themeModel.textDisabled)
+                    .font(.footnote)
+                    .foregroundStyle(Color(.quaternaryLabel))
             }
         }
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                .stroke(report.status == .open ? themeModel.danger.opacity(0.25) : Color.white.opacity(0.1), lineWidth: 1)
-        )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-        .contentShape(RoundedRectangle(cornerRadius: themeModel.radiusLG))
-    }
-}
-
-// MARK: - Report Detail View
-struct ReportDetailView: View {
-    let report: IssueReport
-    @State var viewModel: ReportsViewModel
-
-    @State private var selectedStaffId: UUID?
-    @State private var selectedStatus: IssueReportStatus
-    @State private var isSaved = false
-    @Environment(\.dismiss) private var dismiss
-
-    init(report: IssueReport, viewModel: ReportsViewModel) {
-        self.report = report
-        self.viewModel = viewModel
-        _selectedStaffId = State(initialValue: report.assignedTo)
-        _selectedStatus  = State(initialValue: report.status)
-    }
-
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
-
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: themeModel.spacingLG) {
-                        issueHeaderCard
-                        assignmentCard
-                        statusCard
-                        progressTimeline
-                        saveButton
-                    }
-                    .padding(themeModel.spacingMD)
-                    .padding(.bottom, themeModel.spacingXXL)
-                }
-            }
-            .navigationTitle("Report Detail")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }
-                        .foregroundStyle(themeModel.accent)
-                }
-            }
-        }
-    }
-
-    // MARK: - Issue Header
-    private var issueHeaderCard: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
-            // Vehicle + badges
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(report.vehicleName)
-                        .font(themeModel.title(20))
-                        .foregroundStyle(themeModel.textPrimary)
-                    Text(report.licensePlate)
-                        .font(themeModel.caption())
-                        .foregroundStyle(themeModel.accent)
-                }
-                Spacer()
-                StatusBadge(
-                    text: report.severity.rawValue.capitalized,
-                    color: viewModel.severityColor(report.severity)
-                )
-            }
-
-            // Category
-            StatusBadge(text: report.issueCategory, color: themeModel.info, icon: "exclamationmark.triangle.fill")
-
-            Divider().background(themeModel.divider)
-
-            // Description
-            Text(report.description)
-                .font(themeModel.body())
-                .foregroundStyle(themeModel.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Divider().background(themeModel.divider)
-
-            // Meta
-            HStack {
-                Label(report.driverName, systemImage: "steeringwheel")
-                    .font(themeModel.caption())
-                    .foregroundStyle(themeModel.textTertiary)
-                Spacer()
-                Label(report.submittedAt.formatted(date: .abbreviated, time: .shortened), systemImage: "clock")
-                    .font(themeModel.caption())
-                    .foregroundStyle(themeModel.textDisabled)
-            }
-        }
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-        )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-    }
-
-    // MARK: - Assignment Card
-    private var assignmentCard: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
-            Label("Assign to Maintenance Staff", systemImage: "person.badge.plus")
-                .font(themeModel.headline())
-                .foregroundStyle(themeModel.textPrimary)
-
-            VStack(spacing: themeModel.spacingSM) {
-                // Unassigned option
-                staffRow(id: nil, name: "Unassigned", subtitle: "No assignment")
-
-                ForEach(viewModel.maintenanceStaff) { staff in
-                    staffRow(id: staff.id, name: staff.fullName, subtitle: staff.email)
-                }
-            }
-        }
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-        )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-    }
-
-    private func staffRow(id: UUID?, name: String, subtitle: String) -> some View {
-        let isSelected = selectedStaffId == id
-        return Button(action: {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                selectedStaffId = id
-                if id != nil && selectedStatus == .open {
-                    selectedStatus = .assigned
-                } else if id == nil {
-                    selectedStatus = .open
-                }
-            }
-        }) {
-            HStack(spacing: themeModel.spacingMD) {
-                ZStack {
-                    Circle()
-                        .fill(isSelected ? themeModel.accent.opacity(0.15) : Color.white.opacity(0.05))
-                        .frame(width: 40, height: 40)
-                    Image(systemName: id == nil ? "person.slash.fill" : "person.fill")
-                        .font(.system(size: 16))
-                        .foregroundStyle(isSelected ? themeModel.accent : themeModel.textSecondary)
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(name)
-                        .font(themeModel.bodyMedium())
-                        .foregroundStyle(isSelected ? themeModel.textPrimary : themeModel.textSecondary)
-                    Text(subtitle)
-                        .font(themeModel.caption())
-                        .foregroundStyle(themeModel.textDisabled)
-                }
-                Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(themeModel.accent)
-                        .font(.system(size: 18))
-                }
-            }
-            .padding(themeModel.spacingSM)
-            .background(
-                RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
-                    .fill(isSelected ? themeModel.accent.opacity(0.08) : Color.clear)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous)
-                    .stroke(isSelected ? themeModel.accent.opacity(0.3) : Color.clear, lineWidth: 1)
-            )
-            .animation(.easeInOut(duration: 0.2), value: isSelected)
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Status Card
-    private var statusCard: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
-            Label("Update Status", systemImage: "arrow.triangle.2.circlepath")
-                .font(themeModel.headline())
-                .foregroundStyle(themeModel.textPrimary)
-
-            HStack(spacing: themeModel.spacingSM) {
-                ForEach(IssueReportStatus.allCases) { status in
-                    statusChip(status)
-                }
-            }
-        }
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-        )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-    }
-
-    private func statusChip(_ status: IssueReportStatus) -> some View {
-        let isSelected = selectedStatus == status
-        return Button(action: {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                selectedStatus = status
-            }
-        }) {
-            VStack(spacing: 4) {
-                Image(systemName: status.icon)
-                    .font(.system(size: 14))
-                Text(status.rawValue)
-                    .font(.system(size: 10, weight: .medium))
-                    .multilineTextAlignment(.center)
-            }
-            .foregroundStyle(isSelected ? status.color : themeModel.textSecondary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity)
-            .background(Capsule().fill(isSelected ? status.color.opacity(0.15) : Color.white.opacity(0.04)))
-            .overlay(Capsule().stroke(isSelected ? status.color.opacity(0.5) : Color.white.opacity(0.08), lineWidth: 1))
-            .animation(.easeInOut(duration: 0.2), value: isSelected)
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Progress Timeline
-    private var progressTimeline: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingMD) {
-            Label("Progress", systemImage: "timeline.selection")
-                .font(themeModel.headline())
-                .foregroundStyle(themeModel.textPrimary)
-
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(timelineEntries().indices, id: \.self) { idx in
-                    let entry = timelineEntries()[idx]
-                    let isLast = idx == timelineEntries().count - 1
-                    HStack(alignment: .top, spacing: themeModel.spacingMD) {
-                        VStack(spacing: 0) {
-                            Circle()
-                                .fill(entry.status.color)
-                                .frame(width: 10, height: 10)
-                                .padding(.top, 4)
-                            if !isLast {
-                                Rectangle()
-                                    .fill(themeModel.divider)
-                                    .frame(width: 1)
-                                    .frame(minHeight: 32)
-                            }
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(entry.status.rawValue)
-                                .font(themeModel.bodyMedium())
-                                .foregroundStyle(entry.status.color)
-                            Text(entry.note)
-                                .font(themeModel.caption())
-                                .foregroundStyle(themeModel.textTertiary)
-                            Text(entry.timestamp.formatted(date: .abbreviated, time: .shortened))
-                                .font(.system(size: 10))
-                                .foregroundStyle(themeModel.textDisabled)
-                        }
-                        .padding(.bottom, isLast ? 0 : themeModel.spacingMD)
-                    }
-                }
-            }
-        }
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-        )
-        .shadow(color: themeModel.shadowPrimary, radius: 8, y: 4)
-    }
-
-    private func timelineEntries() -> [StatusHistoryEntry] {
-        var entries: [StatusHistoryEntry] = [
-            StatusHistoryEntry(status: .open, timestamp: report.submittedAt, note: "Issue reported by \(report.driverName)")
-        ]
-        if selectedStatus == .assigned || selectedStatus == .inProgress || selectedStatus == .resolved {
-            let staff = viewModel.staffName(selectedStaffId)
-            entries.append(StatusHistoryEntry(
-                status: .assigned,
-                timestamp: report.submittedAt.addingTimeInterval(3600),
-                note: "Assigned to \(staff)"
-            ))
-        }
-        if selectedStatus == .inProgress || selectedStatus == .resolved {
-            entries.append(StatusHistoryEntry(
-                status: .inProgress,
-                timestamp: report.submittedAt.addingTimeInterval(7200),
-                note: "Work in progress"
-            ))
-        }
-        if selectedStatus == .resolved {
-            entries.append(StatusHistoryEntry(
-                status: .resolved,
-                timestamp: report.submittedAt.addingTimeInterval(14400),
-                note: "Issue resolved and closed"
-            ))
-        }
-        return entries
-    }
-
-    // MARK: - Save Button
-    private var saveButton: some View {
-        Button(action: handleSave) {
-            HStack(spacing: themeModel.spacingSM) {
-                if isSaved {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("Changes Saved")
-                } else {
-                    Image(systemName: "square.and.arrow.down.fill")
-                    Text("Save Changes")
-                }
-            }
-            .font(themeModel.bodyMedium())
-            .fontWeight(.semibold)
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 54)
-            .background {
-                if isSaved {
-                    themeModel.success
-                } else {
-                    LinearGradient(
-                        colors: [themeModel.accent, themeModel.accent.opacity(0.7)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusMD, style: .continuous))
-            .shadow(color: themeModel.accent.opacity(0.3), radius: 12, y: 6)
-            .animation(.easeInOut(duration: 0.3), value: isSaved)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func handleSave() {
-        viewModel.update(reportId: report.id, assignedTo: selectedStaffId, status: selectedStatus)
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { isSaved = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { dismiss() }
+        .padding(16)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 

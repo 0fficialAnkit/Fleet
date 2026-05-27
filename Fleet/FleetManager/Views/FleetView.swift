@@ -2,28 +2,27 @@ import SwiftUI
 
 enum FleetTab: String, CaseIterable {
     case drivers = "Drivers"
-    case maintenance = "Maintenance"
+    case maintenance = "Maintenance Staff"
 }
 
 struct FleetView: View {
     @State private var selectedTab: FleetTab = .drivers
 
     @State private var employeesViewModel = EmployeesViewModel()
-    @State private var maintenanceViewModel = MaintenanceViewModel()
 
-    @State private var isShowingAddDriver = false
-    @State private var isShowingAddMaintenance = false
+    @State private var isShowingAddEmployee = false
+    @State private var navigationPath = NavigationPath()
 
     init() {
-        UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(themeModel.info)
+        UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(Color.blue)
         UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
-        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor(themeModel.textSecondary)], for: .normal)
+        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor(Color.secondary)], for: .normal)
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
-                themeModel.backgroundPrimary.ignoresSafeArea()
+                Color(.systemGroupedBackground).ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     Picker("Fleet Section", selection: $selectedTab) {
@@ -32,14 +31,14 @@ struct FleetView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    .padding(.horizontal, themeModel.spacingMD)
-                    .padding(.vertical, themeModel.spacingMD)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
 
                     switch selectedTab {
                     case .drivers:
-                        EmployeesView(viewModel: employeesViewModel)
+                        EmployeesView(viewModel: employeesViewModel, roleFilter: "driver")
                     case .maintenance:
-                        MaintenanceView(viewModel: maintenanceViewModel)
+                        EmployeesView(viewModel: employeesViewModel, roleFilter: "maintenance")
                     }
 
                     Spacer(minLength: 0)
@@ -49,27 +48,27 @@ struct FleetView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
-                        switch selectedTab {
-                        case .drivers:
-                            isShowingAddDriver = true
-                        case .maintenance:
-                            isShowingAddMaintenance = true
-                        }
+                        isShowingAddEmployee = true
                     }) {
                         Image(systemName: "plus")
                             .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(themeModel.textPrimary)
+                            .foregroundStyle(Color.primary)
                             .frame(width: 38, height: 38)
-                            .glassEffect(in: Circle())
+//                            .background(.ultraThinMaterial, in: Circle())
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .sheet(isPresented: $isShowingAddDriver) {
-                AddEmployeeView(viewModel: employeesViewModel)
+            .sheet(isPresented: $isShowingAddEmployee) {
+                AddEmployeeView(
+                    viewModel: employeesViewModel,
+                    roleName: selectedTab == .drivers ? "driver" : "maintenance"
+                )
             }
-            .sheet(isPresented: $isShowingAddMaintenance) {
-                AddMaintenanceView(viewModel: maintenanceViewModel)
+
+            .task {
+                await employeesViewModel.loadData()
+                employeesViewModel.setupRealtime()
             }
         }
     }

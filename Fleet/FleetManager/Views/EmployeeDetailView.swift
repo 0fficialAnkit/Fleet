@@ -1,119 +1,142 @@
 import SwiftUI
 
 struct EmployeeDetailView: View {
-    let user: User
+    let profile: Profile
     let viewModel: EmployeesViewModel
-    
+
     @Environment(\.dismiss) private var dismiss
     @State private var isShowingEditSheet = false
-    
-    var currentUser: User {
-        viewModel.users.first { $0.id == user.id } ?? user
+
+    var currentProfile: Profile {
+        viewModel.profiles.first { $0.id == profile.id } ?? profile
     }
-    
+
     var currentRoleName: String {
-        viewModel.getRole(for: currentUser)?.roleName ?? "Unknown Role"
+        viewModel.getRole(for: currentProfile)
     }
-    
+
+    var credentialsShareText: String {
+        """
+        Welcome to the Fleet App, \(currentProfile.fullName)!
+
+        Your login credentials are:
+        Email: \(currentProfile.email)
+        Password: [Set during account creation]
+
+        Please log in to access your portal.
+        """
+    }
+
     var body: some View {
         ZStack {
-            themeModel.backgroundPrimary.ignoresSafeArea()
-            
+            Color(.systemGroupedBackground).ignoresSafeArea()
+
             ScrollView(showsIndicators: false) {
-                VStack(spacing: themeModel.spacingLG) {
+                VStack(spacing: 24) {
                     // Header Profile Section
-                    VStack(spacing: themeModel.spacingSM) {
+                    VStack(spacing: 8) {
                         ZStack {
                             Circle()
                                 .fill(viewModel.getColor(for: currentRoleName).opacity(0.15))
                                 .frame(width: 110, height: 110)
-                            
+
                             Image(systemName: viewModel.getIcon(for: currentRoleName))
                                 .font(.system(size: 44))
                                 .foregroundColor(viewModel.getColor(for: currentRoleName))
                         }
                         .padding(.bottom, 8)
-                        
-                        Text(currentUser.fullName)
-                            .font(themeModel.largeTitle(28))
-                            .foregroundColor(themeModel.textPrimary)
-                        
+
+                        Text(currentProfile.fullName)
+                            .font(.title.bold())
+                            .foregroundColor(Color.primary)
+
                         Text(currentRoleName)
-                            .font(themeModel.bodyMedium(14))
+                            .font(.subheadline.weight(.medium))
                             .foregroundColor(viewModel.getColor(for: currentRoleName))
                             .padding(.horizontal, 16)
                             .padding(.vertical, 6)
                             .background(viewModel.getColor(for: currentRoleName).opacity(0.15))
                             .clipShape(Capsule())
                     }
-                    .padding(.top, themeModel.spacingXL)
-                    
+                    .padding(.top, 32)
+
                     // Information Cards
-                    VStack(spacing: themeModel.spacingMD) {
-                        InfoRowView(icon: "envelope.fill", title: "Email", value: currentUser.email)
-                        
-                        if let phone = currentUser.phone {
-                            Divider().background(themeModel.divider)
-                            InfoRowView(icon: "phone.fill", title: "Phone", value: phone)
+                    VStack(spacing: 16) {
+                        InfoRowView(icon: "person.fill", title: "Full Name", value: currentProfile.fullName)
+
+                        Divider().background(Color(.separator))
+                        InfoRowView(icon: "envelope.fill", title: "Email", value: currentProfile.email)
+
+                        Divider().background(Color(.separator))
+                        InfoRowView(icon: "phone.fill", title: "Phone", value: currentProfile.phone ?? "Not Provided")
+
+                        if currentProfile.role == "driver" {
+                            Divider().background(Color(.separator))
+                            InfoRowView(icon: "lanyardcard.fill", title: "Driver License", value: currentProfile.licenseNumber ?? "Not Provided")
                         }
-                        
-                        if currentRoleName.lowercased() == "driver", let license = currentUser.licenseNumber, !license.isEmpty {
-                            Divider().background(themeModel.divider)
-                            InfoRowView(icon: "lanyardcard.fill", title: "License", value: license)
-                        }
-                        
-                        if let status = currentUser.status {
-                            Divider().background(themeModel.divider)
-                            InfoRowView(
-                                icon: status == .active ? "checkmark.circle.fill" : "xmark.circle.fill",
-                                title: "Status",
-                                value: status.rawValue.capitalized,
-                                valueColor: status == .active ? themeModel.success : themeModel.textSecondary
-                            )
-                        }
-                        
-                        if let date = currentUser.createdAt {
-                            Divider().background(themeModel.divider)
+
+                        Divider().background(Color(.separator))
+                        let status = currentProfile.userStatus ?? .active
+                        InfoRowView(
+                            icon: status == .active ? "checkmark.circle.fill" : "xmark.circle.fill",
+                            title: "Status / State",
+                            value: status.rawValue.capitalized,
+                            valueColor: status == .active ? Color.green : Color.secondary
+                        )
+
+                        if let date = currentProfile.createdAt {
+                            Divider().background(Color(.separator))
                             InfoRowView(icon: "calendar", title: "Joined", value: date.formatted(date: .abbreviated, time: .omitted))
                         }
                     }
-                    .padding(themeModel.spacingMD)
-                    .background(themeModel.backgroundElevated)
-                    .cornerRadius(themeModel.radiusLG)
-                    .padding(.horizontal, themeModel.spacingMD)
+//                    .padding(16)
+//                    .background(Color(.systemBackground))
+//                    .cornerRadius(20)
+//                    .padding(.horizontal, 16)
+                    .padding(16)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .padding(.horizontal, 16)
                 }
             }
         }
         .navigationTitle("Details")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
+        .toolbarBackground(Color(.systemGroupedBackground), for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    ShareLink(
+                        item: credentialsShareText,
+                        subject: Text("Fleet App Login Credentials"),
+                        message: Text("Here are your login details:")
+                    ) {
+                        Label("Share Credentials", systemImage: "square.and.arrow.up")
+                    }
+
                     Button(action: {
                         isShowingEditSheet = true
                     }) {
                         Label("Edit", systemImage: "pencil")
                     }
-                    
+
                     Button(role: .destructive, action: {
-                        viewModel.deleteEmployee(currentUser)
+                        viewModel.deleteEmployee(currentProfile)
                         dismiss()
                     }) {
                         Label("Delete", systemImage: "trash")
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 17, weight: .regular))
-                        .foregroundColor(themeModel.textPrimary)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(Color.primary)
                         .padding(8)
                 }
             }
         }
         .sheet(isPresented: $isShowingEditSheet) {
-            EditEmployeeView(user: currentUser, viewModel: viewModel)
+            EditEmployeeView(profile: currentProfile, viewModel: viewModel)
         }
     }
 }
@@ -122,23 +145,23 @@ struct InfoRowView: View {
     let icon: String
     let title: String
     let value: String
-    var valueColor: Color = themeModel.textPrimary
-    
+    var valueColor: Color = Color.primary
+
     var body: some View {
-        HStack(spacing: themeModel.spacingMD) {
+        HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 18))
-                .foregroundColor(themeModel.textTertiary)
+                .foregroundColor(Color(.tertiaryLabel))
                 .frame(width: 24)
-            
+
             Text(title)
-                .font(themeModel.bodyMedium(16))
-                .foregroundColor(themeModel.textSecondary)
-            
+                .font(.body.weight(.medium))
+                .foregroundColor(Color.secondary)
+
             Spacer()
-            
+
             Text(value)
-                .font(themeModel.body(16))
+                .font(.body)
                 .foregroundColor(valueColor)
         }
         .padding(.vertical, 8)
@@ -148,7 +171,7 @@ struct InfoRowView: View {
 #Preview {
     NavigationStack {
         EmployeeDetailView(
-            user: MockData.users.first(where: { $0.fullName == "Ravi Kumar" }) ?? MockData.users.first!,
+            profile: Profile(id: UUID(), fullName: "Ravi Kumar", email: "ravi@fleet.in", role: "driver"),
             viewModel: EmployeesViewModel()
         )
         .preferredColorScheme(.dark)

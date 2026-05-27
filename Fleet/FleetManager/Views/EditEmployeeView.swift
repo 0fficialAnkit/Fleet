@@ -3,103 +3,112 @@ import SwiftUI
 struct EditEmployeeView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: EmployeesViewModel
-    
-    @State private var user: User
+
+    @State private var originalProfile: Profile
     @State private var fullName: String
     @State private var email: String
     @State private var phone: String
     @State private var licenseNumber: String
-    @State private var selectedRoleId: UUID?
-    
-    init(user: User, viewModel: EmployeesViewModel) {
+
+    let isDriverSelected: Bool
+
+    init(profile: Profile, viewModel: EmployeesViewModel) {
         self.viewModel = viewModel
-        _user = State(initialValue: user)
-        _fullName = State(initialValue: user.fullName)
-        _email = State(initialValue: user.email)
-        _phone = State(initialValue: user.phone ?? "")
-        _licenseNumber = State(initialValue: user.licenseNumber ?? "")
-        _selectedRoleId = State(initialValue: user.roleId)
+        _originalProfile = State(initialValue: profile)
+        _fullName = State(initialValue: profile.fullName)
+        _email = State(initialValue: profile.email)
+        _phone = State(initialValue: profile.phone ?? "")
+        _licenseNumber = State(initialValue: profile.licenseNumber ?? "")
+        self.isDriverSelected = (profile.role == "driver")
     }
-    
-    var isDriverSelected: Bool {
-        guard let id = selectedRoleId, let role = viewModel.roles.first(where: { $0.id == id }) else { return false }
-        return role.roleName.lowercased() == "driver"
-    }
-    
-    var assignableRoles: [Role] {
-        viewModel.roles.filter { $0.roleName.lowercased() != "fleet manager" }
-    }
-    
+
     var body: some View {
         NavigationStack {
-            Form {
-                Section(header: Text("Personal Details").foregroundColor(themeModel.textSecondary)) {
-                    TextField("Full Name", text: $fullName)
-                        .foregroundColor(themeModel.textPrimary)
-                    TextField("Email", text: $email)
-                        .keyboardType(.emailAddress)
-                        .autocapitalization(.none)
-                        .foregroundColor(themeModel.textPrimary)
-                    TextField("Phone", text: $phone)
-                        .keyboardType(.phonePad)
-                        .foregroundColor(themeModel.textPrimary)
-                    
-                    TextField("Driver License Number", text: $licenseNumber)
-                        .foregroundColor(isDriverSelected ? themeModel.textPrimary : themeModel.textDisabled)
-                        .disabled(!isDriverSelected)
-                }
-                .listRowBackground(themeModel.backgroundElevated)
-                
-                Section(header: Text("Role & Access").foregroundColor(themeModel.textSecondary)) {
-                    Picker("Select Role", selection: $selectedRoleId) {
-                        Text("Select a role").tag(UUID?.none)
-                        ForEach(assignableRoles) { role in
-                            Text(role.roleName).tag(UUID?.some(role.id))
+            ZStack {
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 24) {
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            SectionHeader(title: "Personal Details")
+                                .padding(.horizontal, 16)
+
+                                VStack(spacing: 0) {
+                                    TextField("Full Name", text: $fullName)
+                                        .padding(.vertical, 12)
+                                        .foregroundColor(Color.primary)
+
+                                    Divider().background(Color(.separator))
+
+                                    TextField("Email", text: $email)
+                                        .keyboardType(.emailAddress)
+                                        .autocapitalization(.none)
+                                        .padding(.vertical, 12)
+                                        .foregroundColor(Color.primary)
+
+                                    Divider().background(Color(.separator))
+
+                                    TextField("Phone", text: $phone)
+                                        .keyboardType(.phonePad)
+                                        .padding(.vertical, 12)
+                                        .foregroundColor(Color.primary)
+
+                                    if isDriverSelected {
+                                        Divider().background(Color(.separator))
+
+                                        TextField("Driver License Number", text: $licenseNumber)
+                                            .padding(.vertical, 12)
+                                            .foregroundColor(Color.primary)
+                                    }
+                                }
+                                .padding(16)
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .padding(.horizontal, 16)
                         }
                     }
-                    .foregroundColor(themeModel.textPrimary)
+                    .padding(.vertical, 16)
                 }
-                .listRowBackground(themeModel.backgroundElevated)
             }
-            .scrollContentBackground(.hidden)
-            .background(themeModel.backgroundPrimary)
-            .navigationTitle("Edit Employee")
+            .navigationTitle(isDriverSelected ? "Edit Driver" : "Edit Maintenance Staff")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(themeModel.backgroundPrimary, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(themeModel.info)
+                    .foregroundColor(Color.teal)
                 }
-                
+
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        if let roleId = selectedRoleId, !fullName.isEmpty {
-                            var updatedUser = user
-                            updatedUser.fullName = fullName
-                            updatedUser.email = email
-                            updatedUser.phone = phone.isEmpty ? nil : phone
-                            updatedUser.licenseNumber = isDriverSelected && !licenseNumber.isEmpty ? licenseNumber : nil
-                            updatedUser.roleId = roleId
-                            
-                            viewModel.updateEmployee(updatedUser)
-                            dismiss()
+                        guard !fullName.isEmpty else { return }
+                        var updatedProfile = originalProfile
+                        updatedProfile.fullName = fullName
+                        updatedProfile.email = email
+                        updatedProfile.phone = phone.isEmpty ? nil : phone
+                        updatedProfile.licenseNumber = isDriverSelected && !licenseNumber.isEmpty ? licenseNumber : nil
+
+                        Task {
+                            do {
+                                try await ProfileService.updateProfile(updatedProfile)
+                                await viewModel.loadData()
+                                dismiss()
+                            } catch {
+                                print("Error updating profile: \(error)")
+                            }
                         }
                     }
-                    .foregroundColor(themeModel.info)
+                    .foregroundColor(Color.teal)
                     .bold()
-                    .disabled(fullName.isEmpty || selectedRoleId == nil)
+                    .disabled(fullName.isEmpty)
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 }
 
 #Preview {
-    EditEmployeeView(user: MockData.users.first!, viewModel: EmployeesViewModel())
+    EditEmployeeView(profile: Profile(id: UUID(), fullName: "Test User", email: "test@fleet.in", role: "driver"), viewModel: EmployeesViewModel())
 }
