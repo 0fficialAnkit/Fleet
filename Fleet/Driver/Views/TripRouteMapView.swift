@@ -3,9 +3,10 @@ import MapKit
 import CoreLocation
 
 /// Shows an Apple Maps preview for a trip.
-/// Geocodes the fleet-manager-entered start + end addresses and places
-/// two pins — green for pickup, red for drop-off. No route polyline.
-/// The "Navigate in Maps" button sends both points to Apple Maps.
+/// Phase 1 — geocodes pickup + drop-off addresses, shows two pins immediately.
+/// Phase 2 — requests a real driving route from MKDirections, overlays the
+///            polyline and refits the camera to the actual road path.
+/// "Navigate in Maps" button hands both points to Apple Maps with driving mode.
 struct TripRouteMapView: View {
 
     let startAddress: String?
@@ -15,6 +16,7 @@ struct TripRouteMapView: View {
     @State private var destinationCoord: CLLocationCoordinate2D?
     @State private var originMapItem: MKMapItem?
     @State private var destinationMapItem: MKMapItem?
+    @State private var routePolyline: MKPolyline?          // nil until MKDirections responds
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var isLoading = true
     @State private var errorMessage: String?
@@ -33,13 +35,11 @@ struct TripRouteMapView: View {
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .frame(height: 260)
 
-            // Show navigate button only when both endpoints are resolved
             if originMapItem != nil && destinationMapItem != nil {
                 navigateButton
                     .padding(.bottom, 12)
             }
         }
-        // Re-runs whenever addresses change (handles late-arriving route data)
         .task(id: "\(startAddress ?? "")|\(endAddress ?? "")") {
             await resolvePoints()
         }
@@ -49,6 +49,15 @@ struct TripRouteMapView: View {
 
     private var mapView: some View {
         Map(position: $cameraPosition) {
+            // Driving route polyline — appears once MKDirections responds
+            if let polyline = routePolyline {
+                MapPolyline(polyline)
+                    .stroke(
+                        Color.blue.opacity(0.85),
+                        style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round)
+                    )
+            }
+
             // Pickup pin — green
             if let o = originCoord {
                 Annotation("Pickup", coordinate: o, anchor: .bottom) {
@@ -126,17 +135,20 @@ struct TripRouteMapView: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(color)
         }
+        .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
     }
 
-    // MARK: - Geocoding (two pins only — no driving directions needed)
+    // MARK: - Two-phase resolution
 
     private func resolvePoints() async {
+        // Reset everything
         isLoading          = true
         errorMessage       = nil
         originCoord        = nil
         destinationCoord   = nil
         originMapItem      = nil
         destinationMapItem = nil
+        routePolyline      = nil
 
         guard let start = startAddress, !start.isEmpty,
               let end   = endAddress,   !end.isEmpty
@@ -146,7 +158,7 @@ struct TripRouteMapView: View {
             return
         }
 
-        // Geocode both concurrently
+        // ── Phase 1: geocode both addresses concurrently ──────────────────
         async let originResult = geocode(start)
         async let destResult   = geocode(end)
         let (origin, dest) = await (originResult, destResult)
@@ -162,19 +174,49 @@ struct TripRouteMapView: View {
         originMapItem      = origin
         destinationMapItem = dest
 
-        // Fit camera to frame both pins with comfortable padding
+        // Show pins immediately — fit camera to both points
         let oCoord = origin.location.coordinate
         let dCoord = dest.location.coordinate
-        let midLat = (oCoord.latitude  + dCoord.latitude)  / 2
-        let midLon = (oCoord.longitude + dCoord.longitude) / 2
-        let spanLat = max(abs(oCoord.latitude  - dCoord.latitude)  * 2.2, 0.02)
-        let spanLon = max(abs(oCoord.longitude - dCoord.longitude) * 2.2, 0.02)
         cameraPosition = .region(MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: midLat, longitude: midLon),
-            span:   MKCoordinateSpan(latitudeDelta: spanLat, longitudeDelta: spanLon)
+            center: CLLocationCoordinate2D(
+                latitude:  (oCoord.latitude  + dCoord.latitude)  / 2,
+                longitude: (oCoord.longitude + dCoord.longitude) / 2
+            ),
+            span: MKCoordinateSpan(
+                latitudeDelta:  max(abs(oCoord.latitude  - dCoord.latitude)  * 2.2, 0.02),
+                longitudeDelta: max(abs(oCoord.longitude - dCoord.longitude) * 2.2, 0.02)
+            )
         ))
+        isLoading = false   // ← pins visible now, polyline still loading
 
-        isLoading = false
+        // ── Phase 2: request actual driving route ─────────────────────────
+        let req = MKDirections.Request()
+        req.source                   = origin
+        req.destination              = dest
+        req.transportType            = .automobile
+        req.requestsAlternateRoutes  = false
+
+        guard let response = try? await MKDirections(request: req).calculate(),
+              let mkRoute  = response.routes.first
+        else { return }   // pins already visible — just skip polyline on failure
+
+        routePolyline = mkRoute.polyline
+
+        // Refit camera to the actual road path
+        let rect   = mkRoute.polyline.boundingMapRect
+        let sw     = MKMapPoint(x: rect.minX, y: rect.maxY).coordinate
+        let ne     = MKMapPoint(x: rect.maxX, y: rect.minY).coordinate
+        let midLat = (sw.latitude  + ne.latitude)  / 2
+        let midLon = (sw.longitude + ne.longitude) / 2
+        let dLat   = abs(ne.latitude  - sw.latitude)  * 1.35
+        let dLon   = abs(ne.longitude - sw.longitude) * 1.35
+        withAnimation(.easeInOut(duration: 0.5)) {
+            cameraPosition = .region(MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: midLat, longitude: midLon),
+                span:   MKCoordinateSpan(latitudeDelta: max(dLat, 0.01),
+                                         longitudeDelta: max(dLon, 0.01))
+            ))
+        }
     }
 
     private func geocode(_ address: String) async -> MKMapItem? {
@@ -184,16 +226,12 @@ struct TripRouteMapView: View {
         return try? await MKLocalSearch(request: request).start().mapItems.first
     }
 
-    // MARK: - Open Apple Maps with pickup → drop-off
+    // MARK: - Open Apple Maps
 
     func openAppleMaps() {
-        guard let source = originMapItem,
-              let dest   = destinationMapItem
-        else { return }
-
+        guard let source = originMapItem, let dest = destinationMapItem else { return }
         source.name = startAddress ?? "Pickup"
         dest.name   = endAddress   ?? "Drop-off"
-
         MKMapItem.openMaps(
             with: [source, dest],
             launchOptions: [
