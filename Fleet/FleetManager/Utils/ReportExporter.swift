@@ -63,7 +63,13 @@ struct CSVGenerator {
         }
     }
     
-    static func generateVehicleCSV(vehicle: Vehicle, driverName: String, pastTrips: [Trip], profiles: [Profile]) -> URL? {
+    static func generateVehicleCSV(
+        vehicle: Vehicle,
+        driverName: String,
+        pastTrips: [Trip],
+        maintenanceHistory: [MaintenanceHistory],
+        profiles: [Profile]
+    ) -> URL? {
         var csvString = "Vehicle Specifications Report\n\n"
         csvString += "Manufacturer,\(vehicle.make ?? "N/A")\n"
         csvString += "Model,\(vehicle.model ?? "N/A")\n"
@@ -89,6 +95,18 @@ struct CSVGenerator {
             let status = trip.status?.rawValue ?? "Completed"
             
             csvString += "\"\(date)\",\"\(dist)\",\"\(tripDriver)\",\"\(status)\"\n"
+        }
+        csvString += "\n"
+        
+        csvString += "Maintenance History\n"
+        csvString += "Date,Service Details,Cost\n"
+        
+        for record in maintenanceHistory {
+            let date = record.completedAt != nil ? formatter.string(from: record.completedAt!) : "N/A"
+            let details = record.serviceDetails?.replacingOccurrences(of: "\"", with: "\"\"").replacingOccurrences(of: "\n", with: " ") ?? "N/A"
+            let cost = record.cost != nil ? "₹\(record.cost!)" : "N/A"
+            
+            csvString += "\"\(date)\",\"\(details)\",\"\(cost)\"\n"
         }
         
         let tempDir = FileManager.default.temporaryDirectory
@@ -375,6 +393,7 @@ struct PDFGenerator {
         vehicle: Vehicle,
         driver: Profile?,
         pastTrips: [Trip],
+        maintenanceHistory: [MaintenanceHistory],
         profiles: [Profile]
     ) async -> URL? {
         let formatter = DateFormatter()
@@ -499,6 +518,48 @@ struct PDFGenerator {
                             <td style="font-weight: 600; font-size: 11px; color: #0d9488;">\(dist)</td>
                             <td style="font-size: 11px;">\(tripDriver)</td>
                             <td style="font-size: 11px; text-transform: uppercase; color: #15803d; font-weight: 600;">\(trip.status?.rawValue ?? "Completed")</td>
+                        </tr>
+                """
+            }
+        }
+        
+        html += """
+                </tbody>
+            </table>
+            
+            <h2>Maintenance History</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Completed Date</th>
+                        <th>Issue & Service Details</th>
+                        <th>Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+        
+        if maintenanceHistory.isEmpty {
+            html += """
+                    <tr>
+                        <td colspan="3" style="text-align: center; color: #94a3b8; padding: 15px; font-size: 11px;">No completed maintenance records for this vehicle.</td>
+                    </tr>
+            """
+        } else {
+            let histFormatter = DateFormatter()
+            histFormatter.dateStyle = .medium
+            histFormatter.timeStyle = .short
+            
+            for record in maintenanceHistory {
+                let dateStr = record.completedAt != nil ? histFormatter.string(from: record.completedAt!) : "N/A"
+                let details = record.serviceDetails ?? "No details provided"
+                let costStr = record.cost != nil ? "₹\(String(format: "%.2f", record.cost!))" : "N/A"
+                
+                html += """
+                        <tr>
+                            <td style="white-space: nowrap; font-size: 11px;">\(dateStr)</td>
+                            <td style="font-size: 11px; color: #475569;">\(details)</td>
+                            <td style="font-weight: 600; font-size: 11px; color: #b91c1c;">\(costStr)</td>
                         </tr>
                 """
             }

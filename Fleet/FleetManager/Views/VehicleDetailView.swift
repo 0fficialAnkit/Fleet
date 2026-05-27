@@ -177,24 +177,35 @@ struct VehicleDetailView: View {
     }
     
     private func exportCSV() {
-        let driver = viewModel.getDriver(for: vehicle.assignedDriverId)
-        let name = driver?.fullName ?? "Unassigned"
-        guard let url = CSVGenerator.generateVehicleCSV(
-            vehicle: vehicle,
-            driverName: name,
-            pastTrips: pastTrips,
-            profiles: viewModel.profiles
-        ) else { return }
-        ShareSheet.share(items: [url])
+        isExporting = true
+        Task {
+            let driver = viewModel.getDriver(for: vehicle.assignedDriverId)
+            let name = driver?.fullName ?? "Unassigned"
+            let history = (try? await MaintenanceHistoryService.fetchHistory(vehicleId: vehicle.id)) ?? []
+            
+            if let url = CSVGenerator.generateVehicleCSV(
+                vehicle: vehicle,
+                driverName: name,
+                pastTrips: pastTrips,
+                maintenanceHistory: history,
+                profiles: viewModel.profiles
+            ) {
+                ShareSheet.share(items: [url])
+            }
+            isExporting = false
+        }
     }
     
     private func exportPDF() async {
         isExporting = true
         let driver = viewModel.getDriver(for: vehicle.assignedDriverId)
+        let history = (try? await MaintenanceHistoryService.fetchHistory(vehicleId: vehicle.id)) ?? []
+        
         if let url = await PDFGenerator.generateVehicleReportPDF(
             vehicle: vehicle,
             driver: driver,
             pastTrips: pastTrips,
+            maintenanceHistory: history,
             profiles: viewModel.profiles
         ) {
             ShareSheet.share(items: [url])
