@@ -384,6 +384,11 @@ struct MaintenanceCardView: View {
                         .font(.caption)
                         .foregroundStyle(Color.red)
                         .lineLimit(2)
+                } else if viewModel.totalDistance(for: vehicle.id) >= (vehicle.vehicleType?.maintenanceThresholdKM ?? 10000) {
+                    Text("Preventive maintenance due (Threshold crossed)")
+                        .font(.caption)
+                        .foregroundStyle(Color.orange)
+                        .lineLimit(2)
                 }
             }
             Spacer()

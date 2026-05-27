@@ -10,6 +10,7 @@ struct AddVehicleView: View {
     @State private var licensePlate = ""
     @State private var tankCapacity = ""
     @State private var mileage = ""
+    @State private var selectedType: VehicleType = .car
     @State private var isSaving = false
     @State private var errorMessage: String?
 
@@ -57,6 +58,21 @@ struct AddVehicleView: View {
                                     .textInputAutocapitalization(.characters)
                                     .padding(.vertical, 12)
                                     .foregroundColor(Color.primary)
+                                
+                                Divider().background(Color(.separator))
+                                
+                                HStack {
+                                    Text("Vehicle Type")
+                                        .foregroundColor(Color.primary)
+                                    Spacer()
+                                    Picker("", selection: $selectedType) {
+                                        ForEach(VehicleType.allCases) { type in
+                                            Text(type.displayName).tag(type)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                }
+                                .padding(.vertical, 8)
                             }
                             .padding(16)
                             .background(Color(.secondarySystemGroupedBackground))
@@ -126,7 +142,8 @@ struct AddVehicleView: View {
                                     year: yearInt,
                                     tankCapacity: cap,
                                     mileage: mil,
-                                    licensePlate: plateTrimmed
+                                    licensePlate: plateTrimmed,
+                                    vehicleType: selectedType
                                 )
                                 dismiss()
                             } catch {

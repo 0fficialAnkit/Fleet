@@ -12,6 +12,9 @@ private struct MaintenanceTaskInsert: Encodable {
     let task_type: MaintenanceTaskType?
     let description: String?
     let scheduled_date: Date?
+    let target_mileage: Double?
+    let service_interval_months: Int?
+    let schedule_type: MaintenanceScheduleType?
     let status: MaintenanceTaskStatus?
 }
 
@@ -57,6 +60,9 @@ enum MaintenanceTaskService {
         taskType: MaintenanceTaskType?,
         description: String?,
         scheduledDate: Date?,
+        targetMileage: Double?,
+        serviceIntervalMonths: Int?,
+        scheduleType: MaintenanceScheduleType?,
         status: MaintenanceTaskStatus?
     ) async throws {
         let payload = MaintenanceTaskInsert(
@@ -68,6 +74,9 @@ enum MaintenanceTaskService {
             task_type: taskType,
             description: description,
             scheduled_date: scheduledDate,
+            target_mileage: targetMileage,
+            service_interval_months: serviceIntervalMonths,
+            schedule_type: scheduleType,
             status: status
         )
         do {
@@ -92,6 +101,9 @@ enum MaintenanceTaskService {
             taskType: task.taskType,
             description: task.description,
             scheduledDate: task.scheduledDate,
+            targetMileage: task.targetMileage,
+            serviceIntervalMonths: task.serviceIntervalMonths,
+            scheduleType: task.scheduleType,
             status: task.status
         )
     }

@@ -30,6 +30,44 @@ final class VehiclesViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+        
+        // --- INJECT MOCK DATA FOR TESTING T4-19 ---
+        let mockVehicleId = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        let mockVehicle = Vehicle(
+            id: mockVehicleId,
+            make: "Honda",
+            model: "Activa (Mock)",
+            year: 2024,
+            vin: "MOCK1234",
+            licensePlate: "MH-12-AB-1234",
+            tankCapacity: 5,
+            mileage: 45,
+            purchaseDate: Date(),
+            assignedDriverId: nil,
+            adminId: nil,
+            status: .active,
+            vehicleType: .twoWheeler
+        )
+        
+        let mockTrip = Trip(
+            id: UUID(),
+            vehicleId: mockVehicleId,
+            driverId: nil,
+            routeId: nil,
+            startTime: Date().addingTimeInterval(-86400 * 2),
+            endTime: Date(),
+            distance: 3100.0,
+            status: .completed,
+            orderType: .pickUpAndDrop,
+            createdAt: Date()
+        )
+        
+        if !vehicles.contains(where: { $0.vin == "MOCK1234" }) {
+            vehicles.append(mockVehicle)
+            trips.append(mockTrip)
+        }
+        // -------------------------------------------
+        
         isLoading = false
     }
 
@@ -42,6 +80,11 @@ final class VehiclesViewModel {
         return trips.filter { $0.vehicleId == vehicleId && $0.status == .completed }
             .sorted(by: { ($0.endTime ?? Date()) > ($1.endTime ?? Date()) })
     }
+    
+    func getTotalDistance(for vehicleId: UUID) -> Double {
+        let vehicleTrips = trips.filter { $0.vehicleId == vehicleId && $0.status == .completed }
+        return vehicleTrips.reduce(0) { $0 + ($1.distance ?? 0) }
+    }
 
     func getStatusColor(_ status: VehicleStatus?) -> Color {
         switch status {
@@ -52,8 +95,8 @@ final class VehiclesViewModel {
         }
     }
 
-    func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, licensePlate: String) async throws {
-        print("[VehiclesViewModel] addVehicle: make=\(make) model=\(model) plate=\(licensePlate)")
+    func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, licensePlate: String, vehicleType: VehicleType) async throws {
+        print("[VehiclesViewModel] addVehicle: make=\(make) model=\(model) plate=\(licensePlate) type=\(vehicleType)")
         do {
             try await VehicleService.createVehicle(
                 make: make,
@@ -64,7 +107,8 @@ final class VehiclesViewModel {
                 tankCapacity: tankCapacity,
                 mileage: mileage,
                 assignedDriverId: nil,   // Always nil on creation — assign via driver selection
-                status: .active
+                status: .active,
+                vehicleType: vehicleType
             )
             print("[VehiclesViewModel] addVehicle: success, reloading...")
             await loadData()

@@ -82,7 +82,18 @@ final class MaintenanceViewModel {
     }
 
     /// Create a maintenance task, optionally linked to a work order.
-    func addTask(vehicleId: UUID, taskType: MaintenanceTaskType, description: String, scheduledDate: Date, assignedTo: UUID? = nil, scheduledBy: UUID? = nil, workOrderId: UUID? = nil) async throws {
+    func addTask(
+        vehicleId: UUID,
+        taskType: MaintenanceTaskType,
+        description: String,
+        scheduledDate: Date?,
+        targetMileage: Double?,
+        serviceIntervalMonths: Int?,
+        scheduleType: MaintenanceScheduleType?,
+        assignedTo: UUID? = nil,
+        scheduledBy: UUID? = nil,
+        workOrderId: UUID? = nil
+    ) async throws {
         print("[MaintenanceViewModel] addTask vehicleId=\(vehicleId) type=\(taskType.rawValue) assignedTo=\(String(describing: assignedTo))")
         try await MaintenanceTaskService.createTask(
             workOrderId: workOrderId,
@@ -92,6 +103,9 @@ final class MaintenanceViewModel {
             taskType: taskType,
             description: description,
             scheduledDate: scheduledDate,
+            targetMileage: targetMileage,
+            serviceIntervalMonths: serviceIntervalMonths,
+            scheduleType: scheduleType,
             status: .pending
         )
         // Notify assigned maintenance staff
