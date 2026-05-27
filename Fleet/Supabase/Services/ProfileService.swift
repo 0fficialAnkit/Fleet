@@ -109,20 +109,23 @@ enum ProfileService {
             let email: String
             let phone: String?
             let licenseNumber: String?
+            let userStatus: String?
 
             enum CodingKeys: String, CodingKey {
-                case fullName = "full_name"
+                case fullName    = "full_name"
                 case email
                 case phone
                 case licenseNumber = "license_number"
+                case userStatus    = "user_status"
             }
         }
 
         let update = UserUpdate(
-            fullName: profile.fullName,
-            email: profile.email,
-            phone: profile.phone,
-            licenseNumber: profile.licenseNumber
+            fullName:      profile.fullName,
+            email:         profile.email,
+            phone:         profile.phone,
+            licenseNumber: profile.licenseNumber,
+            userStatus:    profile.status
         )
 
         try await supabase
