@@ -45,14 +45,17 @@ struct OrdersView: View {
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
 
-                        Section {
-                            if filteredTrips.isEmpty {
+                        if filteredTrips.isEmpty {
+                            Section {
                                 Text("No orders found.")
                                     .font(.body)
                                     .foregroundColor(Color.secondary)
                                     .padding(.vertical, 40)
-                            } else {
-                                ForEach(filteredTrips) { trip in
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                            }
+                        } else {
+                            ForEach(filteredTrips) { trip in
+                                Section {
                                     NavigationLink(value: trip) {
                                         OrderCardView(trip: trip, viewModel: viewModel)
                                     }
@@ -60,6 +63,7 @@ struct OrdersView: View {
                             }
                         }
                     }
+                    .refreshable { await viewModel.loadData() }
                     .listStyle(.insetGrouped)
                 }
             }

@@ -18,13 +18,14 @@ struct DashboardView: View {
                         Section {
                             fleetOverviewCard
                         }
-                        
+
                         liveFleetSection
-                        
+
                         recentOrdersSection
-                        
+
                         maintenanceSection
                     }
+                    .refreshable { await viewModel.loadData() }
                     .listStyle(.insetGrouped)
                 }
             }

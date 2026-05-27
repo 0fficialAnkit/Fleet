@@ -41,6 +41,7 @@ struct MaintenanceSchedulerView: View {
                         )
                     }
                 }
+                .refreshable { await viewModel.loadData() }
             }
             .navigationTitle("Schedule")
             .navigationBarTitleDisplayMode(.large)

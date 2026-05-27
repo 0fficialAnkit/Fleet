@@ -188,6 +188,7 @@ struct MaintenanceDashboardView: View {
                     }
                     .padding(.vertical, 16)
                 }
+                .refreshable { await viewModel.loadData() }
             }
             .navigationTitle("Dashboard")
             .toolbar {

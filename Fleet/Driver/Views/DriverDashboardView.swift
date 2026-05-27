@@ -28,6 +28,7 @@ struct DriverDashboardView: View {
                         .padding(.top, 8)
                         .padding(.bottom, 40)
                     }
+                    .refreshable { await viewModel.loadData() }
                 }
             }
             .navigationTitle("Dashboard")
