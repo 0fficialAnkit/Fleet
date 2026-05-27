@@ -28,82 +28,64 @@ struct EmployeeDetailView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color(.systemGroupedBackground).ignoresSafeArea()
+        List {
+            // Header Profile Section
+            Section {
+                VStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(viewModel.getColor(for: currentRoleName).opacity(0.15))
+                            .frame(width: 110, height: 110)
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 24) {
-                    // Header Profile Section
-                    VStack(spacing: 8) {
-                        ZStack {
-                            Circle()
-                                .fill(viewModel.getColor(for: currentRoleName).opacity(0.15))
-                                .frame(width: 110, height: 110)
-
-                            Image(systemName: viewModel.getIcon(for: currentRoleName))
-                                .font(.system(size: 44))
-                                .foregroundColor(viewModel.getColor(for: currentRoleName))
-                        }
-                        .padding(.bottom, 8)
-
-                        Text(currentProfile.fullName)
-                            .font(.title.bold())
-                            .foregroundColor(Color.primary)
-
-                        Text(currentRoleName)
-                            .font(.subheadline.weight(.medium))
+                        Image(systemName: viewModel.getIcon(for: currentRoleName))
+                            .font(.system(size: 44))
                             .foregroundColor(viewModel.getColor(for: currentRoleName))
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 6)
-                            .background(viewModel.getColor(for: currentRoleName).opacity(0.15))
-                            .clipShape(Capsule())
                     }
-                    .padding(.top, 32)
+                    .padding(.bottom, 8)
 
-                    // Information Cards
-                    VStack(spacing: 16) {
-                        InfoRowView(icon: "person.fill", title: "Full Name", value: currentProfile.fullName)
+                    Text(currentProfile.fullName)
+                        .font(.title.bold())
+                        .foregroundColor(Color.primary)
 
-                        Divider().background(Color(.separator))
-                        InfoRowView(icon: "envelope.fill", title: "Email", value: currentProfile.email)
+                    Text(currentRoleName)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(viewModel.getColor(for: currentRoleName))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 6)
+                        .background(viewModel.getColor(for: currentRoleName).opacity(0.15))
+                        .clipShape(Capsule())
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets()) // Removes extra padding to let VStack center nicely
+            }
 
-                        Divider().background(Color(.separator))
-                        InfoRowView(icon: "phone.fill", title: "Phone", value: currentProfile.phone ?? "Not Provided")
+            // Information Cards
+            Section {
+                InfoRowView(icon: "person.fill", title: "Full Name", value: currentProfile.fullName)
+                InfoRowView(icon: "envelope.fill", title: "Email", value: currentProfile.email)
+                InfoRowView(icon: "phone.fill", title: "Phone", value: currentProfile.phone ?? "Not Provided")
 
-                        if currentProfile.role == "driver" {
-                            Divider().background(Color(.separator))
-                            InfoRowView(icon: "lanyardcard.fill", title: "Driver License", value: currentProfile.licenseNumber ?? "Not Provided")
-                        }
+                if currentProfile.role == "driver" {
+                    InfoRowView(icon: "lanyardcard.fill", title: "Driver License", value: currentProfile.licenseNumber ?? "Not Provided")
+                }
 
-                        Divider().background(Color(.separator))
-                        let status = currentProfile.userStatus ?? .active
-                        InfoRowView(
-                            icon: status == .active ? "checkmark.circle.fill" : "xmark.circle.fill",
-                            title: "Status / State",
-                            value: status.rawValue.capitalized,
-                            valueColor: status == .active ? Color.green : Color.secondary
-                        )
+                let status = currentProfile.userStatus ?? .active
+                InfoRowView(
+                    icon: status == .active ? "checkmark.circle.fill" : "xmark.circle.fill",
+                    title: "Status / State",
+                    value: status.rawValue.capitalized,
+                    valueColor: status == .active ? Color.green : Color.secondary
+                )
 
-                        if let date = currentProfile.createdAt {
-                            Divider().background(Color(.separator))
-                            InfoRowView(icon: "calendar", title: "Joined", value: date.formatted(date: .abbreviated, time: .omitted))
-                        }
-                    }
-//                    .padding(16)
-//                    .background(Color(.systemBackground))
-//                    .cornerRadius(20)
-//                    .padding(.horizontal, 16)
-                    .padding(16)
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .padding(.horizontal, 16)
+                if let date = currentProfile.createdAt {
+                    InfoRowView(icon: "calendar", title: "Joined", value: date.formatted(date: .abbreviated, time: .omitted))
                 }
             }
         }
         .navigationTitle("Details")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color(.systemGroupedBackground), for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -128,10 +110,7 @@ struct EmployeeDetailView: View {
                         Label("Delete", systemImage: "trash")
                     }
                 } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundColor(Color.primary)
-                        .padding(8)
+                    Image(systemName: "ellipsis.circle")
                 }
             }
         }
