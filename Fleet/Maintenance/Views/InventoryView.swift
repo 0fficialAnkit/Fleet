@@ -2,7 +2,6 @@ import SwiftUI
 
 struct InventoryView: View {
     @State private var searchText = ""
-    @State private var showLowStockOnly = false
     @State private var inventoryItems: [Inventory] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -14,14 +13,8 @@ struct InventoryView: View {
     }
 
     var searchResults: [Inventory] {
-        var result = inventoryItems
-        if !searchText.isEmpty {
-            result = result.filter { $0.partName?.localizedCaseInsensitiveContains(searchText) == true }
-        }
-        if showLowStockOnly {
-            result = result.filter { ($0.stockQuantity ?? 0) <= ($0.reorderLevel ?? 0) }
-        }
-        return result
+        if searchText.isEmpty { return inventoryItems }
+        return inventoryItems.filter { $0.partName?.localizedCaseInsensitiveContains(searchText) == true }
     }
 
     var body: some View {
@@ -123,27 +116,6 @@ struct InventoryView: View {
 
                             .padding(.horizontal, 16)
 
-                            // MARK: - Low Stock Filter Toggle
-                            if lowStockCount > 0 {
-                                Button(action: { withAnimation { showLowStockOnly.toggle() } }) {
-                                    HStack {
-                                        Image(systemName: showLowStockOnly ? "checkmark.circle.fill" : "exclamationmark.triangle")
-                                            .foregroundStyle(Color.red)
-                                        Text(showLowStockOnly ? "Showing Low Stock Only" : "Show Low Stock Only (\(lowStockCount))")
-                                            .font(.body.weight(.medium))
-                                            .foregroundStyle(Color.red)
-                                        Spacer()
-                                    }
-                                    .padding(16)
-                                    .background(Color.red.opacity(showLowStockOnly ? 0.15 : 0.07))
-                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                            .stroke(Color.red.opacity(0.3), lineWidth: showLowStockOnly ? 1 : 0.5)
-                                    )
-                                }
-                                .padding(.horizontal, 16)
-                            }
 
                             // MARK: - Items List
                             if searchResults.isEmpty {
@@ -227,8 +199,15 @@ struct InventoryRow: View {
 
     var stockFraction: Double {
         let qty = Double(item.stockQuantity ?? 0)
-        let reorder = Double(item.reorderLevel ?? 1)
-        return min(qty / (reorder * 2), 1.0)
+        let reorder = Double(max(item.reorderLevel ?? 1, 1))
+        // reorder level sits at the 20% mark, so full bar = reorder * 5
+        return min(qty / (reorder * 5), 1.0)
+    }
+
+    var stockBarColor: Color {
+        if stockFraction <= 0.20 { return .red }
+        if stockFraction <  0.50 { return .orange }
+        return .green
     }
 
     var body: some View {
@@ -246,7 +225,7 @@ struct InventoryRow: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("\(item.stockQuantity ?? 0)")
                         .font(.title3.bold())
-                        .foregroundStyle(isLowStock ? Color.red : Color.primary)
+                        .foregroundStyle(Color.primary)
                     Text("in stock")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(Color(.tertiaryLabel))
@@ -260,31 +239,19 @@ struct InventoryRow: View {
                         .fill(Color(.tertiarySystemBackground))
                         .frame(height: 6)
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(isLowStock ? Color.red : Color.green)
+                        .fill(stockBarColor)
                         .frame(width: geo.size.width * stockFraction, height: 6)
                         .animation(.spring(response: 0.5), value: stockFraction)
                 }
             }
             .frame(height: 6)
-
-            if isLowStock {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.caption2)
-                        .foregroundStyle(Color.red)
-                    Text("Below reorder level (\(item.reorderLevel ?? 0)). Restock recommended.")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.red)
-                }
-            }
         }
         .padding(16)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(isLowStock ? Color.red.opacity(0.3) : Color.white.opacity(0.12), lineWidth: isLowStock ? 1 : 0.5)
+                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
         )
-
     }
 }
 
