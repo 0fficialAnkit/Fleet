@@ -16,113 +16,58 @@ struct MaintenanceDashboardView: View {
                 ScrollView {
                     VStack(spacing: 24) {
 
-                        // MARK: - KPI Summary Cards (Fleet Manager style)
-                        VStack(spacing: 12) {
-                            // --- Open Work Orders card ---
-                            Button {
-                                schedulerViewModel.selectedTab = .workOrders
-                                selectedTab = 1
-                            } label: {
-                                VStack(spacing: 0) {
-                                    HStack(alignment: .top, spacing: 16) {
-                                        ZStack {
-                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .fill(Color(red: 59/255, green: 77/255, blue: 140/255).opacity(0.12))
-                                                .frame(width: 44, height: 44)
-                                            Image(systemName: "clipboard.fill")
-                                                .font(.system(size: 20, weight: .medium))
-                                                .foregroundStyle(Color(red: 59/255, green: 77/255, blue: 140/255))
-                                        }
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text("Open Work Orders")
-                                                .font(.headline.bold())
-                                                .foregroundStyle(Color.primary)
-                                        }
-                                        Spacer()
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 13, weight: .semibold))
-                                            .foregroundStyle(Color.secondary)
-                                            .padding(.top, 4)
+                        // MARK: - KPI Summary Card
+                        // --- Inventory Status card ---
+                        Button {
+                            selectedTab = 2
+                        } label: {
+                            VStack(spacing: 0) {
+                                HStack(alignment: .top, spacing: 16) {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(Color.brown.opacity(0.12))
+                                            .frame(width: 44, height: 44)
+                                        Image(systemName: "shippingbox.fill")
+                                            .font(.system(size: 20, weight: .medium))
+                                            .foregroundStyle(Color.brown)
                                     }
-                                    Divider()
-                                        .padding(.vertical, 12)
-                                    HStack(spacing: 8) {
-                                        MaintenanceStatPill(
-                                            value: viewModel.openWorkOrders,
-                                            label: "Open",
-                                            color: Color(red: 59/255, green: 77/255, blue: 140/255)
-                                        )
-                                        MaintenanceStatPill(
-                                            value: viewModel.criticalRepairsCount,
-                                            label: "Critical",
-                                            color: Color.red
-                                        )
-                                        MaintenanceStatPill(
-                                            value: viewModel.inProgressTasks,
-                                            label: "In Progress",
-                                            color: Color.orange
-                                        )
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Inventory Status")
+                                            .font(.headline.bold())
+                                            .foregroundStyle(Color.primary)
                                     }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(Color.secondary)
+                                        .padding(.top, 4)
                                 }
-                                .padding(16)
-                                .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-
-                            // --- Available Parts card ---
-                            Button {
-                                selectedTab = 2
-                            } label: {
-                                VStack(spacing: 0) {
-                                    HStack(alignment: .top, spacing: 16) {
-                                        ZStack {
-                                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .fill(Color.brown.opacity(0.12))
-                                                .frame(width: 44, height: 44)
-                                            Image(systemName: "shippingbox.fill")
-                                                .font(.system(size: 20, weight: .medium))
-                                                .foregroundStyle(Color.brown)
-                                        }
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text("Inventory Status")
-                                                .font(.headline.bold())
-                                                .foregroundStyle(Color.primary)
-                                        }
-                                        Spacer()
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 13, weight: .semibold))
-                                            .foregroundStyle(Color.secondary)
-                                            .padding(.top, 4)
-                                    }
-                                    Divider()
-                                        .padding(.vertical, 12)
-                                    HStack(spacing: 8) {
-                                        MaintenanceStatPill(
-                                            value: viewModel.availablePartsPercentage,
-                                            label: "Available %",
-                                            color: Color.green
-                                        )
-                                        MaintenanceStatPill(
-                                            value: viewModel.lowStockItemsCount,
-                                            label: "Low Stock",
-                                            color: Color.red
-                                        )
-                                        MaintenanceStatPill(
-                                            value: viewModel.inventory.count,
-                                            label: "Total Parts",
-                                            color: Color.brown
-                                        )
-                                    }
+                                Divider()
+                                    .padding(.vertical, 12)
+                                HStack(spacing: 8) {
+                                    MaintenanceStatPill(
+                                        value: viewModel.availablePartsPercentage,
+                                        label: "Available %",
+                                        color: Color.green
+                                    )
+                                    MaintenanceStatPill(
+                                        value: viewModel.lowStockItemsCount,
+                                        label: "Low Stock",
+                                        color: Color.red
+                                    )
+                                    MaintenanceStatPill(
+                                        value: viewModel.inventory.count,
+                                        label: "Total Parts",
+                                        color: Color.brown
+                                    )
                                 }
-                                .padding(16)
-                                .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                .contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
+                            .padding(16)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
                         .padding(.horizontal, 16)
 
                         // MARK: - Upcoming Scheduled Tasks
