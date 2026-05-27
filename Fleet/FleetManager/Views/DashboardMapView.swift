@@ -264,7 +264,7 @@ struct DashboardMapFullscreenView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
+        ZStack {
             // ── Full-screen map ──────────────────────────────────────────
             Map(position: $cameraPosition) {
                 UserAnnotation()
@@ -289,58 +289,71 @@ struct DashboardMapFullscreenView: View {
             }
             .mapStyle(.standard(elevation: .realistic))
             .mapControls {
-                MapUserLocationButton()
+                // MapUserLocationButton removed — using custom button below (bottom-right)
                 MapCompass()
                 MapScaleView()
             }
             .ignoresSafeArea()
 
-            // ── Top bar ──────────────────────────────────────────────────
-            HStack(alignment: .center, spacing: 0) {
-                // Close button
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.primary)
-                        .frame(width: 38, height: 38)
-                        .background(.regularMaterial, in: Circle())
-                }
-
-                Spacer()
-
-                // Title
-                Text("Live Fleet")
-                    .font(.headline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 9)
-                    .background(.regularMaterial, in: Capsule())
-
-                Spacer()
-
-                // Trip color legend (multi-trip only) — mirrors close button width
-                if tripRoutes.count > 1 {
-                    HStack(spacing: 5) {
-                        ForEach(Array(tripRoutes.enumerated()), id: \.offset) { _, route in
+            // ── Close button — top-left, red (native iOS style) ──────────
+            VStack {
+                HStack {
+                    Button { dismiss() } label: {
+                        ZStack {
                             Circle()
-                                .fill(route.color)
-                                .frame(width: 11, height: 11)
-                                .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 0.5))
+                                .fill(.ultraThinMaterial)
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "xmark")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(.red)
                         }
+                        .shadow(color: Color.black.opacity(0.15), radius: 6, y: 2)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 9)
-                    .background(.regularMaterial, in: Capsule())
-                } else {
-                    Color.clear.frame(width: 38, height: 38)
+                    Spacer()
+                    // Trip color legend (multi-trip only)
+                    if tripRoutes.count > 1 {
+                        HStack(spacing: 5) {
+                            ForEach(Array(tripRoutes.enumerated()), id: \.offset) { _, route in
+                                Circle()
+                                    .fill(route.color)
+                                    .frame(width: 11, height: 11)
+                                    .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 0.5))
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 9)
+                        .background(.regularMaterial, in: Capsule())
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 56)
+                Spacer()
+            }
+
+            // ── My Location button — bottom-right ─────────────────────────
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.6)) {
+                            cameraPosition = .userLocation(fallback: .automatic)
+                        }
+                    } label: {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(.blue)
+                            .frame(width: 44, height: 44)
+                            .background(.regularMaterial,
+                                        in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+                    }
+                    .padding(.trailing, 16)
+                    .padding(.bottom, tripRoutes.isEmpty ? 48 : 160)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 56)
 
-            // ── Bottom legend panel ──────────────────────────────────────
+            // ── Bottom legend panel ────────────────────────────────────────
             VStack {
                 Spacer()
                 if !tripRoutes.isEmpty {

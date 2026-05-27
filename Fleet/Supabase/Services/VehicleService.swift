@@ -14,6 +14,7 @@ private struct VehicleInsert: Encodable {
     let tank_capacity: Double?
     let mileage: Double?
     let assigned_driver_id: UUID?  // nil → sends null (never empty string)
+    let admin_id: UUID?
     let status: VehicleStatus?
 }
 
@@ -27,6 +28,7 @@ private struct VehicleUpdate: Encodable {
     let tank_capacity: Double?
     let mileage: Double?
     let assigned_driver_id: UUID?
+    let admin_id: UUID?
     let status: VehicleStatus?
 }
 
@@ -90,6 +92,7 @@ enum VehicleService {
         tankCapacity: Double?,
         mileage: Double?,
         assignedDriverId: UUID?,
+        adminId: UUID? = nil,
         status: VehicleStatus?
     ) async throws {
         let payload = VehicleInsert(
@@ -102,6 +105,7 @@ enum VehicleService {
             tank_capacity: tankCapacity,
             mileage: mileage,
             assigned_driver_id: assignedDriverId, // nil → null, never empty string
+            admin_id: adminId,
             status: status
         )
         do {
@@ -126,6 +130,7 @@ enum VehicleService {
             tank_capacity: vehicle.tankCapacity,
             mileage: vehicle.mileage,
             assigned_driver_id: vehicle.assignedDriverId,
+            admin_id: vehicle.adminId,
             status: vehicle.status
         )
         do {

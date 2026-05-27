@@ -11,6 +11,7 @@ import CoreLocation
 
 struct ContentView: View {
     @State private var authViewModel = AuthViewModel()
+    @Environment(\.scenePhase) private var scenePhase
     // Single shared LocationManager at the app root.
     // Requesting permission here fires the native dialog as soon as the user
     // is authenticated — before any map view even renders.

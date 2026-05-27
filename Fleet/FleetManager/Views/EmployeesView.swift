@@ -11,33 +11,23 @@ struct EmployeesView: View {
     }
 
     var body: some View {
-        Group {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
+        List(filteredEmployees) { profile in
+            let roleName = viewModel.getRole(for: profile)
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        ForEach(filteredEmployees) { profile in
-                            let roleName = viewModel.getRole(for: profile)
-
-                            NavigationLink(destination: EmployeeDetailView(profile: profile, viewModel: viewModel)) {
-                                EmployeeRowView(
-                                    profile: profile,
-                                    roleName: roleName,
-                                    icon: viewModel.getIcon(for: roleName),
-                                    iconColor: viewModel.getColor(for: roleName)
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(.vertical, 16)
-                    .padding(.horizontal, 16)
-                }
-            }
+            NavigationLink(destination: EmployeeDetailView(profile: profile, viewModel: viewModel)) {
+                EmployeeRowView(
+                    profile: profile,
+                    roleName: roleName,
+                    icon: viewModel.getIcon(for: roleName),
+                    iconColor: viewModel.getColor(for: roleName)
+                )
             }
         }
+        .listStyle(.insetGrouped)
+        // If you need to match exactly the parent ZStack background:
+        .scrollContentBackground(.hidden)
     }
+}
 
 struct EmployeeRowView: View {
     let profile: Profile
@@ -65,18 +55,8 @@ struct EmployeeRowView: View {
                 .padding(10)
                 .background(iconColor.opacity(0.15))
                 .clipShape(Circle())
-
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(Color(.tertiaryLabel))
         }
-//        .padding(16)
-//        .background(Color(.systemBackground))
-//        .cornerRadius(20)
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
+        .padding(.vertical, 4)
     }
 }
 

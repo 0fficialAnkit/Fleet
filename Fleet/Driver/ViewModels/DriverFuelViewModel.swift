@@ -41,15 +41,18 @@ final class DriverFuelViewModel {
         isLoading = false
     }
 
-    func addFuelLog(liters: Double, cost: Double, vehicleId: UUID) async throws {
-        guard let userId = currentUserId else { return }
+    func addFuelLog(liters: Double, cost: Double, vehicleId: UUID, billUrl: String? = nil) async throws {
+        guard let userId = currentUserId else {
+            throw NSError(domain: "DriverFuelViewModel", code: 401, userInfo: [NSLocalizedDescriptionKey: "Authentication required. Please log in again."])
+        }
         let newLog = FuelLog(
             id: UUID(),
             vehicleId: vehicleId,
             driverId: userId,
             litersUsed: liters,
             fuelCost: cost,
-            recordedAt: Date()
+            recordedAt: Date(),
+            billUrl: billUrl
         )
 
         try await FuelLogService.createFuelLog(newLog)
