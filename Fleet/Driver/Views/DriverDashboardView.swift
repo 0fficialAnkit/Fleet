@@ -30,6 +30,7 @@ struct DriverDashboardView: View {
                     }
                 }
             }
+        
             .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -65,7 +66,7 @@ struct DriverDashboardView: View {
             }
         }
     }
-    
+
 
 
 // MARK: - Subviews
