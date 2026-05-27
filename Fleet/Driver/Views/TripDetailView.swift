@@ -15,6 +15,7 @@ struct TripDetailView: View {
     @State private var route: Route?
     @State private var vehicle: Vehicle?
     @State private var mapView: TripRouteMapView?
+    @State private var estimatedDistance: Double?
 
     init(trip: Trip, onStart: @escaping (UUID, UUID, String, [String]) -> Void, onEnd: @escaping (UUID, UUID, String, [String]) -> Void) {
         self.trip = trip
@@ -90,10 +91,10 @@ struct TripDetailView: View {
                         color: Color.green
                     )
                     infoTile(
-                        icon: "clock.badge.checkmark.fill",
-                        label: "Est. End",
-                        value: trip.endTime?.formatted(date: .omitted, time: .shortened) ?? "N/A",
-                        color: Color.green
+                        icon: "road.lanes",
+                        label: "Distance",
+                        value: trip.distance != nil ? String(format: "%.1f km", trip.distance!) : (estimatedDistance != nil ? String(format: "%.1f km", estimatedDistance!) : "Calculating..."),
+                        color: Color.yellow
                     )
                 }
 
@@ -157,21 +158,7 @@ struct TripDetailView: View {
                 )
                 .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
 
-                // ── Distance Info ──────────────────────────────────
-                HStack(spacing: 12) {
-                    infoTile(
-                        icon: "road.lanes",
-                        label: "Distance",
-                        value: trip.distance != nil ? String(format: "%.1f km", trip.distance!) : "N/A",
-                        color: Color.yellow
-                    )
-                    infoTile(
-                        icon: "timer",
-                        label: "Est. Duration",
-                        value: "N/A",
-                        color: Color.purple
-                    )
-                }
+
 
                 // ── Assigned Vehicle ───────────────────────────────
                 sectionTitle("Assigned Vehicle")
@@ -200,7 +187,7 @@ struct TripDetailView: View {
                         Divider().background(Color(UIColor.separator))
 
                         HStack(spacing: 16) {
-                            NavigationLink(value: DriverDestination.vehicleDetail(vehicle)) {
+                            NavigationLink(destination: DriverVehicleDetailView(vehicle: vehicle)) {
                                 Label("View Details", systemImage: "info.circle")
                                     .font(.system(size: 16, weight: .regular, design: .rounded))
                                     .fontWeight(.semibold)
@@ -212,7 +199,7 @@ struct TripDetailView: View {
                             }
                             .buttonStyle(.plain)
 
-                            NavigationLink(value: DriverDestination.reportIssue(vehicle)) {
+                            NavigationLink(destination: DriverReportIssueView(vehicle: vehicle)) {
                                 Label("Report Issue", systemImage: "exclamationmark.triangle")
                                     .font(.system(size: 16, weight: .regular, design: .rounded))
                                     .fontWeight(.semibold)
@@ -271,9 +258,13 @@ struct TripDetailView: View {
 
             route = try? await fetchedRoute
             vehicle = try? await fetchedVehicle
+            
+            if let start = route?.startLocation, let end = route?.endLocation {
+                await calculateDistance(from: start, to: end)
+            }
         }
         .sheet(item: $showingChecklist) { type in
-            DriverChecklistView(checklistType: type) { notes, urls in
+            DriverChecklistView(checklistType: type, vehicle: vehicle) { notes, urls in
                 if type == .preTrip {
                     onStart(trip.id, trip.vehicleId, notes, urls)
                     withAnimation { currentStatus = .active }
@@ -405,6 +396,23 @@ struct TripDetailView: View {
         req.naturalLanguageQuery = address
         req.resultTypes = .address
         return try? await MKLocalSearch(request: req).start().mapItems.first
+    }
+    
+    private func calculateDistance(from startAddr: String, to endAddr: String) async {
+        guard let startItem = await geocodeAddress(startAddr),
+              let endItem = await geocodeAddress(endAddr) else { return }
+        
+        let request = MKDirections.Request()
+        request.source = startItem
+        request.destination = endItem
+        request.transportType = .automobile
+        
+        if let response = try? await MKDirections(request: request).calculate(),
+           let route = response.routes.first {
+            await MainActor.run {
+                self.estimatedDistance = route.distance / 1000.0
+            }
+        }
     }
 
     @ViewBuilder

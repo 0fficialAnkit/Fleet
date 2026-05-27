@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 @MainActor
 @Observable
@@ -34,7 +35,68 @@ final class DashboardViewModel {
             errorMessage = error.localizedDescription
         }
         isLoading = false
+        
+        // --- INJECT MOCK DATA FOR TESTING T4-19 ---
+        let mockVehicleId = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        let mockVehicle = Vehicle(
+            id: mockVehicleId,
+            make: "Honda",
+            model: "Activa (Mock)",
+            year: 2024,
+            vin: "MOCK1234",
+            licensePlate: "MH-12-AB-1234",
+            tankCapacity: 5,
+            mileage: 45,
+            purchaseDate: Date(),
+            assignedDriverId: nil,
+            adminId: nil,
+            status: .active,
+            vehicleType: .twoWheeler
+        )
+        
+        let mockTrip = Trip(
+            id: UUID(),
+            vehicleId: mockVehicleId,
+            driverId: nil,
+            routeId: nil,
+            startTime: Date().addingTimeInterval(-86400 * 2),
+            endTime: Date(),
+            distance: 3100.0,
+            status: .completed,
+            orderType: .pickUpAndDrop,
+            createdAt: Date()
+        )
+        
+        if !vehicles.contains(where: { $0.vin == "MOCK1234" }) {
+            vehicles.append(mockVehicle)
+            trips.append(mockTrip)
+        }
+        // -------------------------------------------
+        
         await refreshVehicleLocations()
+        checkAndTriggerNotifications()
+    }
+    
+    private func checkAndTriggerNotifications() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            if granted {
+                Task { @MainActor in
+                    for vehicle in self.maintenanceVehicles {
+                        let totalKMTraveled = self.totalDistance(for: vehicle.id)
+                        let threshold = vehicle.vehicleType?.maintenanceThresholdKM ?? 10000
+                        if totalKMTraveled >= threshold {
+                            let content = UNMutableNotificationContent()
+                            content.title = "Maintenance Due 🚨"
+                            content.body = "\(vehicle.make ?? "") \(vehicle.model ?? "") (\(vehicle.licensePlate ?? "")) has crossed its \(Int(threshold)) km threshold!"
+                            content.sound = .default
+                            
+                            let request = UNNotificationRequest(identifier: vehicle.id.uuidString, content: content, trigger: nil) // Fire immediately
+                            try? await UNUserNotificationCenter.current().add(request)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     func setupRealtime() {
@@ -83,7 +145,33 @@ final class DashboardViewModel {
     }
 
     var maintenanceVehicles: [Vehicle] {
-        vehicles.filter { $0.status == .maintenance }
+        // A vehicle needs maintenance if its status is manually set to maintenance, OR
+        // if its total KM traveled exceeds the maintenance threshold for its type.
+        
+        vehicles.filter { vehicle in
+            if vehicle.status == .maintenance { return true }
+            
+            let totalKMTraveled = totalDistance(for: vehicle.id)
+            let threshold = vehicle.vehicleType?.maintenanceThresholdKM ?? 10000 // Default to 10000 if type is nil
+            
+            // Allow a small buffer (e.g. 500 km) to flag it just before it hits the exact limit,
+            // or we just check if it crossed the interval.
+            // Example: 22,000 km % 20,000 km threshold = 2,000 km.
+            // If they haven't serviced it, we should track when it was last serviced.
+            // Since we don't have full maintenance history loaded here yet, we will
+            // flag it if (totalKM % threshold) > (threshold - 500) OR totalKM >= threshold
+            
+            if totalKMTraveled >= threshold {
+                return true
+            }
+            return false
+        }
+    }
+    
+    // Calculate total KM traveled for a vehicle
+    func totalDistance(for vehicleId: UUID) -> Double {
+        let vehicleTrips = trips.filter { $0.vehicleId == vehicleId && $0.status == .completed }
+        return vehicleTrips.reduce(0) { $0 + ($1.distance ?? 0) }
     }
 
     // MARK: - Lookup helpers

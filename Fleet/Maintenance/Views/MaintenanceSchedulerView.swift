@@ -51,7 +51,7 @@ struct MaintenanceSchedulerView: View {
                 WorkOrderDetailSheet(workOrder: wo, viewModel: viewModel)
             }
             .toolbar {
-                if viewModel.selectedTab == .tasks {
+                if viewModel.selectedTab == .active {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
                             isShowingCreateTaskSheet = true
@@ -223,14 +223,34 @@ private struct TaskListSection: View {
     @Binding var selectedWorkOrder: ScheduledWorkOrder?
 
     private var dateTitle: String {
-        if Calendar.current.isDateInToday(viewModel.selectedDate) { return "Today" }
+        if Calendar.current.isDateInToday(viewModel.selectedDate)     { return "Today" }
         if Calendar.current.isDateInYesterday(viewModel.selectedDate) { return "Yesterday" }
-        if Calendar.current.isDateInTomorrow(viewModel.selectedDate) { return "Tomorrow" }
+        if Calendar.current.isDateInTomorrow(viewModel.selectedDate)  { return "Tomorrow" }
         let f = DateFormatter(); f.dateFormat = "EEEE, d MMM"; return f.string(from: viewModel.selectedDate)
     }
 
-    private var itemsCount: Int {
-        viewModel.selectedTab == .tasks ? viewModel.tasksForSelectedDate.count : viewModel.workOrdersForSelectedDate.count
+    private var currentItems: [SchedulerUnifiedItem] {
+        switch viewModel.selectedTab {
+        case .active:     return viewModel.activeItemsForSelectedDate
+        case .inProgress: return viewModel.inProgressItemsForSelectedDate
+        case .completed:  return viewModel.completedItemsForSelectedDate
+        }
+    }
+
+    private var emptyTitle: String {
+        switch viewModel.selectedTab {
+        case .active:     return "No Active Tasks"
+        case .inProgress: return "Nothing In Progress"
+        case .completed:  return "No Completed Tasks"
+        }
+    }
+
+    private var emptyMessage: String {
+        switch viewModel.selectedTab {
+        case .active:     return "No pending work assigned for this day."
+        case .inProgress: return "No tasks are currently being worked on."
+        case .completed:  return "No tasks were completed on this day."
+        }
     }
 
     var body: some View {
@@ -241,12 +261,12 @@ private struct TaskListSection: View {
                     Text(dateTitle)
                         .font(.headline)
                         .foregroundStyle(Color.primary)
-                    Text("\(itemsCount) \(viewModel.selectedTab.rawValue.lowercased()) assigned")
+                    Text("\(currentItems.count) \(viewModel.selectedTab.rawValue.lowercased()) item\(currentItems.count == 1 ? "" : "s")")
                         .font(.footnote)
                         .foregroundStyle(Color(.tertiaryLabel))
                 }
                 Spacer()
-                if itemsCount > 0 {
+                if !currentItems.isEmpty {
                     StatusLegendChip()
                 }
             }
@@ -254,62 +274,35 @@ private struct TaskListSection: View {
             .padding(.top, 16)
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.selectedDate)
 
-            if viewModel.selectedTab == .tasks {
-                if viewModel.tasksForSelectedDate.isEmpty {
-                    EmptyScheduleView(title: "No Tasks Scheduled", message: "No maintenance tasks assigned for this day.")
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .scale(scale: 0.95)),
-                            removal: .opacity
-                        ))
-                } else {
-                    ForEach(viewModel.tasksForSelectedDate) { task in
-                        Button {
-                            selectedTask = task
-                        } label: {
-                            TaskCard(task: task)
-                        }
-                        .buttonStyle(ScaleButtonStyle())
-                        .scrollTransition { content, phase in
-                            content
-                                .opacity(phase.isIdentity ? 1 : 0.7)
-                                .scaleEffect(phase.isIdentity ? 1 : 0.96)
-                                .offset(y: phase.isIdentity ? 0 : 8)
-                        }
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .move(edge: .bottom)),
-                            removal: .opacity
-                        ))
-                    }
-                    .padding(.horizontal, 16)
-                }
+            if currentItems.isEmpty {
+                EmptyScheduleView(title: emptyTitle, message: emptyMessage)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .scale(scale: 0.95)),
+                        removal: .opacity
+                    ))
             } else {
-                if viewModel.workOrdersForSelectedDate.isEmpty {
-                    EmptyScheduleView(title: "No Work Orders", message: "No service work orders created on this date.")
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .scale(scale: 0.95)),
-                            removal: .opacity
-                        ))
-                } else {
-                    ForEach(viewModel.workOrdersForSelectedDate) { workOrder in
-                        Button {
-                            selectedWorkOrder = workOrder
-                        } label: {
-                            WorkOrderCard(workOrder: workOrder)
+                ForEach(currentItems) { item in
+                    Group {
+                        switch item {
+                        case .task(let task):
+                            Button { selectedTask = task } label: { TaskCard(task: task) }
+                        case .workOrder(let wo):
+                            Button { selectedWorkOrder = wo } label: { WorkOrderCard(workOrder: wo) }
                         }
-                        .buttonStyle(ScaleButtonStyle())
-                        .scrollTransition { content, phase in
-                            content
-                                .opacity(phase.isIdentity ? 1 : 0.7)
-                                .scaleEffect(phase.isIdentity ? 1 : 0.96)
-                                .offset(y: phase.isIdentity ? 0 : 8)
-                        }
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .move(edge: .bottom)),
-                            removal: .opacity
-                        ))
                     }
-                    .padding(.horizontal, 16)
+                    .buttonStyle(ScaleButtonStyle())
+                    .scrollTransition { content, phase in
+                        content
+                            .opacity(phase.isIdentity ? 1 : 0.7)
+                            .scaleEffect(phase.isIdentity ? 1 : 0.96)
+                            .offset(y: phase.isIdentity ? 0 : 8)
+                    }
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .bottom)),
+                        removal: .opacity
+                    ))
                 }
+                .padding(.horizontal, 16)
             }
 
             Spacer(minLength: 60)

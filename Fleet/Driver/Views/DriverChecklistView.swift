@@ -5,6 +5,7 @@ import Supabase
 struct DriverChecklistView: View {
 
     let checklistType: InspectionType
+    let vehicle: Vehicle?
     let onSubmit: (String, [String]) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -220,6 +221,31 @@ struct DriverChecklistView: View {
 
                 // MARK: - Submit Button
                 VStack(spacing: 8) {
+                    if let vehicle = vehicle {
+                        NavigationLink(destination: DriverReportIssueView(vehicle: vehicle)) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                Text("Report an Issue")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .padding(16)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.red, Color.red.opacity(0.8)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .shadow(color: Color.red.opacity(0.3), radius: 8, y: 4)
+                        }
+                        .padding(.bottom, 8)
+                    }
+
                     if !allMandatoryChecked {
                         Text("Complete all mandatory items to submit")
                             .font(.system(size: 16, weight: .regular, design: .rounded))
@@ -348,5 +374,5 @@ struct DriverChecklistView: View {
 }
 
 #Preview {
-    DriverChecklistView(checklistType: .preTrip, onSubmit: { _, _ in })
+    DriverChecklistView(checklistType: .preTrip, vehicle: nil, onSubmit: { _, _ in })
 }

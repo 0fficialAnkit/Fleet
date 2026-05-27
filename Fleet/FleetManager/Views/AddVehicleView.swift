@@ -10,35 +10,102 @@ struct AddVehicleView: View {
     @State private var licensePlate = ""
     @State private var tankCapacity = ""
     @State private var mileage = ""
+    @State private var selectedType: VehicleType = .car
     @State private var isSaving = false
     @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack {
-                Form {
-                    if let error = errorMessage {
-                        Section {
+            ZStack {
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 24) {
+
+                        // Error message
+                        if let error = errorMessage {
                             Text(error)
-                                .foregroundColor(.red)
+                                .font(.subheadline)
+                                .foregroundColor(Color.red)
+                                .padding(.horizontal, 16)
+                        }
+
+                        // Basic Details Section
+                        VStack(alignment: .leading, spacing: 8) {
+                            SectionHeader(title: "Basic Details")
+                                .padding(.horizontal, 16)
+                                                        VStack(spacing: 0) {
+                                TextField("", text: $make, prompt: Text("Manufacturer (e.g. Ford)").foregroundColor(Color(.placeholderText)))
+                                    .padding(.vertical, 12)
+                                    .foregroundColor(Color.primary)
+
+                                Divider().background(Color(.separator))
+
+                                TextField("", text: $model, prompt: Text("Model (e.g. Transit)").foregroundColor(Color(.placeholderText)))
+                                    .padding(.vertical, 12)
+                                    .foregroundColor(Color.primary)
+
+                                Divider().background(Color(.separator))
+
+                                TextField("", text: $year, prompt: Text("Year (e.g. 2024)").foregroundColor(Color(.placeholderText)))
+                                    .keyboardType(.numberPad)
+                                    .padding(.vertical, 12)
+                                    .foregroundColor(Color.primary)
+
+                                Divider().background(Color(.separator))
+
+                                TextField("", text: $licensePlate, prompt: Text("License Plate").foregroundColor(Color(.placeholderText)))
+                                    .textInputAutocapitalization(.characters)
+                                    .padding(.vertical, 12)
+                                    .foregroundColor(Color.primary)
+                                
+                                Divider().background(Color(.separator))
+                                
+                                HStack {
+                                    Text("Vehicle Type")
+                                        .foregroundColor(Color.primary)
+                                    Spacer()
+                                    Picker("", selection: $selectedType) {
+                                        ForEach(VehicleType.allCases) { type in
+                                            Text(type.displayName).tag(type)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                }
+                                .padding(.vertical, 8)
+                            }
+                            .padding(16)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .padding(.horizontal, 16)
+                        }
+
+                        // Specifications Section
+                        VStack(alignment: .leading, spacing: 8) {
+                            SectionHeader(title: "Specifications")
+                                .padding(.horizontal, 16)
+                                                        VStack(spacing: 0) {
+                                TextField("", text: $tankCapacity, prompt: Text("Tank Capacity (L)").foregroundColor(Color(.placeholderText)))
+                                    .keyboardType(.decimalPad)
+                                    .padding(.vertical, 12)
+                                    .foregroundColor(Color.primary)
+
+                                Divider().background(Color(.separator))
+
+                                TextField("", text: $mileage, prompt: Text("Mileage (km/l)").foregroundColor(Color(.placeholderText)))
+                                    .keyboardType(.decimalPad)
+                                    .padding(.vertical, 12)
+                                    .foregroundColor(Color.primary)
+                            }
+                            .padding(16)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .padding(.horizontal, 16)
                         }
                     }
-
-                    Section(header: Text("Basic Details")) {
-                        TextField("Manufacturer (e.g. Ford)", text: $make)
-                        TextField("Model (e.g. Transit)", text: $model)
-                        TextField("Year (e.g. 2024)", text: $year)
-                            .keyboardType(.numberPad)
-                        TextField("License Plate", text: $licensePlate)
-                            .textInputAutocapitalization(.characters)
-                    }
-
-                    Section(header: Text("Specifications")) {
-                        TextField("Tank Capacity (L)", text: $tankCapacity)
-                            .keyboardType(.decimalPad)
-                        TextField("Mileage (km/l)", text: $mileage)
-                            .keyboardType(.decimalPad)
-                    }
+                    .padding(.vertical, 16)
                 }
+            }
             .navigationTitle("Add Vehicle")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -75,7 +142,8 @@ struct AddVehicleView: View {
                                     year: yearInt,
                                     tankCapacity: cap,
                                     mileage: mil,
-                                    licensePlate: plateTrimmed
+                                    licensePlate: plateTrimmed,
+                                    vehicleType: selectedType
                                 )
                                 dismiss()
                             } catch {

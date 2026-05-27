@@ -2,16 +2,16 @@ import SwiftUI
 import Supabase
 
 struct DriverDashboardView: View {
-    
+
     @State private var viewModel = DriverDashboardViewModel()
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var selectedTrip: Trip?
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
                 Color(UIColor.systemGroupedBackground).ignoresSafeArea()
-                
+
                 if viewModel.isLoading && viewModel.trips.isEmpty {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: Color.green))
@@ -22,7 +22,6 @@ struct DriverDashboardView: View {
                             activeTripBanner
                             statsRow
                             upcomingTripSection
-                            quickActionsSection
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
@@ -30,8 +29,6 @@ struct DriverDashboardView: View {
                     }
                 }
             }
-        
-            .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
@@ -40,7 +37,7 @@ struct DriverDashboardView: View {
                             .font(.title3)
                             .foregroundStyle(Color.green)
                     }
-                    
+
                     NavigationLink(destination: DriverProfileView()) {
                         Image(systemName: "person.crop.circle.fill")
                             .font(.title2)
@@ -66,8 +63,7 @@ struct DriverDashboardView: View {
             }
         }
     }
-
-
+}
 
 // MARK: - Subviews
 
@@ -294,57 +290,7 @@ extension DriverDashboardView {
         }
     }
 
-    // MARK: Quick Actions
-    private var quickActionsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Vehicle Services")
 
-            if let vehicle = viewModel.assignedVehicle {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                    NavigationLink(destination: DriverVehicleDetailView(vehicle: vehicle)) {
-                        QuickActionCard(
-                            icon: "info.circle.fill",
-                            title: "Vehicle Info",
-                            subtitle: "\(vehicle.make ?? "My") \(vehicle.model ?? "Vehicle")",
-                            color: Color.green
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink(destination: DriverReportIssueView(vehicle: vehicle)) {
-                        QuickActionCard(
-                            icon: "exclamationmark.triangle.fill",
-                            title: "Report Issue",
-                            subtitle: "Log damage / defect",
-                            color: Color.red
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            } else {
-                HStack(spacing: 16) {
-                    Image(systemName: "car.badge.gearshape")
-                        .font(.title2)
-                        .foregroundStyle(Color(UIColor.tertiaryLabel))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("No Assigned Vehicle")
-                            .font(.system(size: 16, weight: .medium, design: .rounded))
-                            .foregroundStyle(Color.primary)
-                        Text("Contact fleet manager for vehicle details")
-                            .font(.system(size: 16, weight: .regular, design: .rounded))
-                            .foregroundStyle(Color.secondary)
-                    }
-                    Spacer()
-                }
-                .padding(16)
-                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-                )
-            }
-        }
-    }
 }
 
 // MARK: - Enriched Trip Card
@@ -457,41 +403,7 @@ struct EnrichedTripCard: View {
     }
 }
 
-// MARK: - Quick Action Card
 
-private struct QuickActionCard: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-    let color: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(color)
-                .frame(width: 40, height: 40)
-                .background(color.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-
-            Text(title)
-                .font(.system(size: 16, weight: .medium, design: .rounded))
-                .foregroundStyle(Color.primary)
-
-            Text(subtitle)
-                .font(.system(size: 16, weight: .regular, design: .rounded))
-                .foregroundStyle(Color(UIColor.tertiaryLabel))
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-        )
-        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
-    }
-}
 
 #Preview {
     NavigationStack {
