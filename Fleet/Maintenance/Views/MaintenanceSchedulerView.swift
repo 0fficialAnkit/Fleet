@@ -6,14 +6,15 @@ import Supabase
 // ═══════════════════════════════════════════════════════════════
 
 struct MaintenanceSchedulerView: View {
-    @State private var viewModel = MaintenanceSchedulerViewModel()
+    @Bindable var viewModel: MaintenanceSchedulerViewModel
     @Namespace private var calendarNS
     @State private var selectedTask: ScheduledTask? = nil
     @State private var selectedWorkOrder: ScheduledWorkOrder? = nil
     @State private var isShowingCreateTaskSheet = false
     @Environment(AuthViewModel.self) private var authViewModel
 
-    init() {
+    init(viewModel: MaintenanceSchedulerViewModel) {
+        self.viewModel = viewModel
         UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(Color.brown)
         UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
         UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor(Color.secondary)], for: .normal)
@@ -1151,7 +1152,8 @@ func taskTypeLabel(_ type: MaintenanceTaskType) -> String {
 // ═══════════════════════════════════════════════════════════════
 
 #Preview {
-    MaintenanceSchedulerView()
+    MaintenanceSchedulerView(viewModel: MaintenanceSchedulerViewModel())
+        .environment(AuthViewModel())
 }
 
 // ═══════════════════════════════════════════════════════════════

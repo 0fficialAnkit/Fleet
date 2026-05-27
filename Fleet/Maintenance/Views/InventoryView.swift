@@ -7,7 +7,7 @@ struct InventoryView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var selectedItem: Inventory? = nil
-    @State private var isShowingSheet = false
+    @State private var isShowingAddSheet = false
 
     var lowStockCount: Int {
         inventoryItems.filter { ($0.stockQuantity ?? 0) <= ($0.reorderLevel ?? 0) }.count
@@ -162,7 +162,6 @@ struct InventoryView: View {
                                     ForEach(searchResults) { item in
                                         Button(action: {
                                             selectedItem = item
-                                            isShowingSheet = true
                                         }) {
                                             InventoryRow(item: item)
                                         }
@@ -181,18 +180,22 @@ struct InventoryView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        selectedItem = nil
-                        isShowingSheet = true
+                        isShowingAddSheet = true
                     }) {
                         Image(systemName: "plus")
                     }
                 }
             }
-            .sheet(isPresented: $isShowingSheet) {
-                InventoryItemSheet(editingItem: selectedItem) {
-                    Task {
-                        await loadInventory()
-                    }
+            // Sheet for ADDING a new item
+            .sheet(isPresented: $isShowingAddSheet) {
+                InventoryItemSheet(editingItem: nil) {
+                    Task { await loadInventory() }
+                }
+            }
+            // Sheet for EDITING an existing item
+            .sheet(item: $selectedItem) { item in
+                InventoryItemSheet(editingItem: item) {
+                    Task { await loadInventory() }
                 }
             }
             .task {
