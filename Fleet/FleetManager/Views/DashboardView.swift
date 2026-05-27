@@ -5,6 +5,8 @@ struct DashboardView: View {
     @State private var isShowingProfile = false
     @State private var showingNotifications = false
     @Environment(AuthViewModel.self) private var authViewModel
+    @State private var maintenanceViewModel = MaintenanceViewModel()
+    @State private var selectedVehicleForMaintenance: Vehicle?
     @State private var navigationPath = NavigationPath()
 
     var body: some View {
@@ -28,6 +30,9 @@ struct DashboardView: View {
                 }
             }
             .navigationTitle("Dashboard")
+            .sheet(item: $selectedVehicleForMaintenance) { vehicle in
+                ScheduleMaintenanceSheetView(vehicle: vehicle, dashboardViewModel: viewModel, viewModel: maintenanceViewModel)
+            }
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button(action: { showingNotifications = true }) {
@@ -240,8 +245,13 @@ struct DashboardView: View {
                     .padding(.horizontal, 16)
             } else {
                 ForEach(viewModel.maintenanceVehicles) { vehicle in
-                    MaintenanceCardView(vehicle: vehicle, viewModel: viewModel)
-                        .padding(.horizontal, 16)
+                    Button(action: {
+                        selectedVehicleForMaintenance = vehicle
+                    }) {
+                        MaintenanceCardView(vehicle: vehicle, viewModel: viewModel)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
                 }
             }
         }
