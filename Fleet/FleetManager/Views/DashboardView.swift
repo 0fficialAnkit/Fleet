@@ -126,7 +126,7 @@ struct DashboardView: View {
                     FleetStatPill(
                         value: max(0, viewModel.totalVehicles - viewModel.driversOnTrip - viewModel.maintenanceVehicles.count),
                         label: "Idle",
-                        color: Color.yellow
+                        color: Color.orange
                     )
                     FleetStatPill(
                         value: viewModel.maintenanceVehicles.count,
@@ -289,7 +289,7 @@ struct TripCardView: View {
     var statusColor: Color {
         switch trip.status {
         case .scheduled: return Color.blue
-        case .active:    return Color.yellow
+        case .active:    return Color.green
         case .completed: return Color.green
         case .cancelled: return Color.red
         case .none:      return Color(.quaternaryLabel)

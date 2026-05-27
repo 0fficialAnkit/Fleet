@@ -210,7 +210,7 @@ struct ScheduleTripRow: View {
     
     var statusColor: Color {
         switch trip.status {
-        case .scheduled: return Color.yellow
+        case .scheduled: return Color.blue
         case .active:    return Color.green
         case .completed: return Color.gray
         case .cancelled: return Color.red

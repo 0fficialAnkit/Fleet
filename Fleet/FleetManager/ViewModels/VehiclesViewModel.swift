@@ -119,7 +119,7 @@ final class VehiclesViewModel {
         let tripsPerDay = periodDays > 0 ? Double(tripsCount) / periodDays : Double(tripsCount)
         
         if distancePerDay < 10 && tripsPerDay < 0.5 {
-            return ("Underused", "This vehicle has very low activity and high idle time. Consider reallocating it.", .yellow)
+            return ("Underused", "This vehicle has very low activity and high idle time. Consider reallocating it.", .orange)
         } else if distancePerDay > 300 || tripsPerDay > 10 {
             return ("Overused", "This vehicle is seeing heavy usage. It may require more frequent maintenance.", .red)
         } else {
@@ -130,7 +130,7 @@ final class VehiclesViewModel {
     func getStatusColor(_ status: VehicleStatus?) -> Color {
         switch status {
         case .active: return Color.green
-        case .maintenance: return Color.yellow
+        case .maintenance: return Color.orange
         case .inactive: return Color(.tertiaryLabel)
         case nil: return Color(.tertiaryLabel)
         }

@@ -325,7 +325,7 @@ struct EmployeeDetailView: View {
     private func tripStatusColor(_ status: TripStatus?) -> Color {
         switch status {
         case .scheduled: return .blue
-        case .active:    return .yellow
+        case .active:    return .green
         case .completed: return .green
         case .cancelled: return .red
         case .none:      return .secondary
@@ -345,7 +345,7 @@ struct EmployeeDetailView: View {
     private func taskStatusColor(_ status: MaintenanceTaskStatus?) -> Color {
         switch status {
         case .pending:    return .blue
-        case .inProgress: return .yellow
+        case .inProgress: return .orange
         case .completed:  return .green
         case .cancelled:  return .red
         case .none:       return .secondary

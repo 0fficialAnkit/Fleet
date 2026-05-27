@@ -45,7 +45,7 @@ final class OrdersViewModel {
     func getStatusColor(for status: TripStatus?) -> Color {
         switch status {
         case .scheduled: return Color.blue
-        case .active: return Color.yellow
+        case .active: return Color.green
         case .completed: return Color.green
         case .cancelled: return Color.red
         case .none: return Color(.quaternaryLabel)
@@ -76,7 +76,7 @@ final class OrdersViewModel {
         profiles.filter { $0.role == "driver" }
     }
 
-    /// Legacy overload — no date filtering (used by VehicleSelectionView).
+    /// Returns all active vehicles with no date conflict filtering.
     func availableVehicles(for orderType: OrderType) -> [Vehicle] {
         vehicles.filter { $0.status == .active }
     }

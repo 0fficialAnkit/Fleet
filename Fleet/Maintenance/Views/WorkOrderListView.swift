@@ -263,7 +263,7 @@ struct UnifiedWorkItemRow: View {
     func statusColor(_ status: WorkOrderStatus?) -> Color {
         switch status {
         case .open:       return Color.blue
-        case .inProgress: return Color.yellow
+        case .inProgress: return Color.orange
         case .completed:  return Color.green
         case .cancelled:  return Color.red
         case .none:       return Color.secondary
@@ -293,7 +293,7 @@ struct UnifiedWorkItemRow: View {
     func priorityColor(_ priority: WorkOrderPriority?) -> Color {
         switch priority {
         case .critical: return Color.red
-        case .high:     return Color.yellow
+        case .high:     return Color.orange
         case .medium:   return Color.blue
         case .low:      return Color.green
         case .none:     return Color.secondary

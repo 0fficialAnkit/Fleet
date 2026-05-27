@@ -68,7 +68,7 @@ final class EmployeesViewModel {
         switch roleName.lowercased() {
         case "fleet_manager", "fleet manager": return Color.purple
         case "driver": return Color.blue
-        case "maintenance": return Color.yellow
+        case "maintenance": return Color.orange
         default: return Color.secondary
         }
     }
