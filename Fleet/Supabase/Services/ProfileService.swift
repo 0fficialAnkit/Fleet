@@ -142,14 +142,14 @@ enum ProfileService {
         licenseNumber: String?,
         role: String
     ) async throws -> UUID {
-        
+
         // 1. Fetch role_id
         let roles = try await allRoles()
         let normalizedRole = normalizeRoleName(role)
         guard let roleId = roles.first(where: { normalizeRoleName($0.roleName) == normalizedRole })?.id else {
             throw NSError(domain: "ProfileService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Role not found"])
         }
-        
+
         // 2. Prepare user metadata
         var userData: [String: Any] = [
             "full_name": fullName,
@@ -159,8 +159,8 @@ enum ProfileService {
         ]
         if let phone = phone, !phone.isEmpty { userData["phone"] = phone }
         if let license = licenseNumber, !license.isEmpty { userData["license_number"] = license }
-        
-        // 3. Make direct REST API call to /auth/v1/signup to bypass Edge Function 
+
+        // 3. Make direct REST API call to /auth/v1/signup to bypass Edge Function
         // and avoid overriding the local SupabaseClient session.
         let url = supabaseURL.appendingPathComponent("auth/v1/signup")
         var request = URLRequest(url: url)
@@ -168,38 +168,67 @@ enum ProfileService {
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue(supabaseKey, forHTTPHeaderField: "apikey")
         request.addValue("Bearer \(supabaseKey)", forHTTPHeaderField: "Authorization")
-        
+
         let body: [String: Any] = [
             "email": email,
             "password": password,
             "data": userData
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
+
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NSError(domain: "ProfileService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
         }
-        
+
         if !(200...299).contains(httpResponse.statusCode) {
             let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
             let msg = errorJson?["msg"] as? String ?? "Unknown database error"
             throw NSError(domain: "ProfileService", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: msg])
         }
-        
+
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        guard let userDict = json?["user"] as? [String: Any],
-              let idString = userDict["id"] as? String,
-              let newUserId = UUID(uuidString: idString) else {
-            
-            // Sometimes signup returns the user object directly at root if email confirmation is disabled
-            if let idString = json?["id"] as? String, let newUserId = UUID(uuidString: idString) {
-                return newUserId
-            }
+        let newUserId: UUID
+        if let userDict = json?["user"] as? [String: Any],
+           let idString = userDict["id"] as? String,
+           let parsedId = UUID(uuidString: idString) {
+            newUserId = parsedId
+        } else if let idString = json?["id"] as? String,
+                  let parsedId = UUID(uuidString: idString) {
+            newUserId = parsedId
+        } else {
             throw NSError(domain: "ProfileService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Could not parse new user ID"])
         }
-        
+
+        // 4. Directly upsert into public.users table to ensure phone and license_number are stored correctly
+        let newUserRow = User(
+            id: newUserId,
+            fullName: fullName,
+            email: email,
+            passwordHash: "auth_managed",
+            phone: phone?.isEmpty == false ? phone : nil,
+            licenseNumber: licenseNumber?.isEmpty == false ? licenseNumber : nil,
+            roleId: roleId,
+            status: .active,
+            createdAt: Date()
+        )
+
+        do {
+            try await supabase
+                .from("users")
+                .upsert(newUserRow)
+                .execute()
+            print("[ProfileService] Successfully upserted user \(newUserId) in public.users table.")
+        } catch {
+            print("[ProfileService] Public users upsert failed: \(error). Trying standard update...")
+            try? await supabase
+                .from("users")
+                .update(newUserRow)
+                .eq("id", value: newUserId)
+                .execute()
+        }
+
         return newUserId
     }
 }

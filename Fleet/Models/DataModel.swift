@@ -51,9 +51,9 @@ enum OrderType: String, Codable, CaseIterable, Sendable, Identifiable {
   case pickUpAndDrop = "pick_up_and_drop"
   case bulkOrderShip = "bulk_order_ship"
   case travel = "travel"
-  
+
   var id: String { rawValue }
-  
+
   var displayName: String {
       switch self {
       case .pickUpAndDrop: return "Pick Up & Drop"
@@ -179,6 +179,7 @@ struct Vehicle: Codable, Identifiable, Hashable, Sendable {
   var mileage: Double?
   var purchaseDate: Date?
   var assignedDriverId: UUID? //FK
+  var adminId: UUID? //FK
   var status: VehicleStatus?
 
   enum CodingKeys: String, CodingKey {
@@ -188,6 +189,7 @@ struct Vehicle: Codable, Identifiable, Hashable, Sendable {
       case mileage
       case purchaseDate = "purchase_date"
       case assignedDriverId = "assigned_driver_id"
+      case adminId = "admin_id"
       case status
   }
 }
@@ -349,6 +351,7 @@ struct Trip: Codable, Identifiable, Hashable, Sendable {
   var distance: Double?
   var status: TripStatus?
   var orderType: OrderType?
+  var createdAt: Date?
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -359,6 +362,7 @@ struct Trip: Codable, Identifiable, Hashable, Sendable {
       case endTime = "end_time"
       case distance, status
       case orderType = "order_type"
+      case createdAt = "created_at"
   }
 }
 
@@ -525,6 +529,7 @@ struct FuelLog: Codable, Identifiable, Hashable, Sendable {
   var litersUsed: Double?
   var fuelCost: Double?
   var recordedAt: Date?
+  var billUrl: String? // URL of receipt photo in `fuel` storage bucket
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -533,6 +538,7 @@ struct FuelLog: Codable, Identifiable, Hashable, Sendable {
       case litersUsed = "liters_used"
       case fuelCost = "fuel_cost"
       case recordedAt = "recorded_at"
+      case billUrl = "bill_url"
   }
 }
 
@@ -618,4 +624,3 @@ struct MaintenanceStaffRecord: Codable, Identifiable, Hashable, Sendable {
         case createdAt = "created_at"
     }
 }
-

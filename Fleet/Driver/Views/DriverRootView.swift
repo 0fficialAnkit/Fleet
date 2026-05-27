@@ -1,11 +1,8 @@
 import SwiftUI
 
 struct DriverRootView: View {
-
     var body: some View {
-
         TabView {
-
             DriverDashboardView()
                 .tabItem {
                     Label("Dashboard", systemImage: "house.fill")
@@ -21,10 +18,11 @@ struct DriverRootView: View {
                     Label("Fuel", systemImage: "fuelpump.fill")
                 }
         }
-        .tint(themeModel.driverPrimary)
+        .tint(Color.green)
     }
 }
 
 #Preview {
     DriverRootView()
+        .environment(AuthViewModel())
 }

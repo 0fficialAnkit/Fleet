@@ -23,7 +23,7 @@ enum TripService {
             let result: [Trip] = try await supabase
                 .from("trips")
                 .select()
-                .order("start_time", ascending: false)
+                .order("created_at", ascending: false)
                 .execute()
                 .value
             print("[TripService] fetchAllTrips: \(result.count) trips")

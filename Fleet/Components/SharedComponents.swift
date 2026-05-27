@@ -1,6 +1,5 @@
 import SwiftUI
 
-
 // ======================================================
 // MARK: - Status Badge
 // Colored pill with icon + text
@@ -19,7 +18,7 @@ struct StatusBadge: View {
                     .font(.system(size: 8, weight: .bold))
             }
             Text(text)
-                .font(themeModel.small())
+                .font(.caption.weight(.medium))
                 .fontWeight(.semibold)
         }
         .foregroundStyle(color)
@@ -27,6 +26,30 @@ struct StatusBadge: View {
         .padding(.vertical, 5)
         .background(color.opacity(0.12))
         .clipShape(Capsule())
+    }
+}
+
+// ======================================================
+// MARK: - Filter Button
+// Capsule button for horizontal filters
+// ======================================================
+
+struct FilterButton: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.teal : Color(.tertiarySystemBackground))
+                .foregroundColor(isSelected ? .white : Color.secondary)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -43,30 +66,30 @@ struct MetricCard: View {
     let color: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: themeModel.spacingSM) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: icon)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(color)
                     .frame(width: 32, height: 32)
                     .background(color.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: themeModel.radiusXS, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
                 Spacer()
             }
 
             Text(value)
-                .font(themeModel.title(22))
-                .foregroundStyle(themeModel.textPrimary)
+                .font(.title3.bold())
+                .foregroundStyle(Color.primary)
 
             Text(label)
-                .font(themeModel.caption())
-                .foregroundStyle(themeModel.textTertiary)
+                .font(.footnote)
+                .foregroundStyle(Color(.tertiaryLabel))
         }
-        .padding(themeModel.spacingMD)
-        .glassEffect(in: RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous))
+        .padding(16)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: themeModel.radiusLG, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
         )
     }
@@ -82,25 +105,25 @@ struct InfoRow: View {
     let icon: String
     let label: String
     let value: String
-    var iconColor: Color = themeModel.textTertiary
+    var iconColor: Color = Color(.tertiaryLabel)
     var valueColor: Color? = nil
 
     var body: some View {
-        HStack(spacing: themeModel.spacingSM + 4) {
+        HStack(spacing: 8 + 4) {
             Image(systemName: icon)
                 .font(.system(size: 15))
                 .foregroundStyle(iconColor)
                 .frame(width: 22)
 
             Text(label)
-                .font(themeModel.body())
-                .foregroundStyle(themeModel.textSecondary)
+                .font(.body)
+                .foregroundStyle(Color.secondary)
 
             Spacer()
 
             Text(value)
-                .font(themeModel.bodyMedium())
-                .foregroundStyle(valueColor ?? themeModel.textPrimary)
+                .font(.body.weight(.medium))
+                .foregroundStyle(valueColor ?? Color.primary)
                 .multilineTextAlignment(.trailing)
         }
         .padding(.vertical, 6)
@@ -116,25 +139,25 @@ struct ActionRow: View {
 
     let icon: String
     let title: String
-    var iconColor: Color = themeModel.textTertiary
+    var iconColor: Color = Color(.tertiaryLabel)
     var isDestructive: Bool = false
 
     var body: some View {
-        HStack(spacing: themeModel.spacingSM + 4) {
+        HStack(spacing: 8 + 4) {
             Image(systemName: icon)
                 .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(isDestructive ? themeModel.danger : iconColor)
+                .foregroundStyle(isDestructive ? Color.red : iconColor)
                 .frame(width: 22)
 
             Text(title)
-                .font(themeModel.body())
-                .foregroundStyle(isDestructive ? themeModel.danger : themeModel.textPrimary)
+                .font(.body)
+                .foregroundStyle(isDestructive ? Color.red : Color.primary)
 
             Spacer()
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(themeModel.textDisabled)
+                .foregroundStyle(Color(.quaternaryLabel))
         }
         .padding(.vertical, 8)
     }
@@ -154,16 +177,16 @@ struct SectionHeader: View {
     var body: some View {
         HStack {
             Text(title)
-                .font(themeModel.headline())
-                .foregroundStyle(themeModel.textPrimary)
+                .font(.headline)
+                .foregroundStyle(Color.primary)
 
             Spacer()
 
             if let action = action {
                 Button(action: { onAction?() }) {
                     Text(action)
-                        .font(themeModel.caption())
-                        .foregroundStyle(themeModel.accent)
+                        .font(.footnote)
+                        .foregroundStyle(Color.teal)
                 }
             }
         }
@@ -183,7 +206,7 @@ struct ProfileHeader: View {
     let accentColor: Color
 
     var body: some View {
-        VStack(spacing: themeModel.spacingSM + 4) {
+        VStack(spacing: 8 + 4) {
             Image(systemName: icon)
                 .font(.system(size: 48, weight: .light))
                 .foregroundStyle(accentColor)
@@ -192,11 +215,11 @@ struct ProfileHeader: View {
                 .clipShape(Circle())
 
             Text(name)
-                .font(themeModel.title(24))
-                .foregroundStyle(themeModel.textPrimary)
+                .font(.title3.bold())
+                .foregroundStyle(Color.primary)
 
             Text(role)
-                .font(themeModel.bodyMedium())
+                .font(.body.weight(.medium))
                 .foregroundStyle(accentColor)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 5)

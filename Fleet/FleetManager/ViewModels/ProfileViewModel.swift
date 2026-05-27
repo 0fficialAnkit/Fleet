@@ -36,7 +36,7 @@ final class ProfileViewModel {
         guard var profile = currentUser else { return }
         profile.fullName = fullName
         profile.phone = phone.isEmpty ? nil : phone
-        
+
         isLoading = true
         errorMessage = nil
         do {
