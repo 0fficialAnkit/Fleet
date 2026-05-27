@@ -5,30 +5,34 @@ struct DashboardView: View {
     @State private var isShowingProfile = false
     @State private var showingNotifications = false
     @Environment(AuthViewModel.self) private var authViewModel
+    @State private var maintenanceViewModel = MaintenanceViewModel()
+    @State private var selectedVehicleForMaintenance: Vehicle?
     @State private var navigationPath = NavigationPath()
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            Group {
+            ZStack {
+                Color(.systemGroupedBackground).ignoresSafeArea()
+
                 if viewModel.isLoading && viewModel.vehicles.isEmpty {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
-                    List {
-                        Section {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 24) {
                             fleetOverviewCard
+                            liveFleetSection
+                            recentOrdersSection
+                            maintenanceSection
                         }
-                        
-                        liveFleetSection
-                        
-                        recentOrdersSection
-                        
-                        maintenanceSection
+                        .padding(.bottom, 32)
                     }
-                    .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle("Dashboard")
+            .sheet(item: $selectedVehicleForMaintenance) { vehicle in
+                ScheduleMaintenanceSheetView(vehicle: vehicle, dashboardViewModel: viewModel, viewModel: maintenanceViewModel)
+            }
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button(action: { showingNotifications = true }) {
@@ -98,6 +102,11 @@ struct DashboardView: View {
                     }
 
                     Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.secondary)
+                        .padding(.top, 4)
                 }
 
                 Divider()
@@ -123,31 +132,36 @@ struct DashboardView: View {
                     )
                 }
             }
-            .padding(.vertical, 4)
+            .padding(16)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
     }
 
     // MARK: - Recent Orders
 
     private var recentOrdersSection: some View {
-        Section(header: HStack {
-            Text("Recent Orders")
-            Spacer()
-            Button("See All") {
+        VStack(alignment: .leading, spacing: 16) {
+            SectionHeader(title: "Recent Orders", action: "See All") {
                 // Action
             }
-            .font(.footnote)
-            .textCase(.none)
-        }) {
+            .padding(.horizontal, 16)
+
             if viewModel.recentOrders.isEmpty {
                 Text("No orders yet.")
                     .font(.body)
                     .foregroundStyle(Color.secondary)
+                    .padding(.horizontal, 16)
             } else {
                 ForEach(viewModel.recentOrders) { trip in
                     NavigationLink(value: DashboardDestination.orderDetail(trip)) {
                         TripCardView(trip: trip, viewModel: viewModel)
                     }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
                 }
             }
         }
@@ -157,30 +171,34 @@ struct DashboardView: View {
 
     private var liveFleetSection: some View {
         let activeTrips = viewModel.trips.filter { $0.status == .active }
-        return Section(header: HStack {
-            Text("Live Fleet")
-            Spacer()
-            if !activeTrips.isEmpty {
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(Color.green)
-                        .frame(width: 7, height: 7)
-                    Text("\(activeTrips.count) on route")
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(Color.secondary)
-                        .textCase(.none)
+        return VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                SectionHeader(title: "Live Fleet")
+                Spacer()
+                if !activeTrips.isEmpty {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 7, height: 7)
+                        Text("\(activeTrips.count) on route")
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(Color.secondary)
+                    }
                 }
             }
-        }) {
+            .padding(.horizontal, 16)
+
+            // Map is ALWAYS visible — same Apple Maps style as driver's trip detail.
+            // Shows fleet manager's blue dot + green/red pins for every active trip.
             DashboardMapView(
                 activeTrips: activeTrips,
                 routes: viewModel.routes,
                 profiles: viewModel.profiles,
                 vehicleLocations: viewModel.vehicleLocations
             )
-            .frame(height: 250)
-            .listRowInsets(EdgeInsets())
+            .padding(.horizontal, 16)
 
+            // Active trip cards below the map
             if !activeTrips.isEmpty {
                 ForEach(activeTrips) { trip in
                     let route = viewModel.routes.first { $0.id == trip.routeId }
@@ -203,7 +221,11 @@ struct DashboardView: View {
                         Spacer()
                         StatusBadge(text: "Active", color: .green)
                     }
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .padding(.horizontal, 16)
                 }
             }
         }
@@ -212,14 +234,24 @@ struct DashboardView: View {
     // MARK: - Maintenance
 
     private var maintenanceSection: some View {
-        Section(header: Text("Need Maintenance")) {
+        VStack(alignment: .leading, spacing: 16) {
+            SectionHeader(title: "Need Maintenance")
+                .padding(.horizontal, 16)
+
             if viewModel.maintenanceVehicles.isEmpty {
                 Text("All vehicles operational.")
                     .font(.body)
                     .foregroundStyle(Color.secondary)
+                    .padding(.horizontal, 16)
             } else {
                 ForEach(viewModel.maintenanceVehicles) { vehicle in
-                    MaintenanceCardView(vehicle: vehicle, viewModel: viewModel)
+                    Button(action: {
+                        selectedVehicleForMaintenance = vehicle
+                    }) {
+                        MaintenanceCardView(vehicle: vehicle, viewModel: viewModel)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
                 }
             }
         }
@@ -319,8 +351,13 @@ struct TripCardView: View {
                 }
             }
 
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.secondary)
         }
-        .padding(.vertical, 4)
+        .padding(16)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -364,8 +401,11 @@ struct MaintenanceCardView: View {
                         .lineLimit(2)
                 }
             }
+            Spacer()
         }
-        .padding(.vertical, 4)
+        .padding(16)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
