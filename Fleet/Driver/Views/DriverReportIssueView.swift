@@ -28,13 +28,13 @@ enum IssueCategory: String, CaseIterable, Identifiable {
 
     var color: Color {
         switch self {
-        case .engine:     return Color.red
-        case .tire:       return Color.yellow
-        case .brake:      return Color.orange
-        case .electrical: return Color.yellow
-        case .fuelLeak:   return Color.blue
-        case .bodyDamage: return Color.purple
-        case .other:      return Color.secondary
+        case .engine:     return .red
+        case .tire:       return .yellow
+        case .brake:      return .orange
+        case .electrical: return .yellow
+        case .fuelLeak:   return .blue
+        case .bodyDamage: return .purple
+        case .other:      return .secondary
         }
     }
 }
@@ -57,36 +57,37 @@ struct DriverReportIssueView: View {
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var capturedImages: [UIImage] = []
 
+    // MARK: - Body
     var body: some View {
         ZStack {
-            Color(UIColor.systemGroupedBackground).ignoresSafeArea()
-
             if isSubmitted {
                 successView
+                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
             } else {
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 24) {
-                        vehicleHeader
-                        issueCategorySection
-                        severitySection
-                        descriptionSection
-                        photosSection
-                        submitButton
-                    }
-                    .padding(16)
-                    .padding(.bottom, 40)
+                formContent
+            }
+        }
+        .animation(.spring(response: 0.45, dampingFraction: 0.8), value: isSubmitted)
+        .navigationTitle("Report Issue")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                if isSubmitting {
+                    ProgressView()
+                } else {
+                    Button("Submit") { handleSubmit() }
+                        .fontWeight(.semibold)
+                        .disabled(description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
-        .navigationTitle("Report Issue")
-        .navigationBarTitleDisplayMode(.inline)
-        .alert("Error", isPresented: Binding(
+        .alert("Submission Error", isPresented: Binding(
             get: { errorMessage != nil },
             set: { if !$0 { errorMessage = nil } }
         )) {
             Button("OK", role: .cancel) { }
         } message: {
-            Text(errorMessage ?? "Unknown error occurred")
+            Text(errorMessage ?? "An unknown error occurred.")
         }
         .onChange(of: selectedPhotos) { _, newItems in
             Task {
@@ -101,236 +102,175 @@ struct DriverReportIssueView: View {
         }
     }
 
-    // MARK: - Vehicle Header
-    private var vehicleHeader: some View {
-        HStack(spacing: 16) {
-            Image(systemName: "truck.box.fill")
-                .font(.system(size: 28))
-                .foregroundStyle(Color.green)
-                .frame(width: 52, height: 52)
-                .background(Color.green.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    // MARK: - Form Content
+    private var formContent: some View {
+        Form {
+            // ── Vehicle ──────────────────────────────────────────
+            Section {
+                HStack(spacing: 14) {
+                    Image(systemName: "car.fill")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 38, height: 38)
+                        .background(Color.green, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("\(vehicle.make ?? "Vehicle") \(vehicle.model ?? "")")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color.primary)
-                Text(vehicle.licensePlate ?? "—")
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
-                    .foregroundStyle(Color.green)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(vehicle.make ?? "Vehicle") \(vehicle.model ?? "")")
+                            .font(.body.weight(.semibold))
+                        Text(vehicle.licensePlate ?? "—")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Label("Active", systemImage: "circle.fill")
+                        .labelStyle(.iconOnly)
+                        .foregroundStyle(.green)
+                        .font(.caption)
+                }
+            } header: {
+                Text("Vehicle")
             }
-            Spacer()
-        }
-        .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-        )
-    }
 
-    // MARK: - Issue Category
-    private var issueCategorySection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Label("Issue Type", systemImage: "exclamationmark.triangle.fill")
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color.primary)
+            // ── Issue Type ────────────────────────────────────────
+            Section {
+                Picker("Issue Type", selection: $selectedCategory) {
+                    ForEach(IssueCategory.allCases) { category in
+                        Label(category.rawValue, systemImage: category.icon)
+                            .tag(category)
+                    }
+                }
+                .pickerStyle(.navigationLink)
+            } header: {
+                Text("Issue Type")
+            } footer: {
+                Label(selectedCategory.rawValue, systemImage: selectedCategory.icon)
+                    .foregroundStyle(selectedCategory.color)
+                    .font(.footnote)
+            }
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                ForEach(IssueCategory.allCases) { category in
-                    categoryCard(category)
+            // ── Severity ──────────────────────────────────────────
+            Section {
+                Picker("Severity", selection: $selectedSeverity) {
+                    ForEach(DefectSeverity.allCases, id: \.self) { severity in
+                        Text(severity.rawValue.capitalized).tag(severity)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+            } header: {
+                Text("Severity")
+            } footer: {
+                Text(severityFooter)
+                    .foregroundStyle(severityColor(selectedSeverity))
+            }
+
+            // ── Description ───────────────────────────────────────
+            Section {
+                ZStack(alignment: .topLeading) {
+                    if description.isEmpty {
+                        Text("Briefly describe the issue…")
+                            .foregroundStyle(Color(.placeholderText))
+                            .padding(.top, 8)
+                            .padding(.leading, 4)
+                            .allowsHitTesting(false)
+                    }
+                    TextEditor(text: $description)
+                        .frame(minHeight: 100)
+                        .onChange(of: description) { _, newValue in
+                            if newValue.count > maxDescriptionLength {
+                                description = String(newValue.prefix(maxDescriptionLength))
+                            }
+                        }
+                }
+            } header: {
+                Text("Description")
+            } footer: {
+                HStack {
+                    if !description.isEmpty {
+                        Text("Be specific — this helps the technician diagnose faster.")
+                    }
+                    Spacer()
+                    Text("\(description.count)/\(maxDescriptionLength)")
+                        .foregroundStyle(description.count > maxDescriptionLength - 20 ? .orange : Color(.tertiaryLabel))
                 }
             }
-        }
-    }
 
-    private func categoryCard(_ category: IssueCategory) -> some View {
-        let isSelected = selectedCategory == category
-        return Button(action: {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                selectedCategory = category
-            }
-        }) {
-            HStack(spacing: 8) {
-                Image(systemName: category.icon)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(isSelected ? category.color : Color.secondary)
-                    .frame(width: 20)
-                Text(category.rawValue)
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
-                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isSelected ? category.color.opacity(0.15) : Color.white.opacity(0.04))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(isSelected ? category.color.opacity(0.6) : Color.white.opacity(0.08), lineWidth: 1)
-            )
-            .animation(.easeInOut(duration: 0.2), value: isSelected)
-        }
-        .buttonStyle(.plain)
-    }
+            // ── Damage Photos ─────────────────────────────────────
+            Section {
+                if capturedImages.isEmpty {
+                    PhotosPicker(
+                        selection: $selectedPhotos,
+                        maxSelectionCount: 5,
+                        matching: .images,
+                        photoLibrary: .shared()
+                    ) {
+                        Label("Add Photos", systemImage: "photo.badge.plus")
+                    }
+                } else {
+                    // Thumbnail strip
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            ForEach(capturedImages.indices, id: \.self) { index in
+                                ZStack(alignment: .topTrailing) {
+                                    Image(uiImage: capturedImages[index])
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 80, height: 80)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
 
-    // MARK: - Severity
-    private var severitySection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Label("Severity", systemImage: "gauge.with.dots.needle.67percent")
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color.primary)
+                                    Button {
+                                        capturedImages.remove(at: index)
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .symbolRenderingMode(.palette)
+                                            .foregroundStyle(.white, .red)
+                                            .font(.title3)
+                                    }
+                                    .padding(2)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
 
-            HStack(spacing: 8) {
-                ForEach(DefectSeverity.allCases, id: \.self) { severity in
-                    severityChip(severity)
-                }
-            }
-        }
-    }
-
-    private func severityChip(_ severity: DefectSeverity) -> some View {
-        let isSelected = selectedSeverity == severity
-        let color = severityColor(severity)
-        return Button(action: {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                selectedSeverity = severity
-            }
-        }) {
-            Text(severity.rawValue.capitalized)
-                .font(.system(size: 16, weight: .regular, design: .rounded))
-                .fontWeight(isSelected ? .semibold : .regular)
-                .foregroundStyle(isSelected ? color : Color.secondary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(
-                    Capsule()
-                        .fill(isSelected ? color.opacity(0.18) : Color.white.opacity(0.05))
-                )
-                .overlay(
-                    Capsule()
-                        .stroke(isSelected ? color.opacity(0.6) : Color.white.opacity(0.1), lineWidth: 1)
-                )
-                .animation(.easeInOut(duration: 0.2), value: isSelected)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func severityColor(_ severity: DefectSeverity) -> Color {
-        switch severity {
-        case .low:      return Color.green
-        case .medium:   return Color.yellow
-        case .high:     return Color.orange
-        case .critical: return Color.red
-        }
-    }
-
-    // MARK: - Description
-    private var descriptionSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Label("Description", systemImage: "text.alignleft")
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color.primary)
-
-            ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color.white.opacity(0.05))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                    )
-
-                if description.isEmpty {
-                    Text("Briefly describe the issue…")
-                        .font(.system(size: 16, weight: .regular, design: .rounded))
-                        .foregroundStyle(Color(UIColor.quaternaryLabel))
-                        .padding(.horizontal, 14)
-                        .padding(.top, 14)
-                }
-
-                TextEditor(text: $description)
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
-                    .foregroundStyle(Color.primary)
-                    .scrollContentBackground(.hidden)
-                    .background(Color.clear)
-                    .padding(10)
-                    .onChange(of: description) { _, newValue in
-                        if newValue.count > maxDescriptionLength {
-                            description = String(newValue.prefix(maxDescriptionLength))
+                    if capturedImages.count < 5 {
+                        PhotosPicker(
+                            selection: $selectedPhotos,
+                            maxSelectionCount: 5 - capturedImages.count,
+                            matching: .images,
+                            photoLibrary: .shared()
+                        ) {
+                            Label("Add More Photos", systemImage: "photo.badge.plus")
                         }
                     }
-            }
-            .frame(minHeight: 120)
-
-            HStack {
-                Spacer()
-                Text("\(description.count)/\(maxDescriptionLength)")
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
-                    .foregroundStyle(description.count > maxDescriptionLength - 20 ? Color.yellow : Color(UIColor.quaternaryLabel))
-            }
-        }
-    }
-
-    // MARK: - Submit Button
-    private var submitButton: some View {
-        Button(action: handleSubmit) {
-            HStack(spacing: 8) {
-                if isSubmitting {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .scaleEffect(0.85)
-                } else {
-                    Image(systemName: "paperplane.fill")
-                    Text("Submit Report")
                 }
+            } header: {
+                Text("Damage Photos")
+            } footer: {
+                Text("Up to 5 photos. These are attached to the report sent to maintenance.")
             }
-            .font(.system(size: 16, weight: .medium, design: .rounded))
-            .fontWeight(.semibold)
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 54)
-            .background(
-                LinearGradient(
-                    colors: [Color.red, Color.red.opacity(0.7)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color.red.opacity(0.35), radius: 12, y: 6)
         }
-        .disabled(description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSubmitting)
-        .opacity(description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1.0)
     }
 
     // MARK: - Success View
     private var successView: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 32) {
             Spacer()
 
-            ZStack {
-                Circle()
-                    .fill(Color.green.opacity(0.15))
-                    .frame(width: 110, height: 110)
-                Circle()
-                    .fill(Color.green.opacity(0.08))
-                    .frame(width: 140, height: 140)
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(Color.green)
-            }
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 72))
+                .foregroundStyle(.green)
+                .symbolEffect(.bounce, value: isSubmitted)
 
             VStack(spacing: 8) {
                 Text("Report Submitted")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.primary)
-                Text("Your issue has been reported.\nThe maintenance team will be notified.")
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
-                    .foregroundStyle(Color.secondary)
+                    .font(.title2.bold())
+                Text("Your issue has been reported.\nThe maintenance team will be notified shortly.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
 
@@ -338,91 +278,38 @@ struct DriverReportIssueView: View {
 
             Button(action: { dismiss() }) {
                 Text("Done")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(Color.green)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
-            .padding(.horizontal, 16)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(.green)
+            .padding(.horizontal, 32)
             .padding(.bottom, 40)
         }
-        .transition(.opacity.combined(with: .scale(scale: 0.95)))
     }
 
-    // MARK: - Photos Section
-    private var photosSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Label("Damage Photos", systemImage: "camera.fill")
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color.primary)
-
-            Text("Add photos to verify vehicle damage (up to 5)")
-                .font(.system(size: 16, weight: .regular, design: .rounded))
-                .foregroundStyle(Color.secondary)
-
-            if !capturedImages.isEmpty {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                    ForEach(capturedImages.indices, id: \.self) { index in
-                        ZStack(alignment: .topTrailing) {
-                            Image(uiImage: capturedImages[index])
-                                .resizable()
-                                .scaledToFill()
-                                .frame(height: 100)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                            Button {
-                                capturedImages.remove(at: index)
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.title3)
-                                    .symbolRenderingMode(.palette)
-                                    .foregroundStyle(.white, Color.red)
-                            }
-                            .padding(4)
-                        }
-                    }
-                }
-            }
-
-            PhotosPicker(
-                selection: $selectedPhotos,
-                maxSelectionCount: 5,
-                matching: .images,
-                photoLibrary: .shared()
-            ) {
-                HStack(spacing: 8) {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundStyle(Color.green)
-                    Text(capturedImages.isEmpty ? "Add Photos" : "Add More Photos")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundStyle(Color.green)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(16)
-                .background(Color.green.opacity(0.06))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.green.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [8]))
-                )
-            }
+    // MARK: - Helpers
+    private func severityColor(_ severity: DefectSeverity) -> Color {
+        switch severity {
+        case .low:      return .green
+        case .medium:   return .orange
+        case .high:     return .red
+        case .critical: return .red
         }
-        .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-        )
+    }
+
+    private var severityFooter: String {
+        switch selectedSeverity {
+        case .low:      return "Low — Minor issue, no immediate action needed."
+        case .medium:   return "Medium — Should be addressed within 48 hours."
+        case .high:     return "High — Needs prompt attention, may affect safety."
+        case .critical: return "Critical — Vehicle should be taken out of service immediately."
+        }
     }
 
     // MARK: - Submit Action
     private func handleSubmit() {
-        withAnimation(.easeInOut) {
-            isSubmitting = true
-        }
+        isSubmitting = true
         Task {
             do {
                 guard let userId = authViewModel.currentUser?.id else {
@@ -464,7 +351,7 @@ struct DriverReportIssueView: View {
                     createdAt: Date()
                 )
                 try await IssueReportService.createIssueReport(report)
-                
+
                 // Notify all fleet managers
                 let managers = try await ProfileService.fetchProfilesByRole(role: "fleet_manager")
                 for manager in managers {
@@ -479,7 +366,7 @@ struct DriverReportIssueView: View {
                     )
                     try? await NotificationService.createNotification(notification)
                 }
-                
+
                 await MainActor.run {
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                         isSubmitting = false
@@ -496,5 +383,3 @@ struct DriverReportIssueView: View {
         }
     }
 }
-
-
