@@ -36,7 +36,7 @@ final class DashboardViewModel {
         }
         isLoading = false
         
-        // --- INJECT MOCK DATA FOR TESTING T4-19 ---
+        // --- INJECT MOCK DATA FOR DEMO PURPOSES ---
         let mockVehicleId = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
         let mockVehicle = Vehicle(
             id: mockVehicleId,
