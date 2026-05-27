@@ -18,8 +18,8 @@ struct MaintenanceDashboardView: View {
 
                         // MARK: - KPI Summary Card
                         // --- Inventory Status card ---
-                        Button {
-                            selectedTab = 2
+                        NavigationLink {
+                            InventoryView()
                         } label: {
                             VStack(spacing: 0) {
                                 HStack(alignment: .top, spacing: 16) {
