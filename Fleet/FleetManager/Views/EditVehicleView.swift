@@ -12,6 +12,7 @@ struct EditVehicleView: View {
     @State private var tankCapacity: String
     @State private var mileage: String
     @State private var purchaseDate: Date
+    @State private var selectedType: VehicleType
 
     init(viewModel: VehiclesViewModel, vehicle: Vehicle) {
         self.viewModel = viewModel
@@ -24,6 +25,7 @@ struct EditVehicleView: View {
         _tankCapacity = State(initialValue: vehicle.tankCapacity != nil ? String(vehicle.tankCapacity!) : "")
         _mileage = State(initialValue: vehicle.mileage != nil ? String(vehicle.mileage!) : "")
         _purchaseDate = State(initialValue: vehicle.purchaseDate ?? Date())
+        _selectedType = State(initialValue: vehicle.vehicleType ?? .car)
     }
 
     var body: some View {
@@ -63,6 +65,21 @@ struct EditVehicleView: View {
                                     .textInputAutocapitalization(.characters)
                                     .padding(.vertical, 12)
                                     .foregroundColor(Color.primary)
+                                
+                                Divider().background(Color(.separator))
+                                
+                                HStack {
+                                    Text("Vehicle Type")
+                                        .foregroundColor(Color.primary)
+                                    Spacer()
+                                    Picker("", selection: $selectedType) {
+                                        ForEach(VehicleType.allCases) { type in
+                                            Text(type.displayName).tag(type)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                }
+                                .padding(.vertical, 8)
                             }
                             .padding(16)
                             .background(Color(.secondarySystemGroupedBackground))
@@ -128,6 +145,7 @@ struct EditVehicleView: View {
                         updatedVehicle.tankCapacity = cap
                         updatedVehicle.mileage = mil
                         updatedVehicle.purchaseDate = purchaseDate
+                        updatedVehicle.vehicleType = selectedType
 
                         Task {
                             do {
