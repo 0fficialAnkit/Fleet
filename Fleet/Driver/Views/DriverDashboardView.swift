@@ -2,16 +2,16 @@ import SwiftUI
 import Supabase
 
 struct DriverDashboardView: View {
-
+    
     @State private var viewModel = DriverDashboardViewModel()
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var selectedTrip: Trip?
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 Color(UIColor.systemGroupedBackground).ignoresSafeArea()
-
+                
                 if viewModel.isLoading && viewModel.trips.isEmpty {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: Color.green))
@@ -39,7 +39,7 @@ struct DriverDashboardView: View {
                             .font(.title3)
                             .foregroundStyle(Color.green)
                     }
-
+                    
                     NavigationLink(destination: DriverProfileView()) {
                         Image(systemName: "person.crop.circle.fill")
                             .font(.title2)
@@ -64,6 +64,7 @@ struct DriverDashboardView: View {
                 }
             }
         }
+    }
     
 
 
