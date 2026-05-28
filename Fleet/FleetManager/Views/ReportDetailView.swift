@@ -5,6 +5,7 @@ struct ReportDetailView: View {
     let report: IssueReport
     @State var viewModel: ReportsViewModel
     @State private var selectedStaffId: UUID?
+    @State private var showingAssignment = false
     @Environment(\.dismiss) private var dismiss
 
     init(report: IssueReport, viewModel: ReportsViewModel) {
@@ -184,35 +185,47 @@ struct ReportDetailView: View {
                         .foregroundStyle(Color.primary)
                 }
 
-                // Assign — pick a maintenance staff member (saves immediately)
+                // Assign — open assignment sheet
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        // Unassign option
-                        Button(role: .destructive) {
-                            assignStaff(nil)
-                        } label: {
-                            Label("Unassigned", systemImage: "xmark.circle")
-                        }
-
-                        Divider()
-
-                        ForEach(viewModel.maintenanceStaff) { staff in
-                            Button {
-                                assignStaff(staff.id)
-                            } label: {
-                                if selectedStaffId == staff.id {
-                                    Label(
-                                        "\(staff.fullName) — \(viewModel.staffWorkloadStatus(staff.id))",
-                                        systemImage: "checkmark"
-                                    )
-                                } else {
-                                    Text("\(staff.fullName) — \(viewModel.staffWorkloadStatus(staff.id))")
-                                }
-                            }
-                        }
+                    Button {
+                        showingAssignment = true
                     } label: {
                         Label("Assign", systemImage: "person.badge.plus")
                     }
+                }
+            }
+            .sheet(isPresented: $showingAssignment) {
+                MaintenanceAssignmentSheet(
+                    vehicleName: vehicle?.make ?? "" + (vehicle?.model ?? ""),
+                    licensePlate: report.licensePlate,
+                    severityLabel: report.severity.rawValue.capitalized,
+                    severityColor: viewModel.severityColor(report.severity),
+                    severityIcon: report.severity == .critical ? "exclamationmark.triangle.fill" : "exclamationmark.circle.fill",
+                    issueTitle: "Reported Issue",
+                    issueDescription: report.description.isEmpty ? "No description provided." : report.description,
+                    recommendationTitle: "Category",
+                    recommendationDescription: report.issueCategory,
+                    maintenanceStaff: viewModel.maintenanceStaff
+                ) { staffId, notes in
+                    // Update Issue Report status
+                    assignStaff(staffId)
+                    
+                    // Create Maintenance Task
+                    let task = MaintenanceTask(
+                        id: UUID(),
+                        workOrderId: nil,
+                        vehicleId: report.vehicleId,
+                        scheduledBy: nil,
+                        assignedTo: staffId,
+                        taskType: .repair,
+                        description: "\(report.issueCategory): \(report.description)\(notes.isEmpty ? "" : "\nNotes: \(notes)")",
+                        scheduledDate: Date(),
+                        targetMileage: nil,
+                        serviceIntervalMonths: nil,
+                        scheduleType: .date,
+                        status: .pending
+                    )
+                    try await MaintenanceTaskService.createTask(task)
                 }
             }
         }
