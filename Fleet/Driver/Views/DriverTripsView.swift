@@ -67,6 +67,7 @@ struct DriverTripsView: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                     }
+                    .refreshable { await viewModel.loadData() }
                 }
             }
             .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())

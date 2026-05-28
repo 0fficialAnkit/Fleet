@@ -36,6 +36,7 @@ struct NotificationsView: View {
                             .listRowSeparator(.hidden)
                         }
                     }
+                    .refreshable { await viewModel.loadData() }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
                 }

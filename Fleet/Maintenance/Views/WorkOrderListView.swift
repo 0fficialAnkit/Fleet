@@ -90,6 +90,7 @@ struct WorkOrderListView: View {
                         }
                         .padding(.vertical, 16)
                     }
+                    .refreshable { await loadWorkOrders() }
                 }
             }
             .navigationTitle("Work Orders")
