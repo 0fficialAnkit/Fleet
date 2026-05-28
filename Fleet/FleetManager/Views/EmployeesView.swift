@@ -12,19 +12,22 @@ struct EmployeesView: View {
 
     var body: some View {
         List(filteredEmployees) { profile in
-            let roleName = viewModel.getRole(for: profile)
+            let isActive: Bool = {
+                if profile.role == "driver" {
+                    return viewModel.activeDriverIds.contains(profile.id)
+                }
+                return true // maintenance is always active
+            }()
 
             NavigationLink(destination: EmployeeDetailView(profile: profile, viewModel: viewModel)) {
                 EmployeeRowView(
                     profile: profile,
-                    roleName: roleName,
-                    icon: viewModel.getIcon(for: roleName),
-                    iconColor: viewModel.getColor(for: roleName)
+                    roleName: viewModel.getRole(for: profile),
+                    isActive: isActive
                 )
             }
         }
         .listStyle(.insetGrouped)
-        // If you need to match exactly the parent ZStack background:
         .scrollContentBackground(.hidden)
     }
 }
@@ -32,8 +35,18 @@ struct EmployeesView: View {
 struct EmployeeRowView: View {
     let profile: Profile
     let roleName: String
-    let icon: String
-    let iconColor: Color
+    let isActive: Bool
+
+    private var statusLabel: String {
+        if profile.role == "driver" {
+            return isActive ? "On Trip" : "Idle"
+        }
+        return isActive ? "Active" : "Idle"
+    }
+
+    private var statusColor: Color {
+        isActive ? .green : .orange
+    }
 
     var body: some View {
         HStack(spacing: 16) {
@@ -49,12 +62,7 @@ struct EmployeeRowView: View {
 
             Spacer()
 
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundColor(iconColor)
-                .padding(10)
-                .background(iconColor.opacity(0.15))
-                .clipShape(Circle())
+            StatusBadge(text: statusLabel, color: statusColor)
         }
         .padding(.vertical, 4)
     }

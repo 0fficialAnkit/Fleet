@@ -177,7 +177,7 @@ final class MaintenanceDashboardViewModel {
 
     func taskStatusColor(_ status: MaintenanceTaskStatus?) -> Color {
         switch status {
-        case .pending: return Color.yellow
+        case .pending: return Color.orange
         case .inProgress: return Color.blue
         case .completed: return Color.green
         case .cancelled: return Color.red
@@ -188,7 +188,7 @@ final class MaintenanceDashboardViewModel {
     func woStatusColor(_ status: WorkOrderStatus?) -> Color {
         switch status {
         case .open: return Color.blue
-        case .inProgress: return Color.yellow
+        case .inProgress: return Color.orange
         case .completed: return Color.green
         case .cancelled: return Color.red
         case .none: return Color(.tertiaryLabel)
@@ -198,7 +198,7 @@ final class MaintenanceDashboardViewModel {
     func irStatusColor(_ status: String) -> Color {
         switch status.lowercased() {
         case "open", "assigned": return Color.blue
-        case "in_progress": return Color.yellow
+        case "in_progress": return Color.orange
         case "resolved", "closed": return Color.green
         default: return Color(.tertiaryLabel)
         }
@@ -207,7 +207,7 @@ final class MaintenanceDashboardViewModel {
     func irSeverityColor(_ severity: String) -> Color {
         switch severity.lowercased() {
         case "critical": return Color.red
-        case "high": return Color.yellow
+        case "high": return Color.orange
         case "medium": return Color.blue
         case "low": return Color.green
         default: return Color(.tertiaryLabel)
@@ -227,7 +227,7 @@ final class MaintenanceDashboardViewModel {
     func woPriorityColor(_ priority: WorkOrderPriority?) -> Color? {
         switch priority {
         case .critical: return Color.red
-        case .high: return Color.yellow
+        case .high: return Color.orange
         case .medium: return Color.blue
         case .low: return Color.green
         case nil: return nil

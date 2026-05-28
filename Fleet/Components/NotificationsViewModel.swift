@@ -22,7 +22,9 @@ final class NotificationsViewModel {
 
     func setupRealtime() {
         RealtimeManager.shared.addNotificationsChangeHandler { [weak self] in
-            Task { await self?.loadData() }
+            Task { @MainActor [weak self] in
+                await self?.loadData()
+            }
         }
     }
 

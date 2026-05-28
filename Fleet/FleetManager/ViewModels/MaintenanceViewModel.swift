@@ -45,7 +45,7 @@ final class MaintenanceViewModel {
     func getStatusColor(_ status: MaintenanceTaskStatus?) -> Color {
         switch status {
         case .completed: return Color.green
-        case .pending: return Color.yellow
+        case .pending: return Color.orange
         case .inProgress: return Color.blue
         case .cancelled: return Color.red
         case nil: return Color(.tertiaryLabel)

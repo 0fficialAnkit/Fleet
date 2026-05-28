@@ -56,11 +56,11 @@ struct DriverVehicleDetailView: View {
 
             VStack(spacing: 6) {
                 Text("\(vehicle.make ?? "Unknown") \(vehicle.model ?? "")")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .font(.title2.bold())
                     .foregroundStyle(Color.primary)
 
                 Text(vehicle.licensePlate ?? "—")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .font(.body.weight(.medium))
                     .foregroundStyle(Color.green)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 5)
@@ -75,7 +75,7 @@ struct DriverVehicleDetailView: View {
         HStack(spacing: 8) {
             StatusBadge(
                 text: vehicle.status?.rawValue.capitalized ?? "Unknown",
-                color: vehicle.status == .active ? Color.green : Color.yellow,
+                color: vehicle.status == .active ? Color.green : Color.orange,
                 icon: vehicle.status == .active ? "checkmark.circle.fill" : "exclamationmark.circle.fill"
             )
 
@@ -91,7 +91,7 @@ struct DriverVehicleDetailView: View {
     private var vehicleInfoCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("Vehicle Info", systemImage: "info.circle.fill")
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .font(.headline)
                 .foregroundStyle(Color.primary)
 
             VStack(spacing: 0) {
@@ -125,7 +125,7 @@ struct DriverVehicleDetailView: View {
     private var vehicleHealthCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             Label("Quick Stats", systemImage: "heart.text.clipboard.fill")
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .font(.headline)
                 .foregroundStyle(Color.primary)
 
             HStack(spacing: 16) {
@@ -155,11 +155,11 @@ struct DriverVehicleDetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             Text(value)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(.title3.bold())
                 .foregroundStyle(Color.primary)
 
             Text(label)
-                .font(.system(size: 16, weight: .regular, design: .rounded))
+                .font(.body)
                 .foregroundStyle(Color(UIColor.tertiaryLabel))
         }
         .padding(16)
@@ -180,10 +180,10 @@ struct DriverVehicleDetailView: View {
                     .font(.system(size: 18, weight: .semibold))
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Report an Issue")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .font(.body.weight(.medium))
                         .fontWeight(.semibold)
                     Text("Notify maintenance about a problem")
-                        .font(.system(size: 16, weight: .regular, design: .rounded))
+                        .font(.body)
                         .opacity(0.75)
                 }
                 Spacer()

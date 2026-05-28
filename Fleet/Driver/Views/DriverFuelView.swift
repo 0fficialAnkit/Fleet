@@ -25,7 +25,7 @@ struct DriverFuelView: View {
     private var inputFormSection: some View {
         VStack(alignment: .leading, spacing: 24) {
             Text("Log Fuel Expense")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(.title3.bold())
                 .foregroundStyle(Color.primary)
 
             if assignedVehicleId == nil {
@@ -36,10 +36,10 @@ struct DriverFuelView: View {
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text("No Assigned Vehicle")
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .font(.subheadline.weight(.semibold))
                             .foregroundColor(.primary)
                         Text("You must have a vehicle assigned by your Fleet Manager to log fuel expenses.")
-                            .font(.system(size: 12, weight: .regular, design: .rounded))
+                            .font(.footnote)
                             .foregroundColor(.secondary)
                     }
                 }
@@ -59,7 +59,7 @@ struct DriverFuelView: View {
                     Image(systemName: "drop.fill")
                         .foregroundStyle(Color.secondary)
                     Text("Fuel Volume (Liters)")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Color.secondary)
                 }
                 TextField("0.0", text: $volume)
@@ -75,7 +75,7 @@ struct DriverFuelView: View {
                     Image(systemName: "indianrupeesign")
                         .foregroundStyle(Color.secondary)
                     Text("Total Price Paid")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Color.secondary)
                 }
                 TextField("0.00", text: $price)
@@ -91,10 +91,10 @@ struct DriverFuelView: View {
                     Image(systemName: "camera.fill")
                         .foregroundStyle(Color.secondary)
                     Text("Fuel Bill Photo")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Color.secondary)
                     Text("(Required)")
-                        .font(.system(size: 16, weight: .regular, design: .rounded))
+                        .font(.body)
                         .foregroundStyle(Color.red)
                 }
 
@@ -133,10 +133,10 @@ struct DriverFuelView: View {
                                 .font(.system(size: 32))
                                 .foregroundStyle(Color.green)
                             Text("Tap to attach bill photo")
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .font(.body.weight(.medium))
                                 .foregroundStyle(Color.green)
                             Text("Photo will be sent to Fleet Manager")
-                                .font(.system(size: 16, weight: .regular, design: .rounded))
+                                .font(.body)
                                 .foregroundStyle(Color(UIColor.tertiaryLabel))
                         }
                         .frame(maxWidth: .infinity)
@@ -162,7 +162,7 @@ struct DriverFuelView: View {
                         Text("Submit Fuel Log")
                     }
                 }
-                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .font(.body.weight(.medium))
                 .frame(maxWidth: .infinity)
                 .padding(16)
                 .background(!isFormValid || isSubmitting ? Color(UIColor.tertiarySystemFill) : Color.green)
@@ -187,7 +187,7 @@ struct DriverFuelView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(Color.green)
                 Text("Synced with Fleet Manager")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .font(.body.weight(.medium))
                     .foregroundStyle(Color.primary)
                 Spacer()
             }
@@ -204,7 +204,7 @@ struct DriverFuelView: View {
 
             if viewModel.fuelLogs.isEmpty {
                 Text("No fuel logs recorded yet.")
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .font(.body)
                     .foregroundStyle(Color.secondary)
             } else {
                 ForEach(viewModel.fuelLogs) { log in
@@ -214,14 +214,14 @@ struct DriverFuelView: View {
                                 Image(systemName: "drop.fill")
                                     .foregroundColor(Color.green)
                                 Text("\(String(format: "%.1f", log.litersUsed ?? 0.0)) Liters")
-                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                    .font(.headline)
                                     .foregroundColor(Color.primary)
                             }
                             HStack {
                                 Image(systemName: "calendar")
                                     .foregroundColor(Color.secondary)
                                 Text((log.recordedAt ?? Date()).formatted(date: .abbreviated, time: .shortened))
-                                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                                    .font(.body)
                                     .foregroundColor(Color.secondary)
                             }
                         }
@@ -232,7 +232,7 @@ struct DriverFuelView: View {
                             Image(systemName: "indianrupeesign")
                                 .foregroundColor(Color.secondary)
                             Text("\(Int(log.fuelCost ?? 0.0))")
-                                .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .font(.title3.bold())
                                 .foregroundColor(Color.primary)
                         }
                     }

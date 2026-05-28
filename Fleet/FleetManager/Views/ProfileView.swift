@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel = ProfileViewModel()
     @State private var isEditing = false
 
@@ -89,7 +90,12 @@ VStack(spacing: 0) {
                 }
             }
             .navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") { dismiss() }
+                        .foregroundColor(Color.primary)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Edit") {
                         isEditing = true

@@ -42,7 +42,7 @@ struct DriverTripsView: View {
                             .font(.system(size: 40))
                             .foregroundStyle(Color(UIColor.tertiaryLabel))
                         Text("No trips found")
-                            .font(.system(size: 16, weight: .regular, design: .rounded))
+                            .font(.body)
                             .foregroundStyle(Color.secondary)
                     }
                     Spacer()
@@ -105,7 +105,7 @@ struct DriverTripsView: View {
             HStack(spacing: 12) {
                 ForEach(TripFilter.allCases, id: \.self) { filter in
                     Text(filter.rawValue)
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .font(.body.weight(.medium))
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .background(
