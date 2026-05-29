@@ -19,8 +19,9 @@ enum TaskDisplayStatus: String, CaseIterable {
 }
 
 enum SchedulerTabType: String, CaseIterable {
-    case tasks = "Tasks"
-    case workOrders = "Work Orders"
+    case active     = "Active"
+    case inProgress = "In Progress"
+    case completed  = "Completed"
 }
 
 // MARK: - ChecklistItem
@@ -79,6 +80,26 @@ struct ScheduledWorkOrder: Identifiable, Hashable {
     let vehicleIssue: String
 }
 
+// MARK: - Unified Scheduler Item (task or work order in one type)
+enum SchedulerUnifiedItem: Identifiable, Hashable {
+    case task(ScheduledTask)
+    case workOrder(ScheduledWorkOrder)
+
+    var id: UUID {
+        switch self {
+        case .task(let t):      return t.id
+        case .workOrder(let w): return w.id
+        }
+    }
+
+    var sortDate: Date {
+        switch self {
+        case .task(let t):      return t.date
+        case .workOrder(let w): return w.createdAt
+        }
+    }
+}
+
 // MARK: - ViewModel
 
 @MainActor
@@ -89,7 +110,7 @@ final class MaintenanceSchedulerViewModel {
     var selectedTask: ScheduledTask? = nil
     var showTaskDetail: Bool = false
 
-    var selectedTab: SchedulerTabType = .tasks
+    var selectedTab: SchedulerTabType = .active
     var selectedWorkOrder: ScheduledWorkOrder? = nil
     var showWorkOrderDetail: Bool = false
 
@@ -313,14 +334,46 @@ final class MaintenanceSchedulerViewModel {
         Calendar.current.isDate(date, inSameDayAs: selectedDate)
     }
 
-    var tasksForSelectedDate: [ScheduledTask] {
-        allTasks.filter { Calendar.current.isDate($0.date, inSameDayAs: selectedDate) }
-            .sorted { $0.scheduledTime < $1.scheduledTime }
+    // Active: pending / delayed / critical tasks  +  open work orders
+    var activeItemsForSelectedDate: [SchedulerUnifiedItem] {
+        let cal = Calendar.current
+        let tasks = allTasks
+            .filter { cal.isDate($0.date, inSameDayAs: selectedDate) }
+            .filter { [.pending, .delayed, .critical].contains($0.status) }
+            .map    { SchedulerUnifiedItem.task($0) }
+        let wos = allWorkOrders
+            .filter { cal.isDate($0.createdAt, inSameDayAs: selectedDate) }
+            .filter { $0.status == .open }
+            .map    { SchedulerUnifiedItem.workOrder($0) }
+        return (tasks + wos).sorted { $0.sortDate < $1.sortDate }
     }
 
-    var workOrdersForSelectedDate: [ScheduledWorkOrder] {
-        allWorkOrders.filter { Calendar.current.isDate($0.createdAt, inSameDayAs: selectedDate) }
-            .sorted { $0.createdAt < $1.createdAt }
+    // In Progress: inProgress tasks  +  inProgress work orders
+    var inProgressItemsForSelectedDate: [SchedulerUnifiedItem] {
+        let cal = Calendar.current
+        let tasks = allTasks
+            .filter { cal.isDate($0.date, inSameDayAs: selectedDate) }
+            .filter { $0.status == .inProgress }
+            .map    { SchedulerUnifiedItem.task($0) }
+        let wos = allWorkOrders
+            .filter { cal.isDate($0.createdAt, inSameDayAs: selectedDate) }
+            .filter { $0.status == .inProgress }
+            .map    { SchedulerUnifiedItem.workOrder($0) }
+        return (tasks + wos).sorted { $0.sortDate < $1.sortDate }
+    }
+
+    // Completed: completed tasks  +  completed / cancelled work orders
+    var completedItemsForSelectedDate: [SchedulerUnifiedItem] {
+        let cal = Calendar.current
+        let tasks = allTasks
+            .filter { cal.isDate($0.date, inSameDayAs: selectedDate) }
+            .filter { $0.status == .completed }
+            .map    { SchedulerUnifiedItem.task($0) }
+        let wos = allWorkOrders
+            .filter { cal.isDate($0.createdAt, inSameDayAs: selectedDate) }
+            .filter { $0.status == .completed || $0.status == .cancelled }
+            .map    { SchedulerUnifiedItem.workOrder($0) }
+        return (tasks + wos).sorted { $0.sortDate < $1.sortDate }
     }
 
     var taskCountForDate: [Date: Int] {
@@ -512,6 +565,9 @@ final class MaintenanceSchedulerViewModel {
                 taskType: taskType,
                 description: description,
                 scheduledDate: date,
+                targetMileage: nil,
+                serviceIntervalMonths: nil,
+                scheduleType: nil,
                 status: .pending
             )
         }

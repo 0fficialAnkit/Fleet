@@ -20,12 +20,6 @@ struct MaintenanceRootView: View {
                     Label("Schedule", systemImage: "calendar.badge.clock")
                 }
                 .tag(1)
-
-            InventoryView()
-                .tabItem {
-                    Label("Inventory", systemImage: "archivebox.fill")
-                }
-                .tag(2)
         }
         .tint(Color.brown)
     }

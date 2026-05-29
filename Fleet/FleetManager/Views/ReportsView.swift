@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - Reports View (main list)
+// MARK: - Reports View
 struct ReportsView: View {
     @State private var viewModel = ReportsViewModel()
     @State private var selectedReport: IssueReport?
@@ -17,22 +17,24 @@ struct ReportsView: View {
                 Color(.systemGroupedBackground).ignoresSafeArea()
 
                 List {
+                    // Filter chips — right below the "Reports" title
                     Section {
-                        VStack(spacing: 16) {
-                            summaryCards
-                            filterChips
-                        }
+                        filterChips
                     }
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
+                    .listSectionSeparator(.hidden)
 
+                    // Reports list
                     Section {
                         reportsListContent
                     }
+                    .listSectionSeparator(.hidden)
                 }
                 .listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
             }
-            .navigationTitle("Issue Reports")
+            .navigationTitle("Reports")
             .sheet(item: $selectedReport) { report in
                 ReportDetailView(report: report, viewModel: viewModel)
             }
@@ -43,68 +45,36 @@ struct ReportsView: View {
         }
     }
 
-    // MARK: - Summary Cards
-    private var summaryCards: some View {
-        HStack(spacing: 16) {
-            summaryCard(label: "Open",     count: viewModel.openCount,     color: Color.red,  icon: "exclamationmark.circle.fill")
-            summaryCard(label: "Active",   count: viewModel.assignedCount, color: Color.yellow, icon: "wrench.and.screwdriver.fill")
-            summaryCard(label: "Resolved", count: viewModel.resolvedCount, color: Color.green, icon: "checkmark.circle.fill")
-        }
-        .padding(.horizontal, 16)
-    }
-
-    private func summaryCard(label: String, count: Int, color: Color, icon: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(color)
-                .frame(width: 32, height: 32)
-                .background(color.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-
-            Text("\(count)")
-                .font(.title3.bold())
-                .foregroundStyle(Color.primary)
-
-            Text(label)
-                .font(.footnote)
-                .foregroundStyle(Color(.tertiaryLabel))
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-    }
-
     // MARK: - Filter Chips
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 FilterButton(title: "All", isSelected: filterStatus == nil) {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        filterStatus = nil
-                    }
+                    withAnimation(.easeInOut(duration: 0.2)) { filterStatus = nil }
                 }
                 ForEach(IssueReportStatus.allCases) { status in
-                    FilterButton(
-                        title: status.rawValue,
-                        isSelected: filterStatus == status
-                    ) {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            filterStatus = status
-                        }
+                    FilterButton(title: status.rawValue, isSelected: filterStatus == status) {
+                        withAnimation(.easeInOut(duration: 0.2)) { filterStatus = status }
                     }
                 }
             }
             .padding(.horizontal, 16)
+            .padding(.vertical, 8)
         }
-        .padding(.vertical, 8)
     }
 
+    // MARK: - List Content
     @ViewBuilder
     private var reportsListContent: some View {
-        if filteredReports.isEmpty {
+        if viewModel.isLoading && viewModel.reports.isEmpty {
+            HStack {
+                Spacer()
+                ProgressView()
+                Spacer()
+            }
+            .listRowBackground(Color.clear)
+            .padding(.vertical, 40)
+        } else if filteredReports.isEmpty {
             VStack(spacing: 16) {
                 Image(systemName: "tray.fill")
                     .font(.system(size: 40))
@@ -127,76 +97,82 @@ struct ReportsView: View {
     }
 }
 
-// MARK: - Report Row
+// MARK: - Report Row Card
 struct ReportRowView: View {
     let report: IssueReport
     let viewModel: ReportsViewModel
 
     private var timeAgo: String {
         let diff = Date().timeIntervalSince(report.submittedAt)
-        if diff < 3600 { return "\(Int(diff / 60))m ago" }
+        if diff < 60    { return "Just now" }
+        if diff < 3600  { return "\(Int(diff / 60))m ago" }
         if diff < 86400 { return "\(Int(diff / 3600))h ago" }
         return "\(Int(diff / 86400))d ago"
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Top row
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .center, spacing: 10) {
+
+            VStack(alignment: .leading, spacing: 10) {
+
+                // Top row: vehicle name (left) + assignment status badge (right)
+                HStack(alignment: .top) {
                     Text(report.vehicleName)
                         .font(.headline)
                         .foregroundStyle(Color.primary)
-                    Text(report.licensePlate)
-                        .font(.footnote)
-                        .foregroundStyle(Color.teal)
+                    Spacer()
+                    StatusBadge(
+                        text: report.status.rawValue,
+                        color: report.status.color,
+                        icon: report.status.icon
+                    )
                 }
-                Spacer()
-                StatusBadge(
-                    text: report.status.rawValue,
-                    color: report.status.color,
-                    icon: report.status.icon
-                )
-            }
 
-            // Category + severity
-            HStack(spacing: 8) {
-                StatusBadge(text: report.issueCategory, color: Color.blue)
-                StatusBadge(
-                    text: report.severity.rawValue.capitalized,
-                    color: viewModel.severityColor(report.severity)
-                )
-            }
+                // License plate
+                Text(report.licensePlate)
+                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color.teal)
 
-            // Description preview
-            Text(report.description)
-                .font(.body)
-                .foregroundStyle(Color.secondary)
-                .lineLimit(2)
+                // Issue type + severity badges
+                HStack(spacing: 6) {
+                    StatusBadge(text: report.issueCategory, color: Color.blue)
+                    StatusBadge(
+                        text: report.severity.rawValue.capitalized,
+                        color: viewModel.severityColor(report.severity)
+                    )
+                }
 
-            // Footer
-            HStack {
-                Label(report.driverName, systemImage: "steeringwheel")
-                    .font(.footnote)
-                    .foregroundStyle(Color(.tertiaryLabel))
-                Spacer()
-                if let assignedId = report.assignedTo {
-                    Label(viewModel.staffName(assignedId), systemImage: "wrench.fill")
-                        .font(.footnote)
-                        .foregroundStyle(Color.yellow)
-                } else {
-                    Text("Unassigned")
-                        .font(.footnote)
+                // Driver info (left) + time ago (right)
+                HStack(alignment: .bottom) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "person.fill")
+                                .font(.caption2)
+                                .foregroundStyle(Color(.tertiaryLabel))
+                            Text(report.driverName)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.secondary)
+                        }
+                        if let license = report.driverLicenseNumber, !license.isEmpty {
+                            Text(license)
+                                .font(.caption)
+                                .foregroundStyle(Color(.tertiaryLabel))
+                                .padding(.leading, 16)
+                        }
+                    }
+                    Spacer()
+                    Text(timeAgo)
+                        .font(.caption)
                         .foregroundStyle(Color(.quaternaryLabel))
                 }
-                Text("·")
-                    .foregroundStyle(Color(.quaternaryLabel))
-                Text(timeAgo)
-                    .font(.footnote)
-                    .foregroundStyle(Color(.quaternaryLabel))
             }
+
+            // Chevron — vertically centered on the right
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color(.tertiaryLabel))
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
     }
 }
 

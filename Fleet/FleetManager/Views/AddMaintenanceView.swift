@@ -9,7 +9,10 @@ struct AddMaintenanceView: View {
     @State private var selectedVehicleId: UUID?
     @State private var selectedTaskType: MaintenanceTaskType = .inspection
     @State private var description = ""
+    @State private var scheduleType: MaintenanceScheduleType = .date
     @State private var scheduledDate = Date()
+    @State private var targetMileage = ""
+    @State private var serviceIntervalMonths = 3
     @State private var selectedAssignedTo: UUID?
     @State private var selectedWorkOrderId: UUID?
     @State private var isSaving = false
@@ -83,10 +86,31 @@ struct AddMaintenanceView: View {
 
                         TextField("", text: $description, prompt: Text("Description").foregroundColor(Color(.placeholderText)))
                             .foregroundColor(Color.primary)
+                            
+                        Picker("Schedule By", selection: $scheduleType) {
+                            ForEach(MaintenanceScheduleType.allCases) { type in
+                                Text(type.rawValue).tag(type)
+                            }
+                        }
+                        .foregroundColor(Color.primary)
 
-                        DatePicker("Scheduled Date", selection: $scheduledDate, displayedComponents: .date)
+                        if scheduleType == .date {
+                            DatePicker("Scheduled Date", selection: $scheduledDate, displayedComponents: .date)
+                                .foregroundColor(Color.primary)
+                                .tint(Color.teal)
+                        } else if scheduleType == .mileage {
+                            TextField("Target Mileage (km)", text: $targetMileage)
+                                .keyboardType(.numberPad)
+                                .foregroundColor(Color.primary)
+                        } else if scheduleType == .interval {
+                            Picker("Interval (Months)", selection: $serviceIntervalMonths) {
+                                Text("1 Month").tag(1)
+                                Text("3 Months").tag(3)
+                                Text("6 Months").tag(6)
+                                Text("12 Months").tag(12)
+                            }
                             .foregroundColor(Color.primary)
-                            .tint(Color.teal)
+                        }
                     }
                     .listRowBackground(Color(.systemBackground))
 
@@ -122,7 +146,10 @@ struct AddMaintenanceView: View {
                                     vehicleId: vehicleId,
                                     taskType: selectedTaskType,
                                     description: description.trimmingCharacters(in: .whitespaces),
-                                    scheduledDate: scheduledDate,
+                                    scheduledDate: scheduleType == .date ? scheduledDate : nil,
+                                    targetMileage: scheduleType == .mileage ? Double(targetMileage) : nil,
+                                    serviceIntervalMonths: scheduleType == .interval ? serviceIntervalMonths : nil,
+                                    scheduleType: scheduleType,
                                     assignedTo: selectedAssignedTo,
                                     scheduledBy: authViewModel.currentUser?.id,
                                     workOrderId: selectedWorkOrderId
