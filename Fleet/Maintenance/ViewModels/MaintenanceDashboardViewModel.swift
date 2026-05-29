@@ -127,6 +127,21 @@ final class MaintenanceDashboardViewModel {
         return Int((Double(available) / Double(total)) * 100)
     }
 
+    var estimatedValue: Double {
+        inventory.reduce(0) { $0 + (($1.unitCost ?? 0) * Double($1.stockQuantity ?? 0)) }
+    }
+
+    var estimatedValueFormatted: String {
+        let value = estimatedValue
+        if value >= 100_000 {
+            return "₹\(String(format: "%.1fL", value / 100_000))"
+        } else if value >= 1_000 {
+            return "₹\(String(format: "%.1fK", value / 1_000))"
+        } else {
+            return "₹\(String(format: "%.0f", value))"
+        }
+    }
+
     func loadData() async {
         guard let userId = currentUserId else { return }
         isLoading = true
