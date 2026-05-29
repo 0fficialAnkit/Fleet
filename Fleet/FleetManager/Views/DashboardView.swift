@@ -21,8 +21,6 @@ struct DashboardView: View {
 
                         liveFleetSection
 
-                        recentOrdersSection
-
                         maintenanceSection
                     }
                     .refreshable { await viewModel.loadData() }
@@ -129,12 +127,12 @@ struct DashboardView: View {
                         color: Color.green
                     )
                     FleetStatPill(
-                        value: max(0, viewModel.totalVehicles - viewModel.driversOnTrip - viewModel.predictiveAlerts.count),
+                        value: max(0, viewModel.totalVehicles - viewModel.driversOnTrip - viewModel.inServiceVehicles),
                         label: "Idle",
                         color: Color.orange
                     )
                     FleetStatPill(
-                        value: viewModel.predictiveAlerts.count,
+                        value: viewModel.inServiceVehicles,
                         label: "Service",
                         color: Color.red
                     )
@@ -144,31 +142,6 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - Recent Orders
-
-    private var recentOrdersSection: some View {
-        Section(header: HStack {
-            Text("Recent Orders")
-            Spacer()
-            Button("See All") {
-                // Action
-            }
-            .font(.footnote)
-            .textCase(.none)
-        }) {
-            if viewModel.recentOrders.isEmpty {
-                Text("No orders yet.")
-                    .font(.body)
-                    .foregroundStyle(Color.secondary)
-            } else {
-                ForEach(viewModel.recentOrders) { trip in
-                    NavigationLink(value: DashboardDestination.orderDetail(trip)) {
-                        TripCardView(trip: trip, viewModel: viewModel)
-                    }
-                }
-            }
-        }
-    }
 
     // MARK: - Live Fleet Map
 
@@ -527,6 +500,12 @@ struct PredictiveAlertCardView: View {
                     status: .pending
                 )
                 try await MaintenanceTaskService.createTask(task)
+
+                // Mark the vehicle as "in service" so the Service stat pill
+                // updates immediately and the vehicle leaves the alert list.
+                var updatedVehicle = alert.vehicle
+                updatedVehicle.status = .maintenance
+                try? await VehicleService.updateVehicle(updatedVehicle)
             }
         }
     }
