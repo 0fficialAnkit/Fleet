@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct AddVehicleView: View {
     @Environment(\.dismiss) private var dismiss
