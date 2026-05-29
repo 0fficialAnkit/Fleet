@@ -35,7 +35,7 @@ struct DashboardMapView: View {
     }
 
     @State private var tripRoutes:         [TripRoute] = []
-    @State private var cameraPosition:     MapCameraPosition = .automatic
+    @State private var cameraPosition:     MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var locationManager     = LocationManager()
     @State private var lastLocationUpdate: Date? = nil
     @State private var showFullscreen      = false
@@ -60,7 +60,7 @@ struct DashboardMapView: View {
         .onChange(of: vehicleLocations) { _, newLocs in
             if !newLocs.isEmpty {
                 lastLocationUpdate = Date()
-                // Driver pin moves on the map automatically — no camera re-fit needed
+                fitCamera()   // include driver's live position in the visible frame
             }
         }
         .fullScreenCover(isPresented: $showFullscreen) {
@@ -213,18 +213,13 @@ struct DashboardMapView: View {
     // MARK: - Camera
 
     private func fitCamera() {
-        // Use ONLY route polyline coords — never driver pin GPS.
-        // Driver GPS on a simulator is Apple Park (CA); routes are in India.
-        // Mixing both makes boundingRegion span the entire globe.
-        var coords = allPolylineCoords(from: tripRoutes)
-
-        // Fallback: pickup/dropoff coords when polyline isn't built yet
-        if coords.isEmpty {
-            coords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] }
+        var routeCoords = allPolylineCoords(from: tripRoutes)
+        if routeCoords.isEmpty {
+            routeCoords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] }
         }
 
-        guard !coords.isEmpty else {
-            // No active routes — show fleet manager's own location
+        guard !routeCoords.isEmpty else {
+            // No active trips — show fleet manager's own location
             if let mgr = locationManager.coordinate {
                 cameraPosition = .region(MKCoordinateRegion(
                     center: mgr,
@@ -236,7 +231,17 @@ struct DashboardMapView: View {
             return
         }
 
-        cameraPosition = .region(boundingRegion(for: coords, padding: 1.35))
+        // Try to frame route + all driver pins together
+        let combined = routeCoords + driverPins.map(\.coordinate)
+        let fullRegion = boundingRegion(for: combined, padding: 1.4)
+
+        // If the combined region is intercontinental (> 40° lat or > 60° lon),
+        // the driver GPS is a simulator/fake location — just show the route.
+        if fullRegion.span.latitudeDelta > 40 || fullRegion.span.longitudeDelta > 60 {
+            cameraPosition = .region(boundingRegion(for: routeCoords, padding: 1.4))
+        } else {
+            cameraPosition = .region(fullRegion)
+        }
     }
 
     // MARK: - Pin views
@@ -433,16 +438,12 @@ struct DashboardMapFullscreenView: View {
     // MARK: - Camera
 
     private func fitCamera() {
-        // Use ONLY route polyline coords — never driver pin GPS.
-        // Driver GPS on a simulator is Apple Park (CA); routes are in India.
-        // Mixing both makes boundingRegion span the entire globe.
-        var coords = allPolylineCoords(from: tripRoutes)
-
-        if coords.isEmpty {
-            coords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] }
+        var routeCoords = allPolylineCoords(from: tripRoutes)
+        if routeCoords.isEmpty {
+            routeCoords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] }
         }
 
-        guard !coords.isEmpty else {
+        guard !routeCoords.isEmpty else {
             if let mgr = locationManager.coordinate {
                 cameraPosition = .region(MKCoordinateRegion(
                     center: mgr,
@@ -454,7 +455,14 @@ struct DashboardMapFullscreenView: View {
             return
         }
 
-        cameraPosition = .region(boundingRegion(for: coords, padding: 1.3))
+        let combined   = routeCoords + driverPins.map(\.coordinate)
+        let fullRegion = boundingRegion(for: combined, padding: 1.4)
+
+        if fullRegion.span.latitudeDelta > 40 || fullRegion.span.longitudeDelta > 60 {
+            cameraPosition = .region(boundingRegion(for: routeCoords, padding: 1.4))
+        } else {
+            cameraPosition = .region(fullRegion)
+        }
     }
 
     // MARK: - Pin views
