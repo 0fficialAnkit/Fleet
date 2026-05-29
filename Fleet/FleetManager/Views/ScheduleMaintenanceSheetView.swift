@@ -248,6 +248,14 @@ struct ScheduleMaintenanceSheetView: View {
         saveError = nil
         Task {
             do {
+                let workOrderId = try await WorkOrderService.createWorkOrder(
+                    vehicleId: vehicle.id,
+                    createdBy: authViewModel.currentUser?.id,
+                    assignedTo: selectedStaffId,
+                    priority: .medium,
+                    status: .open
+                )
+                
                 try await viewModel.addTask(
                     vehicleId: vehicle.id,
                     taskType: selectedTaskType,
@@ -258,7 +266,7 @@ struct ScheduleMaintenanceSheetView: View {
                     scheduleType: .date,
                     assignedTo: selectedStaffId,
                     scheduledBy: authViewModel.currentUser?.id,
-                    workOrderId: nil
+                    workOrderId: workOrderId
                 )
                 dismiss()
             } catch {

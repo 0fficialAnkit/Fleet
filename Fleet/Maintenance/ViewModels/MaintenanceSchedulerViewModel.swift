@@ -557,19 +557,39 @@ final class MaintenanceSchedulerViewModel {
         allTasks.append(newTask)
         
         if let currentUserId {
-            try? await MaintenanceTaskService.createTask(
-                workOrderId: nil,
-                vehicleId: vehicleId,
-                scheduledBy: currentUserId,
-                assignedTo: currentUserId,
-                taskType: taskType,
-                description: description,
-                scheduledDate: date,
-                targetMileage: nil,
-                serviceIntervalMonths: nil,
-                scheduleType: nil,
-                status: .pending
-            )
+            do {
+                let dbPriority: WorkOrderPriority
+                switch priority {
+                case .low: dbPriority = .low
+                case .medium: dbPriority = .medium
+                case .high: dbPriority = .high
+                case .emergency: dbPriority = .critical
+                }
+                
+                let workOrderId = try await WorkOrderService.createWorkOrder(
+                    vehicleId: vehicleId,
+                    createdBy: currentUserId,
+                    assignedTo: currentUserId,
+                    priority: dbPriority,
+                    status: .open
+                )
+                
+                try await MaintenanceTaskService.createTask(
+                    workOrderId: workOrderId,
+                    vehicleId: vehicleId,
+                    scheduledBy: currentUserId,
+                    assignedTo: currentUserId,
+                    taskType: taskType,
+                    description: description,
+                    scheduledDate: date,
+                    targetMileage: nil,
+                    serviceIntervalMonths: nil,
+                    scheduleType: nil,
+                    status: .pending
+                )
+            } catch {
+                print("[SchedulerViewModel] Failed to create work order or task: \(error)")
+            }
         }
     }
 }

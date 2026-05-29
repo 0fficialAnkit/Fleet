@@ -53,7 +53,7 @@ enum WorkOrderService {
             vehicle_id: vehicleId,
             created_by: createdBy,
             assigned_to: assignedTo,
-            priority: priority,
+            priority: priority == .critical ? .high : priority,
             status: status
         )
         do {
@@ -70,10 +70,14 @@ enum WorkOrderService {
     }
 
     static func updateWorkOrder(_ workOrder: WorkOrder) async throws {
+        var updated = workOrder
+        if updated.priority == .critical {
+            updated.priority = .high
+        }
         do {
             try await supabase
                 .from("work_orders")
-                .update(workOrder)
+                .update(updated)
                 .eq("id", value: workOrder.id)
                 .execute()
             print("[WorkOrderService] updateWorkOrder(\(workOrder.id)): OK")

@@ -35,7 +35,7 @@ struct DashboardMapView: View {
     }
 
     @State private var tripRoutes:         [TripRoute] = []
-    @State private var cameraPosition:     MapCameraPosition = .userLocation(fallback: .automatic)
+    @State private var cameraPosition:     MapCameraPosition = .automatic
     @State private var locationManager     = LocationManager()
     @State private var lastLocationUpdate: Date? = nil
     @State private var showFullscreen      = false
@@ -52,10 +52,17 @@ struct DashboardMapView: View {
         .onAppear { locationManager.requestPermission() }
         .task(id: tripsKey) {
             await buildTripRoutes()
+            // fitCamera() is triggered by onChange(of: tripRoutes) once @State is committed
+        }
+        .onChange(of: tripRoutes) { _, newRoutes in
+            guard !newRoutes.isEmpty else { return }
             fitCamera()
         }
         .onChange(of: vehicleLocations) { _, newLocs in
-            if !newLocs.isEmpty { lastLocationUpdate = Date() }
+            if !newLocs.isEmpty {
+                lastLocationUpdate = Date()
+                fitCamera()   // re-fit so live driver pins stay in frame
+            }
         }
         .fullScreenCover(isPresented: $showFullscreen) {
             DashboardMapFullscreenView(
@@ -207,30 +214,16 @@ struct DashboardMapView: View {
     // MARK: - Camera
 
     private func fitCamera() {
-        // Build bounding box from routes + live driver pins only.
-        // Do NOT include the manager's own location — if the manager is on a
-        // simulator set to Apple Park (California) and the routes are in India,
-        // mixing both coordinates creates a half-globe bounding box.
         var coords = allPolylineCoords(from: tripRoutes)
         coords += driverPins.map(\.coordinate)
 
-        // Fallback: use pickup/drop-off coords when polylines aren't ready yet
+        // Fallback: use pickup/drop-off coords when polylines aren't built yet
         if coords.isEmpty {
             coords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] }
         }
 
-        guard !coords.isEmpty else {
-            // No routes at all — zoom in on the manager's own location
-            if let mgr = locationManager.coordinate {
-                cameraPosition = .region(MKCoordinateRegion(
-                    center: mgr,
-                    span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
-                ))
-            } else {
-                cameraPosition = .userLocation(fallback: .automatic)
-            }
-            return
-        }
+        // No routes — stay on .automatic, never snap to user location
+        guard !coords.isEmpty else { return }
 
         cameraPosition = .region(boundingRegion(for: coords, padding: 1.35))
     }
@@ -490,7 +483,7 @@ struct DashboardMapFullscreenView: View {
 
 // MARK: - Shared model types
 
-struct TripRoute: Identifiable {
+struct TripRoute: Identifiable, Equatable {
     let id:           UUID
     let polyline:     MKPolyline
     let color:        Color
@@ -498,6 +491,8 @@ struct TripRoute: Identifiable {
     let pickupCoord:  CLLocationCoordinate2D
     let dropoffLabel: String
     let dropoffCoord: CLLocationCoordinate2D
+
+    static func == (lhs: TripRoute, rhs: TripRoute) -> Bool { lhs.id == rhs.id }
 }
 
 struct DriverPin: Identifiable {
