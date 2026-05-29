@@ -33,7 +33,8 @@ struct ReportsView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
 
-                    if selectedTab == .maintenance {
+                    switch selectedTab {
+                    case .maintenance:
                         List {
                             // Filter chips — right below the "Reports" title
                             Section {
@@ -51,7 +52,11 @@ struct ReportsView: View {
                         }
                         .listStyle(.insetGrouped)
                         .scrollContentBackground(.hidden)
-                    } else {
+
+                    case .fuel:
+                        FleetFuelAnalyticsView()
+
+                    case .vehicles:
                         Spacer()
                     }
                 }
