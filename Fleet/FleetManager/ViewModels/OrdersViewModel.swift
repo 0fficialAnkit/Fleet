@@ -73,7 +73,7 @@ final class OrdersViewModel {
 
     /// Returns all driver profiles with no date-based conflict filtering.
     func driversWithRole() -> [Profile] {
-        profiles.filter { $0.role.lowercased() == "driver" }
+        profiles.filter { $0.role == "driver" }
     }
 
     /// Returns all active vehicles with no date conflict filtering.
@@ -94,7 +94,7 @@ final class OrdersViewModel {
     /// Drivers that are not already assigned to a trip on the given date.
     func availableDrivers(at date: Date) -> [Profile] {
         let busyIds = busyDriverIds(at: date)
-        return profiles.filter { $0.role.lowercased() == "driver" && !busyIds.contains($0.id) }
+        return profiles.filter { $0.role == "driver" && !busyIds.contains($0.id) }
     }
 
     private func busyVehicleIds(at date: Date) -> Set<UUID> {

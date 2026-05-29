@@ -60,6 +60,7 @@ struct AddOrderView: View {
                                 .tag(type)
                         }
                     }
+                    .pickerStyle(.menu)
                     .tint(.primary)
                 } header: {
                     Label("Order Type", systemImage: "shippingbox.fill")
@@ -117,6 +118,7 @@ struct AddOrderView: View {
                         } label: {
                             Label("Vehicle", systemImage: "car.fill")
                         }
+                        .pickerStyle(.menu)
                         .tint(.primary)
                     }
 
@@ -139,6 +141,7 @@ struct AddOrderView: View {
                         } label: {
                             Label("Driver", systemImage: "person.crop.circle.fill")
                         }
+                        .pickerStyle(.menu)
                         .tint(.primary)
                     }
                 } header: {

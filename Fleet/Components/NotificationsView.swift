@@ -29,18 +29,22 @@ struct NotificationsView: View {
                             if notification.referenceId != nil {
                                 NavigationLink {
                                     NotificationDetailDestination(notification: notification)
+                                        .onAppear {
+                                            viewModel.markAsRead(notification)
+                                        }
                                 } label: {
-                                    NotificationRow(notification: notification) {
-                                        viewModel.markAsRead(notification)
-                                    }
+                                    NotificationRowContent(notification: notification)
                                 }
                                 .listRowBackground(Color.clear)
                                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                                 .listRowSeparator(.hidden)
                             } else {
-                                NotificationRow(notification: notification) {
+                                Button {
                                     viewModel.markAsRead(notification)
+                                } label: {
+                                    NotificationRowContent(notification: notification)
                                 }
+                                .buttonStyle(.plain)
                                 .listRowBackground(Color.clear)
                                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                                 .listRowSeparator(.hidden)
@@ -112,9 +116,8 @@ struct NotificationDetailDestination: View {
     }
 }
 
-struct NotificationRow: View {
+struct NotificationRowContent: View {
     let notification: Notification
-    let onTap: () -> Void
 
     var iconName: String {
         switch notification.type {
@@ -137,42 +140,39 @@ struct NotificationRow: View {
     }
 
     var body: some View {
-        Button(action: onTap) {
-            HStack(alignment: .top, spacing: 16) {
-                Image(systemName: iconName)
-                    .font(.title2)
-                    .foregroundColor(iconColor)
-                    .padding(.top, 4)
+        HStack(alignment: .top, spacing: 16) {
+            Image(systemName: iconName)
+                .font(.title2)
+                .foregroundColor(iconColor)
+                .padding(.top, 4)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(notification.title ?? "Notification")
-                            .font(.body.bold())
-                            .foregroundColor(notification.isRead ? Color.secondary : Color.primary)
-                        Spacer()
-                        if let date = notification.createdAt {
-                            Text(date.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
-                                .foregroundColor(Color(.tertiaryLabel))
-                        }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(notification.title ?? "Notification")
+                        .font(.body.bold())
+                        .foregroundColor(notification.isRead ? Color.secondary : Color.primary)
+                    Spacer()
+                    if let date = notification.createdAt {
+                        Text(date.formatted(date: .abbreviated, time: .shortened))
+                            .font(.caption)
+                            .foregroundColor(Color(.tertiaryLabel))
                     }
-
-                    Text(notification.message ?? "")
-                        .font(.subheadline)
-                        .foregroundColor(Color.secondary)
-                        .multilineTextAlignment(.leading)
                 }
+
+                Text(notification.message ?? "")
+                    .font(.subheadline)
+                    .foregroundColor(Color.secondary)
+                    .multilineTextAlignment(.leading)
             }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(notification.isRead ? Color.white.opacity(0.02) : Color.white.opacity(0.06))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(notification.isRead ? Color.clear : iconColor.opacity(0.3), lineWidth: 1)
-            )
         }
-        .buttonStyle(.plain)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(notification.isRead ? Color.white.opacity(0.02) : Color.white.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(notification.isRead ? Color.clear : iconColor.opacity(0.3), lineWidth: 1)
+        )
     }
 }
