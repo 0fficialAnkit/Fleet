@@ -258,6 +258,7 @@ struct DriverFuelView: View {
                 }
                 .padding()
             }
+            .refreshable { await viewModel.loadData() }
             .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Fuel")
             .navigationBarTitleDisplayMode(.large)

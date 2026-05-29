@@ -509,7 +509,7 @@ struct PredictiveAlertCardView: View {
                     createdBy: nil,
                     assignedTo: staffId,
                     priority: alert.severity == .critical ? .critical : .medium,
-                    status: .open
+                    status: .pending
                 )
                 
                 let task = MaintenanceTask(

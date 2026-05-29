@@ -60,7 +60,7 @@ final class MaintenanceViewModel {
             createdBy: createdBy,
             assignedTo: assignedTo,
             priority: priority,
-            status: .open
+            status: .pending
         )
         // Notify assigned maintenance staff
         if let userId = assignedTo {

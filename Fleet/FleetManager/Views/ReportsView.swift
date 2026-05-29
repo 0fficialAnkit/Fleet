@@ -50,6 +50,7 @@ struct ReportsView: View {
                             }
                             .listSectionSeparator(.hidden)
                         }
+                        .refreshable { await viewModel.loadData() }
                         .listStyle(.insetGrouped)
                         .scrollContentBackground(.hidden)
 

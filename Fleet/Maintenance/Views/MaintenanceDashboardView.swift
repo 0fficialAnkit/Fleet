@@ -4,7 +4,6 @@ import Supabase
 struct MaintenanceDashboardView: View {
     @Binding var selectedTab: Int
     var schedulerViewModel: MaintenanceSchedulerViewModel
-    @State private var viewModel = MaintenanceDashboardViewModel()
     @State private var isShowingProfile = false
     @Environment(AuthViewModel.self) private var authViewModel
 
@@ -46,17 +45,17 @@ struct MaintenanceDashboardView: View {
                                     .padding(.vertical, 12)
                                 HStack(spacing: 8) {
                                     MaintenanceStatPill(
-                                        value: viewModel.inventory.count,
+                                        value: schedulerViewModel.inventory.count,
                                         label: "Total Parts",
                                         color: Color.brown
                                     )
                                     MaintenanceStatPill(
-                                        value: viewModel.lowStockItemsCount,
+                                        value: schedulerViewModel.lowStockItemsCount,
                                         label: "Low Stock",
                                         color: Color.red
                                     )
                                     MaintenanceStatPillText(
-                                        value: viewModel.estimatedValueFormatted,
+                                        value: schedulerViewModel.estimatedValueFormatted,
                                         label: "Est. Value",
                                         color: Color.green
                                     )
@@ -75,7 +74,7 @@ struct MaintenanceDashboardView: View {
                             SectionHeader(title: "Upcoming Maintenance")
                                 .padding(.horizontal, 16)
 
-                            if viewModel.upcomingItems.isEmpty {
+                            if schedulerViewModel.upcomingItems.isEmpty {
                                 HStack {
                                     Spacer()
                                     VStack(spacing: 8) {
@@ -91,7 +90,7 @@ struct MaintenanceDashboardView: View {
                                 .padding(.vertical, 24)
                             } else {
                                 VStack(spacing: 16) {
-                                    ForEach(viewModel.upcomingItems) { item in
+                                    ForEach(schedulerViewModel.upcomingItems) { item in
                                         UpcomingMaintenanceCard(item: item)
                                     }
                                 }
@@ -106,7 +105,7 @@ struct MaintenanceDashboardView: View {
                             }
                             .padding(.horizontal, 16)
 
-                            if viewModel.priorityQueueItems.isEmpty {
+                            if schedulerViewModel.priorityQueueItems.isEmpty {
                                 HStack {
                                     Spacer()
                                     VStack(spacing: 8) {
@@ -122,8 +121,8 @@ struct MaintenanceDashboardView: View {
                                 .padding(.vertical, 24)
                             } else {
                                 VStack(spacing: 16) {
-                                    ForEach(viewModel.priorityQueueItems) { item in
-                                        PriorityQueueCard(item: item, viewModel: viewModel)
+                                    ForEach(schedulerViewModel.priorityQueueItems) { item in
+                                        PriorityQueueCard(item: item, schedulerViewModel: schedulerViewModel)
                                     }
                                 }
                                 .padding(.horizontal, 16)
@@ -133,7 +132,7 @@ struct MaintenanceDashboardView: View {
                     }
                     .padding(.vertical, 16)
                 }
-                .refreshable { await viewModel.loadData() }
+                .refreshable { await schedulerViewModel.loadData() }
             }
             .navigationTitle("Dashboard")
             .toolbar {
@@ -153,6 +152,56 @@ struct MaintenanceDashboardView: View {
                     IssueReportDetailView(report: report)
                 case .workOrderList(let filter, let assignedTo, let priority):
                     WorkOrderListView(initialFilter: filter, assignedUserId: assignedTo, priorityFilter: priority)
+                case .taskDetail(let task):
+                    if let scheduledTask = schedulerViewModel.allTasks.first(where: { $0.sourceTaskId == task.id }) {
+                        TaskDetailSheet(task: scheduledTask, viewModel: schedulerViewModel)
+                    } else {
+                        { () -> TaskDetailSheet in
+                            let timeFormatter = DateFormatter()
+                            timeFormatter.dateFormat = "hh:mm a"
+                            let vehicle = schedulerViewModel.allVehicles.first { $0.id == task.vehicleId }
+                            let displayStatus: TaskDisplayStatus = {
+                                switch task.status {
+                                case .pending: return .pending
+                                case .inProgress: return .inProgress
+                                case .completed: return .completed
+                                case .cancelled: return .delayed
+                                case .none: return .pending
+                                }
+                            }()
+                            let priority: TaskPriority = {
+                                switch task.taskType {
+                                case .repair: return .high
+                                case .inspection: return .medium
+                                case .oilChange: return .low
+                                case .tireRotation: return .low
+                                case .other: return .medium
+                                case .none: return .medium
+                                }
+                            }()
+                            let fallbackScheduledTask = ScheduledTask(
+                                id: UUID(),
+                                vehicleNumber: vehicle?.licensePlate ?? "Unknown",
+                                vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
+                                taskType: task.taskType ?? .other,
+                                priority: priority,
+                                scheduledTime: task.scheduledDate.map { timeFormatter.string(from: $0) } ?? "TBD",
+                                assignedBy: "Fleet Manager",
+                                estimatedDuration: "1-2 hrs",
+                                status: displayStatus,
+                                description: task.description ?? "No description.",
+                                date: task.scheduledDate ?? Date(),
+                                checklistItems: [],
+                                partsNeeded: [],
+                                previousNote: "",
+                                aiRecommendation: "",
+                                sourceTaskId: task.id,
+                                laborHours: nil,
+                                laborCost: nil
+                            )
+                            return TaskDetailSheet(task: fallbackScheduledTask, viewModel: schedulerViewModel)
+                        }()
+                    }
                 }
             }
             .sheet(isPresented: $isShowingProfile) {
@@ -160,9 +209,9 @@ struct MaintenanceDashboardView: View {
                     .environment(authViewModel)
             }
             .task {
-                viewModel.currentUserId = authViewModel.currentUser?.id
-                await viewModel.loadData()
-                viewModel.setupRealtime()
+                schedulerViewModel.currentUserId = authViewModel.currentUser?.id
+                await schedulerViewModel.loadData()
+                schedulerViewModel.setupRealtime()
             }
         }
     }
@@ -186,17 +235,7 @@ struct UpcomingMaintenanceCard: View {
                             .foregroundStyle(Color(.tertiaryLabel).opacity(0.3))
                     )
 
-                // Priority Badge
-                if let priorityLabel = item.priorityLabel, let priorityColor = item.priorityColor {
-                    Text(priorityLabel.capitalized)
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(priorityColor)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                        .padding(12)
-                }
+                // Access through standard details or action buttons
             }
 
             // MARK: - Content
@@ -414,7 +453,7 @@ struct MaintenanceStatPillText: View {
 // MARK: - Priority Queue Card
 struct PriorityQueueCard: View {
     let item: UnifiedMaintenanceItem
-    let viewModel: MaintenanceDashboardViewModel
+    let schedulerViewModel: MaintenanceSchedulerViewModel
 
     var iconName: String {
         switch item {
@@ -454,7 +493,7 @@ struct PriorityQueueCard: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(viewModel.vehiclePlate(for: item.vehicleId))
+                Text(schedulerViewModel.vehiclePlate(for: item.vehicleId))
                     .font(.body.bold())
                     .foregroundStyle(Color.primary)
 

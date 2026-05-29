@@ -216,7 +216,7 @@ struct ReportDetailView: View {
                         createdBy: nil,
                         assignedTo: staffId,
                         priority: report.severity == .critical ? .critical : (report.severity == .high ? .high : .medium),
-                        status: .open
+                        status: .pending
                     )
                     
                     // Create Maintenance Task

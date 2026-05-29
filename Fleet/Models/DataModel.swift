@@ -290,9 +290,76 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
       case description
       case scheduledDate = "scheduled_date"
       case targetMileage = "target_mileage"
-      case serviceIntervalMonths = "service_internal"
+      case serviceIntervalMonths = "service_interval_months"
       case scheduleType = "schedule_type"
       case status
+  }
+}
+
+extension MaintenanceTask {
+  init(from decoder: Decoder) throws {
+      let container = try decoder.container(keyedBy: CodingKeys.self)
+      id = try container.decode(UUID.self, forKey: .id)
+      workOrderId = try container.decodeIfPresent(UUID.self, forKey: .workOrderId)
+      vehicleId = try container.decode(UUID.self, forKey: .vehicleId)
+      scheduledBy = try container.decodeIfPresent(UUID.self, forKey: .scheduledBy)
+      assignedTo = try container.decodeIfPresent(UUID.self, forKey: .assignedTo)
+      taskType = try container.decodeIfPresent(MaintenanceTaskType.self, forKey: .taskType)
+      description = try container.decodeIfPresent(String.self, forKey: .description)
+      targetMileage = try container.decodeIfPresent(Double.self, forKey: .targetMileage)
+      serviceIntervalMonths = try container.decodeIfPresent(Int.self, forKey: .serviceIntervalMonths)
+      scheduleType = try container.decodeIfPresent(MaintenanceScheduleType.self, forKey: .scheduleType)
+      status = try container.decodeIfPresent(MaintenanceTaskStatus.self, forKey: .status)
+
+      // Decode scheduledDate flexibly
+      if let dateStr = try container.decodeIfPresent(String.self, forKey: .scheduledDate) {
+          let formatters = [
+              "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ",
+              "yyyy-MM-dd'T'HH:mm:ssZZZZZ",
+              "yyyy-MM-dd'T'HH:mm:ss.SSSSSZZZZZ",
+              "yyyy-MM-dd'T'HH:mm:ss.SSSSSSZZZZZ",
+              "yyyy-MM-dd"
+          ]
+          var parsedDate: Date? = nil
+          for fmt in formatters {
+              let formatter = DateFormatter()
+              formatter.dateFormat = fmt
+              formatter.locale = Locale(identifier: "en_US_POSIX")
+              formatter.timeZone = TimeZone(secondsFromGMT: 0)
+              if let d = formatter.date(from: dateStr) {
+                  parsedDate = d
+                  break
+              }
+          }
+          scheduledDate = parsedDate
+      } else {
+          scheduledDate = nil
+      }
+  }
+
+  func encode(to encoder: Encoder) throws {
+      var container = encoder.container(keyedBy: CodingKeys.self)
+      try container.encode(id, forKey: .id)
+      try container.encodeIfPresent(workOrderId, forKey: .workOrderId)
+      try container.encode(vehicleId, forKey: .vehicleId)
+      try container.encodeIfPresent(scheduledBy, forKey: .scheduledBy)
+      try container.encodeIfPresent(assignedTo, forKey: .assignedTo)
+      try container.encodeIfPresent(taskType, forKey: .taskType)
+      try container.encodeIfPresent(description, forKey: .description)
+      try container.encodeIfPresent(targetMileage, forKey: .targetMileage)
+      try container.encodeIfPresent(serviceIntervalMonths, forKey: .serviceIntervalMonths)
+      try container.encodeIfPresent(scheduleType, forKey: .scheduleType)
+      try container.encodeIfPresent(status, forKey: .status)
+
+      if let date = scheduledDate {
+          let formatter = DateFormatter()
+          formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
+          formatter.locale = Locale(identifier: "en_US_POSIX")
+          formatter.timeZone = TimeZone(secondsFromGMT: 0)
+          try container.encode(formatter.string(from: date), forKey: .scheduledDate)
+      } else {
+          try container.encodeNil(forKey: .scheduledDate)
+      }
   }
 }
 

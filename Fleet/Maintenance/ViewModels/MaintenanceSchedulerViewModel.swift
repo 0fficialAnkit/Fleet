@@ -224,7 +224,11 @@ final class MaintenanceSchedulerViewModel {
             )
         }
 
-        var mappedWorkOrders = rawWorkOrders.map { wo in
+        let taskWorkOrderIds = Set(rawTasks.compactMap { $0.workOrderId })
+        let existingVehicleIds = Set(rawTasks.map { $0.vehicleId } + rawWorkOrders.map { $0.vehicleId })
+
+        let filteredWorkOrders = rawWorkOrders.filter { !taskWorkOrderIds.contains($0.id) }
+        var mappedWorkOrders = filteredWorkOrders.map { wo in
             let vehicle = vehicles.first { $0.id == wo.vehicleId }
             let createdBy = profiles.first { $0.id == wo.createdBy }
 
@@ -245,7 +249,8 @@ final class MaintenanceSchedulerViewModel {
             )
         }
 
-        let mappedIssueReports = rawIssueReports.map { ir in
+        let filteredIssueReports = rawIssueReports.filter { !existingVehicleIds.contains($0.vehicleId) }
+        let mappedIssueReports = filteredIssueReports.map { ir in
             let vehicle = vehicles.first { $0.id == ir.vehicleId }
             let reportedBy = profiles.first { $0.id == ir.reportedBy }
 
@@ -347,7 +352,7 @@ final class MaintenanceSchedulerViewModel {
             .map    { SchedulerUnifiedItem.task($0) }
         let wos = allWorkOrders
             .filter { cal.isDate($0.effectiveDate, inSameDayAs: selectedDate) }
-            .filter { $0.status == .open }
+            .filter { $0.status == .open || $0.status == .pending }
             .map    { SchedulerUnifiedItem.workOrder($0) }
         return (tasks + wos).sorted { $0.sortDate < $1.sortDate }
     }
@@ -591,7 +596,7 @@ final class MaintenanceSchedulerViewModel {
                     createdBy: currentUserId,
                     assignedTo: currentUserId,
                     priority: dbPriority,
-                    status: .open
+                    status: .pending
                 )
                 
                 try await MaintenanceTaskService.createTask(
@@ -610,6 +615,163 @@ final class MaintenanceSchedulerViewModel {
             } catch {
                 print("[SchedulerViewModel] Failed to create work order or task: \(error)")
             }
+        }
+    }
+
+    // MARK: - Dashboard computed properties
+
+    var lowStockItemsCount: Int {
+        inventory.filter { ($0.stockQuantity ?? 0) <= ($0.reorderLevel ?? 0) }.count
+    }
+
+    var estimatedValue: Double {
+        inventory.reduce(0) { $0 + (($1.unitCost ?? 0) * Double($1.stockQuantity ?? 0)) }
+    }
+
+    var estimatedValueFormatted: String {
+        let value = estimatedValue
+        if value >= 100_000 {
+            return "₹\(String(format: "%.1fL", value / 100_000))"
+        } else if value >= 1_000 {
+            return "₹\(String(format: "%.1fK", value / 1_000))"
+        } else {
+            return "₹\(String(format: "%.0f", value))"
+        }
+    }
+
+    var upcomingItems: [UpcomingDisplayItem] {
+        var items: [UpcomingDisplayItem] = []
+
+        let tItems = rawTasks.filter { $0.status != .completed }.map { task -> UpcomingDisplayItem in
+            return UpcomingDisplayItem(
+                id: task.id,
+                priorityLabel: nil,
+                priorityColor: nil,
+                referenceId: "TSK-\(task.id.uuidString.prefix(4).uppercased())",
+                assignmentTag: "SCHEDULED",
+                vehicleName: vehiclePlate(for: task.vehicleId),
+                taskDescription: taskTypeString(for: task.taskType),
+                estimatedDuration: "1h 30m",
+                location: "Bay 01",
+                actionButtonTitle: "Start Task",
+                actionButtonIcon: "play.fill",
+                destination: .taskDetail(task),
+                isTask: true
+            )
+        }
+        items.append(contentsOf: tItems)
+
+        let taskWorkOrderIds = Set(rawTasks.compactMap { $0.workOrderId })
+        let filteredWorkOrders = rawWorkOrders.filter { !taskWorkOrderIds.contains($0.id) }
+        let woItems = filteredWorkOrders.filter { $0.status != .completed && $0.status != .cancelled }.map { wo -> UpcomingDisplayItem in
+            return UpcomingDisplayItem(
+                id: wo.id,
+                priorityLabel: woPriorityLabel(wo.priority),
+                priorityColor: woPriorityColor(wo.priority),
+                referenceId: "WO-\(wo.id.uuidString.prefix(4).uppercased())",
+                assignmentTag: "ASSIGNED TO YOU",
+                vehicleName: vehiclePlate(for: wo.vehicleId),
+                taskDescription: "Work Order Execution",
+                estimatedDuration: "2h 30m",
+                location: "Bay 04",
+                actionButtonTitle: "Start Work",
+                actionButtonIcon: "play.fill",
+                destination: .workOrderDetail(wo),
+                isTask: false
+            )
+        }
+        items.append(contentsOf: woItems)
+
+        let existingVehicleIds = Set(rawTasks.map { $0.vehicleId } + rawWorkOrders.map { $0.vehicleId })
+        let filteredIssueReports = rawIssueReports.filter { !existingVehicleIds.contains($0.vehicleId) }
+        let irItems = filteredIssueReports.filter { $0.status.lowercased() != "resolved" && $0.status.lowercased() != "closed" }.map { ir -> UpcomingDisplayItem in
+            return UpcomingDisplayItem(
+                id: ir.id,
+                priorityLabel: ir.severity.uppercased(),
+                priorityColor: irStatusColor(ir.severity),
+                referenceId: "REP-\(ir.id.uuidString.prefix(4).uppercased())",
+                assignmentTag: "ASSIGNED TO YOU",
+                vehicleName: vehiclePlate(for: ir.vehicleId),
+                taskDescription: ir.category + (ir.description?.isEmpty == false ? " - \(ir.description!)" : ""),
+                estimatedDuration: "1h 00m",
+                location: "Bay 02",
+                actionButtonTitle: "Start Repair",
+                actionButtonIcon: "play.fill",
+                destination: .issueReportDetail(ir),
+                isTask: false
+            )
+        }
+        items.append(contentsOf: irItems)
+
+        return Array(items.prefix(3))
+    }
+
+    var unifiedItems: [UnifiedMaintenanceItem] {
+        let taskWorkOrderIds = Set(rawTasks.compactMap { $0.workOrderId })
+        let existingVehicleIds = Set(rawTasks.map { $0.vehicleId } + rawWorkOrders.map { $0.vehicleId })
+
+        let filteredWorkOrders = rawWorkOrders.filter { !taskWorkOrderIds.contains($0.id) }
+        let filteredIssueReports = rawIssueReports.filter { !existingVehicleIds.contains($0.vehicleId) }
+
+        let woItems = filteredWorkOrders.map { UnifiedMaintenanceItem.workOrder($0) }
+        let irItems = filteredIssueReports.map { UnifiedMaintenanceItem.issueReport($0) }
+        return woItems + irItems
+    }
+
+    var priorityQueueItems: [UnifiedMaintenanceItem] {
+        unifiedItems
+            .filter { $0.unifiedStatus == .open || $0.unifiedStatus == .inProgress }
+            .sorted { (a, b) -> Bool in
+                let priorityScore: [WorkOrderPriority: Int] = [.critical: 4, .high: 3, .medium: 2, .low: 1]
+                let scoreA = priorityScore[a.unifiedPriority ?? .low] ?? 0
+                let scoreB = priorityScore[b.unifiedPriority ?? .low] ?? 0
+                return scoreA > scoreB
+            }
+            .prefix(3)
+            .map { $0 }
+    }
+
+    func vehiclePlate(for vehicleId: UUID) -> String {
+        vehicles.first(where: { $0.id == vehicleId })?.licensePlate ?? "Unknown"
+    }
+
+    func taskTypeString(for type: MaintenanceTaskType?) -> String {
+        switch type {
+        case .oilChange: return "Oil Change"
+        case .tireRotation: return "Tire Rotation"
+        case .inspection: return "Inspection"
+        case .repair: return "Repair"
+        case .other: return "Other"
+        case .none: return "Unknown"
+        }
+    }
+
+    func irStatusColor(_ status: String) -> Color {
+        switch status.lowercased() {
+        case "open", "assigned": return Color.blue
+        case "in_progress": return Color.orange
+        case "resolved", "closed": return Color.green
+        default: return Color(.tertiaryLabel)
+        }
+    }
+
+    func woPriorityLabel(_ priority: WorkOrderPriority?) -> String? {
+        switch priority {
+        case .critical: return "CRITICAL"
+        case .high: return "HIGH"
+        case .medium: return "MEDIUM"
+        case .low: return "LOW"
+        case nil: return nil
+        }
+    }
+
+    func woPriorityColor(_ priority: WorkOrderPriority?) -> Color? {
+        switch priority {
+        case .critical: return Color.red
+        case .high: return Color.orange
+        case .medium: return Color.blue
+        case .low: return Color.green
+        case nil: return nil
         }
     }
 }

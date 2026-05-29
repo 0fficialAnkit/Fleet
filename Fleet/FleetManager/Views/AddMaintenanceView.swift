@@ -151,7 +151,7 @@ struct AddMaintenanceView: View {
                                         createdBy: authViewModel.currentUser?.id,
                                         assignedTo: selectedAssignedTo,
                                         priority: .medium,
-                                        status: .open
+                                        status: .pending
                                     )
                                 }
                                 

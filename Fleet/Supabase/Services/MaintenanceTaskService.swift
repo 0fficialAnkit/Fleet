@@ -11,9 +11,9 @@ private struct MaintenanceTaskInsert: Encodable {
     let assigned_to: UUID?
     let task_type: MaintenanceTaskType?
     let description: String?
-    let scheduled_date: Date?
+    let scheduled_date: String?
     let target_mileage: Double?
-    let service_internal: Int?
+    let service_interval_months: Int?
     let schedule_type: MaintenanceScheduleType?
     let status: MaintenanceTaskStatus?
 }
@@ -65,6 +65,17 @@ enum MaintenanceTaskService {
         scheduleType: MaintenanceScheduleType?,
         status: MaintenanceTaskStatus?
     ) async throws {
+        let dateString: String?
+        if let date = scheduledDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            dateString = formatter.string(from: date)
+        } else {
+            dateString = nil
+        }
+
         let payload = MaintenanceTaskInsert(
             id: UUID(),
             work_order_id: workOrderId,
@@ -73,9 +84,9 @@ enum MaintenanceTaskService {
             assigned_to: assignedTo,
             task_type: taskType,
             description: description,
-            scheduled_date: scheduledDate,
+            scheduled_date: dateString,
             target_mileage: targetMileage,
-            service_internal: serviceIntervalMonths,
+            service_interval_months: serviceIntervalMonths,
             schedule_type: scheduleType,
             status: status
         )

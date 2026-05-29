@@ -253,7 +253,7 @@ struct ScheduleMaintenanceSheetView: View {
                     createdBy: authViewModel.currentUser?.id,
                     assignedTo: selectedStaffId,
                     priority: .medium,
-                    status: .open
+                    status: .pending
                 )
                 
                 try await viewModel.addTask(

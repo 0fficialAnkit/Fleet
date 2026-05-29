@@ -27,6 +27,7 @@ struct EmployeesView: View {
                 )
             }
         }
+        .refreshable { await viewModel.loadData() }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
     }

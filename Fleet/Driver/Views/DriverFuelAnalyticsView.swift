@@ -240,6 +240,7 @@ struct DriverFuelAnalyticsView: View {
             }
             .padding(.vertical, 16)
         }
+        .refreshable { await viewModel.loadData() }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("My Analytics")
         .navigationBarTitleDisplayMode(.large)

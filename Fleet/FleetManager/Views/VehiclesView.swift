@@ -13,6 +13,7 @@ struct VehiclesView: View {
                 )
             }
         }
+        .refreshable { await viewModel.loadData() }
         .listStyle(.insetGrouped)
     }
 }

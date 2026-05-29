@@ -182,6 +182,7 @@ struct DriverScheduleView: View {
                             }
                             .padding(16)
                         }
+                        .refreshable { await viewModel.loadData() }
                     }
                 }
             }
