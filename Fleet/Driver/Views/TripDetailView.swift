@@ -16,6 +16,7 @@ struct TripDetailView: View {
     @State private var vehicle: Vehicle?
     @State private var mapView: TripRouteMapView?
     @State private var estimatedDistance: Double?
+    @State private var incidents: [TripIncident] = []
 
     init(trip: Trip, onStart: @escaping (UUID, UUID, String, [String]) -> Void, onEnd: @escaping (UUID, UUID, String, [String]) -> Void) {
         self.trip = trip
@@ -242,6 +243,44 @@ struct TripDetailView: View {
                     startAddress: route?.startLocation,
                     endAddress:   route?.endLocation
                 )
+                
+                // ── Incidents ─────────────────────────────────────
+                if !incidents.isEmpty {
+                    sectionTitle("Incident History")
+                    
+                    VStack(spacing: 12) {
+                        ForEach(incidents) { incident in
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: TripIncidentType(rawValue: incident.incidentType)?.icon ?? "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.black)
+                                    .padding(8)
+                                    .background(Color.yellow)
+                                    .clipShape(Circle())
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(incident.incidentType)
+                                        .font(.headline)
+                                        .foregroundStyle(Color.primary)
+                                    Text(incident.description)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                    if let date = incident.createdAt {
+                                        Text(date.formatted(date: .abbreviated, time: .shortened))
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                                Spacer()
+                            }
+                            .padding(12)
+                            .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(Color.yellow.opacity(0.5), lineWidth: 1)
+                            )
+                        }
+                    }
+                }
 
                 // ── Action Buttons ─────────────────────────────────
                 actionSection
@@ -261,6 +300,11 @@ struct TripDetailView: View {
             
             if let start = route?.startLocation, let end = route?.endLocation {
                 await calculateDistance(from: start, to: end)
+            }
+        }
+        .onAppear {
+            Task {
+                incidents = (try? await TripIncidentService.fetchIncidents(forTripId: trip.id)) ?? []
             }
         }
         .sheet(item: $showingChecklist) { type in
@@ -332,6 +376,21 @@ struct TripDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .shadow(color: Color.red.opacity(0.35), radius: 10, y: 4)
+                
+                // Report Incident button
+                NavigationLink(destination: DriverReportIncidentView(trip: trip)) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                        Text("Report Incident")
+                            .font(.headline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(16)
+                    .background(Color.yellow)
+                    .foregroundStyle(.black)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .shadow(color: Color.yellow.opacity(0.4), radius: 10, y: 4)
             }
 
         case .completed:

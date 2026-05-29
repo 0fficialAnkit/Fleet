@@ -427,6 +427,47 @@ struct TripUpdate: Codable, Identifiable, Hashable, Sendable {
   }
 }
 
+//  MARK: - TripIncident
+enum TripIncidentType: String, Codable, CaseIterable, Sendable {
+    case traffic = "Traffic"
+    case accident = "Accident"
+    case breakdown = "Breakdown"
+    case weather = "Weather"
+    case other = "Other"
+    
+    var icon: String {
+        switch self {
+        case .traffic: return "car.2.fill"
+        case .accident: return "car.burst.fill"
+        case .breakdown: return "wrench.and.screwdriver.fill"
+        case .weather: return "cloud.heavyrain.fill"
+        case .other: return "exclamationmark.triangle.fill"
+        }
+    }
+}
+
+struct TripIncident: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var tripId: UUID
+    var driverId: UUID?
+    var incidentType: String
+    var description: String
+    var location: String
+    var photoUrl: String?
+    var createdAt: Date?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tripId = "trip_id"
+        case driverId = "driver_id"
+        case incidentType = "incident_type"
+        case description
+        case location
+        case photoUrl = "photo_url"
+        case createdAt = "created_at"
+    }
+}
+
 //  MARK: - VehicleInspection
 struct VehicleInspection: Codable, Identifiable, Hashable, Sendable {
   let id: UUID
