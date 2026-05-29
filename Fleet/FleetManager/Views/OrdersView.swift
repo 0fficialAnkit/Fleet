@@ -3,7 +3,7 @@ import SwiftUI
 struct OrdersView: View {
     @State private var viewModel = OrdersViewModel()
     @State private var selectedFilter: TripStatus? = nil
-    @State private var selectedOrderType: OrderType? = nil
+    @State private var isAddingOrder = false
     @State private var navigationPath = [Trip]()
 
     var filteredTrips: [Trip] {
@@ -45,13 +45,16 @@ struct OrdersView: View {
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
 
-                        Section {
-                            if filteredTrips.isEmpty {
+                        if filteredTrips.isEmpty {
+                            Section {
                                 Text("No orders found.")
                                     .font(.body)
                                     .foregroundColor(Color.secondary)
                                     .padding(.vertical, 40)
-                            } else {
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                            }
+                        } else {
+                            Section {
                                 ForEach(filteredTrips) { trip in
                                     NavigationLink(value: trip) {
                                         OrderCardView(trip: trip, viewModel: viewModel)
@@ -60,20 +63,15 @@ struct OrdersView: View {
                             }
                         }
                     }
+                    .refreshable { await viewModel.loadData() }
                     .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle("Orders")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        ForEach(OrderType.allCases, id: \.self) { type in
-                            Button(action: {
-                                selectedOrderType = type
-                            }) {
-                                Text(type.displayName)
-                            }
-                        }
+                    Button {
+                        isAddingOrder = true
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 17, weight: .medium))
@@ -81,13 +79,8 @@ struct OrdersView: View {
                     }
                 }
             }
-            .sheet(item: $selectedOrderType) { orderType in
-                VehicleSelectionView(orderType: orderType, viewModel: viewModel, selectedOrderType: $selectedOrderType)
-            }
-            .onChange(of: selectedOrderType) { _, newValue in
-                if newValue == nil {
-                    selectedFilter = nil
-                }
+            .sheet(isPresented: $isAddingOrder) {
+                AddOrderView(viewModel: viewModel)
             }
             .navigationDestination(for: Trip.self) { trip in
                 OrderDetailView(trip: trip, viewModel: viewModel)

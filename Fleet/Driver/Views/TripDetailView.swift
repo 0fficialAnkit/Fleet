@@ -28,7 +28,7 @@ struct TripDetailView: View {
 
     var statusColor: Color {
         switch currentStatus {
-        case .scheduled: return Color.yellow
+        case .scheduled: return Color.blue
         case .active:    return Color.green
         case .completed: return Color.green
         case .cancelled: return Color.red
@@ -56,7 +56,7 @@ struct TripDetailView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Route #\(trip.id.uuidString.prefix(6).uppercased())")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .font(.title2.bold())
                             .foregroundStyle(Color.primary)
                         StatusBadge(text: statusText, color: statusColor)
                     }
@@ -114,10 +114,10 @@ struct TripDetailView: View {
                         }
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Pickup / Origin")
-                                .font(.system(size: 16, weight: .regular, design: .rounded))
+                                .font(.body)
                                 .foregroundStyle(Color.secondary)
                             Text(route?.startLocation ?? "No start location")
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .font(.body.weight(.medium))
                                 .foregroundStyle(Color.primary)
                         }
                         Spacer()
@@ -141,10 +141,10 @@ struct TripDetailView: View {
                         }
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Drop-off / Destination")
-                                .font(.system(size: 16, weight: .regular, design: .rounded))
+                                .font(.body)
                                 .foregroundStyle(Color.secondary)
                             Text(route?.endLocation ?? "No destination")
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .font(.body.weight(.medium))
                                 .foregroundStyle(Color.primary)
                         }
                         Spacer()
@@ -175,10 +175,10 @@ struct TripDetailView: View {
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("\(vehicle.make ?? "Vehicle") \(vehicle.model ?? "")")
-                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                    .font(.headline)
                                     .foregroundStyle(Color.primary)
                                 Text(vehicle.licensePlate ?? "—")
-                                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                                    .font(.body)
                                     .foregroundStyle(Color.secondary)
                             }
                             Spacer()
@@ -189,7 +189,7 @@ struct TripDetailView: View {
                         HStack(spacing: 16) {
                             NavigationLink(destination: DriverVehicleDetailView(vehicle: vehicle)) {
                                 Label("View Details", systemImage: "info.circle")
-                                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                                    .font(.body)
                                     .fontWeight(.semibold)
                                     .foregroundStyle(Color.green)
                                     .padding(.vertical, 8)
@@ -201,7 +201,7 @@ struct TripDetailView: View {
 
                             NavigationLink(destination: DriverReportIssueView(vehicle: vehicle)) {
                                 Label("Report Issue", systemImage: "exclamationmark.triangle")
-                                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                                    .font(.body)
                                     .fontWeight(.semibold)
                                     .foregroundStyle(Color.red)
                                     .padding(.vertical, 8)
@@ -224,7 +224,7 @@ struct TripDetailView: View {
                         ProgressView()
                             .scaleEffect(0.8)
                         Text("Loading vehicle info...")
-                            .font(.system(size: 16, weight: .regular, design: .rounded))
+                            .font(.body)
                             .foregroundStyle(Color.secondary)
                     }
                     .padding(16)
@@ -291,7 +291,7 @@ struct TripDetailView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "play.fill")
                     Text("Start Trip")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .font(.headline)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(16)
@@ -308,7 +308,7 @@ struct TripDetailView: View {
                     Image(systemName: "bolt.fill")
                         .foregroundStyle(Color.green)
                     Text("Trip is currently in progress")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Color.green)
                     Spacer()
                 }
@@ -323,7 +323,7 @@ struct TripDetailView: View {
                     HStack(spacing: 10) {
                         Image(systemName: "stop.fill")
                         Text("End Trip")
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .font(.headline)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(16)
@@ -339,7 +339,7 @@ struct TripDetailView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Color.green)
                 Text("Trip completed successfully")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .font(.body.weight(.medium))
                     .foregroundStyle(Color.green)
                 Spacer()
             }
@@ -357,7 +357,7 @@ struct TripDetailView: View {
     @ViewBuilder
     func sectionTitle(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 18, weight: .semibold, design: .rounded))
+            .font(.headline)
             .foregroundStyle(Color.primary)
     }
 
@@ -422,10 +422,10 @@ struct TripDetailView: View {
                 .font(.system(size: 16))
                 .foregroundStyle(color)
             Text(label)
-                .font(.system(size: 16, weight: .regular, design: .rounded))
+                .font(.body)
                 .foregroundStyle(Color.secondary)
             Text(value)
-                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .font(.body.weight(.medium))
                 .foregroundStyle(Color.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)

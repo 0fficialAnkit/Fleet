@@ -9,6 +9,7 @@ struct EditEmployeeView: View {
     @State private var email: String
     @State private var phone: String
     @State private var licenseNumber: String
+    @State private var selectedStatus: UserStatus
 
     let isDriverSelected: Bool
 
@@ -19,6 +20,7 @@ struct EditEmployeeView: View {
         _email = State(initialValue: profile.email)
         _phone = State(initialValue: profile.phone ?? "")
         _licenseNumber = State(initialValue: profile.licenseNumber ?? "")
+        _selectedStatus = State(initialValue: profile.userStatus ?? .active)
         self.isDriverSelected = (profile.role == "driver")
     }
 
@@ -67,6 +69,46 @@ struct EditEmployeeView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                             .padding(.horizontal, 16)
                         }
+                        VStack(alignment: .leading, spacing: 8) {
+                            SectionHeader(title: "Account Status")
+                                .padding(.horizontal, 16)
+
+                            VStack(spacing: 0) {
+                                ForEach([UserStatus.active, .inactive], id: \.self) { status in
+                                    Button {
+                                        selectedStatus = status
+                                    } label: {
+                                        HStack {
+                                            HStack(spacing: 10) {
+                                                Circle()
+                                                    .fill(status == .active ? Color.green : Color.secondary)
+                                                    .frame(width: 8, height: 8)
+                                                Text(status.rawValue.capitalized)
+                                                    .font(.body)
+                                                    .foregroundStyle(Color.primary)
+                                            }
+                                            Spacer()
+                                            if selectedStatus == status {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 14, weight: .semibold))
+                                                    .foregroundStyle(Color.teal)
+                                            }
+                                        }
+                                        .padding(.vertical, 12)
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    if status == .active {
+                                        Divider().background(Color(.separator))
+                                    }
+                                }
+                            }
+                            .padding(16)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .padding(.horizontal, 16)
+                        }
                     }
                     .padding(.vertical, 16)
                 }
@@ -89,6 +131,7 @@ struct EditEmployeeView: View {
                         updatedProfile.email = email
                         updatedProfile.phone = phone.isEmpty ? nil : phone
                         updatedProfile.licenseNumber = isDriverSelected && !licenseNumber.isEmpty ? licenseNumber : nil
+                        updatedProfile.status = selectedStatus.rawValue
 
                         Task {
                             do {

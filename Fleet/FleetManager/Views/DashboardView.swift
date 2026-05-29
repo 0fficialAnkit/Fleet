@@ -5,34 +5,31 @@ struct DashboardView: View {
     @State private var isShowingProfile = false
     @State private var showingNotifications = false
     @Environment(AuthViewModel.self) private var authViewModel
-    @State private var maintenanceViewModel = MaintenanceViewModel()
-    @State private var selectedVehicleForMaintenance: Vehicle?
     @State private var navigationPath = NavigationPath()
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
-
+            Group {
                 if viewModel.isLoading && viewModel.vehicles.isEmpty {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 24) {
+                    List {
+                        Section {
                             fleetOverviewCard
-                            liveFleetSection
-                            recentOrdersSection
-                            maintenanceSection
                         }
-                        .padding(.bottom, 32)
+
+                        liveFleetSection
+
+                        recentOrdersSection
+
+                        maintenanceSection
                     }
+                    .refreshable { await viewModel.loadData() }
+                    .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle("Dashboard")
-            .sheet(item: $selectedVehicleForMaintenance) { vehicle in
-                ScheduleMaintenanceSheetView(vehicle: vehicle, dashboardViewModel: viewModel, viewModel: maintenanceViewModel)
-            }
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button(action: { showingNotifications = true }) {
@@ -70,6 +67,11 @@ struct DashboardView: View {
                             vehicles: viewModel.vehicles
                         )
                     )
+                case .allMaintenanceAlerts:
+                    AllMaintenanceAlertsView(
+                        alerts: viewModel.predictiveAlerts,
+                        maintenanceStaff: viewModel.profiles.filter { $0.role == "maintenance" }
+                    )
                 }
             }
         }
@@ -79,10 +81,16 @@ struct DashboardView: View {
         }
     }
 
+
     // MARK: - Fleet Overview Card (Idea 3)
 
     private var fleetOverviewCard: some View {
-        NavigationLink(value: DashboardDestination.vehiclesRoot) {
+        ZStack {
+            NavigationLink(value: DashboardDestination.vehiclesRoot) {
+                EmptyView()
+            }
+            .opacity(0)
+
             VStack(spacing: 0) {
                 // Header: icon badge + count + chevron on top trailing
                 HStack(alignment: .top, spacing: 16) {
@@ -105,7 +113,7 @@ struct DashboardView: View {
 
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(Color(.tertiaryLabel))
                         .padding(.top, 4)
                 }
 
@@ -121,47 +129,42 @@ struct DashboardView: View {
                         color: Color.green
                     )
                     FleetStatPill(
-                        value: max(0, viewModel.totalVehicles - viewModel.driversOnTrip - viewModel.maintenanceVehicles.count),
+                        value: max(0, viewModel.totalVehicles - viewModel.driversOnTrip - viewModel.predictiveAlerts.count),
                         label: "Idle",
-                        color: Color.yellow
+                        color: Color.orange
                     )
                     FleetStatPill(
-                        value: viewModel.maintenanceVehicles.count,
+                        value: viewModel.predictiveAlerts.count,
                         label: "Service",
                         color: Color.red
                     )
                 }
             }
-            .padding(16)
-            .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .contentShape(Rectangle())
+            .padding(.vertical, 4)
         }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 16)
     }
 
     // MARK: - Recent Orders
 
     private var recentOrdersSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Recent Orders", action: "See All") {
+        Section(header: HStack {
+            Text("Recent Orders")
+            Spacer()
+            Button("See All") {
                 // Action
             }
-            .padding(.horizontal, 16)
-
+            .font(.footnote)
+            .textCase(.none)
+        }) {
             if viewModel.recentOrders.isEmpty {
                 Text("No orders yet.")
                     .font(.body)
                     .foregroundStyle(Color.secondary)
-                    .padding(.horizontal, 16)
             } else {
                 ForEach(viewModel.recentOrders) { trip in
                     NavigationLink(value: DashboardDestination.orderDetail(trip)) {
                         TripCardView(trip: trip, viewModel: viewModel)
                     }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 16)
                 }
             }
         }
@@ -171,34 +174,30 @@ struct DashboardView: View {
 
     private var liveFleetSection: some View {
         let activeTrips = viewModel.trips.filter { $0.status == .active }
-        return VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                SectionHeader(title: "Live Fleet")
-                Spacer()
-                if !activeTrips.isEmpty {
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 7, height: 7)
-                        Text("\(activeTrips.count) on route")
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(Color.secondary)
-                    }
+        return Section(header: HStack {
+            Text("Live Fleet")
+            Spacer()
+            if !activeTrips.isEmpty {
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 7, height: 7)
+                    Text("\(activeTrips.count) on route")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(Color.secondary)
+                        .textCase(.none)
                 }
             }
-            .padding(.horizontal, 16)
-
-            // Map is ALWAYS visible — same Apple Maps style as driver's trip detail.
-            // Shows fleet manager's blue dot + green/red pins for every active trip.
+        }) {
             DashboardMapView(
                 activeTrips: activeTrips,
                 routes: viewModel.routes,
                 profiles: viewModel.profiles,
                 vehicleLocations: viewModel.vehicleLocations
             )
-            .padding(.horizontal, 16)
+            .frame(height: 250)
+            .listRowInsets(EdgeInsets())
 
-            // Active trip cards below the map
             if !activeTrips.isEmpty {
                 ForEach(activeTrips) { trip in
                     let route = viewModel.routes.first { $0.id == trip.routeId }
@@ -221,11 +220,7 @@ struct DashboardView: View {
                         Spacer()
                         StatusBadge(text: "Active", color: .green)
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .padding(.horizontal, 16)
+                    .padding(.vertical, 4)
                 }
             }
         }
@@ -234,24 +229,50 @@ struct DashboardView: View {
     // MARK: - Maintenance
 
     private var maintenanceSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Need Maintenance")
-                .padding(.horizontal, 16)
-
-            if viewModel.maintenanceVehicles.isEmpty {
-                Text("All vehicles operational.")
-                    .font(.body)
-                    .foregroundStyle(Color.secondary)
-                    .padding(.horizontal, 16)
-            } else {
-                ForEach(viewModel.maintenanceVehicles) { vehicle in
-                    Button(action: {
-                        selectedVehicleForMaintenance = vehicle
-                    }) {
-                        MaintenanceCardView(vehicle: vehicle, viewModel: viewModel)
+        let topAlerts = Array(viewModel.predictiveAlerts.prefix(3))
+        return Section {
+            if viewModel.predictiveAlerts.isEmpty {
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.shield.fill")
+                        .font(.system(size: 28))
+                        .foregroundStyle(Color.green)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("All vehicles operational")
+                            .font(.body.bold())
+                            .foregroundStyle(Color.primary)
+                        Text("No maintenance alerts detected")
+                            .font(.caption)
+                            .foregroundStyle(Color.secondary)
                     }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 16)
+                }
+                .padding(.vertical, 6)
+            } else {
+                ForEach(topAlerts) { alert in
+                    PredictiveAlertCardView(
+                        alert: alert,
+                        maintenanceStaff: viewModel.profiles.filter { $0.role == "maintenance" }
+                    )
+                }
+            }
+        } header: {
+            HStack {
+                Text("Need Maintenance")
+                Spacer()
+                if viewModel.predictiveAlerts.count > 3 {
+                    NavigationLink(value: DashboardDestination.allMaintenanceAlerts) {
+                        HStack(spacing: 4) {
+                            Text("See All (\(viewModel.predictiveAlerts.count))")
+                                .font(.caption.weight(.medium))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.orange)
+                        .textCase(.none)
+                    }
+                } else if !viewModel.predictiveAlerts.isEmpty {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.secondary)
                 }
             }
         }
@@ -309,7 +330,7 @@ struct TripCardView: View {
     var statusColor: Color {
         switch trip.status {
         case .scheduled: return Color.blue
-        case .active:    return Color.yellow
+        case .active:    return Color.green
         case .completed: return Color.green
         case .cancelled: return Color.red
         case .none:      return Color(.quaternaryLabel)
@@ -351,61 +372,173 @@ struct TripCardView: View {
                 }
             }
 
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.secondary)
         }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.vertical, 4)
     }
 }
 
-// MARK: - Maintenance Card
+// MARK: - Predictive Alert Card
 
-struct MaintenanceCardView: View {
-    let vehicle: Vehicle
-    let viewModel: DashboardViewModel
+struct PredictiveAlertCardView: View {
+    let alert: PredictiveMaintenanceAlert
+    let maintenanceStaff: [Profile]
+    @State private var showingAssignment = false
 
-    var maintenanceTask: MaintenanceTask? {
-        viewModel.maintenanceTask(for: vehicle.id)
+    private var accentColor: Color {
+        alert.severity == .critical ? Color.red : Color.orange
+    }
+
+    private var severityLabel: String {
+        alert.severity == .critical ? "Critical" : "Warning"
+    }
+
+    private var severityIcon: String {
+        alert.severity == .critical ? "exclamationmark.triangle.fill" : "exclamationmark.circle.fill"
     }
 
     var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: "wrench.and.screwdriver.fill")
-                .font(.system(size: 24))
-                .foregroundStyle(Color.yellow)
-                .frame(width: 44, height: 44)
-                .background(Color.yellow.opacity(0.15))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        Button(action: { showingAssignment = true }) {
+            VStack(alignment: .leading, spacing: 10) {
+                // Header row
+                HStack(spacing: 10) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(accentColor.opacity(0.12))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "wrench.and.screwdriver.fill")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(accentColor)
+                    }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
-                    .font(.body.bold())
-                    .foregroundStyle(Color.primary)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("\(alert.vehicle.make ?? "") \(alert.vehicle.model ?? "")")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.primary)
+                        Text(alert.vehicle.licensePlate ?? "No Plate")
+                            .font(.caption)
+                            .foregroundStyle(Color.secondary)
+                    }
 
-                Text(vehicle.licensePlate ?? "No Plate")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.secondary)
+                    Spacer()
 
-                if let task = maintenanceTask {
-                    Text(task.description ?? "Needs maintenance")
-                        .font(.caption)
-                        .foregroundStyle(Color.red)
-                        .lineLimit(2)
-                } else if viewModel.totalDistance(for: vehicle.id) >= (vehicle.vehicleType?.maintenanceThresholdKM ?? 10000) {
-                    Text("Preventive maintenance due (Threshold crossed)")
-                        .font(.caption)
-                        .foregroundStyle(Color.orange)
-                        .lineLimit(2)
+                    // Severity badge
+                    HStack(spacing: 4) {
+                        Image(systemName: severityIcon)
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(severityLabel)
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(accentColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(accentColor.opacity(0.1))
+                    .clipShape(Capsule())
                 }
+
+                Divider()
+
+                // Predicted issue
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.secondary)
+                        .padding(.top, 1)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Predicted Issue")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Color.secondary)
+                            .textCase(.uppercase)
+                        Text(alert.reason)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.primary)
+                    }
+                }
+
+                // Recommended action
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Color.yellow)
+                        .padding(.top, 1)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Recommended Action")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Color.secondary)
+                            .textCase(.uppercase)
+                        Text(alert.recommendation)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.primary)
+                            .lineLimit(2)
+                    }
+                }
+
+                // Assign row
+                HStack {
+                    Image(systemName: "person.badge.plus")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Color.teal)
+                    Text("Tap to assign to maintenance staff")
+                        .font(.caption)
+                        .foregroundStyle(Color.teal)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.secondary)
+                }
+                .padding(.top, 2)
             }
-            Spacer()
+            .padding(.vertical, 8)
         }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showingAssignment) {
+            MaintenanceAssignmentSheet(
+                vehicleName: "\(alert.vehicle.make ?? "") \(alert.vehicle.model ?? "")",
+                licensePlate: alert.vehicle.licensePlate ?? "No Plate",
+                severityLabel: severityLabel,
+                severityColor: accentColor,
+                severityIcon: severityIcon,
+                issueTitle: "Predicted Issue",
+                issueDescription: alert.reason,
+                recommendationTitle: "Recommended Action",
+                recommendationDescription: alert.recommendation,
+                maintenanceStaff: maintenanceStaff
+            ) { staffId, notes in
+                let task = MaintenanceTask(
+                    id: UUID(),
+                    workOrderId: nil,
+                    vehicleId: alert.vehicle.id,
+                    scheduledBy: nil,
+                    assignedTo: staffId,
+                    taskType: .inspection,
+                    description: "\(alert.reason). \(alert.recommendation)\(notes.isEmpty ? "" : "\nNotes: \(notes)")",
+                    scheduledDate: Date(),
+                    targetMileage: nil,
+                    serviceIntervalMonths: nil,
+                    scheduleType: .date,
+                    status: .pending
+                )
+                try await MaintenanceTaskService.createTask(task)
+            }
+        }
+    }
+}
+
+// MARK: - All Maintenance Alerts View
+
+struct AllMaintenanceAlertsView: View {
+    let alerts: [PredictiveMaintenanceAlert]
+    let maintenanceStaff: [Profile]
+
+    var body: some View {
+        List {
+            ForEach(alerts) { alert in
+                PredictiveAlertCardView(alert: alert, maintenanceStaff: maintenanceStaff)
+                    .listRowSeparator(.hidden)
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("All Maintenance Alerts")
+        .navigationBarTitleDisplayMode(.large)
     }
 }
 
@@ -413,3 +546,4 @@ struct MaintenanceCardView: View {
     DashboardView()
         .environment(AuthViewModel())
 }
+

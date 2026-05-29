@@ -11,6 +11,12 @@ final class DashboardViewModel {
     private(set) var profiles: [Profile] = []
     private(set) var maintenanceTasks: [MaintenanceTask] = []
     private(set) var vehicleLocations: [VehicleLocation] = []
+    private(set) var inspections: [VehicleInspection] = []
+    private(set) var issueReports: [IssueReportRecord] = []
+    private(set) var maintenanceHistory: [MaintenanceHistory] = []
+
+    /// Predictive alerts derived by the on-device rules engine after each data load.
+    private(set) var predictiveAlerts: [PredictiveMaintenanceAlert] = []
 
     var isLoading = false
     var errorMessage: String?
@@ -19,24 +25,30 @@ final class DashboardViewModel {
         isLoading = true
         errorMessage = nil
         do {
-            async let v = VehicleService.fetchAllVehicles()
-            async let t = TripService.fetchAllTrips()
-            async let w = WorkOrderService.fetchAllWorkOrders()
-            async let r = RouteService.fetchAllRoutes()
-            async let p = ProfileService.fetchAllProfiles()
-            async let m = MaintenanceTaskService.fetchAllTasks()
-            vehicles = try await v
-            trips = try await t
-            workOrders = try await w
-            routes = try await r
-            profiles = try await p
-            maintenanceTasks = try await m
+            async let v  = VehicleService.fetchAllVehicles()
+            async let t  = TripService.fetchAllTrips()
+            async let w  = WorkOrderService.fetchAllWorkOrders()
+            async let r  = RouteService.fetchAllRoutes()
+            async let p  = ProfileService.fetchAllProfiles()
+            async let m  = MaintenanceTaskService.fetchAllTasks()
+            async let i  = InspectionService.fetchAllInspections()
+            async let ir = IssueReportService.fetchAllIssueReports()
+            async let mh = MaintenanceHistoryService.fetchAllHistory()
+            vehicles           = try await v
+            trips              = try await t
+            workOrders         = try await w
+            routes             = try await r
+            profiles           = try await p
+            maintenanceTasks   = try await m
+            inspections        = try await i
+            issueReports       = try await ir
+            maintenanceHistory = try await mh
         } catch {
             errorMessage = error.localizedDescription
         }
         isLoading = false
         
-        // --- INJECT MOCK DATA FOR TESTING T4-19 ---
+        // --- INJECT MOCK DATA FOR DEMO PURPOSES ---
         let mockVehicleId = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
         let mockVehicle = Vehicle(
             id: mockVehicleId,
@@ -72,27 +84,39 @@ final class DashboardViewModel {
             trips.append(mockTrip)
         }
         // -------------------------------------------
-        
+
+        // Run predictive analysis on updated data
+        predictiveAlerts = PredictiveMaintenanceService.analyze(
+            vehicles: vehicles,
+            trips: trips,
+            inspections: inspections,
+            issueReports: issueReports,
+            maintenanceHistory: maintenanceHistory
+        )
+
         await refreshVehicleLocations()
         checkAndTriggerNotifications()
     }
     
     private func checkAndTriggerNotifications() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
             if granted {
                 Task { @MainActor in
-                    for vehicle in self.maintenanceVehicles {
-                        let totalKMTraveled = self.totalDistance(for: vehicle.id)
-                        let threshold = vehicle.vehicleType?.maintenanceThresholdKM ?? 10000
-                        if totalKMTraveled >= threshold {
-                            let content = UNMutableNotificationContent()
-                            content.title = "Maintenance Due 🚨"
-                            content.body = "\(vehicle.make ?? "") \(vehicle.model ?? "") (\(vehicle.licensePlate ?? "")) has crossed its \(Int(threshold)) km threshold!"
-                            content.sound = .default
-                            
-                            let request = UNNotificationRequest(identifier: vehicle.id.uuidString, content: content, trigger: nil) // Fire immediately
-                            try? await UNUserNotificationCenter.current().add(request)
-                        }
+                    for alert in self.predictiveAlerts {
+                        let vehicle = alert.vehicle
+                        let content = UNMutableNotificationContent()
+                        content.title = alert.severity == .critical
+                            ? "Critical Maintenance Alert 🚨"
+                            : "Maintenance Warning ⚠️"
+                        content.body = "\(vehicle.make ?? "") \(vehicle.model ?? "") (\(vehicle.licensePlate ?? "")): \(alert.reason)"
+                        content.sound = .default
+
+                        let request = UNNotificationRequest(
+                            identifier: vehicle.id.uuidString,
+                            content: content,
+                            trigger: nil
+                        )
+                        try? await UNUserNotificationCenter.current().add(request)
                     }
                 }
             }
@@ -144,31 +168,7 @@ final class DashboardViewModel {
         return Array(sorted.prefix(3))
     }
 
-    var maintenanceVehicles: [Vehicle] {
-        // A vehicle needs maintenance if its status is manually set to maintenance, OR
-        // if its total KM traveled exceeds the maintenance threshold for its type.
-        
-        vehicles.filter { vehicle in
-            if vehicle.status == .maintenance { return true }
-            
-            let totalKMTraveled = totalDistance(for: vehicle.id)
-            let threshold = vehicle.vehicleType?.maintenanceThresholdKM ?? 10000 // Default to 10000 if type is nil
-            
-            // Allow a small buffer (e.g. 500 km) to flag it just before it hits the exact limit,
-            // or we just check if it crossed the interval.
-            // Example: 22,000 km % 20,000 km threshold = 2,000 km.
-            // If they haven't serviced it, we should track when it was last serviced.
-            // Since we don't have full maintenance history loaded here yet, we will
-            // flag it if (totalKM % threshold) > (threshold - 500) OR totalKM >= threshold
-            
-            if totalKMTraveled >= threshold {
-                return true
-            }
-            return false
-        }
-    }
-    
-    // Calculate total KM traveled for a vehicle
+    // Calculate total KM traveled for a vehicle (still used by fleet overview stats)
     func totalDistance(for vehicleId: UUID) -> Double {
         let vehicleTrips = trips.filter { $0.vehicleId == vehicleId && $0.status == .completed }
         return vehicleTrips.reduce(0) { $0 + ($1.distance ?? 0) }
@@ -194,4 +194,5 @@ final class DashboardViewModel {
 enum DashboardDestination: Hashable {
     case vehiclesRoot
     case orderDetail(Trip)
+    case allMaintenanceAlerts
 }
