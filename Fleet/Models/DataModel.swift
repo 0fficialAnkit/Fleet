@@ -27,6 +27,7 @@ enum MaintenanceTaskStatus: String, Codable, CaseIterable, Sendable {
 }
 
 enum WorkOrderStatus: String, Codable, CaseIterable, Sendable {
+  case pending = "pending" // Add this case
   case open = "open"
   case inProgress = "in_progress"
   case completed = "completed"
@@ -286,7 +287,7 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
       case description
       case scheduledDate = "scheduled_date"
       case targetMileage = "target_mileage"
-      case serviceIntervalMonths = "service_interval_months"
+      case serviceIntervalMonths = "service_internal"
       case scheduleType = "schedule_type"
       case status
   }
@@ -460,9 +461,9 @@ struct InspectionPhoto: Codable, Identifiable, Hashable, Sendable {
 //  MARK: - DefectReport
 struct DefectReport: Codable, Identifiable, Hashable, Sendable {
   let id: UUID
-  var inspectionId: UUID? // FK — optional, defects can be reported without a linked inspection
+  var inspectionId: UUID // FK - required
   var reportedBy: UUID? // FK
-  var description: String?
+  var description: String // required
   var severity: DefectSeverity?
   var status: DefectStatus?
   var createdAt: Date?
