@@ -167,6 +167,7 @@ final class MaintenanceDashboardViewModel {
         let rt = RealtimeManager.shared
         rt.addMaintenanceTasksChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addWorkOrdersChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addIssueReportsChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addInventoryChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData() } }
     }
