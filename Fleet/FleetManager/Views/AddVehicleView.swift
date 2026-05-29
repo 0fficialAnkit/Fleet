@@ -183,4 +183,5 @@ struct AddVehicleView: View {
 
 #Preview {
     AddVehicleView(viewModel: VehiclesViewModel())
+        .environment(AuthViewModel())
 }
