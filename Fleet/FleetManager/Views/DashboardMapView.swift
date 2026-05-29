@@ -35,7 +35,7 @@ struct DashboardMapView: View {
     }
 
     @State private var tripRoutes:         [TripRoute] = []
-    @State private var cameraPosition:     MapCameraPosition = .userLocation(fallback: .automatic)
+    @State private var cameraPosition:     MapCameraPosition = .automatic
     @State private var locationManager     = LocationManager()
     @State private var lastLocationUpdate: Date? = nil
     @State private var showFullscreen      = false
@@ -52,10 +52,16 @@ struct DashboardMapView: View {
         .onAppear { locationManager.requestPermission() }
         .task(id: tripsKey) {
             await buildTripRoutes()
-            fitCamera()
+            // fitCamera() is triggered by onChange(of: tripRoutes) once @State is committed
+        }
+        .onChange(of: tripRoutes) { _, _ in
+            fitCamera()   // re-frame whenever routes are built or cleared
         }
         .onChange(of: vehicleLocations) { _, newLocs in
-            if !newLocs.isEmpty { lastLocationUpdate = Date() }
+            if !newLocs.isEmpty {
+                lastLocationUpdate = Date()
+                // Driver pin moves on the map automatically — no camera re-fit needed
+            }
         }
         .fullScreenCover(isPresented: $showFullscreen) {
             DashboardMapFullscreenView(
@@ -207,20 +213,18 @@ struct DashboardMapView: View {
     // MARK: - Camera
 
     private func fitCamera() {
-        // Build bounding box from routes + live driver pins only.
-        // Do NOT include the manager's own location — if the manager is on a
-        // simulator set to Apple Park (California) and the routes are in India,
-        // mixing both coordinates creates a half-globe bounding box.
+        // Use ONLY route polyline coords — never driver pin GPS.
+        // Driver GPS on a simulator is Apple Park (CA); routes are in India.
+        // Mixing both makes boundingRegion span the entire globe.
         var coords = allPolylineCoords(from: tripRoutes)
-        coords += driverPins.map(\.coordinate)
 
-        // Fallback: use pickup/drop-off coords when polylines aren't ready yet
+        // Fallback: pickup/dropoff coords when polyline isn't built yet
         if coords.isEmpty {
             coords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] }
         }
 
         guard !coords.isEmpty else {
-            // No routes at all — zoom in on the manager's own location
+            // No active routes — show fleet manager's own location
             if let mgr = locationManager.coordinate {
                 cameraPosition = .region(MKCoordinateRegion(
                     center: mgr,
@@ -429,20 +433,16 @@ struct DashboardMapFullscreenView: View {
     // MARK: - Camera
 
     private func fitCamera() {
-        // Build bounding box from routes + live driver pins only.
-        // Do NOT include the manager's own location — if the manager is on a
-        // simulator set to Apple Park (California) and the routes are in India,
-        // mixing both coordinates creates a half-globe bounding box.
+        // Use ONLY route polyline coords — never driver pin GPS.
+        // Driver GPS on a simulator is Apple Park (CA); routes are in India.
+        // Mixing both makes boundingRegion span the entire globe.
         var coords = allPolylineCoords(from: tripRoutes)
-        coords += driverPins.map(\.coordinate)
 
-        // Fallback: use pickup/drop-off coords when polylines aren't ready yet
         if coords.isEmpty {
             coords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] }
         }
 
         guard !coords.isEmpty else {
-            // No routes at all — zoom in on the manager's own location
             if let mgr = locationManager.coordinate {
                 cameraPosition = .region(MKCoordinateRegion(
                     center: mgr,
@@ -490,7 +490,7 @@ struct DashboardMapFullscreenView: View {
 
 // MARK: - Shared model types
 
-struct TripRoute: Identifiable {
+struct TripRoute: Identifiable, Equatable {
     let id:           UUID
     let polyline:     MKPolyline
     let color:        Color
@@ -498,6 +498,8 @@ struct TripRoute: Identifiable {
     let pickupCoord:  CLLocationCoordinate2D
     let dropoffLabel: String
     let dropoffCoord: CLLocationCoordinate2D
+
+    static func == (lhs: TripRoute, rhs: TripRoute) -> Bool { lhs.id == rhs.id }
 }
 
 struct DriverPin: Identifiable {

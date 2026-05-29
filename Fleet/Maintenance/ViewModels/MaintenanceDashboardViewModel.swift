@@ -127,6 +127,21 @@ final class MaintenanceDashboardViewModel {
         return Int((Double(available) / Double(total)) * 100)
     }
 
+    var estimatedValue: Double {
+        inventory.reduce(0) { $0 + (($1.unitCost ?? 0) * Double($1.stockQuantity ?? 0)) }
+    }
+
+    var estimatedValueFormatted: String {
+        let value = estimatedValue
+        if value >= 100_000 {
+            return "₹\(String(format: "%.1fL", value / 100_000))"
+        } else if value >= 1_000 {
+            return "₹\(String(format: "%.1fK", value / 1_000))"
+        } else {
+            return "₹\(String(format: "%.0f", value))"
+        }
+    }
+
     func loadData() async {
         guard let userId = currentUserId else { return }
         isLoading = true
@@ -152,6 +167,7 @@ final class MaintenanceDashboardViewModel {
         let rt = RealtimeManager.shared
         rt.addMaintenanceTasksChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addWorkOrdersChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addIssueReportsChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addInventoryChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData() } }
     }
@@ -187,6 +203,7 @@ final class MaintenanceDashboardViewModel {
 
     func woStatusColor(_ status: WorkOrderStatus?) -> Color {
         switch status {
+        case .pending: return Color.gray
         case .open: return Color.blue
         case .inProgress: return Color.orange
         case .completed: return Color.green

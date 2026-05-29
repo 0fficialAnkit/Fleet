@@ -48,42 +48,6 @@ final class DashboardViewModel {
         }
         isLoading = false
         
-        // --- INJECT MOCK DATA FOR DEMO PURPOSES ---
-        let mockVehicleId = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
-        let mockVehicle = Vehicle(
-            id: mockVehicleId,
-            make: "Honda",
-            model: "Activa (Mock)",
-            year: 2024,
-            vin: "MOCK1234",
-            licensePlate: "MH-12-AB-1234",
-            tankCapacity: 5,
-            mileage: 45,
-            purchaseDate: Date(),
-            assignedDriverId: nil,
-            adminId: nil,
-            status: .active,
-            vehicleType: .twoWheeler
-        )
-        
-        let mockTrip = Trip(
-            id: UUID(),
-            vehicleId: mockVehicleId,
-            driverId: nil,
-            routeId: nil,
-            startTime: Date().addingTimeInterval(-86400 * 2),
-            endTime: Date(),
-            distance: 3100.0,
-            status: .completed,
-            orderType: .pickUpAndDrop,
-            createdAt: Date()
-        )
-        
-        if !vehicles.contains(where: { $0.vin == "MOCK1234" }) {
-            vehicles.append(mockVehicle)
-            trips.append(mockTrip)
-        }
-        // -------------------------------------------
 
         // Run predictive analysis on updated data
         predictiveAlerts = PredictiveMaintenanceService.analyze(

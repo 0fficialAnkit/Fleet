@@ -1,7 +1,9 @@
 import SwiftUI
+import Supabase
 
 struct AddVehicleView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AuthViewModel.self) private var authViewModel
     var viewModel: VehiclesViewModel
 
     @State private var make = ""
@@ -143,7 +145,8 @@ struct AddVehicleView: View {
                                     tankCapacity: cap,
                                     mileage: mil,
                                     licensePlate: plateTrimmed,
-                                    vehicleType: selectedType
+                                    vehicleType: selectedType,
+                                    adminId: authViewModel.currentUser?.id
                                 )
                                 dismiss()
                             } catch {
