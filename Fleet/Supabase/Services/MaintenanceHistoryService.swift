@@ -22,6 +22,17 @@ enum MaintenanceHistoryService {
             .value
     }
 
+    /// Fetches maintenance history records linked to a specific work order.
+    static func fetchHistoryForWorkOrder(workOrderId: UUID) async throws -> [MaintenanceHistory] {
+        try await supabase
+            .from("maintenance_history")
+            .select()
+            .eq("work_order_id", value: workOrderId)
+            .order("completed_at", ascending: false)
+            .execute()
+            .value
+    }
+
     static func createHistory(_ history: MaintenanceHistory) async throws {
         try await supabase
             .from("maintenance_history")

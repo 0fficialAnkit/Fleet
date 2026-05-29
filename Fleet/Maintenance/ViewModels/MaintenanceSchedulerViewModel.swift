@@ -406,6 +406,21 @@ final class MaintenanceSchedulerViewModel {
                 }
                 Task {
                     try? await MaintenanceTaskService.updateTaskStatus(id: sourceId, status: dbStatus)
+                    if status == .completed {
+                        let task = allTasks[i]
+                        if let vehicle = vehicles.first(where: { $0.licensePlate == task.vehicleNumber }) {
+                            let cost = Double(task.laborCost ?? "") ?? nil
+                            let history = MaintenanceHistory(
+                                id: UUID(),
+                                vehicleId: vehicle.id,
+                                workOrderId: nil,
+                                serviceDetails: "Task completed: \(task.taskType.rawValue) - \(task.description)",
+                                cost: cost,
+                                completedAt: Date()
+                            )
+                            try? await MaintenanceHistoryService.createHistory(history)
+                        }
+                    }
                 }
             }
         }
@@ -457,6 +472,20 @@ final class MaintenanceSchedulerViewModel {
                     case .cancelled: statusStr = "closed"
                     }
                     try? await IssueReportService.updateIssueReport(id: sourceIrId, assignedTo: uid, status: statusStr)
+                    if status == .completed {
+                        let wo = allWorkOrders[i]
+                        if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                            let history = MaintenanceHistory(
+                                id: UUID(),
+                                vehicleId: vehicle.id,
+                                workOrderId: nil,
+                                serviceDetails: "Issue resolved: \(wo.vehicleIssue)",
+                                cost: nil,
+                                completedAt: Date()
+                            )
+                            try? await MaintenanceHistoryService.createHistory(history)
+                        }
+                    }
                 }
             }
         }

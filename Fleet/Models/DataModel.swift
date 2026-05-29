@@ -275,6 +275,7 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
   var serviceIntervalMonths: Int?
   var scheduleType: MaintenanceScheduleType?
   var status: MaintenanceTaskStatus?
+  var completedAt: Date?
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -289,6 +290,7 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
       case serviceIntervalMonths = "service_interval_months"
       case scheduleType = "schedule_type"
       case status
+      case completedAt = "completed_at"
   }
 }
 
@@ -301,6 +303,7 @@ struct WorkOrder: Codable, Identifiable, Hashable, Sendable {
   var priority: WorkOrderPriority?
   var status: WorkOrderStatus?
   var createdAt: Date?
+  var completedAt: Date?
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -309,6 +312,7 @@ struct WorkOrder: Codable, Identifiable, Hashable, Sendable {
       case assignedTo = "assigned_to"
       case priority, status
       case createdAt = "created_at"
+      case completedAt = "completed_at"
   }
 }
 
