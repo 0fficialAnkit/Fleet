@@ -10,7 +10,6 @@ struct MaintenanceSchedulerView: View {
     @Namespace private var calendarNS
     @State private var selectedTask: ScheduledTask? = nil
     @State private var selectedWorkOrder: ScheduledWorkOrder? = nil
-    @State private var isShowingCreateTaskSheet = false
     @Environment(AuthViewModel.self) private var authViewModel
 
     init(viewModel: MaintenanceSchedulerViewModel) {
@@ -49,25 +48,6 @@ struct MaintenanceSchedulerView: View {
             }
             .navigationDestination(item: $selectedWorkOrder) { wo in
                 WorkOrderDetailSheet(workOrder: wo, viewModel: viewModel)
-            }
-            .toolbar {
-                if viewModel.selectedTab == .pending {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            isShowingCreateTaskSheet = true
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundStyle(Color.brown)
-                                .frame(width: 32, height: 32)
-                                .background(Color.brown.opacity(0.12), in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-            .sheet(isPresented: $isShowingCreateTaskSheet) {
-                CreateTaskSheet(viewModel: viewModel, initialDate: viewModel.selectedDate, currentUserId: authViewModel.currentUser?.id)
             }
             .task {
                 viewModel.currentUserId = authViewModel.currentUser?.id
@@ -282,15 +262,68 @@ private struct TaskListSection: View {
                     ))
             } else {
                 ForEach(currentItems) { item in
-                    Group {
-                        switch item {
-                        case .task(let task):
-                            Button { selectedTask = task } label: { TaskCard(task: task) }
-                        case .workOrder(let wo):
-                            Button { selectedWorkOrder = wo } label: { WorkOrderCard(workOrder: wo) }
+                    VStack(spacing: 10) {
+                        Group {
+                            switch item {
+                            case .task(let task):
+                                Button { selectedTask = task } label: { TaskCard(task: task) }
+                            case .workOrder(let wo):
+                                Button { selectedWorkOrder = wo } label: { WorkOrderCard(workOrder: wo) }
+                            }
+                        }
+                        .buttonStyle(ScaleButtonStyle())
+
+                        // MARK: Inline Action Buttons
+                        if viewModel.selectedTab == .pending {
+                            Button {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                                    switch item {
+                                    case .task(let task):
+                                        viewModel.updateTaskStatus(id: task.id, to: .inProgress)
+                                    case .workOrder(let wo):
+                                        viewModel.updateWorkOrderStatus(id: wo.id, to: .inProgress)
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 12, weight: .bold))
+                                    Text("Start")
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 42)
+                                .background(Color.brown, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            }
+                            .buttonStyle(ScaleButtonStyle())
+                        }
+
+                        if viewModel.selectedTab == .inProgress {
+                            Button {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                                    switch item {
+                                    case .task(let task):
+                                        viewModel.updateTaskStatus(id: task.id, to: .completed)
+                                    case .workOrder(let wo):
+                                        viewModel.updateWorkOrderStatus(id: wo.id, to: .completed)
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 14, weight: .bold))
+                                    Text("Mark as Complete")
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 42)
+                                .background(Color.green, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            }
+                            .buttonStyle(ScaleButtonStyle())
                         }
                     }
-                    .buttonStyle(ScaleButtonStyle())
                     .scrollTransition { content, phase in
                         content
                             .opacity(phase.isIdentity ? 1 : 0.7)
@@ -880,7 +913,7 @@ struct WorkOrderDetailSheet: View {
                                             Text("Pick a Date & Time")
                                                 .font(.subheadline.weight(.semibold))
                                                 .foregroundStyle(.primary)
-                                            Text("This will move the work order to In Progress on the chosen date")
+                                            Text("The work order will appear in Pending on the chosen date")
                                                 .font(.caption)
                                                 .foregroundStyle(.secondary)
                                         }
@@ -907,7 +940,7 @@ struct WorkOrderDetailSheet: View {
                                     } label: {
                                         HStack(spacing: 8) {
                                             Image(systemName: "calendar.badge.checkmark")
-                                            Text("Schedule & Start")
+                                            Text("Schedule")
                                         }
                                         .font(.system(size: 16, weight: .semibold))
                                         .foregroundStyle(.white)

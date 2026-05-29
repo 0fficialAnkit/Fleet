@@ -7,13 +7,23 @@ struct InventoryView: View {
     @State private var errorMessage: String?
     @State private var selectedItem: Inventory? = nil
     @State private var isShowingAddSheet = false
+    @State private var selectedFilter: InventoryFilter = .all
 
+    enum InventoryFilter: String, CaseIterable {
+        case all = "All"
+        case lowStock = "Low Stock"
+        case inStock = "In Stock"
+    }
 
-
-
-    var searchResults: [Inventory] {
-        if searchText.isEmpty { return inventoryItems }
-        return inventoryItems.filter { $0.partName?.localizedCaseInsensitiveContains(searchText) == true }
+    var filteredItems: [Inventory] {
+        let base: [Inventory]
+        switch selectedFilter {
+        case .all:      base = inventoryItems
+        case .lowStock: base = inventoryItems.filter { ($0.stockQuantity ?? 0) <= ($0.reorderLevel ?? 0) }
+        case .inStock:  base = inventoryItems.filter { ($0.stockQuantity ?? 0) > ($0.reorderLevel ?? 0) }
+        }
+        if searchText.isEmpty { return base }
+        return base.filter { $0.partName?.localizedCaseInsensitiveContains(searchText) == true }
     }
 
     var body: some View {
@@ -22,62 +32,107 @@ struct InventoryView: View {
                 Color(.systemGroupedBackground).ignoresSafeArea()
 
                 if isLoading && inventoryItems.isEmpty {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                    VStack(spacing: 14) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .brown))
+                            .scaleEffect(1.1)
+                        Text("Loading inventory…")
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(Color.secondary)
+                    }
                 } else {
                     ScrollView {
-                        VStack(spacing: 16) {
-
-
-
+                        VStack(spacing: 20) {
 
                             // MARK: - AI Forecast Banner
-                            HStack(alignment: .top, spacing: 16) {
-                                Image(systemName: "sparkles")
-                                    .foregroundStyle(Color.yellow)
-                                    .font(.system(size: 18, weight: .semibold))
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("AI Forecast")
-                                        .font(.body.weight(.medium))
+                            HStack(alignment: .center, spacing: 14) {
+                                ZStack {
+                                    Circle()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Color.yellow.opacity(0.25), Color.orange.opacity(0.15)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .frame(width: 42, height: 42)
+                                    Image(systemName: "sparkles")
+                                        .font(.system(size: 18, weight: .semibold))
                                         .foregroundStyle(Color.yellow)
+                                }
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("AI Forecast")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Color.primary)
                                     Text("High demand for **Oil Filters** expected next week. Consider restocking soon.")
-                                        .font(.footnote)
+                                        .font(.caption)
                                         .foregroundStyle(Color.secondary)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                                 Spacer(minLength: 0)
                             }
-                            .padding(16)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .stroke(Color.yellow.opacity(0.25), lineWidth: 0.8)
+                            .padding(14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color(.secondarySystemGroupedBackground))
                             )
-
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .stroke(Color.yellow.opacity(0.2), lineWidth: 0.8)
+                            )
                             .padding(.horizontal, 16)
 
+                            // MARK: - Filter Chips
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(InventoryFilter.allCases, id: \.self) { filter in
+                                        InventoryFilterChip(
+                                            label: filter.rawValue,
+                                            count: countFor(filter),
+                                            isSelected: selectedFilter == filter
+                                        ) {
+                                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                                selectedFilter = filter
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                            }
+
+                            // MARK: - Section Header
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Parts")
+                                        .font(.headline)
+                                        .foregroundStyle(Color.primary)
+                                    Text("\(filteredItems.count) item\(filteredItems.count == 1 ? "" : "s")")
+                                        .font(.footnote)
+                                        .foregroundStyle(Color(.tertiaryLabel))
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
 
                             // MARK: - Items List
-                            if searchResults.isEmpty {
-                                VStack(spacing: 16) {
-                                    Image(systemName: "magnifyingglass")
-                                        .font(.system(size: 40))
-                                        .foregroundStyle(Color(.tertiaryLabel))
-                                    Text("No parts found")
-                                        .font(.body.weight(.medium))
-                                        .foregroundStyle(Color.secondary)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 40)
+                            if filteredItems.isEmpty {
+                                InventoryEmptyState(isFiltered: selectedFilter != .all || !searchText.isEmpty)
                             } else {
-                                LazyVStack(spacing: 16) {
-                                    ForEach(searchResults) { item in
+                                LazyVStack(spacing: 14) {
+                                    ForEach(filteredItems) { item in
                                         Button(action: {
                                             selectedItem = item
                                         }) {
                                             InventoryRow(item: item)
                                         }
-                                        .buttonStyle(.plain)
+                                        .buttonStyle(InventoryCardButtonStyle())
+                                        .scrollTransition { content, phase in
+                                            content
+                                                .opacity(phase.isIdentity ? 1 : 0.7)
+                                                .scaleEffect(phase.isIdentity ? 1 : 0.97)
+                                                .offset(y: phase.isIdentity ? 0 : 6)
+                                        }
                                     }
                                 }
                                 .padding(.horizontal, 16)
@@ -116,6 +171,14 @@ struct InventoryView: View {
         }
     }
 
+    private func countFor(_ filter: InventoryFilter) -> Int {
+        switch filter {
+        case .all:      return inventoryItems.count
+        case .lowStock: return inventoryItems.filter { ($0.stockQuantity ?? 0) <= ($0.reorderLevel ?? 0) }.count
+        case .inStock:  return inventoryItems.filter { ($0.stockQuantity ?? 0) > ($0.reorderLevel ?? 0) }.count
+        }
+    }
+
     private func loadInventory() async {
         isLoading = true
         do {
@@ -127,7 +190,92 @@ struct InventoryView: View {
     }
 }
 
+// MARK: - Filter Chip
+private struct InventoryFilterChip: View {
+    let label: String
+    let count: Int
+    let isSelected: Bool
+    let action: () -> Void
 
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Text(label)
+                    .font(.footnote.weight(isSelected ? .semibold : .regular))
+
+                Text("\(count)")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(
+                        isSelected
+                            ? Color.white.opacity(0.2)
+                            : Color(.tertiarySystemBackground)
+                    )
+                    .clipShape(Capsule())
+            }
+            .foregroundStyle(isSelected ? .white : Color.secondary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(isSelected ? Color.brown : Color(.secondarySystemGroupedBackground))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule().stroke(isSelected ? Color.clear : Color(.separator).opacity(0.3), lineWidth: 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
+    }
+}
+
+// MARK: - Card Button Style
+private struct InventoryCardButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.85 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Empty State
+private struct InventoryEmptyState: View {
+    let isFiltered: Bool
+    @State private var floatOffset: CGFloat = 0
+
+    var body: some View {
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(Color.brown.opacity(0.06))
+                    .frame(width: 100, height: 100)
+
+                Image(systemName: isFiltered ? "line.3.horizontal.decrease.circle" : "shippingbox")
+                    .font(.system(size: 40, weight: .light))
+                    .foregroundStyle(Color.brown.opacity(0.5))
+                    .symbolEffect(.pulse)
+                    .offset(y: floatOffset)
+                    .onAppear {
+                        withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                            floatOffset = -6
+                        }
+                    }
+            }
+
+            VStack(spacing: 6) {
+                Text(isFiltered ? "No matching parts" : "No parts yet")
+                    .font(.headline)
+                    .foregroundStyle(Color.primary)
+                Text(isFiltered ? "Try adjusting your filters or search query." : "Tap + to add your first inventory item.")
+                    .font(.subheadline)
+                    .foregroundStyle(Color(.tertiaryLabel))
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 48)
+    }
+}
 
 // MARK: - Inventory Row
 struct InventoryRow: View {
@@ -144,54 +292,172 @@ struct InventoryRow: View {
         return min(qty / (reorder * 5), 1.0)
     }
 
-    var stockBarColor: Color {
+    var stockStatusColor: Color {
         if stockFraction <= 0.20 { return .red }
-        if stockFraction <  0.50 { return .orange }
+        if stockFraction < 0.50 { return .orange }
         return .green
     }
 
+    var stockBarGradient: LinearGradient {
+        if stockFraction <= 0.20 {
+            return LinearGradient(colors: [.red, .red.opacity(0.6)], startPoint: .leading, endPoint: .trailing)
+        }
+        if stockFraction < 0.50 {
+            return LinearGradient(colors: [.orange, .yellow.opacity(0.7)], startPoint: .leading, endPoint: .trailing)
+        }
+        return LinearGradient(colors: [.green.opacity(0.7), .green], startPoint: .leading, endPoint: .trailing)
+    }
+
+    /// Pick an SF Symbol based on the part name
+    var partIcon: String {
+        let name = (item.partName ?? "").lowercased()
+        if name.contains("oil") || name.contains("filter") { return "drop.fill" }
+        if name.contains("brake")                          { return "circle.slash" }
+        if name.contains("tire") || name.contains("tyre")  { return "circle.circle" }
+        if name.contains("battery")                        { return "battery.100" }
+        if name.contains("belt")                           { return "arrow.triangle.2.circlepath" }
+        if name.contains("light") || name.contains("lamp") { return "lightbulb.fill" }
+        if name.contains("spark") || name.contains("plug") { return "bolt.fill" }
+        if name.contains("wiper")                          { return "windshield.front.and.wiper" }
+        return "gearshape.fill"
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.partName ?? "Unknown Part")
-                        .font(.headline)
-                        .foregroundStyle(Color.primary)
-                    Text("Unit Cost: ₹\(String(format: "%.2f", item.unitCost ?? 0.0))")
-                        .font(.footnote)
-                        .foregroundStyle(Color.secondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("\(item.stockQuantity ?? 0)")
-                        .font(.title3.bold())
-                        .foregroundStyle(Color.primary)
-                    Text("in stock")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color(.tertiaryLabel))
-                }
+        HStack(spacing: 0) {
+            // Left accent stripe for low-stock items
+            if isLowStock {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color.red)
+                    .frame(width: 4)
+                    .padding(.vertical, 10)
+                    .padding(.leading, 4)
             }
 
-            // Stock Level Bar
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color(.tertiarySystemBackground))
-                        .frame(height: 6)
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(stockBarColor)
-                        .frame(width: geo.size.width * stockFraction, height: 6)
-                        .animation(.spring(response: 0.5), value: stockFraction)
+            VStack(alignment: .leading, spacing: 0) {
+                // Top section: Icon + Info + Stock count
+                HStack(spacing: 14) {
+                    // Part Icon Badge
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(
+                                isLowStock
+                                    ? Color.red.opacity(0.1)
+                                    : Color.brown.opacity(0.08)
+                            )
+                            .frame(width: 48, height: 48)
+                        Image(systemName: partIcon)
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundStyle(isLowStock ? Color.red : Color.brown)
+                    }
+
+                    // Part Name + Info Pills
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            Text(item.partName ?? "Unknown Part")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.primary)
+                                .lineLimit(1)
+
+                            if isLowStock {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.system(size: 8))
+                                    Text("LOW")
+                                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                                }
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Color.red, in: Capsule())
+                            }
+                        }
+
+                        // Info Pills Row
+                        HStack(spacing: 8) {
+                            // Unit Cost Pill
+                            HStack(spacing: 4) {
+                                Image(systemName: "indianrupeesign")
+                                    .font(.system(size: 9, weight: .semibold))
+                                Text("\(String(format: "%.0f", item.unitCost ?? 0.0))")
+                                    .font(.caption.weight(.medium))
+                            }
+                            .foregroundStyle(Color.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color(.tertiarySystemFill))
+                            .clipShape(Capsule())
+
+                            // Reorder Level Pill
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.down.to.line")
+                                    .font(.system(size: 9, weight: .semibold))
+                                Text("Reorder: \(item.reorderLevel ?? 0)")
+                                    .font(.caption.weight(.medium))
+                            }
+                            .foregroundStyle(Color.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color(.tertiarySystemFill))
+                            .clipShape(Capsule())
+                        }
+                    }
+
+                    Spacer(minLength: 0)
+
+                    // Stock Count
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("\(item.stockQuantity ?? 0)")
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .foregroundStyle(stockStatusColor)
+                        Text("in stock")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Color(.tertiaryLabel))
+                    }
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, 12)
+
+                // Stock Level Bar with Reorder Marker
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        // Background track
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color(.tertiarySystemFill))
+                            .frame(height: 5)
+
+                        // Filled portion
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(stockBarGradient)
+                            .frame(width: max(geo.size.width * stockFraction, 4), height: 5)
+                            .animation(.spring(response: 0.6, dampingFraction: 0.7), value: stockFraction)
+
+                        // Reorder level marker (at the 20% point)
+                        Rectangle()
+                            .fill(Color(.tertiaryLabel).opacity(0.4))
+                            .frame(width: 1.5, height: 11)
+                            .offset(x: geo.size.width * 0.2 - 0.75)
+                    }
+                }
+                .frame(height: 11)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 12)
             }
-            .frame(height: 6)
         }
-        .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+                .stroke(
+                    isLowStock
+                        ? Color.red.opacity(0.25)
+                        : Color(.separator).opacity(0.2),
+                    lineWidth: isLowStock ? 1.0 : 0.5
+                )
         )
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
