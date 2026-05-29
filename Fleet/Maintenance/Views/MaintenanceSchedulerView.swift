@@ -451,6 +451,7 @@ private struct WorkOrderCard: View {
 
     func statusLabel(_ status: WorkOrderStatus) -> String {
         switch status {
+        case .pending:    return "Pending"
         case .open:       return "Open"
         case .inProgress: return "In Progress"
         case .completed:  return "Completed"
@@ -460,6 +461,7 @@ private struct WorkOrderCard: View {
 
     func statusColor(_ status: WorkOrderStatus) -> Color {
         switch status {
+        case .pending:    return Color.gray
         case .open:       return Color.blue
         case .inProgress: return Color.orange
         case .completed:  return Color.green
@@ -904,6 +906,7 @@ struct WorkOrderDetailSheet: View {
 
     func statusIcon(_ status: WorkOrderStatus) -> String {
         switch status {
+        case .pending:    return "hourglass"
         case .open:       return "tray.circle"
         case .inProgress: return "wrench.adjustable"
         case .completed:  return "checkmark.circle.fill"
@@ -913,6 +916,7 @@ struct WorkOrderDetailSheet: View {
 
     func statusLabel(_ status: WorkOrderStatus) -> String {
         switch status {
+        case .pending:    return "Pending"
         case .open:       return "Open"
         case .inProgress: return "In Progress"
         case .completed:  return "Completed"
@@ -922,6 +926,7 @@ struct WorkOrderDetailSheet: View {
 
     func statusColor(_ status: WorkOrderStatus) -> Color {
         switch status {
+        case .pending:    return Color.gray
         case .open:       return Color.blue
         case .inProgress: return Color.orange
         case .completed:  return Color.green
