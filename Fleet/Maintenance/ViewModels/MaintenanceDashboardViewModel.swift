@@ -202,6 +202,7 @@ final class MaintenanceDashboardViewModel {
 
     func woStatusColor(_ status: WorkOrderStatus?) -> Color {
         switch status {
+        case .pending: return Color.gray
         case .open: return Color.blue
         case .inProgress: return Color.orange
         case .completed: return Color.green

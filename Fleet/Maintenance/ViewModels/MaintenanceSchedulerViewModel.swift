@@ -470,6 +470,7 @@ final class MaintenanceSchedulerViewModel {
                 Task {
                     let statusStr: String
                     switch status {
+                    case .pending: statusStr = "open"
                     case .open: statusStr = "open"
                     case .inProgress: statusStr = "in_progress"
                     case .completed: statusStr = "resolved"

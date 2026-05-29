@@ -151,7 +151,7 @@ final class VehiclesViewModel {
         }
     }
 
-    func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, licensePlate: String, vehicleType: VehicleType) async throws {
+    func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, licensePlate: String, vehicleType: VehicleType, adminId: UUID? = nil) async throws {
         print("[VehiclesViewModel] addVehicle: make=\(make) model=\(model) plate=\(licensePlate) type=\(vehicleType)")
         do {
             try await VehicleService.createVehicle(
@@ -163,6 +163,7 @@ final class VehiclesViewModel {
                 tankCapacity: tankCapacity,
                 mileage: mileage,
                 assignedDriverId: nil,   // Always nil on creation — assign via driver selection
+                adminId: adminId,
                 status: .active,
                 vehicleType: vehicleType
             )
