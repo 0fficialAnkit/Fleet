@@ -143,26 +143,35 @@ final class MaintenanceSchedulerViewModel {
     func loadData() async {
         isLoading = true
         errorMessage = nil
-        do {
-            vehicles = try await VehicleService.fetchAllVehicles()
-            profiles = try await ProfileService.fetchAllProfiles()
-            inventory = try await InventoryService.fetchAllInventory()
 
-            if let uid = currentUserId {
-                rawTasks = try await MaintenanceTaskService.fetchTasksForUser(assignedTo: uid)
-                rawWorkOrders = try await WorkOrderService.fetchWorkOrdersForUser(assignedTo: uid)
-                rawIssueReports = try await IssueReportService.fetchIssueReportsAssignedTo(userId: uid)
-            } else {
-                rawTasks = try await MaintenanceTaskService.fetchAllTasks()
-                rawWorkOrders = try await WorkOrderService.fetchAllWorkOrders()
-                rawIssueReports = try await IssueReportService.fetchAllIssueReports()
-            }
+        // Fetch each independently to prevent one database schema/network error from failing everything
+        async let v = try? VehicleService.fetchAllVehicles()
+        async let p = try? ProfileService.fetchAllProfiles()
+        async let i = try? InventoryService.fetchAllInventory()
 
-            buildDisplayModels()
-        } catch {
-            errorMessage = error.localizedDescription
-            print("[SchedulerViewModel] loadData error: \(error)")
+        vehicles = (await v) ?? []
+        profiles = (await p) ?? []
+        inventory = (await i) ?? []
+
+        if let uid = currentUserId {
+            async let t = try? MaintenanceTaskService.fetchTasksForUser(assignedTo: uid)
+            async let w = try? WorkOrderService.fetchWorkOrdersForUser(assignedTo: uid)
+            async let ir = try? IssueReportService.fetchIssueReportsAssignedTo(userId: uid)
+
+            rawTasks = (await t) ?? []
+            rawWorkOrders = (await w) ?? []
+            rawIssueReports = (await ir) ?? []
+        } else {
+            async let t = try? MaintenanceTaskService.fetchAllTasks()
+            async let w = try? WorkOrderService.fetchAllWorkOrders()
+            async let ir = try? IssueReportService.fetchAllIssueReports()
+
+            rawTasks = (await t) ?? []
+            rawWorkOrders = (await w) ?? []
+            rawIssueReports = (await ir) ?? []
         }
+
+        buildDisplayModels()
         isLoading = false
     }
 
@@ -338,7 +347,7 @@ final class MaintenanceSchedulerViewModel {
         Calendar.current.isDate(date, inSameDayAs: selectedDate)
     }
 
-    // Pending: pending/delayed/critical tasks + all open work orders on this date
+    // Pending: pending/delayed/critical tasks + all open/pending work orders on this date
     var pendingItemsForSelectedDate: [SchedulerUnifiedItem] {
         let cal = Calendar.current
         let tasks = allTasks
@@ -347,7 +356,7 @@ final class MaintenanceSchedulerViewModel {
             .map    { SchedulerUnifiedItem.task($0) }
         let wos = allWorkOrders
             .filter { cal.isDate($0.effectiveDate, inSameDayAs: selectedDate) }
-            .filter { $0.status == .open }
+            .filter { $0.status == .open || $0.status == .pending }
             .map    { SchedulerUnifiedItem.workOrder($0) }
         return (tasks + wos).sorted { $0.sortDate < $1.sortDate }
     }
