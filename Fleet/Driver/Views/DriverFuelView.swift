@@ -341,20 +341,20 @@ struct DriverFuelView: View {
                 // Dispatch notifications to managers in the background to prevent UI blocking
                 Task {
                     do {
-                        if let userId = authViewModel.currentUser?.id {
-                            let managers = try await ProfileService.fetchProfilesByRole(role: "fleet_manager")
-                            for manager in managers {
-                                let notification = Notification(
-                                    id: UUID(),
-                                    userId: manager.id,
-                                    title: "Fuel Log Submitted",
-                                    message: "Driver logged \(String(format: "%.1f", liters))L fuel — ₹\(Int(cost)).",
-                                    type: .info,
-                                    isRead: false,
-                                    createdAt: Date()
-                                )
-                                try await NotificationService.createNotification(notification)
-                            }
+                        guard authViewModel.currentUser?.id != nil else { return }
+
+                        let managers = try await ProfileService.fetchProfilesByRole(role: "fleet_manager")
+                        for manager in managers {
+                            let notification = Notification(
+                                id: UUID(),
+                                userId: manager.id,
+                                title: "Fuel Log Submitted",
+                                message: "Driver logged \(String(format: "%.1f", liters))L fuel — ₹\(Int(cost)).",
+                                type: .info,
+                                isRead: false,
+                                createdAt: Date()
+                            )
+                            try await NotificationService.createNotification(notification)
                         }
                     } catch {
                         print("[DriverFuelView] Failed to dispatch notifications: \(error)")

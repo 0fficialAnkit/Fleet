@@ -227,6 +227,12 @@ struct VehicleDocument: Codable, Identifiable, Hashable, Sendable {
   var documentType: DocumentType?
   var fileUrl: String?
   var expiryDate: Date?
+  var insuranceProvider: String?
+  var policyNumber: String?
+  var policyHolderName: String?
+  var issueDate: Date?
+  var ocrStatus: InsuranceOCRStatus?
+  var uploadedAt: Date?
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -234,6 +240,12 @@ struct VehicleDocument: Codable, Identifiable, Hashable, Sendable {
       case documentType = "document_type"
       case fileUrl = "file_url"
       case expiryDate = "expiry_date"
+      case insuranceProvider = "insurance_provider"
+      case policyNumber = "policy_number"
+      case policyHolderName = "policy_holder_name"
+      case issueDate = "issue_date"
+      case ocrStatus = "ocr_status"
+      case uploadedAt = "uploaded_at"
   }
 }
 

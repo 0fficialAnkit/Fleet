@@ -7,6 +7,8 @@ struct DashboardView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var navigationPath = NavigationPath()
     @State private var complianceStore = ComplianceSettingsStore.shared
+    /// Observed so Dashboard re-renders when a vehicle is added from VehiclesRootView.
+    private let sharedVehiclesVM = VehiclesViewModel.shared
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -28,7 +30,7 @@ struct DashboardView: View {
 
                         maintenanceSection
                     }
-                    .refreshable { await viewModel.loadData() }
+                    .refreshable { await loadDashboardData() }
                     .listStyle(.insetGrouped)
                 }
             }
@@ -79,9 +81,26 @@ struct DashboardView: View {
             }
         }
         .task {
-            await viewModel.loadData()
+            await loadDashboardData()
             viewModel.setupRealtime()
         }
+        // When a vehicle is added/deleted from VehiclesRootView, the shared VM updates.
+        // Sync it into DashboardViewModel immediately so the vehicle count updates.
+        .onChange(of: sharedVehiclesVM.vehicles.count) {
+            viewModel.syncVehiclesFromShared()
+        }
+    }
+
+    private func loadDashboardData() async {
+        await viewModel.loadData()
+        await runInsuranceMonitor()
+    }
+
+    private func runInsuranceMonitor() async {
+        let userId = authViewModel.currentProfile?.id
+            ?? viewModel.vehicles.compactMap(\.adminId).first
+            ?? UUID()
+        await InsuranceMonitorService.shared.runCheck(vehicles: viewModel.vehicles, userId: userId)
     }
 
 
@@ -283,8 +302,8 @@ struct DashboardView: View {
 
     // MARK: - Automatic Expiry Alerts
 
-    private var expiringVehicles: [(vehicle: Vehicle, type: String, status: ComplianceStatus, daysLeft: Int)] {
-        var alerts: [(vehicle: Vehicle, type: String, status: ComplianceStatus, daysLeft: Int)] = []
+    private var expiringVehicles: [(vehicle: Vehicle, type: String, status: ComplianceStatus, level: InsuranceAlertLevel, daysLeft: Int)] {
+        var alerts: [(vehicle: Vehicle, type: String, status: ComplianceStatus, level: InsuranceAlertLevel, daysLeft: Int)] = []
         for vehicle in viewModel.vehicles {
             let key = vehicle.licensePlate ?? vehicle.id.uuidString
             let settings = complianceStore.settings(for: key)
@@ -293,7 +312,8 @@ struct DashboardView: View {
                 let days = complianceStore.daysUntilExpiry(for: date) ?? 0
                 if days <= 30 {
                     let status = complianceStore.insuranceStatus(for: key)
-                    alerts.append((vehicle, "Insurance Expiry", status, days))
+                    let level = InsuranceAlertLevel.level(for: days)
+                    alerts.append((vehicle, "Insurance Expiry", status, level, days))
                 }
             }
 
@@ -301,11 +321,40 @@ struct DashboardView: View {
                 let days = complianceStore.daysUntilExpiry(for: date) ?? 0
                 if days <= 30 {
                     let status = complianceStore.serviceStatus(for: key)
-                    alerts.append((vehicle, "Service Due", status, days))
+                    let level = InsuranceAlertLevel.level(for: days)
+                    alerts.append((vehicle, "Service Due", status, level, days))
                 }
             }
         }
         return alerts.sorted(by: { $0.daysLeft < $1.daysLeft })
+    }
+
+    private func alertColor(for level: InsuranceAlertLevel) -> Color {
+        switch level {
+        case .normal: return Color.green
+        case .warning: return Color.orange
+        case .highPriority: return Color.red.opacity(0.9)
+        case .critical: return Color.red
+        }
+    }
+
+    private func alertIcon(for level: InsuranceAlertLevel) -> String {
+        switch level {
+        case .normal: return "checkmark.shield.fill"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .highPriority: return "exclamationmark.octagon.fill"
+        case .critical: return "xmark.shield.fill"
+        }
+    }
+
+    private func alertMessage(for alert: (vehicle: Vehicle, type: String, status: ComplianceStatus, level: InsuranceAlertLevel, daysLeft: Int)) -> String {
+        if alert.daysLeft < 0 {
+            return "\(alert.type): Expired \(abs(alert.daysLeft)) day\(abs(alert.daysLeft) == 1 ? "" : "s") ago"
+        }
+        if alert.level == .highPriority {
+            return "\(alert.type): High Priority, \(alert.daysLeft) day\(alert.daysLeft == 1 ? "" : "s") left"
+        }
+        return "\(alert.type): Expires in \(alert.daysLeft) day\(alert.daysLeft == 1 ? "" : "s")"
     }
 
     private var complianceExpiryAlertsSection: some View {
@@ -322,16 +371,16 @@ struct DashboardView: View {
                         HStack(spacing: 12) {
                             ForEach(0..<alerts.count, id: \.self) { idx in
                                 let alert = alerts[idx]
-                                let isExpired = alert.daysLeft < 0
+                                let color = alertColor(for: alert.level)
                                 NavigationLink(value: DashboardDestination.vehiclesRoot) {
                                     HStack(spacing: 12) {
                                         ZStack {
                                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                                .fill(alert.status.color.opacity(0.15))
+                                                .fill(color.opacity(0.15))
                                                 .frame(width: 40, height: 40)
-                                            Image(systemName: alert.status.icon)
+                                            Image(systemName: alertIcon(for: alert.level))
                                                 .font(.system(size: 16, weight: .bold))
-                                                .foregroundStyle(alert.status.color)
+                                                .foregroundStyle(color)
                                         }
 
                                         VStack(alignment: .leading, spacing: 2) {
@@ -339,9 +388,9 @@ struct DashboardView: View {
                                                 .font(.subheadline.bold())
                                                 .foregroundStyle(Color.primary)
 
-                                            Text("\(alert.type): \(isExpired ? "Expired" : "Expires in \(alert.daysLeft) day\(alert.daysLeft == 1 ? "" : "s")")")
+                                            Text(alertMessage(for: alert))
                                                 .font(.caption)
-                                                .foregroundStyle(alert.status.color)
+                                                .foregroundStyle(color)
                                         }
 
                                         Spacer()
@@ -359,7 +408,7 @@ struct DashboardView: View {
                                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                            .stroke(alert.status.color.opacity(0.25), lineWidth: 1)
+                                            .stroke(color.opacity(0.25), lineWidth: 1)
                                     )
                                 }
                                 .buttonStyle(.plain)

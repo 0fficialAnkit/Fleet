@@ -97,8 +97,10 @@ final class DriverDashboardViewModel {
     private func setupLiveTimer() {
         liveTimer?.invalidate()
         if activeTrip != nil {
-            liveTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-                self?.currentTime = Date()
+            liveTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+                Task { @MainActor [weak self] in
+                    self?.currentTime = Date()
+                }
             }
         }
     }

@@ -18,6 +18,7 @@ struct EditVehicleView: View {
 
     // Compliance settings — loaded from store, edited here, saved on confirm
     @State private var complianceSettings: ComplianceSettings
+    @State private var showingInsuranceUpload = false
 
     private var vehicleKey: String {
         vehicle.licensePlate ?? vehicle.id.uuidString
@@ -157,8 +158,11 @@ struct EditVehicleView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             SectionHeader(title: "Compliance & Reminders")
                                 .padding(.horizontal, 16)
-                            ComplianceReminderCard(settings: $complianceSettings)
-                                .padding(.horizontal, 16)
+                            ComplianceReminderCard(
+                                settings: $complianceSettings,
+                                onInsuranceScan: { showingInsuranceUpload = true }
+                            )
+                            .padding(.horizontal, 16)
                         }
 
                         Color.clear.frame(height: 16)
@@ -204,6 +208,13 @@ struct EditVehicleView: View {
             .task {
                 _ = try? await UNUserNotificationCenter.current()
                     .requestAuthorization(options: [.alert, .sound, .badge])
+            }
+            .sheet(isPresented: $showingInsuranceUpload) {
+                InsuranceUploadView(vehicle: vehicle) {
+                    // After a successful upload, sync the expiry date into the compliance settings
+                    let key = vehicle.licensePlate ?? vehicle.id.uuidString
+                    complianceSettings = ComplianceSettingsStore.shared.settings(for: key)
+                }
             }
         }
     }

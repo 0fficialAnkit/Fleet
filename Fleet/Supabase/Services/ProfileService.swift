@@ -225,7 +225,7 @@ enum ProfileService {
             print("[ProfileService] Successfully upserted user \(newUserId) in public.users table.")
         } catch {
             print("[ProfileService] Public users upsert failed: \(error). Trying standard update...")
-            try? await supabase
+            _ = try? await supabase
                 .from("users")
                 .update(newUserRow)
                 .eq("id", value: newUserId)

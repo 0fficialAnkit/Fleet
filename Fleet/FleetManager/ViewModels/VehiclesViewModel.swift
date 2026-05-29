@@ -3,6 +3,10 @@ import SwiftUI
 @MainActor
 @Observable
 final class VehiclesViewModel {
+    /// Shared instance used across Dashboard, VehiclesRootView, and AddVehicleView
+    /// so all screens always reflect the same vehicle list.
+    static let shared = VehiclesViewModel()
+
     var vehicles: [Vehicle] = []
     private(set) var profiles: [Profile] = []
     private(set) var trips: [Trip] = []
@@ -10,11 +14,15 @@ final class VehiclesViewModel {
     var isLoading = false
     var errorMessage: String?
 
+    private var isRealtimeSetUp = false
+
     func setupRealtime() {
+        guard !isRealtimeSetUp else { return }
+        isRealtimeSetUp = true
         let rt = RealtimeManager.shared
         rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addProfilesChangeHandler { [weak self] in Task { await self?.loadData() } }
-        rt.addTripsChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addTripsChangeHandler    { [weak self] in Task { await self?.loadData() } }
     }
 
     func loadData() async {
@@ -140,7 +148,8 @@ final class VehiclesViewModel {
     func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, licensePlate: String, vehicleType: VehicleType = .car) async throws -> Vehicle {
         print("[VehiclesViewModel] addVehicle: make=\(make) model=\(model) plate=\(licensePlate) type=\(vehicleType)")
         do {
-            try await VehicleService.createVehicle(
+            // createVehicle now returns the echoed row from Supabase — no second fetch needed.
+            let newVehicle = try await VehicleService.createVehicle(
                 make: make,
                 model: model,
                 year: year,
@@ -148,17 +157,18 @@ final class VehiclesViewModel {
                 licensePlate: licensePlate,
                 tankCapacity: tankCapacity,
                 mileage: mileage,
-                assignedDriverId: nil,   // Always nil on creation — assign via driver selection
+                assignedDriverId: nil,
                 status: .active,
                 vehicleType: vehicleType
             )
-            print("[VehiclesViewModel] addVehicle: success, reloading...")
-            await loadData()
-            // Return the newly created vehicle (matched by license plate)
-            if let newVehicle = vehicles.first(where: { $0.licensePlate == licensePlate }) {
-                return newVehicle
+            print("[VehiclesViewModel] addVehicle: created id=\(newVehicle.id), appending locally")
+            // Append immediately for instant UI update — no waiting for a full reload.
+            if !vehicles.contains(where: { $0.id == newVehicle.id }) {
+                vehicles.append(newVehicle)
             }
-            throw NSError(domain: "Fleet", code: 1, userInfo: [NSLocalizedDescriptionKey: "Vehicle created but could not be found after reload."])
+            // Background reload to sync any server-side defaults (admin_id, timestamps, etc.)
+            Task { await loadData() }
+            return newVehicle
         } catch {
             print("[VehiclesViewModel] addVehicle ERROR: \(error)")
             throw error

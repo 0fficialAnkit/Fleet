@@ -1,7 +1,7 @@
 import SwiftUI
 import Vision
 import PhotosUI
-import UserNotifications
+@preconcurrency import UserNotifications
 
 // MARK: - Compliance Status
 
@@ -193,6 +193,9 @@ struct CameraPickerView: UIViewControllerRepresentable {
 struct ComplianceReminderCard: View {
     @Binding var settings: ComplianceSettings
     var compact: Bool = false
+    /// When provided, tapping the insurance Scan button calls this instead of the built-in OCRScannerSheet.
+    /// Use this to open the full InsuranceUploadView with vehicle context.
+    var onInsuranceScan: (() -> Void)? = nil
 
     enum OCRTarget { case insurance, service
         var displayName: String { self == .insurance ? "Insurance Certificate" : "Service Receipt" }
@@ -220,13 +223,21 @@ struct ComplianceReminderCard: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 14) {
-                // Insurance
+                // Insurance — if an override handler is provided (e.g. InsuranceUploadView), use it;
+                // otherwise fall back to the built-in OCRScannerSheet (date-only).
                 ExpiryInputRow(
                     icon: "shield.lefthalf.filled",
                     title: "Insurance Expiry",
                     accentColor: .teal,
                     date: $settings.insuranceExpiry,
-                    onScan: { scannerTarget = .insurance; showingScanner = true }
+                    onScan: {
+                        if let onInsuranceScan {
+                            onInsuranceScan()
+                        } else {
+                            scannerTarget = .insurance
+                            showingScanner = true
+                        }
+                    }
                 )
 
                 // Service
@@ -563,10 +574,10 @@ struct OCRScannerSheet: View {
     // MARK: - Vision OCR
 
     private func runOCR(on image: UIImage) async {
-        isScanning   = true
-        scanComplete = false
+        isScanning    = true
+        scanComplete  = false
         extractedDate = nil
-        scanText     = "Recognising text in image..."
+        scanText      = "Recognising text in image..."
 
         guard let cgImage = image.cgImage else {
             isScanning = false; scanText = "Error: could not read image."; return
@@ -575,13 +586,54 @@ struct OCRScannerSheet: View {
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
-        request.usesLanguageCorrection = true
+        request.usesLanguageCorrection = false
+        request.recognitionLanguages = ["en-US"]
 
         do {
             try handler.perform([request])
 
-            let rawLines = request.results?.compactMap { $0.topCandidates(1).first?.string } ?? []
+            // Use only the single best candidate per observation to avoid noise.
+            let rawLines: [String] = request.results?.compactMap {
+                $0.topCandidates(1).first?.string
+            } ?? []
             scanText  = "Searching \(rawLines.count) text segments for dates..."
+
+            if target == .insurance {
+                let result = InsuranceOCREngine.parse(lines: rawLines)
+                isScanning = false
+                if let expiryDate = result.expiryDate {
+                    extractedDate = Calendar.current.startOfDay(for: expiryDate)
+                    scanText = "✓ Scanned document. Found expiry date: \(expiryDate.formatted(date: .long, time: .omitted))"
+                } else {
+                    // Final fallback: NSDataDetector on each line (very reliable for
+                    // natural-language dates like "27 May 2027")
+                    let today = Calendar.current.startOfDay(for: Date())
+                    var fallbackDate: Date? = nil
+                    if let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue) {
+                        for line in rawLines {
+                            for m in detector.matches(in: line, range: NSRange(line.startIndex..., in: line)) {
+                                if let d = m.date {
+                                    let midnight = Calendar.current.startOfDay(for: d)
+                                    if midnight >= today {
+                                        if fallbackDate == nil || midnight > fallbackDate! {
+                                            fallbackDate = midnight
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if let fb = fallbackDate {
+                        extractedDate = fb
+                        scanText = "✓ Scanned document. Found expiry date: \(fb.formatted(date: .long, time: .omitted))"
+                    } else {
+                        extractedDate = nil
+                        scanText = "Could not find the expiry date row. Please retake a clearer photo or choose manually."
+                    }
+                }
+                withAnimation { scanComplete = true }
+                return
+            }
 
             var found: [Date] = []
             let fm = DateFormatter()

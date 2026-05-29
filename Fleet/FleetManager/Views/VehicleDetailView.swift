@@ -6,6 +6,7 @@ struct VehicleDetailView: View {
 
     @State private var isShowingEdit = false
     @State private var complianceStore = ComplianceSettingsStore.shared
+    @State private var showingInsuranceUpload = false
     @Environment(\.dismiss) private var dismiss
 
     private var vehicleKey: String {
@@ -73,6 +74,39 @@ struct VehicleDetailView: View {
                         SectionHeader(title: "Compliance Status")
                             .padding(.horizontal, 16)
                         VehicleComplianceStatusCard(vehicleId: vehicleKey)
+
+                        // Upload / scan insurance document button
+                        Button {
+                            showingInsuranceUpload = true
+                        } label: {
+                            HStack(spacing: 12) {
+                                Circle()
+                                    .fill(Color.teal.opacity(0.12))
+                                    .frame(width: 44, height: 44)
+                                    .overlay(
+                                        Image(systemName: "doc.text.viewfinder")
+                                            .foregroundColor(Color.teal)
+                                            .font(.system(size: 20))
+                                    )
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Upload Insurance Document")
+                                        .font(.headline)
+                                        .foregroundColor(Color.primary)
+                                    Text("Scan to auto-extract policy details")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundColor(Color(.tertiaryLabel))
+                            }
+                            .padding(16)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 16)
                     }
 
                     // ── Vehicle Info Card ────────────────────────────────────────
@@ -210,6 +244,12 @@ struct VehicleDetailView: View {
         }
         .sheet(isPresented: $isShowingEdit) {
             EditVehicleView(viewModel: viewModel, vehicle: vehicle)
+        }
+        .sheet(isPresented: $showingInsuranceUpload) {
+            InsuranceUploadView(vehicle: vehicle) {
+                // Refresh the compliance store after a successful upload
+                complianceStore = ComplianceSettingsStore.shared
+            }
         }
     }
 }

@@ -84,7 +84,7 @@ enum VehicleService {
         }
     }
 
-    /// Safe insert — only sends columns that exist in the vehicles table.
+    /// Safe insert — returns the full Vehicle row echoed back by Supabase.
     static func createVehicle(
         make: String?,
         model: String?,
@@ -97,7 +97,7 @@ enum VehicleService {
         adminId: UUID? = nil,
         status: VehicleStatus?,
         vehicleType: VehicleType?
-    ) async throws {
+    ) async throws -> Vehicle {
         let payload = VehicleInsert(
             id: UUID(),
             make: make,
@@ -107,17 +107,21 @@ enum VehicleService {
             license_plate: licensePlate,
             tank_capacity: tankCapacity,
             mileage: mileage,
-            assigned_driver_id: assignedDriverId, // nil → null, never empty string
+            assigned_driver_id: assignedDriverId,
             admin_id: adminId,
             status: status,
             vehicle_type: vehicleType
         )
         do {
-            try await supabase
+            let created: Vehicle = try await supabase
                 .from("vehicles")
                 .insert(payload)
+                .select()
+                .single()
                 .execute()
-            print("[VehicleService] createVehicle: OK — \(make ?? "?") \(model ?? "?")")
+                .value
+            print("[VehicleService] createVehicle: OK — id=\(created.id) plate=\(created.licensePlate ?? "?")")
+            return created
         } catch {
             print("[VehicleService] createVehicle ERROR: \(error)")
             throw error

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct VehiclesRootView: View {
     @Binding var path: NavigationPath
-    @State private var vehiclesViewModel = VehiclesViewModel()
+    @State private var vehiclesViewModel = VehiclesViewModel.shared
     @State private var isShowingAddVehicle = false
 
     var body: some View {
@@ -38,7 +38,7 @@ struct VehiclesRootView: View {
 }
 
 #Preview {
-    @State var path = NavigationPath()
+    @Previewable @State var path = NavigationPath()
     return NavigationStack(path: $path) {
         VehiclesRootView(path: $path)
     }

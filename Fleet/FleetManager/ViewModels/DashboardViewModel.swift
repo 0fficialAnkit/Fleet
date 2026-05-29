@@ -34,7 +34,7 @@ final class DashboardViewModel {
             async let i  = InspectionService.fetchAllInspections()
             async let ir = IssueReportService.fetchAllIssueReports()
             async let mh = MaintenanceHistoryService.fetchAllHistory()
-            vehicles           = try await v
+            let fetchedVehicles   = try await v
             trips              = try await t
             workOrders         = try await w
             routes             = try await r
@@ -43,6 +43,11 @@ final class DashboardViewModel {
             inspections        = try await i
             issueReports       = try await ir
             maintenanceHistory = try await mh
+
+            // Sync the shared VehiclesViewModel so Dashboard and Vehicles tab
+            // always show the same list.
+            VehiclesViewModel.shared.vehicles = fetchedVehicles
+            vehicles = VehiclesViewModel.shared.vehicles
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -82,6 +87,10 @@ final class DashboardViewModel {
         if !vehicles.contains(where: { $0.vin == "MOCK1234" }) {
             vehicles.append(mockVehicle)
             trips.append(mockTrip)
+            // Also keep shared list consistent with mock
+            if !VehiclesViewModel.shared.vehicles.contains(where: { $0.vin == "MOCK1234" }) {
+                VehiclesViewModel.shared.vehicles.append(mockVehicle)
+            }
         }
         // -------------------------------------------
 
@@ -96,6 +105,18 @@ final class DashboardViewModel {
 
         await refreshVehicleLocations()
         checkAndTriggerNotifications()
+    }
+
+    /// Call this to pick up vehicles added via VehiclesViewModel.shared without a full reload.
+    func syncVehiclesFromShared() {
+        vehicles = VehiclesViewModel.shared.vehicles
+        predictiveAlerts = PredictiveMaintenanceService.analyze(
+            vehicles: vehicles,
+            trips: trips,
+            inspections: inspections,
+            issueReports: issueReports,
+            maintenanceHistory: maintenanceHistory
+        )
     }
     
     private func checkAndTriggerNotifications() {
