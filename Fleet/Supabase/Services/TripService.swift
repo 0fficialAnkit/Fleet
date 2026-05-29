@@ -18,6 +18,21 @@ private struct TripInsert: Encodable {
 
 enum TripService {
 
+    static func fetchTrip(id: UUID) async throws -> Trip? {
+        do {
+            let result: [Trip] = try await supabase
+                .from("trips")
+                .select()
+                .eq("id", value: id)
+                .execute()
+                .value
+            return result.first
+        } catch {
+            print("[TripService] fetchTrip(\(id)) ERROR: \(error)")
+            throw error
+        }
+    }
+
     static func fetchAllTrips() async throws -> [Trip] {
         do {
             let result: [Trip] = try await supabase

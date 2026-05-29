@@ -109,10 +109,10 @@ struct AddOrderView: View {
                         }
                     } else {
                         Picker(selection: $selectedVehicleId) {
-                            Text("Select a vehicle").tag(nil as UUID?)
+                            Text("Select a vehicle").tag(UUID?.none)
                             ForEach(availableVehicles) { v in
                                 Text("\(v.make ?? "Unknown") \(v.model ?? "") · \(v.licensePlate ?? "—")")
-                                    .tag(Optional(v.id))
+                                    .tag(v.id as UUID?)
                             }
                         } label: {
                             Label("Vehicle", systemImage: "car.fill")
@@ -131,10 +131,10 @@ struct AddOrderView: View {
                         }
                     } else {
                         Picker(selection: $selectedDriverId) {
-                            Text("Select a driver").tag(nil as UUID?)
+                            Text("Select a driver").tag(UUID?.none)
                             ForEach(availableDrivers) { d in
                                 Text(d.fullName)
-                                    .tag(Optional(d.id))
+                                    .tag(d.id as UUID?)
                             }
                         } label: {
                             Label("Driver", systemImage: "person.crop.circle.fill")
