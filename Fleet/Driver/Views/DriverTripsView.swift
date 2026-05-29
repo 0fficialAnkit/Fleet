@@ -27,7 +27,7 @@ struct DriverTripsView: View {
             Group {
                 if viewModel.isLoading && viewModel.trips.isEmpty {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .green))
+                        .tint(.green)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {

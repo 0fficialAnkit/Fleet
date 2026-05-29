@@ -68,7 +68,6 @@ struct DriverReportIssueView: View {
     @State private var selectedLocation: IssueLocation = .highway
     @State private var issueDate: Date = Date()
     @State private var isDriveable: Bool = true
-    @State private var odometer: String = ""
     @State private var descriptionText: String = ""
     @State private var isSubmitted  = false
     @State private var isSubmitting = false

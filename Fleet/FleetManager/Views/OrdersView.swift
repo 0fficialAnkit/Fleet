@@ -34,7 +34,7 @@ struct OrdersView: View {
 
                 if viewModel.isLoading && viewModel.trips.isEmpty {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .tint(.white)
                 } else {
                     List {
                         Section {

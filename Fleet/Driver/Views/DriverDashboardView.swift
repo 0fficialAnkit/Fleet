@@ -13,7 +13,7 @@ struct DriverDashboardView: View {
             Group {
                 if viewModel.isLoading && viewModel.trips.isEmpty {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Color.green))
+                        .tint(Color.green)
                 } else {
                     List {
                         Section { overviewCard }
@@ -237,93 +237,6 @@ struct DriverTripRow: View {
             }
         }
         .padding(.vertical, 4)
-    }
-}
-
-// MARK: - Enriched Trip Card (used by DriverTripsView)
-
-struct EnrichedTripCard: View {
-    let trip: Trip
-    let route: Route?
-    let vehicle: Vehicle?
-
-    var statusColor: Color {
-        switch trip.status {
-        case .scheduled: return Color.blue
-        case .active:    return Color.green
-        case .completed: return Color.green
-        case .cancelled: return Color.red
-        case .none:      return Color(UIColor.quaternaryLabel)
-        }
-    }
-
-    var statusText: String {
-        switch trip.status {
-        case .scheduled: return "Scheduled"
-        case .active:    return "In Progress"
-        case .completed: return "Completed"
-        case .cancelled: return "Cancelled"
-        case .none:      return "Unknown"
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(trip.orderType?.displayName ?? "Trip")
-                    .font(.body.bold()).foregroundStyle(Color.primary).lineLimit(1)
-                Spacer()
-                if let orderType = trip.orderType {
-                    StatusBadge(text: orderType.displayName, color: Color.blue, icon: orderTypeIcon(orderType))
-                }
-                StatusBadge(text: statusText, color: statusColor)
-            }
-
-            if let start = route?.startLocation, let end = route?.endLocation {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.forward").font(.caption.weight(.medium)).foregroundStyle(Color.secondary)
-                    Text("\(start) → \(end)").font(.subheadline).foregroundStyle(Color.secondary).lineLimit(1)
-                }
-            }
-
-            Divider()
-
-            HStack {
-                if let vehicle {
-                    HStack(spacing: 6) {
-                        Image(systemName: "truck.box.fill").font(.system(size: 13)).foregroundStyle(Color.green)
-                        Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
-                            .font(.subheadline).foregroundStyle(Color.secondary).lineLimit(1)
-                    }
-                }
-                Spacer()
-                if let start = trip.startTime {
-                    HStack(spacing: 5) {
-                        Image(systemName: "clock.fill").font(.system(size: 13)).foregroundStyle(Color(.tertiaryLabel))
-                        Text(start.formatted(date: .omitted, time: .shortened))
-                            .font(.subheadline).foregroundStyle(Color.secondary)
-                    }
-                }
-                if let distance = trip.distance, distance > 0 {
-                    HStack(spacing: 5) {
-                        Image(systemName: "road.lanes").font(.system(size: 13)).foregroundStyle(Color(.tertiaryLabel))
-                        Text(String(format: "%.1f km", distance)).font(.subheadline).foregroundStyle(Color.secondary)
-                    }
-                }
-            }
-        }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(statusColor.opacity(0.25), lineWidth: 1))
-    }
-
-    private func orderTypeIcon(_ type: OrderType) -> String {
-        switch type {
-        case .pickUpAndDrop: return "shippingbox"
-        case .bulkOrderShip: return "cube.box.fill"
-        case .travel:        return "car.fill"
-        }
     }
 }
 

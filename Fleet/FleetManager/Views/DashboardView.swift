@@ -12,7 +12,7 @@ struct DashboardView: View {
             Group {
                 if viewModel.isLoading && viewModel.vehicles.isEmpty {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .tint(.white)
                 } else {
                     List {
                         Section {

@@ -72,12 +72,8 @@ struct DriverProfileView: View {
                         )
                     }
                     .padding(16)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                    )
-                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     // Preferences & Support Card
                     VStack(alignment: .leading, spacing: 16) {
@@ -108,12 +104,8 @@ struct DriverProfileView: View {
                         )
                     }
                     .padding(16)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                    )
-                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     // Logout Button
                     Button(action: {
@@ -129,12 +121,8 @@ struct DriverProfileView: View {
                         )
                     }
                     .padding(16)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                    )
-                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
             .padding()
