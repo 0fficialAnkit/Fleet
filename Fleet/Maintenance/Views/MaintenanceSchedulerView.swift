@@ -45,10 +45,10 @@ struct MaintenanceSchedulerView: View {
             .navigationTitle("Schedule")
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(item: $selectedTask) { task in
-                TaskDetailSheet(task: task, viewModel: viewModel)
+                MaintenanceTaskDetailView(task: task, viewModel: viewModel)
             }
             .navigationDestination(item: $selectedWorkOrder) { wo in
-                WorkOrderDetailSheet(workOrder: wo, viewModel: viewModel)
+                WorkOrderDetailView(scheduledWorkOrder: wo)
             }
             .task {
                 viewModel.currentUserId = authViewModel.currentUser?.id
@@ -1424,3 +1424,205 @@ struct CreateTaskSheet: View {
         }
     }
 }
+// ═══════════════════════════════════════════════════════════════
+// MARK: - Maintenance Task Detail View
+// ═══════════════════════════════════════════════════════════════
+
+struct MaintenanceTaskDetailView: View {
+    let task: ScheduledTask
+    let viewModel: MaintenanceSchedulerViewModel
+
+    @State private var repairNotes: String = ""
+    @State private var currentStatus: TaskDisplayStatus
+
+    init(task: ScheduledTask, viewModel: MaintenanceSchedulerViewModel) {
+        self.task = task
+        self.viewModel = viewModel
+        _currentStatus = State(initialValue: task.status)
+        _repairNotes = State(initialValue: task.previousNote)
+    }
+
+    var body: some View {
+        ZStack {
+            Color(.systemGroupedBackground).ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 24) {
+
+                    // MARK: Status Banner
+                    HStack(spacing: 8) {
+                        Image(systemName: statusIcon(currentStatus))
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(statusColor(currentStatus))
+                        Text(currentStatus.rawValue)
+                            .font(.headline)
+                            .foregroundStyle(statusColor(currentStatus))
+                        Spacer()
+                        StatusBadge(
+                            text: task.priority.rawValue,
+                            color: priorityColor(task.priority),
+                            icon: priorityIconName(task.priority)
+                        )
+                    }
+                    .padding(16)
+                    .background(statusColor(currentStatus).opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(statusColor(currentStatus).opacity(0.25), lineWidth: 1)
+                    )
+
+                    // MARK: Details Section
+                    GlassSection(title: "Task Details") {
+                        InfoRow(icon: "car.fill",      label: "Vehicle",   value: "\(task.vehicleName) · \(task.vehicleNumber)")
+                        Divider().background(Color(.separator))
+                        InfoRow(icon: "wrench.fill",   label: "Type",      value: taskTypeLabel(task.taskType))
+                        Divider().background(Color(.separator))
+                        InfoRow(icon: "clock.fill",    label: "Time",      value: "\(task.scheduledTime) · \(task.estimatedDuration)")
+                        Divider().background(Color(.separator))
+                        InfoRow(icon: "person.fill",   label: "Assigned By", value: task.assignedBy)
+                    }
+
+                    // MARK: Service Checklist
+                    let items = task.checklistItems
+                    if !items.isEmpty {
+                        GlassSection(title: "Service Checklist") {
+                            let doneCount = items.filter(\.isChecked).count
+                            let totalCount = items.count
+
+                            HStack {
+                                GeometryReader { geo in
+                                    ZStack(alignment: .leading) {
+                                        RoundedRectangle(cornerRadius: 4).fill(Color(.tertiarySystemBackground)).frame(height: 6)
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .fill(Color.green)
+                                            .frame(width: totalCount > 0 ? geo.size.width * CGFloat(doneCount) / CGFloat(totalCount) : 0, height: 6)
+                                    }
+                                }
+                                .frame(height: 6)
+
+                                Text("\(doneCount)/\(totalCount)")
+                                    .font(.footnote)
+                                    .foregroundStyle(Color(.tertiaryLabel))
+                                    .frame(width: 36, alignment: .trailing)
+                            }
+
+                            Divider().background(Color(.separator))
+
+                            ForEach(items) { item in
+                                ChecklistRow(item: item) {
+                                    viewModel.toggleChecklist(taskId: task.id, itemId: item.id)
+                                }
+                                if item.id != items.last?.id {
+                                    Divider().background(Color(.separator)).padding(.leading, 32)
+                                }
+                            }
+                        }
+                    }
+
+                    // MARK: AI Recommendation
+                    if !task.aiRecommendation.isEmpty {
+                        GlassSection(title: "AI Recommendation") {
+                            HStack(alignment: .top, spacing: 16) {
+                                Image(systemName: "sparkles")
+                                    .foregroundStyle(Color.yellow)
+                                    .font(.system(size: 18, weight: .semibold))
+                                Text(task.aiRecommendation)
+                                    .font(.body)
+                                    .foregroundStyle(Color.primary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+
+                    // MARK: Service Notes
+                    GlassSection(title: "Service Notes") {
+                        TextField("Add notes, observations, or findings...", text: $repairNotes, axis: .vertical)
+                            .lineLimit(3...6)
+                            .font(.body)
+                            .foregroundStyle(Color.primary)
+                    }
+
+                    // MARK: Action Buttons
+                    VStack(spacing: 16) {
+                        if currentStatus == .pending || currentStatus == .delayed {
+                            ActionButton(title: "Start Task", icon: "play.circle.fill", color: Color.brown) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                    currentStatus = .inProgress
+                                    viewModel.updateTaskStatus(id: task.id, to: .inProgress)
+                                }
+                            }
+                        }
+                        if currentStatus == .inProgress || currentStatus == .critical {
+                            ActionButton(title: "Mark as Completed", icon: "checkmark.circle.fill", color: Color.green) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                    currentStatus = .completed
+                                    viewModel.updateTaskStatus(id: task.id, to: .completed)
+                                }
+                            }
+                        }
+                        if currentStatus != .completed && currentStatus != .delayed {
+                            ActionButton(title: "Report Issue / Delay", icon: "exclamationmark.triangle.fill", color: Color.yellow) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                    currentStatus = .delayed
+                                    viewModel.updateTaskStatus(id: task.id, to: .delayed)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.bottom, 24)
+                }
+                .padding(16)
+            }
+        }
+        .navigationTitle(task.vehicleName)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - GlassSection for MaintenanceTaskDetailView
+private struct GlassSection<Content: View>: View {
+    let title: String
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            SectionHeader(title: title)
+            VStack(spacing: 16) {
+                content()
+            }
+            .padding(16)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+            )
+        }
+    }
+}
+
+private struct ActionButton: View {
+    let title: String
+    let icon: String
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                Text(title)
+            }
+            .font(.headline)
+            .foregroundStyle(color)
+            .frame(maxWidth: .infinity)
+            .padding(16)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(color.opacity(0.3), lineWidth: 1)
+            )
+        }
+    }
+}
+

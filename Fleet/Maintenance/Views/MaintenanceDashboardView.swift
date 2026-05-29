@@ -153,55 +153,7 @@ struct MaintenanceDashboardView: View {
                 case .workOrderList(let filter, let assignedTo, let priority):
                     WorkOrderListView(initialFilter: filter, assignedUserId: assignedTo, priorityFilter: priority)
                 case .taskDetail(let task):
-                    if let scheduledTask = schedulerViewModel.allTasks.first(where: { $0.sourceTaskId == task.id }) {
-                        TaskDetailSheet(task: scheduledTask, viewModel: schedulerViewModel)
-                    } else {
-                        { () -> TaskDetailSheet in
-                            let timeFormatter = DateFormatter()
-                            timeFormatter.dateFormat = "hh:mm a"
-                            let vehicle = schedulerViewModel.allVehicles.first { $0.id == task.vehicleId }
-                            let displayStatus: TaskDisplayStatus = {
-                                switch task.status {
-                                case .pending: return .pending
-                                case .inProgress: return .inProgress
-                                case .completed: return .completed
-                                case .cancelled: return .delayed
-                                case .none: return .pending
-                                }
-                            }()
-                            let priority: TaskPriority = {
-                                switch task.taskType {
-                                case .repair: return .high
-                                case .inspection: return .medium
-                                case .oilChange: return .low
-                                case .tireRotation: return .low
-                                case .other: return .medium
-                                case .none: return .medium
-                                }
-                            }()
-                            let fallbackScheduledTask = ScheduledTask(
-                                id: UUID(),
-                                vehicleNumber: vehicle?.licensePlate ?? "Unknown",
-                                vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
-                                taskType: task.taskType ?? .other,
-                                priority: priority,
-                                scheduledTime: task.scheduledDate.map { timeFormatter.string(from: $0) } ?? "TBD",
-                                assignedBy: "Fleet Manager",
-                                estimatedDuration: "1-2 hrs",
-                                status: displayStatus,
-                                description: task.description ?? "No description.",
-                                date: task.scheduledDate ?? Date(),
-                                checklistItems: [],
-                                partsNeeded: [],
-                                previousNote: "",
-                                aiRecommendation: "",
-                                sourceTaskId: task.id,
-                                laborHours: nil,
-                                laborCost: nil
-                            )
-                            return TaskDetailSheet(task: fallbackScheduledTask, viewModel: schedulerViewModel)
-                        }()
-                    }
+                    MaintenanceTaskDetailView(task: task, viewModel: schedulerViewModel)
                 }
             }
             .sheet(isPresented: $isShowingProfile) {

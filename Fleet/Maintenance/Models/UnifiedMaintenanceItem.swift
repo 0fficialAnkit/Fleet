@@ -73,3 +73,28 @@ enum UnifiedMaintenanceItem: Identifiable, Hashable {
         }
     }
 }
+
+import SwiftUI
+
+enum MaintenanceDestination: Hashable {
+    case workOrderDetail(WorkOrder)
+    case issueReportDetail(IssueReportRecord)
+    case workOrderList(filter: WorkOrderStatus?, assignedTo: UUID?, priority: WorkOrderPriority?)
+    case taskDetail(ScheduledTask)
+}
+
+struct UpcomingDisplayItem: Identifiable, Hashable {
+    let id: UUID
+    let priorityLabel: String?
+    let priorityColor: Color?
+    let referenceId: String
+    let assignmentTag: String
+    let vehicleName: String
+    let taskDescription: String
+    let estimatedDuration: String
+    let location: String
+    let actionButtonTitle: String
+    let actionButtonIcon: String
+    let destination: MaintenanceDestination?
+    let isTask: Bool
+}

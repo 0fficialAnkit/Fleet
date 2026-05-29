@@ -642,7 +642,52 @@ final class MaintenanceSchedulerViewModel {
     var upcomingItems: [UpcomingDisplayItem] {
         var items: [UpcomingDisplayItem] = []
 
-        let tItems = rawTasks.filter { $0.status != .completed }.map { task -> UpcomingDisplayItem in
+        let tItems = rawTasks.filter { $0.status != .completed }.compactMap { task -> UpcomingDisplayItem? in
+            let matchedScheduled = allTasks.first(where: { $0.sourceTaskId == task.id })
+            let scheduledTask: ScheduledTask
+            if let matched = matchedScheduled {
+                scheduledTask = matched
+            } else {
+                let priority: TaskPriority = {
+                    switch task.taskType {
+                    case .repair: return .high
+                    case .inspection: return .medium
+                    case .oilChange: return .low
+                    case .tireRotation: return .low
+                    case .other, .none: return .medium
+                    }
+                }()
+                let displayStatus: TaskDisplayStatus = {
+                    switch task.status {
+                    case .pending: return .pending
+                    case .inProgress: return .inProgress
+                    case .completed: return .completed
+                    case .cancelled: return .delayed
+                    case .none: return .pending
+                    }
+                }()
+                scheduledTask = ScheduledTask(
+                    id: UUID(),
+                    vehicleNumber: "Unknown",
+                    vehicleName: vehiclePlate(for: task.vehicleId),
+                    taskType: task.taskType ?? .other,
+                    priority: priority,
+                    scheduledTime: "TBD",
+                    assignedBy: "Fleet Manager",
+                    estimatedDuration: "1-2 hrs",
+                    status: displayStatus,
+                    description: task.description ?? "",
+                    date: task.scheduledDate ?? Date(),
+                    checklistItems: [],
+                    partsNeeded: [],
+                    previousNote: "",
+                    aiRecommendation: "",
+                    sourceTaskId: task.id,
+                    laborHours: nil,
+                    laborCost: nil
+                )
+            }
+            
             return UpcomingDisplayItem(
                 id: task.id,
                 priorityLabel: nil,
@@ -655,7 +700,7 @@ final class MaintenanceSchedulerViewModel {
                 location: "Bay 01",
                 actionButtonTitle: "Start Task",
                 actionButtonIcon: "play.fill",
-                destination: .taskDetail(task),
+                destination: .taskDetail(scheduledTask),
                 isTask: true
             )
         }

@@ -159,26 +159,31 @@ struct WorkOrderDetailView: View {
                         if currentStatus == .pending {
                             ActionButton(title: "Open Work Order", icon: "play.circle.fill", color: Color.brown) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .open }
+                                Task { try? await WorkOrderService.updateWorkOrderStatus(id: data.id, status: .open) }
                             }
                         }
                         if currentStatus == .open {
                             ActionButton(title: "Start Work Order", icon: "play.circle.fill", color: Color.brown) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .inProgress }
+                                Task { try? await WorkOrderService.updateWorkOrderStatus(id: data.id, status: .inProgress) }
                             }
                         }
                         if currentStatus == .inProgress {
                             ActionButton(title: "Mark as Completed", icon: "checkmark.circle.fill", color: Color.green) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .completed }
+                                Task { try? await WorkOrderService.updateWorkOrderStatus(id: data.id, status: .completed) }
                             }
                         }
                         if currentStatus == .completed {
                             ActionButton(title: "Reopen Order", icon: "arrow.counterclockwise.circle.fill", color: Color.yellow) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .inProgress }
+                                Task { try? await WorkOrderService.updateWorkOrderStatus(id: data.id, status: .inProgress) }
                             }
                         }
                         if currentStatus != .cancelled {
                             ActionButton(title: "Cancel Order", icon: "xmark.circle", color: Color.red) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .cancelled }
+                                Task { try? await WorkOrderService.updateWorkOrderStatus(id: data.id, status: .cancelled) }
                             }
                         }
                     }
