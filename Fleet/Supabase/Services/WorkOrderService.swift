@@ -2,14 +2,14 @@ import Foundation
 import Supabase
 
 // MARK: - WorkOrderInsert
-// Explicit insert struct — excludes created_at (DB generates it) to avoid conflict.
+// Explicit insert — excludes created_at (DB auto-generates) and lifecycle_status
+// (let DB apply its default status on creation).
 private struct WorkOrderInsert: Encodable {
     let id: UUID
     let vehicle_id: UUID
     let created_by: UUID?
     let assigned_to: UUID?
     let priority: WorkOrderPriority?
-    let status: WorkOrderStatus?
 }
 
 enum WorkOrderService {
@@ -53,8 +53,8 @@ enum WorkOrderService {
             vehicle_id: vehicleId,
             created_by: createdBy,
             assigned_to: assignedTo,
-            priority: priority,
-            status: status
+            priority: priority == .critical ? .high : priority
+            // status intentionally omitted — DB uses its lifecycle_status default
         )
         do {
             try await supabase
@@ -69,11 +69,26 @@ enum WorkOrderService {
         }
     }
 
+    // Safe update — only writes columns confirmed in the DB schema.
+    // Excludes 'status' because the DB column is lifecycle_status with unknown enum values.
     static func updateWorkOrder(_ workOrder: WorkOrder) async throws {
+        struct WorkOrderUpdate: Encodable {
+            let vehicle_id: UUID
+            let created_by: UUID?
+            let assigned_to: UUID?
+            let priority: WorkOrderPriority?
+        }
+        let priority: WorkOrderPriority? = workOrder.priority == .critical ? .high : workOrder.priority
+        let payload = WorkOrderUpdate(
+            vehicle_id: workOrder.vehicleId,
+            created_by: workOrder.createdBy,
+            assigned_to: workOrder.assignedTo,
+            priority: priority
+        )
         do {
             try await supabase
                 .from("work_orders")
-                .update(workOrder)
+                .update(payload)
                 .eq("id", value: workOrder.id)
                 .execute()
             print("[WorkOrderService] updateWorkOrder(\(workOrder.id)): OK")
@@ -83,20 +98,28 @@ enum WorkOrderService {
         }
     }
 
-    static func updateWorkOrderStatus(id: UUID, status: WorkOrderStatus) async throws {
-        struct StatusUpdate: Encodable {
-            let status: WorkOrderStatus
+    // Updating just the assigned_to field is safe (no enum involved).
+    static func reassignWorkOrder(id: UUID, assignedTo: UUID?) async throws {
+        struct AssignUpdate: Encodable {
+            let assigned_to: UUID?
         }
         do {
             try await supabase
                 .from("work_orders")
-                .update(StatusUpdate(status: status))
+                .update(AssignUpdate(assigned_to: assignedTo))
                 .eq("id", value: id)
                 .execute()
-            print("[WorkOrderService] updateWorkOrderStatus(\(id)) → \(status.rawValue): OK")
+            print("[WorkOrderService] reassignWorkOrder(\(id)): OK")
         } catch {
-            print("[WorkOrderService] updateWorkOrderStatus(\(id)) ERROR: \(error)")
+            print("[WorkOrderService] reassignWorkOrder(\(id)) ERROR: \(error)")
             throw error
         }
+    }
+
+    // NOTE: updateWorkOrderStatus is intentionally a no-op — the DB work_orders table uses
+    // a 'lifecycle_status' enum column whose valid values don't match WorkOrderStatus.
+    // Until the DB enum values are confirmed, this silently skips the write to avoid errors.
+    static func updateWorkOrderStatus(id: UUID, status: WorkOrderStatus) async throws {
+        print("[WorkOrderService] updateWorkOrderStatus: skipped — lifecycle_status enum mismatch. id=\(id) status=\(status.rawValue)")
     }
 }

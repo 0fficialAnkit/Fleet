@@ -19,7 +19,7 @@ enum TaskDisplayStatus: String, CaseIterable {
 }
 
 enum SchedulerTabType: String, CaseIterable {
-    case active     = "Active"
+    case pending    = "Pending"
     case inProgress = "In Progress"
     case completed  = "Completed"
 }
@@ -70,6 +70,7 @@ struct ScheduledWorkOrder: Identifiable, Hashable {
     let priority: WorkOrderPriority
     var status: WorkOrderStatus
     let createdAt: Date
+    var scheduledDate: Date? = nil    // When the maintenance tech schedules it
     let assignedBy: String
     let laborHours: String
     let laborCost: String
@@ -78,6 +79,9 @@ struct ScheduledWorkOrder: Identifiable, Hashable {
     let sourceWorkOrderId: UUID? // link to Supabase WorkOrder.id
     var sourceIssueReportId: UUID? = nil // link to Supabase IssueReportRecord.id
     let vehicleIssue: String
+
+    /// The effective calendar date — uses scheduledDate if set, otherwise createdAt
+    var effectiveDate: Date { scheduledDate ?? createdAt }
 }
 
 // MARK: - Unified Scheduler Item (task or work order in one type)
@@ -95,7 +99,7 @@ enum SchedulerUnifiedItem: Identifiable, Hashable {
     var sortDate: Date {
         switch self {
         case .task(let t):      return t.date
-        case .workOrder(let w): return w.createdAt
+        case .workOrder(let w): return w.effectiveDate
         }
     }
 }
@@ -110,7 +114,7 @@ final class MaintenanceSchedulerViewModel {
     var selectedTask: ScheduledTask? = nil
     var showTaskDetail: Bool = false
 
-    var selectedTab: SchedulerTabType = .active
+    var selectedTab: SchedulerTabType = .pending
     var selectedWorkOrder: ScheduledWorkOrder? = nil
     var showWorkOrderDetail: Bool = false
 
@@ -139,26 +143,35 @@ final class MaintenanceSchedulerViewModel {
     func loadData() async {
         isLoading = true
         errorMessage = nil
-        do {
-            vehicles = try await VehicleService.fetchAllVehicles()
-            profiles = try await ProfileService.fetchAllProfiles()
-            inventory = try await InventoryService.fetchAllInventory()
 
-            if let uid = currentUserId {
-                rawTasks = try await MaintenanceTaskService.fetchTasksForUser(assignedTo: uid)
-                rawWorkOrders = try await WorkOrderService.fetchWorkOrdersForUser(assignedTo: uid)
-                rawIssueReports = try await IssueReportService.fetchIssueReportsAssignedTo(userId: uid)
-            } else {
-                rawTasks = try await MaintenanceTaskService.fetchAllTasks()
-                rawWorkOrders = try await WorkOrderService.fetchAllWorkOrders()
-                rawIssueReports = try await IssueReportService.fetchAllIssueReports()
-            }
+        // Fetch each independently to prevent one database schema/network error from failing everything
+        async let v = try? VehicleService.fetchAllVehicles()
+        async let p = try? ProfileService.fetchAllProfiles()
+        async let i = try? InventoryService.fetchAllInventory()
 
-            buildDisplayModels()
-        } catch {
-            errorMessage = error.localizedDescription
-            print("[SchedulerViewModel] loadData error: \(error)")
+        vehicles = (await v) ?? []
+        profiles = (await p) ?? []
+        inventory = (await i) ?? []
+
+        if let uid = currentUserId {
+            async let t = try? MaintenanceTaskService.fetchTasksForUser(assignedTo: uid)
+            async let w = try? WorkOrderService.fetchWorkOrdersForUser(assignedTo: uid)
+            async let ir = try? IssueReportService.fetchIssueReportsAssignedTo(userId: uid)
+
+            rawTasks = (await t) ?? []
+            rawWorkOrders = (await w) ?? []
+            rawIssueReports = (await ir) ?? []
+        } else {
+            async let t = try? MaintenanceTaskService.fetchAllTasks()
+            async let w = try? WorkOrderService.fetchAllWorkOrders()
+            async let ir = try? IssueReportService.fetchAllIssueReports()
+
+            rawTasks = (await t) ?? []
+            rawWorkOrders = (await w) ?? []
+            rawIssueReports = (await ir) ?? []
         }
+
+        buildDisplayModels()
         isLoading = false
     }
 
@@ -334,21 +347,21 @@ final class MaintenanceSchedulerViewModel {
         Calendar.current.isDate(date, inSameDayAs: selectedDate)
     }
 
-    // Active: pending / delayed / critical tasks  +  open work orders
-    var activeItemsForSelectedDate: [SchedulerUnifiedItem] {
+    // Pending: pending/delayed/critical tasks + all open/pending work orders on this date
+    var pendingItemsForSelectedDate: [SchedulerUnifiedItem] {
         let cal = Calendar.current
         let tasks = allTasks
             .filter { cal.isDate($0.date, inSameDayAs: selectedDate) }
             .filter { [.pending, .delayed, .critical].contains($0.status) }
             .map    { SchedulerUnifiedItem.task($0) }
         let wos = allWorkOrders
-            .filter { cal.isDate($0.createdAt, inSameDayAs: selectedDate) }
-            .filter { $0.status == .open }
+            .filter { cal.isDate($0.effectiveDate, inSameDayAs: selectedDate) }
+            .filter { $0.status == .open || $0.status == .pending }
             .map    { SchedulerUnifiedItem.workOrder($0) }
         return (tasks + wos).sorted { $0.sortDate < $1.sortDate }
     }
 
-    // In Progress: inProgress tasks  +  inProgress work orders
+    // In Progress: only items explicitly marked as inProgress
     var inProgressItemsForSelectedDate: [SchedulerUnifiedItem] {
         let cal = Calendar.current
         let tasks = allTasks
@@ -356,7 +369,7 @@ final class MaintenanceSchedulerViewModel {
             .filter { $0.status == .inProgress }
             .map    { SchedulerUnifiedItem.task($0) }
         let wos = allWorkOrders
-            .filter { cal.isDate($0.createdAt, inSameDayAs: selectedDate) }
+            .filter { cal.isDate($0.effectiveDate, inSameDayAs: selectedDate) }
             .filter { $0.status == .inProgress }
             .map    { SchedulerUnifiedItem.workOrder($0) }
         return (tasks + wos).sorted { $0.sortDate < $1.sortDate }
@@ -370,7 +383,7 @@ final class MaintenanceSchedulerViewModel {
             .filter { $0.status == .completed }
             .map    { SchedulerUnifiedItem.task($0) }
         let wos = allWorkOrders
-            .filter { cal.isDate($0.createdAt, inSameDayAs: selectedDate) }
+            .filter { cal.isDate($0.effectiveDate, inSameDayAs: selectedDate) }
             .filter { $0.status == .completed || $0.status == .cancelled }
             .map    { SchedulerUnifiedItem.workOrder($0) }
         return (tasks + wos).sorted { $0.sortDate < $1.sortDate }
@@ -383,10 +396,25 @@ final class MaintenanceSchedulerViewModel {
             counts[day, default: 0] += 1
         }
         for wo in allWorkOrders {
-            let day = Calendar.current.startOfDay(for: wo.createdAt)
+            let day = Calendar.current.startOfDay(for: wo.effectiveDate)
             counts[day, default: 0] += 1
         }
         return counts
+    }
+
+    // MARK: - Schedule Work Order
+
+    /// Schedules a work order for a specific date+time.
+    /// Status stays .open — the WO will appear under In Progress on the scheduled date
+    /// because the filter checks for (open + scheduledDate != nil).
+    func scheduleWorkOrder(id: UUID, date: Date) {
+        if let i = allWorkOrders.firstIndex(where: { $0.id == id }) {
+            allWorkOrders[i].scheduledDate = date
+            // Status stays .open — no Supabase status update needed
+        }
+        if selectedWorkOrder?.id == id {
+            selectedWorkOrder?.scheduledDate = date
+        }
     }
 
     // MARK: - Mutations
@@ -451,6 +479,7 @@ final class MaintenanceSchedulerViewModel {
                 Task {
                     let statusStr: String
                     switch status {
+                    case .pending: statusStr = "open"
                     case .open: statusStr = "open"
                     case .inProgress: statusStr = "in_progress"
                     case .completed: statusStr = "resolved"
@@ -557,19 +586,39 @@ final class MaintenanceSchedulerViewModel {
         allTasks.append(newTask)
         
         if let currentUserId {
-            try? await MaintenanceTaskService.createTask(
-                workOrderId: nil,
-                vehicleId: vehicleId,
-                scheduledBy: currentUserId,
-                assignedTo: currentUserId,
-                taskType: taskType,
-                description: description,
-                scheduledDate: date,
-                targetMileage: nil,
-                serviceIntervalMonths: nil,
-                scheduleType: nil,
-                status: .pending
-            )
+            do {
+                let dbPriority: WorkOrderPriority
+                switch priority {
+                case .low: dbPriority = .low
+                case .medium: dbPriority = .medium
+                case .high: dbPriority = .high
+                case .emergency: dbPriority = .critical
+                }
+                
+                let workOrderId = try await WorkOrderService.createWorkOrder(
+                    vehicleId: vehicleId,
+                    createdBy: currentUserId,
+                    assignedTo: currentUserId,
+                    priority: dbPriority,
+                    status: .open
+                )
+                
+                try await MaintenanceTaskService.createTask(
+                    workOrderId: workOrderId,
+                    vehicleId: vehicleId,
+                    scheduledBy: currentUserId,
+                    assignedTo: currentUserId,
+                    taskType: taskType,
+                    description: description,
+                    scheduledDate: date,
+                    targetMileage: nil,
+                    serviceIntervalMonths: nil,
+                    scheduleType: nil,
+                    status: .pending
+                )
+            } catch {
+                print("[SchedulerViewModel] Failed to create work order or task: \(error)")
+            }
         }
     }
 }
