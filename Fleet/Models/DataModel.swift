@@ -169,6 +169,7 @@ struct User: Codable, Identifiable, Hashable, Sendable {
 
 enum VehicleType: String, Codable, CaseIterable, Sendable, Identifiable {
   case twoWheeler = "two_wheeler"
+  case threeWheeler = "three_wheeler"
   case car = "car"
   case truck = "truck"
   
@@ -177,6 +178,7 @@ enum VehicleType: String, Codable, CaseIterable, Sendable, Identifiable {
   var maintenanceThresholdKM: Double {
       switch self {
       case .twoWheeler: return 3000
+      case .threeWheeler: return 5000
       case .car: return 10000
       case .truck: return 20000
       }
@@ -185,7 +187,8 @@ enum VehicleType: String, Codable, CaseIterable, Sendable, Identifiable {
   var displayName: String {
       switch self {
       case .twoWheeler: return "Two Wheeler"
-      case .car: return "Car"
+      case .threeWheeler: return "Three Wheeler"
+      case .car: return "Four Wheeler"
       case .truck: return "Truck"
       }
   }
