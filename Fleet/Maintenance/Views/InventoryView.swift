@@ -3,10 +3,14 @@ import SwiftUI
 struct InventoryView: View {
     @State private var searchText = ""
     @State private var inventoryItems: [Inventory] = []
+    @State private var maintenanceTasks: [MaintenanceTask] = []
+    @State private var workOrders: [WorkOrder] = []
+    @State private var forecasts: [SparePartForecast] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var selectedItem: Inventory? = nil
     @State private var isShowingAddSheet = false
+    @State private var isForecastExpanded = false
 
     var lowStockCount: Int {
         inventoryItems.filter { ($0.stockQuantity ?? 0) <= ($0.reorderLevel ?? 0) }.count
@@ -92,28 +96,10 @@ struct InventoryView: View {
                             .padding(.horizontal, 16)
 
                             // MARK: - AI Forecast Banner
-                            HStack(alignment: .top, spacing: 16) {
-                                Image(systemName: "sparkles")
-                                    .foregroundStyle(Color.yellow)
-                                    .font(.system(size: 18, weight: .semibold))
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("AI Forecast")
-                                        .font(.body.weight(.medium))
-                                        .foregroundStyle(Color.yellow)
-                                    Text("High demand for **Oil Filters** expected next week. Consider restocking soon.")
-                                        .font(.footnote)
-                                        .foregroundStyle(Color.secondary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                Spacer(minLength: 0)
-                            }
-                            .padding(16)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .stroke(Color.yellow.opacity(0.25), lineWidth: 0.8)
+                            AIForecastBannerView(
+                                forecasts: forecasts,
+                                isExpanded: $isForecastExpanded
                             )
-
                             .padding(.horizontal, 16)
 
 
@@ -180,7 +166,18 @@ struct InventoryView: View {
     private func loadInventory() async {
         isLoading = true
         do {
-            inventoryItems = try await InventoryService.fetchAllInventory()
+            async let items = InventoryService.fetchAllInventory()
+            async let tasks = MaintenanceTaskService.fetchAllTasks()
+            async let orders = WorkOrderService.fetchAllWorkOrders()
+            inventoryItems = try await items
+            maintenanceTasks = try await tasks
+            workOrders = try await orders
+            // Run forecasting engine after all data is loaded
+            forecasts = DemandForecastingService.forecast(
+                inventory: inventoryItems,
+                tasks: maintenanceTasks,
+                workOrders: workOrders
+            )
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -258,6 +255,168 @@ struct InventoryRow: View {
 
 #Preview {
     InventoryView()
+}
+
+// MARK: - AI Forecast Banner View
+
+struct AIForecastBannerView: View {
+    let forecasts: [SparePartForecast]
+    @Binding var isExpanded: Bool
+
+    // Show top forecast collapsed, full list expanded
+    private var topForecast: SparePartForecast? { forecasts.first }
+    private var hasMore: Bool { forecasts.count > 1 }
+
+    private var bannerColor: Color {
+        switch topForecast?.urgency {
+        case .restock: return Color.red
+        case .high:    return Color.orange
+        case .monitor: return Color.blue
+        case .none:    return Color.green
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header row — always visible
+            Button(action: {
+                guard forecasts.count > 1 else { return }
+                withAnimation(.spring(response: 0.38, dampingFraction: 0.8)) {
+                    isExpanded.toggle()
+                }
+            }) {
+                HStack(alignment: .top, spacing: 14) {
+                    Image(systemName: "sparkles")
+                        .foregroundStyle(forecasts.isEmpty ? Color.green : bannerColor)
+                        .font(.system(size: 18, weight: .semibold))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("AI Forecast")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(forecasts.isEmpty ? Color.green : bannerColor)
+
+                        if let top = topForecast {
+                            Text("**\(top.partName)**: \(top.reason)")
+                                .font(.footnote)
+                                .foregroundStyle(Color.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .lineLimit(isExpanded ? nil : 2)
+                        } else {
+                            Text("Stock levels look healthy. No restocking needed soon.")
+                                .font(.footnote)
+                                .foregroundStyle(Color.secondary)
+                        }
+                    }
+
+                    Spacer(minLength: 0)
+
+                    if hasMore {
+                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color.secondary)
+                            .padding(.top, 2)
+                    }
+                }
+                .padding(16)
+            }
+            .buttonStyle(.plain)
+
+            // Badge for top item (always shown)
+            if let top = topForecast {
+                HStack {
+                    ForecastUrgencyBadge(urgency: top.urgency)
+                    if let days = top.daysUntilStockout, days > 0 {
+                        Text("~\(days)d until reorder level")
+                            .font(.caption2)
+                            .foregroundStyle(Color.secondary)
+                    } else if top.urgency == .restock {
+                        Text("Restock immediately")
+                            .font(.caption2)
+                            .foregroundStyle(Color.red)
+                    }
+                    Spacer()
+                    if hasMore && !isExpanded {
+                        Text("See all (\(forecasts.count))")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(bannerColor)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 14)
+            }
+
+            // Expanded list
+            if isExpanded && forecasts.count > 1 {
+                Divider()
+                    .padding(.horizontal, 16)
+
+                VStack(spacing: 0) {
+                    ForEach(forecasts.dropFirst()) { forecast in
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text(forecast.partName)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Color.primary)
+                                Spacer()
+                                ForecastUrgencyBadge(urgency: forecast.urgency)
+                            }
+                            Text(forecast.reason)
+                                .font(.caption)
+                                .foregroundStyle(Color.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            if let days = forecast.daysUntilStockout, days > 0 {
+                                Label("~\(days) days until reorder level", systemImage: "clock")
+                                    .font(.caption2)
+                                    .foregroundStyle(Color.secondary)
+                            }
+                        }
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
+
+                        if forecast.id != forecasts.last?.id {
+                            Divider()
+                                .padding(.horizontal, 16)
+                        }
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke((forecasts.isEmpty ? Color.green : bannerColor).opacity(0.25), lineWidth: 0.8)
+        )
+    }
+}
+
+// MARK: - Forecast Urgency Badge
+
+struct ForecastUrgencyBadge: View {
+    let urgency: ForecastUrgency
+
+    private var color: Color {
+        switch urgency {
+        case .restock: return Color.red
+        case .high:    return Color.orange
+        case .monitor: return Color.blue
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: urgency.icon)
+                .font(.system(size: 9, weight: .semibold))
+            Text(urgency.description)
+                .font(.system(size: 10, weight: .semibold))
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(color.opacity(0.12))
+        .clipShape(Capsule())
+    }
 }
 
 // MARK: - InventoryItemSheet
