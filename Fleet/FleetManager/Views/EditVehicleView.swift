@@ -14,6 +14,7 @@ struct EditVehicleView: View {
     @State private var mileage: String
     @State private var purchaseDate: Date
     @State private var isSaving = false
+    @State private var selectedType: VehicleType
 
     // Compliance settings — loaded from store, edited here, saved on confirm
     @State private var complianceSettings: ComplianceSettings
@@ -33,6 +34,7 @@ struct EditVehicleView: View {
         _tankCapacity  = State(initialValue: vehicle.tankCapacity != nil ? String(vehicle.tankCapacity!) : "")
         _mileage       = State(initialValue: vehicle.mileage != nil ? String(vehicle.mileage!) : "")
         _purchaseDate  = State(initialValue: vehicle.purchaseDate ?? Date())
+        _selectedType  = State(initialValue: vehicle.vehicleType ?? .car)
 
         // Load existing compliance settings for this vehicle
         let key = vehicle.licensePlate ?? vehicle.id.uuidString
@@ -86,6 +88,21 @@ struct EditVehicleView: View {
                                     .textInputAutocapitalization(.characters)
                                     .padding(.vertical, 12)
                                     .foregroundColor(Color.primary)
+
+                                Divider().background(Color(.separator))
+
+                                HStack {
+                                    Text("Vehicle Type")
+                                        .foregroundColor(Color.primary)
+                                    Spacer()
+                                    Picker("", selection: $selectedType) {
+                                        ForEach(VehicleType.allCases) { type in
+                                            Text(type.displayName).tag(type)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                }
+                                .padding(.vertical, 8)
                             }
                             .padding(16)
                             .background(Color(.secondarySystemGroupedBackground))
@@ -208,6 +225,7 @@ struct EditVehicleView: View {
         updated.tankCapacity     = cap
         updated.mileage          = mil
         updated.purchaseDate     = purchaseDate
+        updated.vehicleType      = selectedType
 
         do {
             try await viewModel.updateVehicle(updated)

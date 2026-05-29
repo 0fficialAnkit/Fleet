@@ -15,6 +15,7 @@ struct TripDetailView: View {
     @State private var route: Route?
     @State private var vehicle: Vehicle?
     @State private var mapView: TripRouteMapView?
+    @State private var estimatedDistance: Double?
 
     init(trip: Trip, onStart: @escaping (UUID, UUID, String, [String]) -> Void, onEnd: @escaping (UUID, UUID, String, [String]) -> Void) {
         self.trip = trip
@@ -27,7 +28,7 @@ struct TripDetailView: View {
 
     var statusColor: Color {
         switch currentStatus {
-        case .scheduled: return Color.yellow
+        case .scheduled: return Color.blue
         case .active:    return Color.green
         case .completed: return Color.green
         case .cancelled: return Color.red
@@ -55,7 +56,7 @@ struct TripDetailView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Route #\(trip.id.uuidString.prefix(6).uppercased())")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .font(.title2.bold())
                             .foregroundStyle(Color.primary)
                         StatusBadge(text: statusText, color: statusColor)
                     }
@@ -90,10 +91,10 @@ struct TripDetailView: View {
                         color: Color.green
                     )
                     infoTile(
-                        icon: "clock.badge.checkmark.fill",
-                        label: "Est. End",
-                        value: trip.endTime?.formatted(date: .omitted, time: .shortened) ?? "N/A",
-                        color: Color.green
+                        icon: "road.lanes",
+                        label: "Distance",
+                        value: trip.distance != nil ? String(format: "%.1f km", trip.distance!) : (estimatedDistance != nil ? String(format: "%.1f km", estimatedDistance!) : "Calculating..."),
+                        color: Color.yellow
                     )
                 }
 
@@ -113,10 +114,10 @@ struct TripDetailView: View {
                         }
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Pickup / Origin")
-                                .font(.system(size: 16, weight: .regular, design: .rounded))
+                                .font(.body)
                                 .foregroundStyle(Color.secondary)
                             Text(route?.startLocation ?? "No start location")
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .font(.body.weight(.medium))
                                 .foregroundStyle(Color.primary)
                         }
                         Spacer()
@@ -140,10 +141,10 @@ struct TripDetailView: View {
                         }
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Drop-off / Destination")
-                                .font(.system(size: 16, weight: .regular, design: .rounded))
+                                .font(.body)
                                 .foregroundStyle(Color.secondary)
                             Text(route?.endLocation ?? "No destination")
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .font(.body.weight(.medium))
                                 .foregroundStyle(Color.primary)
                         }
                         Spacer()
@@ -157,21 +158,7 @@ struct TripDetailView: View {
                 )
                 .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
 
-                // ── Distance Info ──────────────────────────────────
-                HStack(spacing: 12) {
-                    infoTile(
-                        icon: "road.lanes",
-                        label: "Distance",
-                        value: trip.distance != nil ? String(format: "%.1f km", trip.distance!) : "N/A",
-                        color: Color.yellow
-                    )
-                    infoTile(
-                        icon: "timer",
-                        label: "Est. Duration",
-                        value: "N/A",
-                        color: Color.purple
-                    )
-                }
+
 
                 // ── Assigned Vehicle ───────────────────────────────
                 sectionTitle("Assigned Vehicle")
@@ -188,10 +175,10 @@ struct TripDetailView: View {
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("\(vehicle.make ?? "Vehicle") \(vehicle.model ?? "")")
-                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                    .font(.headline)
                                     .foregroundStyle(Color.primary)
                                 Text(vehicle.licensePlate ?? "—")
-                                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                                    .font(.body)
                                     .foregroundStyle(Color.secondary)
                             }
                             Spacer()
@@ -200,9 +187,9 @@ struct TripDetailView: View {
                         Divider().background(Color(UIColor.separator))
 
                         HStack(spacing: 16) {
-                            NavigationLink(value: DriverDestination.vehicleDetail(vehicle)) {
+                            NavigationLink(destination: DriverVehicleDetailView(vehicle: vehicle)) {
                                 Label("View Details", systemImage: "info.circle")
-                                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                                    .font(.body)
                                     .fontWeight(.semibold)
                                     .foregroundStyle(Color.green)
                                     .padding(.vertical, 8)
@@ -212,9 +199,9 @@ struct TripDetailView: View {
                             }
                             .buttonStyle(.plain)
 
-                            NavigationLink(value: DriverDestination.reportIssue(vehicle)) {
+                            NavigationLink(destination: DriverReportIssueView(vehicle: vehicle)) {
                                 Label("Report Issue", systemImage: "exclamationmark.triangle")
-                                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                                    .font(.body)
                                     .fontWeight(.semibold)
                                     .foregroundStyle(Color.red)
                                     .padding(.vertical, 8)
@@ -237,7 +224,7 @@ struct TripDetailView: View {
                         ProgressView()
                             .scaleEffect(0.8)
                         Text("Loading vehicle info...")
-                            .font(.system(size: 16, weight: .regular, design: .rounded))
+                            .font(.body)
                             .foregroundStyle(Color.secondary)
                     }
                     .padding(16)
@@ -271,9 +258,13 @@ struct TripDetailView: View {
 
             route = try? await fetchedRoute
             vehicle = try? await fetchedVehicle
+            
+            if let start = route?.startLocation, let end = route?.endLocation {
+                await calculateDistance(from: start, to: end)
+            }
         }
         .sheet(item: $showingChecklist) { type in
-            DriverChecklistView(checklistType: type) { notes, urls in
+            DriverChecklistView(checklistType: type, vehicle: vehicle) { notes, urls in
                 if type == .preTrip {
                     onStart(trip.id, trip.vehicleId, notes, urls)
                     withAnimation { currentStatus = .active }
@@ -300,7 +291,7 @@ struct TripDetailView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "play.fill")
                     Text("Start Trip")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .font(.headline)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(16)
@@ -317,7 +308,7 @@ struct TripDetailView: View {
                     Image(systemName: "bolt.fill")
                         .foregroundStyle(Color.green)
                     Text("Trip is currently in progress")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Color.green)
                     Spacer()
                 }
@@ -332,7 +323,7 @@ struct TripDetailView: View {
                     HStack(spacing: 10) {
                         Image(systemName: "stop.fill")
                         Text("End Trip")
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .font(.headline)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(16)
@@ -348,7 +339,7 @@ struct TripDetailView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Color.green)
                 Text("Trip completed successfully")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .font(.body.weight(.medium))
                     .foregroundStyle(Color.green)
                 Spacer()
             }
@@ -366,7 +357,7 @@ struct TripDetailView: View {
     @ViewBuilder
     func sectionTitle(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 18, weight: .semibold, design: .rounded))
+            .font(.headline)
             .foregroundStyle(Color.primary)
     }
 
@@ -406,6 +397,23 @@ struct TripDetailView: View {
         req.resultTypes = .address
         return try? await MKLocalSearch(request: req).start().mapItems.first
     }
+    
+    private func calculateDistance(from startAddr: String, to endAddr: String) async {
+        guard let startItem = await geocodeAddress(startAddr),
+              let endItem = await geocodeAddress(endAddr) else { return }
+        
+        let request = MKDirections.Request()
+        request.source = startItem
+        request.destination = endItem
+        request.transportType = .automobile
+        
+        if let response = try? await MKDirections(request: request).calculate(),
+           let route = response.routes.first {
+            await MainActor.run {
+                self.estimatedDistance = route.distance / 1000.0
+            }
+        }
+    }
 
     @ViewBuilder
     func infoTile(icon: String, label: String, value: String, color: Color) -> some View {
@@ -414,10 +422,10 @@ struct TripDetailView: View {
                 .font(.system(size: 16))
                 .foregroundStyle(color)
             Text(label)
-                .font(.system(size: 16, weight: .regular, design: .rounded))
+                .font(.body)
                 .foregroundStyle(Color.secondary)
             Text(value)
-                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .font(.body.weight(.medium))
                 .foregroundStyle(Color.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)

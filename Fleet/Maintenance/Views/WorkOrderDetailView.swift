@@ -247,7 +247,7 @@ struct WorkOrderDetailView: View {
     func statusColor(_ s: WorkOrderStatus?) -> Color {
         switch s {
         case .open:       return Color.blue
-        case .inProgress: return Color.yellow
+        case .inProgress: return Color.orange
         case .completed:  return Color.green
         case .cancelled:  return Color.red
         case .none:       return Color.secondary
@@ -274,7 +274,7 @@ struct WorkOrderDetailView: View {
     func priorityColor(_ p: WorkOrderPriority?) -> Color {
         switch p {
         case .critical: return Color.red
-        case .high:     return Color.yellow
+        case .high:     return Color.orange
         case .medium:   return Color.blue
         case .low:      return Color.green
         case .none:     return Color.secondary

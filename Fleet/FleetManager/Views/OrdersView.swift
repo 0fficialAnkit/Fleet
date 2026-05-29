@@ -3,7 +3,7 @@ import SwiftUI
 struct OrdersView: View {
     @State private var viewModel = OrdersViewModel()
     @State private var selectedFilter: TripStatus? = nil
-    @State private var selectedOrderType: OrderType? = nil
+    @State private var isAddingOrder = false
     @State private var navigationPath = [Trip]()
 
     var filteredTrips: [Trip] {
@@ -22,10 +22,8 @@ struct OrdersView: View {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 16) {
-
-                            // Filters
+                    List {
+                        Section {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
                                     FilterButton(title: "All", isSelected: selectedFilter == nil) {
@@ -43,38 +41,37 @@ struct OrdersView: View {
                                 .padding(.horizontal, 16)
                             }
                             .padding(.vertical, 8)
+                        }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
 
-                            // Orders List
-                            if filteredTrips.isEmpty {
+                        if filteredTrips.isEmpty {
+                            Section {
                                 Text("No orders found.")
                                     .font(.body)
                                     .foregroundColor(Color.secondary)
-                                    .padding(.top, 40)
-                            } else {
+                                    .padding(.vertical, 40)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                            }
+                        } else {
+                            Section {
                                 ForEach(filteredTrips) { trip in
                                     NavigationLink(value: trip) {
                                         OrderCardView(trip: trip, viewModel: viewModel)
                                     }
-                                    .buttonStyle(.plain)
                                 }
-                                .padding(.horizontal, 16)
                             }
                         }
-                        .padding(.bottom, 40)
                     }
+                    .refreshable { await viewModel.loadData() }
+                    .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle("Orders")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        ForEach(OrderType.allCases, id: \.self) { type in
-                            Button(action: {
-                                selectedOrderType = type
-                            }) {
-                                Text(type.displayName)
-                            }
-                        }
+                    Button {
+                        isAddingOrder = true
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 17, weight: .medium))
@@ -82,13 +79,8 @@ struct OrdersView: View {
                     }
                 }
             }
-            .sheet(item: $selectedOrderType) { orderType in
-                VehicleSelectionView(orderType: orderType, viewModel: viewModel, selectedOrderType: $selectedOrderType)
-            }
-            .onChange(of: selectedOrderType) { _, newValue in
-                if newValue == nil {
-                    selectedFilter = nil
-                }
+            .sheet(isPresented: $isAddingOrder) {
+                AddOrderView(viewModel: viewModel)
             }
             .navigationDestination(for: Trip.self) { trip in
                 OrderDetailView(trip: trip, viewModel: viewModel)
@@ -146,10 +138,6 @@ struct OrderCardView: View {
                 }
 
                 Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color(.tertiaryLabel))
             }
             .padding(.vertical, 2)
 
@@ -174,10 +162,7 @@ struct OrderCardView: View {
                 }
             }
         }
-        .contentShape(Rectangle())
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.vertical, 4)
 
     }
 }

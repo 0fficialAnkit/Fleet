@@ -6,13 +6,15 @@ import Supabase
 // ═══════════════════════════════════════════════════════════════
 
 struct MaintenanceSchedulerView: View {
-    @State private var viewModel = MaintenanceSchedulerViewModel()
+    @Bindable var viewModel: MaintenanceSchedulerViewModel
     @Namespace private var calendarNS
     @State private var selectedTask: ScheduledTask? = nil
     @State private var selectedWorkOrder: ScheduledWorkOrder? = nil
+    @State private var isShowingCreateTaskSheet = false
     @Environment(AuthViewModel.self) private var authViewModel
 
-    init() {
+    init(viewModel: MaintenanceSchedulerViewModel) {
+        self.viewModel = viewModel
         UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(Color.brown)
         UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
         UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor(Color.secondary)], for: .normal)
@@ -39,6 +41,7 @@ struct MaintenanceSchedulerView: View {
                         )
                     }
                 }
+                .refreshable { await viewModel.loadData() }
             }
             .navigationTitle("Schedule")
             .navigationBarTitleDisplayMode(.large)
@@ -46,7 +49,26 @@ struct MaintenanceSchedulerView: View {
                 TaskDetailSheet(task: task, viewModel: viewModel)
             }
             .navigationDestination(item: $selectedWorkOrder) { wo in
-                WorkOrderDetailView(scheduledWorkOrder: wo)
+                WorkOrderDetailSheet(workOrder: wo, viewModel: viewModel)
+            }
+            .toolbar {
+                if viewModel.selectedTab == .active {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            isShowingCreateTaskSheet = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(Color.brown)
+                                .frame(width: 32, height: 32)
+                                .background(Color.brown.opacity(0.12), in: Circle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .sheet(isPresented: $isShowingCreateTaskSheet) {
+                CreateTaskSheet(viewModel: viewModel, initialDate: viewModel.selectedDate, currentUserId: authViewModel.currentUser?.id)
             }
             .task {
                 viewModel.currentUserId = authViewModel.currentUser?.id
@@ -202,14 +224,34 @@ private struct TaskListSection: View {
     @Binding var selectedWorkOrder: ScheduledWorkOrder?
 
     private var dateTitle: String {
-        if Calendar.current.isDateInToday(viewModel.selectedDate) { return "Today" }
+        if Calendar.current.isDateInToday(viewModel.selectedDate)     { return "Today" }
         if Calendar.current.isDateInYesterday(viewModel.selectedDate) { return "Yesterday" }
-        if Calendar.current.isDateInTomorrow(viewModel.selectedDate) { return "Tomorrow" }
+        if Calendar.current.isDateInTomorrow(viewModel.selectedDate)  { return "Tomorrow" }
         let f = DateFormatter(); f.dateFormat = "EEEE, d MMM"; return f.string(from: viewModel.selectedDate)
     }
 
-    private var itemsCount: Int {
-        viewModel.selectedTab == .tasks ? viewModel.tasksForSelectedDate.count : viewModel.workOrdersForSelectedDate.count
+    private var currentItems: [SchedulerUnifiedItem] {
+        switch viewModel.selectedTab {
+        case .active:     return viewModel.activeItemsForSelectedDate
+        case .inProgress: return viewModel.inProgressItemsForSelectedDate
+        case .completed:  return viewModel.completedItemsForSelectedDate
+        }
+    }
+
+    private var emptyTitle: String {
+        switch viewModel.selectedTab {
+        case .active:     return "No Active Tasks"
+        case .inProgress: return "Nothing In Progress"
+        case .completed:  return "No Completed Tasks"
+        }
+    }
+
+    private var emptyMessage: String {
+        switch viewModel.selectedTab {
+        case .active:     return "No pending work assigned for this day."
+        case .inProgress: return "No tasks are currently being worked on."
+        case .completed:  return "No tasks were completed on this day."
+        }
     }
 
     var body: some View {
@@ -220,12 +262,12 @@ private struct TaskListSection: View {
                     Text(dateTitle)
                         .font(.headline)
                         .foregroundStyle(Color.primary)
-                    Text("\(itemsCount) \(viewModel.selectedTab.rawValue.lowercased()) assigned")
+                    Text("\(currentItems.count) \(viewModel.selectedTab.rawValue.lowercased()) item\(currentItems.count == 1 ? "" : "s")")
                         .font(.footnote)
                         .foregroundStyle(Color(.tertiaryLabel))
                 }
                 Spacer()
-                if itemsCount > 0 {
+                if !currentItems.isEmpty {
                     StatusLegendChip()
                 }
             }
@@ -233,56 +275,35 @@ private struct TaskListSection: View {
             .padding(.top, 16)
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: viewModel.selectedDate)
 
-            if viewModel.selectedTab == .tasks {
-                if viewModel.tasksForSelectedDate.isEmpty {
-                    EmptyScheduleView(title: "No Tasks Scheduled", message: "No maintenance tasks assigned for this day.")
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .scale(scale: 0.95)),
-                            removal: .opacity
-                        ))
-                } else {
-                    ForEach(viewModel.tasksForSelectedDate) { task in
-                        TaskCard(task: task)
-                            .contentShape(Rectangle())
-                            .onTapGesture { selectedTask = task }
-                            .scrollTransition { content, phase in
-                                content
-                                    .opacity(phase.isIdentity ? 1 : 0.7)
-                                    .scaleEffect(phase.isIdentity ? 1 : 0.96)
-                                    .offset(y: phase.isIdentity ? 0 : 8)
-                            }
-                            .transition(.asymmetric(
-                                insertion: .opacity.combined(with: .move(edge: .bottom)),
-                                removal: .opacity
-                            ))
-                    }
-                    .padding(.horizontal, 16)
-                }
+            if currentItems.isEmpty {
+                EmptyScheduleView(title: emptyTitle, message: emptyMessage)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .scale(scale: 0.95)),
+                        removal: .opacity
+                    ))
             } else {
-                if viewModel.workOrdersForSelectedDate.isEmpty {
-                    EmptyScheduleView(title: "No Work Orders", message: "No service work orders created on this date.")
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .scale(scale: 0.95)),
-                            removal: .opacity
-                        ))
-                } else {
-                    ForEach(viewModel.workOrdersForSelectedDate) { workOrder in
-                        WorkOrderCard(workOrder: workOrder)
-                            .contentShape(Rectangle())
-                            .onTapGesture { selectedWorkOrder = workOrder }
-                            .scrollTransition { content, phase in
-                                content
-                                    .opacity(phase.isIdentity ? 1 : 0.7)
-                                    .scaleEffect(phase.isIdentity ? 1 : 0.96)
-                                    .offset(y: phase.isIdentity ? 0 : 8)
-                            }
-                            .transition(.asymmetric(
-                                insertion: .opacity.combined(with: .move(edge: .bottom)),
-                                removal: .opacity
-                            ))
+                ForEach(currentItems) { item in
+                    Group {
+                        switch item {
+                        case .task(let task):
+                            Button { selectedTask = task } label: { TaskCard(task: task) }
+                        case .workOrder(let wo):
+                            Button { selectedWorkOrder = wo } label: { WorkOrderCard(workOrder: wo) }
+                        }
                     }
-                    .padding(.horizontal, 16)
+                    .buttonStyle(ScaleButtonStyle())
+                    .scrollTransition { content, phase in
+                        content
+                            .opacity(phase.isIdentity ? 1 : 0.7)
+                            .scaleEffect(phase.isIdentity ? 1 : 0.96)
+                            .offset(y: phase.isIdentity ? 0 : 8)
+                    }
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .move(edge: .bottom)),
+                        removal: .opacity
+                    ))
                 }
+                .padding(.horizontal, 16)
             }
 
             Spacer(minLength: 60)
@@ -313,7 +334,6 @@ private struct StatusLegendChip: View {
 
 private struct TaskCard: View {
     let task: ScheduledTask
-    @State private var isPressed = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -366,14 +386,6 @@ private struct TaskCard: View {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(statusColor(task.status).opacity(0.5), lineWidth: 1.0)
         )
-
-        .scaleEffect(isPressed ? 0.97 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in isPressed = true }
-                .onEnded   { _ in isPressed = false }
-        )
     }
 }
 
@@ -383,7 +395,6 @@ private struct TaskCard: View {
 
 private struct WorkOrderCard: View {
     let workOrder: ScheduledWorkOrder
-    @State private var isPressed = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -436,14 +447,6 @@ private struct WorkOrderCard: View {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(statusColor(workOrder.status).opacity(0.5), lineWidth: 1.0)
         )
-
-        .scaleEffect(isPressed ? 0.97 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in isPressed = true }
-                .onEnded   { _ in isPressed = false }
-        )
     }
 
     func statusLabel(_ status: WorkOrderStatus) -> String {
@@ -458,7 +461,7 @@ private struct WorkOrderCard: View {
     func statusColor(_ status: WorkOrderStatus) -> Color {
         switch status {
         case .open:       return Color.blue
-        case .inProgress: return Color.yellow
+        case .inProgress: return Color.orange
         case .completed:  return Color.green
         case .cancelled:  return Color.red
         }
@@ -468,7 +471,7 @@ private struct WorkOrderCard: View {
         switch priority {
         case .low:      return Color.green
         case .medium:   return Color.blue
-        case .high:     return Color.yellow
+        case .high:     return Color.orange
         case .critical: return Color.red
         }
     }
@@ -550,6 +553,9 @@ struct TaskDetailSheet: View {
     @State private var repairNotes: String = ""
     @State private var showActionConfirm = false
     @State private var confirmAction: TaskDisplayStatus? = nil
+    @State private var laborHours: String = ""
+    @State private var laborCost: String = ""
+    @State private var estimatedDuration: String = ""
 
     var body: some View {
         ZStack {
@@ -567,12 +573,12 @@ struct TaskDetailSheet: View {
                                 .symbolEffect(.pulse, isActive: currentTask.status == .critical)
 
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(currentTask.vehicleName)
-                                    .font(.headline)
-                                    .foregroundStyle(Color.primary)
-                                Text(currentTask.vehicleNumber)
-                                    .font(.footnote)
-                                    .foregroundStyle(Color(.tertiaryLabel))
+                                  Text(currentTask.vehicleName)
+                                      .font(.headline)
+                                      .foregroundStyle(Color.primary)
+                                  Text(currentTask.vehicleNumber)
+                                      .font(.footnote)
+                                      .foregroundStyle(Color(.tertiaryLabel))
                             }
                             Spacer()
                             StatusBadge(text: currentTask.status.rawValue, color: statusColor(currentTask.status))
@@ -596,6 +602,62 @@ struct TaskDetailSheet: View {
                             InfoRow(icon: "clock.fill",    label: "Time",      value: "\(currentTask.scheduledTime) · \(currentTask.estimatedDuration)")
                             Divider().background(Color(.separator))
                             InfoRow(icon: "person.fill",   label: "Assigned By", value: currentTask.assignedBy)
+                        }
+
+                        // MARK: Labor, Financials & Time (Editable)
+                        SheetSection(title: "Labor, Financials & Time") {
+                            VStack(spacing: 16) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "timer")
+                                        .foregroundStyle(Color.blue)
+                                        .frame(width: 20)
+                                    Text("Est. Duration:")
+                                        .font(.body.weight(.medium))
+                                        .foregroundStyle(Color.primary)
+                                    Spacer()
+                                    TextField("e.g. 2 hrs", text: $estimatedDuration)
+                                        .textFieldStyle(.plain)
+                                        .multilineTextAlignment(.trailing)
+                                        .font(.body)
+                                        .foregroundStyle(Color.secondary)
+                                }
+                                
+                                Divider().background(Color(.separator))
+                                
+                                HStack(spacing: 12) {
+                                    Image(systemName: "clock.fill")
+                                        .foregroundStyle(Color.green)
+                                        .frame(width: 20)
+                                    Text("Labor Hours:")
+                                        .font(.body.weight(.medium))
+                                        .foregroundStyle(Color.primary)
+                                    Spacer()
+                                    TextField("e.g. 3", text: $laborHours)
+                                        .textFieldStyle(.plain)
+                                        .keyboardType(.numberPad)
+                                        .multilineTextAlignment(.trailing)
+                                        .font(.body)
+                                        .foregroundStyle(Color.secondary)
+                                }
+                                
+                                Divider().background(Color(.separator))
+                                
+                                HStack(spacing: 12) {
+                                    Image(systemName: "indianrupeesign.circle.fill")
+                                        .foregroundStyle(Color.green)
+                                        .frame(width: 20)
+                                    Text("Labor Cost:")
+                                        .font(.body.weight(.medium))
+                                        .foregroundStyle(Color.primary)
+                                    Spacer()
+                                    TextField("e.g. 500", text: $laborCost)
+                                        .textFieldStyle(.plain)
+                                        .keyboardType(.numberPad)
+                                        .multilineTextAlignment(.trailing)
+                                        .font(.body)
+                                        .foregroundStyle(Color.secondary)
+                                }
+                            }
                         }
 
                         // MARK: Service Checklist
@@ -717,6 +779,21 @@ struct TaskDetailSheet: View {
         }
         .navigationTitle(task.vehicleName)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            repairNotes = task.previousNote
+            laborHours = task.laborHours ?? ""
+            laborCost = task.laborCost ?? ""
+            estimatedDuration = task.estimatedDuration
+        }
+        .onChange(of: laborHours) { _, newValue in
+            viewModel.updateTaskLabor(id: task.id, hours: newValue, cost: laborCost)
+        }
+        .onChange(of: laborCost) { _, newValue in
+            viewModel.updateTaskLabor(id: task.id, hours: laborHours, cost: newValue)
+        }
+        .onChange(of: estimatedDuration) { _, newValue in
+            viewModel.updateTaskDuration(id: task.id, duration: newValue)
+        }
     }
 }
 
@@ -727,10 +804,6 @@ struct TaskDetailSheet: View {
 struct WorkOrderDetailSheet: View {
     let workOrder: ScheduledWorkOrder
     let viewModel: MaintenanceSchedulerViewModel
-
-    @State private var notes: String = ""
-    @State private var showAddPartSheet = false
-    @State private var newPartName: String = ""
 
     private var currentWO: ScheduledWorkOrder {
         viewModel.allWorkOrders.first(where: { $0.id == workOrder.id }) ?? workOrder
@@ -776,29 +849,25 @@ struct WorkOrderDetailSheet: View {
                             Divider().background(Color(.separator))
                             InfoRow(icon: "flag.fill",     label: "Priority",    value: priorityLabel(currentWO.priority), valueColor: priorityColor(currentWO.priority))
                             Divider().background(Color(.separator))
-                            InfoRow(icon: "person.fill",   label: "Assigned To",  value: currentWO.assignedBy)
-                            Divider().background(Color(.separator))
                             InfoRow(icon: "calendar",      label: "Created At",   value: currentWO.createdAt.formatted(date: .abbreviated, time: .shortened))
                         }
 
-                        // MARK: Spare Parts Consumed
-                        SheetSection(title: "Parts Consumed") {
-                            Button(action: { showAddPartSheet = true }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "plus.circle.fill")
-                                        .foregroundStyle(Color.brown)
-                                    Text("Add Part from Inventory")
-                                        .font(.body.weight(.medium))
-                                        .foregroundStyle(Color.brown)
-                                    Spacer()
-                                }
-                                .padding(.vertical, 4)
+                        // MARK: Reported Problem
+                        SheetSection(title: "Reported Problem") {
+                            HStack(alignment: .top, spacing: 16) {
+                                Image(systemName: "exclamationmark.bubble.fill")
+                                    .foregroundStyle(Color.red)
+                                    .font(.system(size: 18, weight: .semibold))
+                                Text(currentWO.vehicleIssue)
+                                    .font(.body)
+                                    .foregroundStyle(Color.primary)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
-                            .buttonStyle(.plain)
+                        }
 
-                            if !currentWO.partsUsed.isEmpty {
-                                Divider().background(Color(.separator))
-
+                        // MARK: Spare Parts Consumed (Read-Only)
+                        if !currentWO.partsUsed.isEmpty {
+                            SheetSection(title: "Parts Consumed") {
                                 ForEach(Array(currentWO.partsUsed.enumerated()), id: \.offset) { idx, part in
                                     HStack(spacing: 16) {
                                         Image(systemName: "gearshape.2.fill")
@@ -816,96 +885,21 @@ struct WorkOrderDetailSheet: View {
                             }
                         }
 
-                        // MARK: Labor & Financials
-                        SheetSection(title: "Labor & Financials") {
-                            HStack(spacing: 16) {
-                                LaborStatBox(label: "Est. Hours", value: currentWO.laborHours, icon: "clock.fill",  color: Color.blue)
-                                LaborStatBox(label: "Labor Cost",  value: currentWO.laborCost,   icon: "indianrupeesign.circle.fill",  color: Color.green)
+                        // MARK: Notes Section (Read-Only)
+                        if !currentWO.notes.isEmpty {
+                            SheetSection(title: "Service Notes") {
+                                Text(currentWO.notes)
+                                    .font(.body)
+                                    .foregroundStyle(Color.primary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
-
-                        // MARK: Notes Section
-                        SheetSection(title: "Service Notes") {
-                            TextField("Add order details, notes or observations...", text: $notes, axis: .vertical)
-                                .lineLimit(3...6)
-                                .font(.body)
-                                .foregroundStyle(Color.primary)
-                                .onChange(of: notes) { _, newValue in
-                                    viewModel.updateWorkOrderNotes(id: currentWO.id, notes: newValue)
-                                }
-                                .onAppear {
-                                    notes = currentWO.notes
-                                }
-                        }
-
-                        // MARK: Action Buttons
-                        VStack(spacing: 16) {
-                            if currentWO.status == .open {
-                                SheetActionButton(title: "Start Work Order", icon: "play.circle.fill", color: Color.brown) {
-                                    viewModel.updateWorkOrderStatus(id: currentWO.id, to: .inProgress)
-                                }
-                            }
-                            if currentWO.status == .inProgress {
-                                SheetActionButton(title: "Mark as Completed", icon: "checkmark.circle.fill", color: Color.green) {
-                                    viewModel.updateWorkOrderStatus(id: currentWO.id, to: .completed)
-                                }
-                            }
-                            if currentWO.status == .completed {
-                                SheetActionButton(title: "Reopen Work Order", icon: "arrow.counterclockwise.circle.fill", color: Color.yellow) {
-                                    viewModel.updateWorkOrderStatus(id: currentWO.id, to: .inProgress)
-                                }
-                            }
-                            if currentWO.status != .cancelled && currentWO.status != .completed {
-                                SheetActionButton(title: "Cancel Work Order", icon: "xmark.circle.fill", color: Color.red) {
-                                    viewModel.updateWorkOrderStatus(id: currentWO.id, to: .cancelled)
-                                }
-                            }
-                        }
-                        .padding(.bottom, 24)
                     }
                     .padding(16)
             }
         }
         .navigationTitle("Work Order Details")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $showAddPartSheet) {
-                ZStack {
-                    Color(.systemGroupedBackground).ignoresSafeArea()
-                    VStack(spacing: 20) {
-                        Text("Add Spare Part")
-                            .font(.headline)
-                            .foregroundStyle(Color.primary)
-                            .padding(.top, 20)
-
-                        TextField("Part Name (e.g. Air Filter)", text: $newPartName)
-                            .font(.body)
-                            .padding(12)
-                            .background(Color(.tertiarySystemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                            .padding(.horizontal)
-
-                        Button(action: {
-                            if !newPartName.isEmpty {
-                                viewModel.addPartToWorkOrder(id: currentWO.id, part: newPartName)
-                                newPartName = ""
-                                showAddPartSheet = false
-                            }
-                        }) {
-                            Text("Add to Consumed Parts")
-                                .font(.headline)
-                                .foregroundStyle(Color.primary)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                                .background(Color.brown)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .padding(.horizontal)
-                        }
-
-                        Spacer()
-                    }
-                }
-                .presentationDetents([.fraction(0.35)])
-        }
     }
 
     func statusIcon(_ status: WorkOrderStatus) -> String {
@@ -929,7 +923,7 @@ struct WorkOrderDetailSheet: View {
     func statusColor(_ status: WorkOrderStatus) -> Color {
         switch status {
         case .open:       return Color.blue
-        case .inProgress: return Color.yellow
+        case .inProgress: return Color.orange
         case .completed:  return Color.green
         case .cancelled:  return Color.red
         }
@@ -948,7 +942,7 @@ struct WorkOrderDetailSheet: View {
         switch priority {
         case .low:      return Color.green
         case .medium:   return Color.blue
-        case .high:     return Color.yellow
+        case .high:     return Color.orange
         case .critical: return Color.red
         }
     }
@@ -1102,7 +1096,7 @@ private struct LaborStatBox: View {
 func statusColor(_ status: TaskDisplayStatus) -> Color {
     switch status {
     case .pending:    return Color.blue
-    case .inProgress: return Color.yellow
+    case .inProgress: return Color.orange
     case .completed:  return Color.green
     case .delayed:    return Color.red
     case .critical:   return Color.red
@@ -1123,7 +1117,7 @@ func priorityColor(_ priority: TaskPriority) -> Color {
     switch priority {
     case .low:       return Color.green
     case .medium:    return Color.blue
-    case .high:      return Color.yellow
+    case .high:      return Color.orange
     case .emergency: return Color.red
     }
 }
@@ -1152,5 +1146,150 @@ func taskTypeLabel(_ type: MaintenanceTaskType) -> String {
 // ═══════════════════════════════════════════════════════════════
 
 #Preview {
-    MaintenanceSchedulerView()
+    MaintenanceSchedulerView(viewModel: MaintenanceSchedulerViewModel())
+        .environment(AuthViewModel())
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MARK: - Scale Button Style
+// ═══════════════════════════════════════════════════════════════
+
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MARK: - Create Task Sheet
+// ═══════════════════════════════════════════════════════════════
+
+struct CreateTaskSheet: View {
+    let viewModel: MaintenanceSchedulerViewModel
+    let initialDate: Date
+    let currentUserId: UUID?
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var selectedVehicleId: UUID = UUID()
+    @State private var selectedTaskType: MaintenanceTaskType = .oilChange
+    @State private var selectedPriority: TaskPriority = .medium
+    @State private var description: String = ""
+    @State private var estimatedDuration: String = "1 hr"
+    @State private var laborHours: String = ""
+    @State private var laborCost: String = ""
+    @State private var scheduledDate: Date = Date()
+    
+    @State private var isSaving = false
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(.systemGroupedBackground).ignoresSafeArea()
+                
+                Form {
+                    Section("Vehicle Details") {
+                        Picker("Vehicle", selection: $selectedVehicleId) {
+                            Text("Select Vehicle").tag(UUID())
+                            ForEach(viewModel.allVehicles) { vehicle in
+                                Text("\(vehicle.make ?? "") \(vehicle.model ?? "") (\(vehicle.licensePlate ?? ""))")
+                                    .tag(vehicle.id)
+                            }
+                        }
+                    }
+                    
+                    Section("Task Configuration") {
+                        Picker("Task Type", selection: $selectedTaskType) {
+                            Text("Oil Change").tag(MaintenanceTaskType.oilChange)
+                            Text("Tire Rotation").tag(MaintenanceTaskType.tireRotation)
+                            Text("Safety Inspection").tag(MaintenanceTaskType.inspection)
+                            Text("Repair").tag(MaintenanceTaskType.repair)
+                            Text("Other").tag(MaintenanceTaskType.other)
+                        }
+                        
+                        Picker("Priority", selection: $selectedPriority) {
+                            Text("Low").tag(TaskPriority.low)
+                            Text("Medium").tag(TaskPriority.medium)
+                            Text("High").tag(TaskPriority.high)
+                            Text("Emergency").tag(TaskPriority.emergency)
+                        }
+                        
+                        DatePicker("Scheduled Date", selection: $scheduledDate, displayedComponents: [.date, .hourAndMinute])
+                    }
+                    
+                    Section("Labor, Cost & Time") {
+                        HStack {
+                            Text("Est. Duration")
+                            Spacer()
+                            TextField("e.g. 2 hrs", text: $estimatedDuration)
+                                .multilineTextAlignment(.trailing)
+                        }
+                        
+                        HStack {
+                            Text("Labor Hours")
+                            Spacer()
+                            TextField("Optional", text: $laborHours)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                        }
+                        
+                        HStack {
+                            Text("Labor Cost (₹)")
+                            Spacer()
+                            TextField("Optional", text: $laborCost)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                        }
+                    }
+                    
+                    Section("Description") {
+                        TextField("Describe the service required...", text: $description, axis: .vertical)
+                            .lineLimit(3...6)
+                    }
+                }
+            }
+            .navigationTitle("Create Maintenance Task")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundStyle(Color.red)
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        guard selectedVehicleId != UUID() else { return }
+                        isSaving = true
+                        Task {
+                            await viewModel.createNewTask(
+                                vehicleId: selectedVehicleId,
+                                taskType: selectedTaskType,
+                                priority: selectedPriority,
+                                date: scheduledDate,
+                                description: description.isEmpty ? "No description provided." : description,
+                                estimatedDuration: estimatedDuration,
+                                laborHours: laborHours,
+                                laborCost: laborCost,
+                                currentUserId: currentUserId
+                            )
+                            isSaving = false
+                            dismiss()
+                        }
+                    }
+                    .bold()
+                    .disabled(selectedVehicleId == UUID() || isSaving)
+                    .foregroundStyle(selectedVehicleId == UUID() ? Color.gray : Color.brown)
+                }
+            }
+            .onAppear {
+                scheduledDate = initialDate
+                if let firstVehicle = viewModel.allVehicles.first {
+                    selectedVehicleId = firstVehicle.id
+                }
+            }
+        }
+    }
 }

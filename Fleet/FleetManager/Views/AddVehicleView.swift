@@ -14,6 +14,7 @@ struct AddVehicleView: View {
     @State private var licensePlate  = ""
     @State private var tankCapacity  = ""
     @State private var mileage       = ""
+    @State private var selectedType: VehicleType = .car
     @State private var isSaving      = false
     @State private var errorMessage: String?
 
@@ -64,6 +65,21 @@ struct AddVehicleView: View {
                                 field(text: $year,         prompt: "Year (e.g. 2024)",  keyboard: .numberPad)
                                 Divider().background(Color(.separator))
                                 field(text: $licensePlate, prompt: "License Plate",      autocap: .characters)
+
+                                Divider().background(Color(.separator))
+
+                                HStack {
+                                    Text("Vehicle Type")
+                                        .foregroundColor(Color.primary)
+                                    Spacer()
+                                    Picker("", selection: $selectedType) {
+                                        ForEach(VehicleType.allCases) { type in
+                                            Text(type.displayName).tag(type)
+                                        }
+                                    }
+                                    .pickerStyle(.menu)
+                                }
+                                .padding(.vertical, 8)
                             }
                             .padding(16)
                             .background(Color(.secondarySystemGroupedBackground))
@@ -182,7 +198,8 @@ struct AddVehicleView: View {
                 year:         yearInt,
                 tankCapacity: cap,
                 mileage:      mil,
-                licensePlate: plateTrim
+                licensePlate: plateTrim,
+                vehicleType: selectedType
             )
 
             // Persist compliance settings keyed by license plate

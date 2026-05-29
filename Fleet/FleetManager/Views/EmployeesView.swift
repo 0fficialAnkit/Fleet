@@ -11,39 +11,42 @@ struct EmployeesView: View {
     }
 
     var body: some View {
-        Group {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
-
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 16) {
-                        ForEach(filteredEmployees) { profile in
-                            let roleName = viewModel.getRole(for: profile)
-
-                            NavigationLink(destination: EmployeeDetailView(profile: profile, viewModel: viewModel)) {
-                                EmployeeRowView(
-                                    profile: profile,
-                                    roleName: roleName,
-                                    icon: viewModel.getIcon(for: roleName),
-                                    iconColor: viewModel.getColor(for: roleName)
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(.vertical, 16)
-                    .padding(.horizontal, 16)
+        List(filteredEmployees) { profile in
+            let isActive: Bool = {
+                if profile.role == "driver" {
+                    return viewModel.activeDriverIds.contains(profile.id)
                 }
-            }
+                return true // maintenance is always active
+            }()
+
+            NavigationLink(destination: EmployeeDetailView(profile: profile, viewModel: viewModel)) {
+                EmployeeRowView(
+                    profile: profile,
+                    roleName: viewModel.getRole(for: profile),
+                    isActive: isActive
+                )
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
     }
+}
 
 struct EmployeeRowView: View {
     let profile: Profile
     let roleName: String
-    let icon: String
-    let iconColor: Color
+    let isActive: Bool
+
+    private var statusLabel: String {
+        if profile.role == "driver" {
+            return isActive ? "On Trip" : "Idle"
+        }
+        return isActive ? "Active" : "Idle"
+    }
+
+    private var statusColor: Color {
+        isActive ? .green : .orange
+    }
 
     var body: some View {
         HStack(spacing: 16) {
@@ -59,24 +62,9 @@ struct EmployeeRowView: View {
 
             Spacer()
 
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundColor(iconColor)
-                .padding(10)
-                .background(iconColor.opacity(0.15))
-                .clipShape(Circle())
-
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(Color(.tertiaryLabel))
+            StatusBadge(text: statusLabel, color: statusColor)
         }
-//        .padding(16)
-//        .background(Color(.systemBackground))
-//        .cornerRadius(20)
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
+        .padding(.vertical, 4)
     }
 }
 

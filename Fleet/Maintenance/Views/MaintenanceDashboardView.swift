@@ -3,6 +3,7 @@ import Supabase
 
 struct MaintenanceDashboardView: View {
     @Binding var selectedTab: Int
+    var schedulerViewModel: MaintenanceSchedulerViewModel
     @State private var viewModel = MaintenanceDashboardViewModel()
     @State private var isShowingProfile = false
     @Environment(AuthViewModel.self) private var authViewModel
@@ -15,41 +16,58 @@ struct MaintenanceDashboardView: View {
                 ScrollView {
                     VStack(spacing: 24) {
 
-                        // MARK: - KPI Summary Cards
-                        VStack(spacing: 16) {
-                            HStack(spacing: 16) {
-                                NavigationLink(value: MaintenanceDestination.workOrderList(filter: nil, assignedTo: viewModel.currentUserId, priority: nil)) {
-                                    DashboardCard(
-                                        title: "OPEN WORK\nORDERS",
-                                        value: "\(viewModel.openWorkOrders)",
-                                        icon: "clipboard",
-                                        titleColor: Color(red: 59/255, green: 77/255, blue: 140/255),
-                                        valueColor: Color(red: 29/255, green: 40/255, blue: 82/255),
-                                        backgroundColor: Color(red: 238/255, green: 242/255, blue: 255/255)
+                        // MARK: - KPI Summary Card
+                        // --- Inventory Status card ---
+                        NavigationLink {
+                            InventoryView()
+                        } label: {
+                            VStack(spacing: 0) {
+                                HStack(alignment: .top, spacing: 16) {
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                            .fill(Color.brown.opacity(0.12))
+                                            .frame(width: 44, height: 44)
+                                        Image(systemName: "shippingbox.fill")
+                                            .font(.system(size: 20, weight: .medium))
+                                            .foregroundStyle(Color.brown)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Inventory Status")
+                                            .font(.headline.bold())
+                                            .foregroundStyle(Color.primary)
+                                    }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(Color.secondary)
+                                        .padding(.top, 4)
+                                }
+                                Divider()
+                                    .padding(.vertical, 12)
+                                HStack(spacing: 8) {
+                                    MaintenanceStatPill(
+                                        value: viewModel.availablePartsPercentage,
+                                        label: "Available %",
+                                        color: Color.green
+                                    )
+                                    MaintenanceStatPill(
+                                        value: viewModel.lowStockItemsCount,
+                                        label: "Low Stock",
+                                        color: Color.red
+                                    )
+                                    MaintenanceStatPill(
+                                        value: viewModel.inventory.count,
+                                        label: "Total Parts",
+                                        color: Color.brown
                                     )
                                 }
-                                .buttonStyle(.plain)
-
-                                NavigationLink(value: MaintenanceDestination.workOrderList(filter: nil, assignedTo: viewModel.currentUserId, priority: .critical)) {
-                                    DashboardCard(
-                                        title: "CRITICAL\nREPAIRS",
-                                        value: "\(viewModel.criticalRepairsCount)",
-                                        icon: "exclamationmark.triangle",
-                                        titleColor: Color(red: 178/255, green: 42/255, blue: 42/255),
-                                        valueColor: Color(red: 229/255, green: 62/255, blue: 62/255),
-                                        backgroundColor: Color(red: 255/255, green: 237/255, blue: 237/255)
-                                    )
-                                }
-                                .buttonStyle(.plain)
                             }
-
-                            Button {
-                                selectedTab = 2 // Switch to Inventory Tab
-                            } label: {
-                                AvailablePartsCard(percentage: viewModel.availablePartsPercentage)
-                            }
-                            .buttonStyle(.plain)
+                            .padding(16)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
                         .padding(.horizontal, 16)
 
                         // MARK: - Upcoming Scheduled Tasks
@@ -115,6 +133,7 @@ struct MaintenanceDashboardView: View {
                     }
                     .padding(.vertical, 16)
                 }
+                .refreshable { await viewModel.loadData() }
             }
             .navigationTitle("Dashboard")
             .toolbar {
@@ -340,6 +359,32 @@ struct AvailablePartsCard: View {
     }
 }
 
+// MARK: - Maintenance Stat Pill (matches Fleet Manager style)
+struct MaintenanceStatPill: View {
+    let value: Int
+    let label: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 5) {
+            Text("\(value)")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Color.primary)
+            Text(label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(color.opacity(0.08))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(color.opacity(0.25), lineWidth: 0.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
 // MARK: - Priority Queue Card
 struct PriorityQueueCard: View {
     let item: UnifiedMaintenanceItem
@@ -417,6 +462,9 @@ struct PriorityQueueCard: View {
 }
 
 #Preview {
-    MaintenanceDashboardView(selectedTab: .constant(0))
-        .environment(AuthViewModel())
+    MaintenanceDashboardView(
+        selectedTab: .constant(0),
+        schedulerViewModel: MaintenanceSchedulerViewModel()
+    )
+    .environment(AuthViewModel())
 }

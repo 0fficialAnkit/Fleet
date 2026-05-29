@@ -24,81 +24,44 @@ struct AddEmployeeView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 24) {
-
-                        // Error message
-                        if let error = viewModel.errorMessage {
+                Form {
+                    if let error = viewModel.errorMessage {
+                        Section {
                             Text(error)
-                                .font(.subheadline)
-                                .foregroundColor(Color.red)
-                                .padding(.horizontal, 16)
-                        }
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            SectionHeader(title: "Personal Details")
-                                .padding(.horizontal, 16)
-
-                                VStack(spacing: 0) {
-                                    TextField("Full Name", text: $fullName)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(Color.primary)
-
-                                    Divider().background(Color(.separator))
-
-                                    TextField("Email", text: $email)
-                                        .keyboardType(.emailAddress)
-                                        .autocapitalization(.none)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(Color.primary)
-
-                                    Divider().background(Color(.separator))
-
-                                    HStack {
-                                        if isPasswordVisible {
-                                            TextField("Password", text: $password)
-                                                .foregroundColor(Color.primary)
-                                        } else {
-                                            SecureField("Password", text: $password)
-                                                .foregroundColor(Color.primary)
-                                        }
-
-                                        Button(action: {
-                                            isPasswordVisible.toggle()
-                                        }) {
-                                            Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
-                                                .foregroundColor(Color.secondary)
-                                        }
-                                    }
-                                    .padding(.vertical, 12)
-
-                                    Divider().background(Color(.separator))
-
-                                    TextField("Phone", text: $phone)
-                                        .keyboardType(.phonePad)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(Color.primary)
-
-                                    if isDriverSelected {
-                                        Divider().background(Color(.separator))
-
-                                        TextField("Driver License Number", text: $licenseNumber)
-                                            .padding(.vertical, 12)
-                                            .foregroundColor(Color.primary)
-                                    }
-                                }
-                                .padding(16)
-                                .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .padding(.horizontal, 16)
+                                .foregroundColor(.red)
                         }
                     }
-                    .padding(.vertical, 16)
+
+                    Section(header: Text("Personal Details")) {
+                        TextField("Full Name", text: $fullName)
+
+                        TextField("Email", text: $email)
+                            .keyboardType(.emailAddress)
+                            .autocapitalization(.none)
+
+                        HStack {
+                            if isPasswordVisible {
+                                TextField("Password", text: $password)
+                            } else {
+                                SecureField("Password", text: $password)
+                            }
+
+                            Button(action: {
+                                isPasswordVisible.toggle()
+                            }) {
+                                Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+
+                        TextField("Phone", text: $phone)
+                            .keyboardType(.phonePad)
+
+                        if isDriverSelected {
+                            TextField("Driver License Number", text: $licenseNumber)
+                        }
+                    }
                 }
-            }
             .navigationTitle(isDriverSelected ? "Add Driver" : "Add Maintenance Staff")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

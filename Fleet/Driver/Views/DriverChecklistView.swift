@@ -5,6 +5,7 @@ import Supabase
 struct DriverChecklistView: View {
 
     let checklistType: InspectionType
+    let vehicle: Vehicle?
     let onSubmit: (String, [String]) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -60,78 +61,79 @@ struct DriverChecklistView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Progress bar
-                progressBar
+
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 16) {
                         SectionHeader(title: checklistType == .preTrip ? "Pre-Trip Inspection" : "Post-Trip Inspection")
                             .padding(.top)
 
-                        // Mandatory notice
-                        HStack(spacing: 8) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(Color.yellow)
-                            Text("Items marked with ● are mandatory")
-                                .font(.system(size: 16, weight: .regular, design: .rounded))
-                                .foregroundStyle(Color.secondary)
-                        }
-                        .padding(.horizontal, 4)
+                       
 
                         // Checklist items
-                        ForEach(currentItems, id: \.name) { item in
-                            Button(action: {
-                                withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
-                                    if checkedItems.contains(item.name) {
-                                        checkedItems.remove(item.name)
-                                    } else {
-                                        checkedItems.insert(item.name)
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                            ForEach(currentItems, id: \.name) { item in
+                                Button(action: {
+                                    withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                                        if checkedItems.contains(item.name) {
+                                            checkedItems.remove(item.name)
+                                        } else {
+                                            checkedItems.insert(item.name)
+                                        }
                                     }
-                                }
-                            }) {
-                                HStack {
-                                    Image(systemName: item.icon)
-                                        .font(.system(size: 20))
-                                        .foregroundColor(Color.green)
-                                        .frame(width: 30)
+                                }) {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: item.icon)
+                                            .font(.system(size: 18))
+                                            .foregroundColor(Color.primary)
+                                            .frame(width: 24)
 
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        HStack(spacing: 6) {
-                                            Text(item.name)
-                                                .font(.system(size: 16, weight: .regular, design: .rounded))
-                                                .foregroundColor(Color.primary)
-                                            if item.mandatory {
-                                                Circle()
-                                                    .fill(Color.red)
-                                                    .frame(width: 6, height: 6)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            HStack(spacing: 4) {
+                                                Text(item.name)
+                                                    .font(.system(size: 14, weight: .regular, design: .rounded))
+                                                    .foregroundColor(Color.primary)
+                                                    .lineLimit(2)
+                                                    .minimumScaleFactor(0.8)
+                                                if item.mandatory {
+                                                    Circle()
+                                                        .fill(Color.red)
+                                                        .frame(width: 6, height: 6)
+                                                }
                                             }
                                         }
-                                        if item.mandatory {
-                                            Text("Required")
-                                                .font(.system(size: 16, weight: .medium, design: .rounded))
-                                                .foregroundStyle(Color.red)
+
+                                        Spacer(minLength: 0)
+
+                                        ZStack {
+                                            Circle()
+                                                .fill(checkedItems.contains(item.name) ? Color.green : Color.gray.opacity(0.15))
+                                                .frame(width: 24, height: 24)
+                                            
+                                            if checkedItems.contains(item.name) {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 12, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            }
                                         }
                                     }
-                                    .padding(.leading, 8)
-
-                                    Spacer()
-
-                                    Image(systemName: checkedItems.contains(item.name) ? "checkmark.circle.fill" : "circle")
-                                        .foregroundColor(checkedItems.contains(item.name) ? Color.green : Color(UIColor.tertiaryLabel))
-                                        .font(.title3)
+                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 12)
+                                    .frame(maxWidth: .infinity, minHeight: 70)
+                                    .background(Color(UIColor.secondarySystemGroupedBackground))
+                                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                            .stroke(
+                                                checkedItems.contains(item.name)
+                                                    ? Color.green.opacity(0.5)
+                                                    : Color.clear,
+                                                lineWidth: 1.5
+                                            )
+                                    )
+                                    .shadow(color: Color.black.opacity(0.05), radius: 5, y: 2)
                                 }
-                                .padding(16)
-                                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                        .stroke(
-                                            checkedItems.contains(item.name)
-                                                ? Color.green.opacity(0.3)
-                                                : Color.white.opacity(0.15),
-                                            lineWidth: checkedItems.contains(item.name) ? 1.0 : 0.5
-                                        )
-                                )
-                                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                                .buttonStyle(.plain)
                             }
                         }
 
@@ -220,6 +222,31 @@ struct DriverChecklistView: View {
 
                 // MARK: - Submit Button
                 VStack(spacing: 8) {
+                    if let vehicle = vehicle {
+                        NavigationLink(destination: DriverReportIssueView(vehicle: vehicle)) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                Text("Report an Issue")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .padding(16)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.red, Color.red.opacity(0.8)],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .shadow(color: Color.red.opacity(0.3), radius: 8, y: 4)
+                        }
+                        .padding(.bottom, 8)
+                    }
+
                     if !allMandatoryChecked {
                         Text("Complete all mandatory items to submit")
                             .font(.system(size: 16, weight: .regular, design: .rounded))
@@ -272,38 +299,7 @@ struct DriverChecklistView: View {
         }
     }
 
-    // MARK: - Progress Bar
 
-    private var progressBar: some View {
-        VStack(spacing: 4) {
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color(UIColor.tertiarySystemBackground))
-                        .frame(height: 6)
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(allMandatoryChecked ? Color.green : Color.green)
-                        .frame(width: geo.size.width * Double(checkedCount) / Double(max(totalCount, 1)), height: 6)
-                        .animation(.spring(response: 0.3), value: checkedCount)
-                }
-            }
-            .frame(height: 6)
-
-            HStack {
-                Text("\(checkedCount)/\(totalCount) checked")
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
-                    .foregroundStyle(Color(UIColor.tertiaryLabel))
-                Spacer()
-                if allMandatoryChecked {
-                    Text("All mandatory items ✓")
-                        .font(.system(size: 16, weight: .regular, design: .rounded))
-                        .foregroundStyle(Color.green)
-                }
-            }
-        }
-        .padding(.horizontal)
-        .padding(.top, 8)
-    }
 
     // MARK: - Submit
 
@@ -348,5 +344,5 @@ struct DriverChecklistView: View {
 }
 
 #Preview {
-    DriverChecklistView(checklistType: .preTrip, onSubmit: { _, _ in })
+    DriverChecklistView(checklistType: .preTrip, vehicle: nil, onSubmit: { _, _ in })
 }

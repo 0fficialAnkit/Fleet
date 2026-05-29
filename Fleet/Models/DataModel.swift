@@ -167,6 +167,30 @@ struct User: Codable, Identifiable, Hashable, Sendable {
   }
 }
 
+enum VehicleType: String, Codable, CaseIterable, Sendable, Identifiable {
+  case twoWheeler = "two_wheeler"
+  case car = "car"
+  case truck = "truck"
+  
+  var id: String { rawValue }
+  
+  var maintenanceThresholdKM: Double {
+      switch self {
+      case .twoWheeler: return 3000
+      case .car: return 10000
+      case .truck: return 20000
+      }
+  }
+  
+  var displayName: String {
+      switch self {
+      case .twoWheeler: return "Two Wheeler"
+      case .car: return "Car"
+      case .truck: return "Truck"
+      }
+  }
+}
+
 // MARK: - Vehicle
 struct Vehicle: Codable, Identifiable, Hashable, Sendable {
   let id: UUID
@@ -181,6 +205,7 @@ struct Vehicle: Codable, Identifiable, Hashable, Sendable {
   var assignedDriverId: UUID? //FK
   var adminId: UUID? //FK
   var status: VehicleStatus?
+  var vehicleType: VehicleType?
 
   enum CodingKeys: String, CodingKey {
       case id, make, model, year, vin
@@ -191,6 +216,7 @@ struct Vehicle: Codable, Identifiable, Hashable, Sendable {
       case assignedDriverId = "assigned_driver_id"
       case adminId = "admin_id"
       case status
+      case vehicleType = "vehicle_type"
   }
 }
 
@@ -228,6 +254,14 @@ struct VehicleLocation: Codable, Identifiable, Hashable, Sendable {
   }
 }
 //  MARK: - MaintenanceTask
+enum MaintenanceScheduleType: String, Codable, CaseIterable, Sendable, Identifiable {
+    case date = "Date"
+    case mileage = "Mileage"
+    case interval = "Interval"
+    
+    var id: String { rawValue }
+}
+
 struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
   let id: UUID
   var workOrderId: UUID? // FK — optional, tasks can exist without a work order
@@ -237,6 +271,9 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
   var taskType: MaintenanceTaskType?
   var description: String?
   var scheduledDate: Date?
+  var targetMileage: Double?
+  var serviceIntervalMonths: Int?
+  var scheduleType: MaintenanceScheduleType?
   var status: MaintenanceTaskStatus?
 
   enum CodingKeys: String, CodingKey {
@@ -248,6 +285,9 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
       case taskType = "task_type"
       case description
       case scheduledDate = "scheduled_date"
+      case targetMileage = "target_mileage"
+      case serviceIntervalMonths = "service_interval_months"
+      case scheduleType = "schedule_type"
       case status
   }
 }
