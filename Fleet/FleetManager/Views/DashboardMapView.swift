@@ -60,7 +60,7 @@ struct DashboardMapView: View {
         .onChange(of: vehicleLocations) { _, newLocs in
             if !newLocs.isEmpty {
                 lastLocationUpdate = Date()
-                // Driver pin moves on the map automatically — no camera re-fit needed
+                fitCamera()   // re-fit to include driver's live position in frame
             }
         }
         .fullScreenCover(isPresented: $showFullscreen) {
@@ -213,17 +213,12 @@ struct DashboardMapView: View {
     // MARK: - Camera
 
     private func fitCamera() {
-        // Use ONLY route polyline coords — never driver pin GPS.
-        // Driver GPS on a simulator is Apple Park (CA); routes are in India.
-        // Mixing both makes boundingRegion span the entire globe.
-        var coords = allPolylineCoords(from: tripRoutes)
-
-        // Fallback: pickup/dropoff coords when polyline isn't built yet
-        if coords.isEmpty {
-            coords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] }
+        var routeCoords = allPolylineCoords(from: tripRoutes)
+        if routeCoords.isEmpty {
+            routeCoords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] }
         }
 
-        guard !coords.isEmpty else {
+        guard !routeCoords.isEmpty else {
             // No active routes — show fleet manager's own location
             if let mgr = locationManager.coordinate {
                 cameraPosition = .region(MKCoordinateRegion(
@@ -236,7 +231,15 @@ struct DashboardMapView: View {
             return
         }
 
-        cameraPosition = .region(boundingRegion(for: coords, padding: 1.35))
+        // Include driver pins that are within 500 km of the route centroid.
+        // This keeps real driver GPS in frame while ignoring simulator fake GPS
+        // (e.g. Apple Park, CA when the route is in India).
+        let centroid = routeCoords.centroid
+        let nearbyPins = driverPins.map(\.coordinate).filter {
+            $0.approxKm(to: centroid) < 500
+        }
+
+        cameraPosition = .region(boundingRegion(for: routeCoords + nearbyPins, padding: 1.4))
     }
 
     // MARK: - Pin views
@@ -433,16 +436,12 @@ struct DashboardMapFullscreenView: View {
     // MARK: - Camera
 
     private func fitCamera() {
-        // Use ONLY route polyline coords — never driver pin GPS.
-        // Driver GPS on a simulator is Apple Park (CA); routes are in India.
-        // Mixing both makes boundingRegion span the entire globe.
-        var coords = allPolylineCoords(from: tripRoutes)
-
-        if coords.isEmpty {
-            coords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] }
+        var routeCoords = allPolylineCoords(from: tripRoutes)
+        if routeCoords.isEmpty {
+            routeCoords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] }
         }
 
-        guard !coords.isEmpty else {
+        guard !routeCoords.isEmpty else {
             if let mgr = locationManager.coordinate {
                 cameraPosition = .region(MKCoordinateRegion(
                     center: mgr,
@@ -454,7 +453,16 @@ struct DashboardMapFullscreenView: View {
             return
         }
 
-        cameraPosition = .region(boundingRegion(for: coords, padding: 1.3))
+        // Include driver pins that fall within 2× the route's bounding box.
+        // This handles any real driver (even on a Lahore → Bangladesh route)
+        // while still excluding simulator GPS thousands of km away.
+        let routeBBox = boundingRegion(for: routeCoords, padding: 2.0)
+        let nearbyPins = driverPins.map(\.coordinate).filter { coord in
+            abs(coord.latitude  - routeBBox.center.latitude)  < routeBBox.span.latitudeDelta  / 2 &&
+            abs(coord.longitude - routeBBox.center.longitude) < routeBBox.span.longitudeDelta / 2
+        }
+
+        cameraPosition = .region(boundingRegion(for: routeCoords + nearbyPins, padding: 1.4))
     }
 
     // MARK: - Pin views
@@ -555,6 +563,29 @@ func relativeTime(_ date: Date) -> String {
     if secs < 5  { return "just now" }
     if secs < 60 { return "\(secs)s ago" }
     return "\(secs / 60)m ago"
+}
+
+// MARK: - Coordinate helpers
+
+private extension Array where Element == CLLocationCoordinate2D {
+    /// Average of all coordinates in the array.
+    var centroid: CLLocationCoordinate2D {
+        guard !isEmpty else { return CLLocationCoordinate2D() }
+        let lat = map(\.latitude).reduce(0, +) / Double(count)
+        let lon = map(\.longitude).reduce(0, +) / Double(count)
+        return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    }
+}
+
+private extension CLLocationCoordinate2D {
+    /// Rough great-circle distance in km using the equirectangular approximation.
+    /// Accurate enough for filtering outliers (< 1 % error within 1000 km).
+    func approxKm(to other: CLLocationCoordinate2D) -> Double {
+        let dLat = (latitude  - other.latitude)  * .pi / 180
+        let dLon = (longitude - other.longitude) * .pi / 180
+        let meanLat = ((latitude + other.latitude) / 2) * .pi / 180
+        return sqrt(dLat * dLat + (cos(meanLat) * dLon) * (cos(meanLat) * dLon)) * 6371
+    }
 }
 
 /// Geocodes a free-text address to the first matching MKMapItem.
