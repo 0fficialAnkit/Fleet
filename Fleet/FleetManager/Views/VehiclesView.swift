@@ -8,7 +8,8 @@ struct VehiclesView: View {
             NavigationLink(value: vehicle) {
                 VehicleRowView(
                     vehicle: vehicle,
-                    statusColor: viewModel.getStatusColor(vehicle.status)
+                    statusText: viewModel.getVehicleStatusText(for: vehicle),
+                    statusColor: viewModel.getVehicleStatusColor(for: vehicle)
                 )
             }
         }
@@ -18,6 +19,7 @@ struct VehiclesView: View {
 
 struct VehicleRowView: View {
     let vehicle: Vehicle
+    let statusText: String
     let statusColor: Color
 
     var body: some View {
@@ -44,7 +46,7 @@ struct VehicleRowView: View {
 
             Spacer()
 
-            StatusBadge(text: vehicle.status?.rawValue.capitalized ?? "Unknown", color: statusColor)
+            StatusBadge(text: statusText, color: statusColor)
         }
         .padding(.vertical, 4)
     }
