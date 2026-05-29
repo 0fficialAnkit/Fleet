@@ -52,7 +52,7 @@ struct MaintenanceSchedulerView: View {
                 WorkOrderDetailSheet(workOrder: wo, viewModel: viewModel)
             }
             .toolbar {
-                if viewModel.selectedTab == .active {
+                if viewModel.selectedTab == .pending {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
                             isShowingCreateTaskSheet = true
@@ -232,7 +232,7 @@ private struct TaskListSection: View {
 
     private var currentItems: [SchedulerUnifiedItem] {
         switch viewModel.selectedTab {
-        case .active:     return viewModel.activeItemsForSelectedDate
+        case .pending:    return viewModel.pendingItemsForSelectedDate
         case .inProgress: return viewModel.inProgressItemsForSelectedDate
         case .completed:  return viewModel.completedItemsForSelectedDate
         }
@@ -240,7 +240,7 @@ private struct TaskListSection: View {
 
     private var emptyTitle: String {
         switch viewModel.selectedTab {
-        case .active:     return "No Active Tasks"
+        case .pending:    return "No Pending Tasks"
         case .inProgress: return "Nothing In Progress"
         case .completed:  return "No Completed Tasks"
         }
@@ -248,7 +248,7 @@ private struct TaskListSection: View {
 
     private var emptyMessage: String {
         switch viewModel.selectedTab {
-        case .active:     return "No pending work assigned for this day."
+        case .pending:    return "No pending work assigned for this day."
         case .inProgress: return "No tasks are currently being worked on."
         case .completed:  return "No tasks were completed on this day."
         }
@@ -805,6 +805,10 @@ struct WorkOrderDetailSheet: View {
     let workOrder: ScheduledWorkOrder
     let viewModel: MaintenanceSchedulerViewModel
 
+    @State private var scheduledDate = Date()
+    @State private var isScheduled = false
+    @Environment(\.dismiss) private var dismiss
+
     private var currentWO: ScheduledWorkOrder {
         viewModel.allWorkOrders.first(where: { $0.id == workOrder.id }) ?? workOrder
     }
@@ -865,6 +869,77 @@ struct WorkOrderDetailSheet: View {
                             }
                         }
 
+                        // MARK: Schedule Work Order (only if open/pending)
+                        if currentWO.status == .open {
+                            SheetSection(title: "Schedule Work Order") {
+                                VStack(spacing: 16) {
+                                    HStack(spacing: 14) {
+                                        Image(systemName: "calendar.badge.clock")
+                                            .font(.system(size: 20, weight: .semibold))
+                                            .foregroundStyle(Color.brown)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Pick a Date & Time")
+                                                .font(.subheadline.weight(.semibold))
+                                                .foregroundStyle(.primary)
+                                            Text("This will move the work order to In Progress on the chosen date")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                                    DatePicker(
+                                        "Scheduled For",
+                                        selection: $scheduledDate,
+                                        in: Date()...,
+                                        displayedComponents: [.date, .hourAndMinute]
+                                    )
+                                    .datePickerStyle(.graphical)
+                                    .tint(Color.brown)
+
+                                    Button {
+                                        viewModel.scheduleWorkOrder(id: currentWO.id, date: scheduledDate)
+                                        withAnimation {
+                                            isScheduled = true
+                                        }
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                            dismiss()
+                                        }
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "calendar.badge.checkmark")
+                                            Text("Schedule & Start")
+                                        }
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 48)
+                                        .background(Color.brown, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    }
+                                }
+                            }
+                        }
+
+                        // MARK: Scheduled confirmation (if already scheduled)
+                        if let scheduled = currentWO.scheduledDate {
+                            SheetSection(title: "Scheduled") {
+                                HStack(spacing: 14) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 22))
+                                        .foregroundStyle(.green)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Scheduled for")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(.secondary)
+                                        Text(scheduled.formatted(date: .long, time: .shortened))
+                                            .font(.headline)
+                                            .foregroundStyle(.primary)
+                                    }
+                                    Spacer()
+                                }
+                            }
+                        }
+
                         // MARK: Spare Parts Consumed (Read-Only)
                         if !currentWO.partsUsed.isEmpty {
                             SheetSection(title: "Parts Consumed") {
@@ -896,6 +971,24 @@ struct WorkOrderDetailSheet: View {
                         }
                     }
                     .padding(16)
+            }
+
+            // Scheduled confirmation overlay
+            if isScheduled {
+                VStack(spacing: 16) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 56))
+                        .foregroundStyle(.green)
+                        .symbolEffect(.bounce, value: isScheduled)
+                    Text("Scheduled!")
+                        .font(.title2.bold())
+                    Text(scheduledDate.formatted(date: .long, time: .shortened))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.ultraThinMaterial)
+                .transition(.opacity)
             }
         }
         .navigationTitle("Work Order Details")
