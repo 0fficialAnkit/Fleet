@@ -15,81 +15,30 @@ struct AddVehicleView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 24) {
-
-                        // Error message
-                        if let error = errorMessage {
+                Form {
+                    if let error = errorMessage {
+                        Section {
                             Text(error)
-                                .font(.subheadline)
-                                .foregroundColor(Color.red)
-                                .padding(.horizontal, 16)
-                        }
-
-                        // Basic Details Section
-                        VStack(alignment: .leading, spacing: 8) {
-                            SectionHeader(title: "Basic Details")
-                                .padding(.horizontal, 16)
-                                                        VStack(spacing: 0) {
-                                TextField("", text: $make, prompt: Text("Manufacturer (e.g. Ford)").foregroundColor(Color(.placeholderText)))
-                                    .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
-
-                                Divider().background(Color(.separator))
-
-                                TextField("", text: $model, prompt: Text("Model (e.g. Transit)").foregroundColor(Color(.placeholderText)))
-                                    .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
-
-                                Divider().background(Color(.separator))
-
-                                TextField("", text: $year, prompt: Text("Year (e.g. 2024)").foregroundColor(Color(.placeholderText)))
-                                    .keyboardType(.numberPad)
-                                    .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
-
-                                Divider().background(Color(.separator))
-
-                                TextField("", text: $licensePlate, prompt: Text("License Plate").foregroundColor(Color(.placeholderText)))
-                                    .textInputAutocapitalization(.characters)
-                                    .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
-                            }
-                            .padding(16)
-                            .background(Color(.secondarySystemGroupedBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .padding(.horizontal, 16)
-                        }
-
-                        // Specifications Section
-                        VStack(alignment: .leading, spacing: 8) {
-                            SectionHeader(title: "Specifications")
-                                .padding(.horizontal, 16)
-                                                        VStack(spacing: 0) {
-                                TextField("", text: $tankCapacity, prompt: Text("Tank Capacity (L)").foregroundColor(Color(.placeholderText)))
-                                    .keyboardType(.decimalPad)
-                                    .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
-
-                                Divider().background(Color(.separator))
-
-                                TextField("", text: $mileage, prompt: Text("Mileage (km/l)").foregroundColor(Color(.placeholderText)))
-                                    .keyboardType(.decimalPad)
-                                    .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
-                            }
-                            .padding(16)
-                            .background(Color(.secondarySystemGroupedBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .padding(.horizontal, 16)
+                                .foregroundColor(.red)
                         }
                     }
-                    .padding(.vertical, 16)
+
+                    Section(header: Text("Basic Details")) {
+                        TextField("Manufacturer (e.g. Ford)", text: $make)
+                        TextField("Model (e.g. Transit)", text: $model)
+                        TextField("Year (e.g. 2024)", text: $year)
+                            .keyboardType(.numberPad)
+                        TextField("License Plate", text: $licensePlate)
+                            .textInputAutocapitalization(.characters)
+                    }
+
+                    Section(header: Text("Specifications")) {
+                        TextField("Tank Capacity (L)", text: $tankCapacity)
+                            .keyboardType(.decimalPad)
+                        TextField("Mileage (km/l)", text: $mileage)
+                            .keyboardType(.decimalPad)
+                    }
                 }
-            }
             .navigationTitle("Add Vehicle")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

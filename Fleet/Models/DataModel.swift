@@ -179,6 +179,7 @@ struct Vehicle: Codable, Identifiable, Hashable, Sendable {
   var mileage: Double?
   var purchaseDate: Date?
   var assignedDriverId: UUID? //FK
+  var adminId: UUID? //FK
   var status: VehicleStatus?
 
   enum CodingKeys: String, CodingKey {
@@ -188,6 +189,7 @@ struct Vehicle: Codable, Identifiable, Hashable, Sendable {
       case mileage
       case purchaseDate = "purchase_date"
       case assignedDriverId = "assigned_driver_id"
+      case adminId = "admin_id"
       case status
   }
 }
@@ -527,6 +529,7 @@ struct FuelLog: Codable, Identifiable, Hashable, Sendable {
   var litersUsed: Double?
   var fuelCost: Double?
   var recordedAt: Date?
+  var billUrl: String? // URL of receipt photo in `fuel` storage bucket
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -535,6 +538,7 @@ struct FuelLog: Codable, Identifiable, Hashable, Sendable {
       case litersUsed = "liters_used"
       case fuelCost = "fuel_cost"
       case recordedAt = "recorded_at"
+      case billUrl = "bill_url"
   }
 }
 

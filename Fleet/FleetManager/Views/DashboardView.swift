@@ -9,22 +9,23 @@ struct DashboardView: View {
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
-
+            Group {
                 if viewModel.isLoading && viewModel.vehicles.isEmpty {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                 } else {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 24) {
+                    List {
+                        Section {
                             fleetOverviewCard
-                            liveFleetSection
-                            recentOrdersSection
-                            maintenanceSection
                         }
-                        .padding(.bottom, 32)
+                        
+                        liveFleetSection
+                        
+                        recentOrdersSection
+                        
+                        maintenanceSection
                     }
+                    .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle("Dashboard")
@@ -97,11 +98,6 @@ struct DashboardView: View {
                     }
 
                     Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.secondary)
-                        .padding(.top, 4)
                 }
 
                 Divider()
@@ -127,36 +123,31 @@ struct DashboardView: View {
                     )
                 }
             }
-            .padding(16)
-            .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .contentShape(Rectangle())
+            .padding(.vertical, 4)
         }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 16)
     }
 
     // MARK: - Recent Orders
 
     private var recentOrdersSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Recent Orders", action: "See All") {
+        Section(header: HStack {
+            Text("Recent Orders")
+            Spacer()
+            Button("See All") {
                 // Action
             }
-            .padding(.horizontal, 16)
-
+            .font(.footnote)
+            .textCase(.none)
+        }) {
             if viewModel.recentOrders.isEmpty {
                 Text("No orders yet.")
                     .font(.body)
                     .foregroundStyle(Color.secondary)
-                    .padding(.horizontal, 16)
             } else {
                 ForEach(viewModel.recentOrders) { trip in
                     NavigationLink(value: DashboardDestination.orderDetail(trip)) {
                         TripCardView(trip: trip, viewModel: viewModel)
                     }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, 16)
                 }
             }
         }
@@ -166,53 +157,53 @@ struct DashboardView: View {
 
     private var liveFleetSection: some View {
         let activeTrips = viewModel.trips.filter { $0.status == .active }
-        return VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                SectionHeader(title: "Live Vehicles")
-                Spacer()
-                if !activeTrips.isEmpty {
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 7, height: 7)
-                        Text("\(activeTrips.count) on route")
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(Color.secondary)
-                    }
+        return Section(header: HStack {
+            Text("Live Fleet")
+            Spacer()
+            if !activeTrips.isEmpty {
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 7, height: 7)
+                    Text("\(activeTrips.count) on route")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(Color.secondary)
+                        .textCase(.none)
                 }
             }
-            .padding(.horizontal, 16)
+        }) {
+            DashboardMapView(
+                activeTrips: activeTrips,
+                routes: viewModel.routes,
+                profiles: viewModel.profiles,
+                vehicleLocations: viewModel.vehicleLocations
+            )
+            .frame(height: 250)
+            .listRowInsets(EdgeInsets())
 
-            if activeTrips.isEmpty {
-                Text("No active trips right now.")
-                    .font(.body)
-                    .foregroundStyle(Color.secondary)
-                    .padding(.horizontal, 16)
-            } else {
+            if !activeTrips.isEmpty {
                 ForEach(activeTrips) { trip in
                     let route = viewModel.routes.first { $0.id == trip.routeId }
                     let driverName = viewModel.driverName(for: trip.driverId)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        // Driver + vehicle label
-                        HStack(spacing: 8) {
-                            Image(systemName: "person.crop.circle.fill")
-                                .foregroundStyle(Color.blue)
+                    HStack(spacing: 10) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .foregroundStyle(Color.teal)
+                            .font(.system(size: 16))
+                        VStack(alignment: .leading, spacing: 2) {
                             Text(driverName)
                                 .font(.subheadline.bold())
                                 .foregroundStyle(Color.primary)
-                            Spacer()
-                            StatusBadge(text: "Active", color: Color.green)
+                            if let start = route?.startLocation, let end = route?.endLocation {
+                                Text("\(start) → \(end)")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.secondary)
+                                    .lineLimit(1)
+                            }
                         }
-                        .padding(.horizontal, 16)
-
-                        // Reuse the exact same map from the driver's TripDetailView
-                        TripRouteMapView(
-                            startAddress: route?.startLocation,
-                            endAddress: route?.endLocation
-                        )
-                        .padding(.horizontal, 16)
+                        Spacer()
+                        StatusBadge(text: "Active", color: .green)
                     }
+                    .padding(.vertical, 4)
                 }
             }
         }
@@ -221,19 +212,14 @@ struct DashboardView: View {
     // MARK: - Maintenance
 
     private var maintenanceSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Need Maintenance")
-                .padding(.horizontal, 16)
-
+        Section(header: Text("Need Maintenance")) {
             if viewModel.maintenanceVehicles.isEmpty {
                 Text("All vehicles operational.")
                     .font(.body)
                     .foregroundStyle(Color.secondary)
-                    .padding(.horizontal, 16)
             } else {
                 ForEach(viewModel.maintenanceVehicles) { vehicle in
                     MaintenanceCardView(vehicle: vehicle, viewModel: viewModel)
-                        .padding(.horizontal, 16)
                 }
             }
         }
@@ -333,13 +319,8 @@ struct TripCardView: View {
                 }
             }
 
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.secondary)
         }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.vertical, 4)
     }
 }
 
@@ -378,11 +359,8 @@ struct MaintenanceCardView: View {
                         .lineLimit(2)
                 }
             }
-            Spacer()
         }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.vertical, 4)
     }
 }
 

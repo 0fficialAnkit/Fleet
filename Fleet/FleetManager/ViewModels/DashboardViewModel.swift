@@ -9,6 +9,7 @@ final class DashboardViewModel {
     private(set) var routes: [Route] = []
     private(set) var profiles: [Profile] = []
     private(set) var maintenanceTasks: [MaintenanceTask] = []
+    private(set) var vehicleLocations: [VehicleLocation] = []
 
     var isLoading = false
     var errorMessage: String?
@@ -33,6 +34,7 @@ final class DashboardViewModel {
             errorMessage = error.localizedDescription
         }
         isLoading = false
+        await refreshVehicleLocations()
     }
 
     func setupRealtime() {
@@ -42,6 +44,17 @@ final class DashboardViewModel {
         rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addMaintenanceTasksChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addProfilesChangeHandler { [weak self] in Task { await self?.loadData() } }
+        // Refresh vehicle pins whenever a driver pushes a new location row
+        rt.addVehicleLocationsChangeHandler { [weak self] in
+            Task { await self?.refreshVehicleLocations() }
+        }
+    }
+
+    private func refreshVehicleLocations() async {
+        let activeVehicleIds = trips
+            .filter { $0.status == .active }
+            .map { $0.vehicleId }
+        vehicleLocations = (try? await VehicleLocationService.fetchLatestLocations(for: activeVehicleIds)) ?? []
     }
 
     // MARK: - Computed
@@ -61,7 +74,12 @@ final class DashboardViewModel {
     }
 
     var recentOrders: [Trip] {
-        Array(trips.prefix(3))
+        let sorted = trips.sorted {
+            let lhs = $0.startTime ?? .distantPast
+            let rhs = $1.startTime ?? .distantPast
+            return lhs > rhs
+        }
+        return Array(sorted.prefix(3))
     }
 
     var maintenanceVehicles: [Vehicle] {
