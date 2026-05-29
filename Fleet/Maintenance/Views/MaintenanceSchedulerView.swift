@@ -40,6 +40,7 @@ struct MaintenanceSchedulerView: View {
                         )
                     }
                 }
+                .refreshable { await viewModel.loadData() }
             }
             .navigationTitle("Schedule")
             .navigationBarTitleDisplayMode(.large)
@@ -493,7 +494,7 @@ private struct WorkOrderCard: View {
     func statusColor(_ status: WorkOrderStatus) -> Color {
         switch status {
         case .open:       return Color.blue
-        case .inProgress: return Color.yellow
+        case .inProgress: return Color.orange
         case .completed:  return Color.green
         case .cancelled:  return Color.red
         }
@@ -503,7 +504,7 @@ private struct WorkOrderCard: View {
         switch priority {
         case .low:      return Color.green
         case .medium:   return Color.blue
-        case .high:     return Color.yellow
+        case .high:     return Color.orange
         case .critical: return Color.red
         }
     }
@@ -1048,7 +1049,7 @@ struct WorkOrderDetailSheet: View {
     func statusColor(_ status: WorkOrderStatus) -> Color {
         switch status {
         case .open:       return Color.blue
-        case .inProgress: return Color.yellow
+        case .inProgress: return Color.orange
         case .completed:  return Color.green
         case .cancelled:  return Color.red
         }
@@ -1067,7 +1068,7 @@ struct WorkOrderDetailSheet: View {
         switch priority {
         case .low:      return Color.green
         case .medium:   return Color.blue
-        case .high:     return Color.yellow
+        case .high:     return Color.orange
         case .critical: return Color.red
         }
     }
@@ -1221,7 +1222,7 @@ private struct LaborStatBox: View {
 func statusColor(_ status: TaskDisplayStatus) -> Color {
     switch status {
     case .pending:    return Color.blue
-    case .inProgress: return Color.yellow
+    case .inProgress: return Color.orange
     case .completed:  return Color.green
     case .delayed:    return Color.red
     case .critical:   return Color.red
@@ -1242,7 +1243,7 @@ func priorityColor(_ priority: TaskPriority) -> Color {
     switch priority {
     case .low:       return Color.green
     case .medium:    return Color.blue
-    case .high:      return Color.yellow
+    case .high:      return Color.orange
     case .emergency: return Color.red
     }
 }

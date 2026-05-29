@@ -22,15 +22,14 @@ struct DriverDashboardView: View {
                             activeTripBanner
                             statsRow
                             upcomingTripSection
-                            quickActionsSection
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
                         .padding(.bottom, 40)
                     }
+                    .refreshable { await viewModel.loadData() }
                 }
             }
-            .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
@@ -180,78 +179,69 @@ extension DriverDashboardView {
 
     // MARK: Stats Row
     private var statsRow: some View {
-        HStack(spacing: 16) {
-            // Achievements Card (60% width)
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Label("Achievements", systemImage: "trophy.fill")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundStyle(Color.yellow)
-                    Spacer()
-                    Image(systemName: "checkmark.seal.fill")
-                        .foregroundStyle(Color.green)
-                }
-
-                HStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(viewModel.totalCompletedTrips)")
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.primary)
-                        Text("Completed")
-                            .font(.system(size: 16, weight: .regular, design: .rounded))
-                            .foregroundStyle(Color.secondary)
-                    }
-
-                    Rectangle()
-                        .fill(Color(UIColor.separator))
-                        .frame(width: 1, height: 36)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(String(format: "%.0f km", viewModel.totalDistanceKm))
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .fontWeight(.bold)
-                            .foregroundStyle(Color.primary)
-                        Text("Distance")
-                            .font(.system(size: 16, weight: .regular, design: .rounded))
-                            .foregroundStyle(Color.secondary)
-                    }
-                }
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-            )
-            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
-
-            // Hours Active Card (40% width)
-            VStack(alignment: .leading, spacing: 10) {
-                Label("Active Time", systemImage: "clock.badge.checkmark.fill")
+        VStack(spacing: 16) {
+            HStack {
+                Label("Performance", systemImage: "chart.bar.fill")
                     .font(.system(size: 16, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.green)
+                Spacer()
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundStyle(Color.green)
+            }
 
+            HStack(spacing: 12) {
+                // Completed
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(viewModel.totalCompletedTrips)")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.primary)
+                    Text("Completed")
+                        .font(.system(size: 14, weight: .regular, design: .rounded))
+                        .foregroundStyle(Color.secondary)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Rectangle()
+                    .fill(Color(UIColor.separator))
+                    .frame(width: 1, height: 36)
+
+                // Distance
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(String(format: "%.0f km", viewModel.totalDistanceKm))
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.primary)
+                    Text("Distance")
+                        .font(.system(size: 14, weight: .regular, design: .rounded))
+                        .foregroundStyle(Color.secondary)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Rectangle()
+                    .fill(Color(UIColor.separator))
+                    .frame(width: 1, height: 36)
+
+                // Hours Active
                 VStack(alignment: .leading, spacing: 4) {
                     Text(String(format: "%.1f hrs", viewModel.totalHoursActive))
                         .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .fontWeight(.bold)
                         .foregroundStyle(Color.primary)
-                    Text("Hours Active")
-                        .font(.system(size: 16, weight: .regular, design: .rounded))
+                    Text("Active")
+                        .font(.system(size: 14, weight: .regular, design: .rounded))
                         .foregroundStyle(Color.secondary)
+                        .lineLimit(1)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(16)
-            .frame(width: 130, alignment: .leading)
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-            )
-            .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
         }
+        .padding(16)
+        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+        )
+        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
     }
 
     // MARK: Upcoming Trip
@@ -292,57 +282,7 @@ extension DriverDashboardView {
         }
     }
 
-    // MARK: Quick Actions
-    private var quickActionsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Vehicle Services")
 
-            if let vehicle = viewModel.assignedVehicle {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                    NavigationLink(destination: DriverVehicleDetailView(vehicle: vehicle)) {
-                        QuickActionCard(
-                            icon: "info.circle.fill",
-                            title: "Vehicle Info",
-                            subtitle: "\(vehicle.make ?? "My") \(vehicle.model ?? "Vehicle")",
-                            color: Color.green
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    NavigationLink(destination: DriverReportIssueView(vehicle: vehicle)) {
-                        QuickActionCard(
-                            icon: "exclamationmark.triangle.fill",
-                            title: "Report Issue",
-                            subtitle: "Log damage / defect",
-                            color: Color.red
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            } else {
-                HStack(spacing: 16) {
-                    Image(systemName: "car.badge.gearshape")
-                        .font(.title2)
-                        .foregroundStyle(Color(UIColor.tertiaryLabel))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("No Assigned Vehicle")
-                            .font(.system(size: 16, weight: .medium, design: .rounded))
-                            .foregroundStyle(Color.primary)
-                        Text("Contact fleet manager for vehicle details")
-                            .font(.system(size: 16, weight: .regular, design: .rounded))
-                            .foregroundStyle(Color.secondary)
-                    }
-                    Spacer()
-                }
-                .padding(16)
-                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-                )
-            }
-        }
-    }
 }
 
 // MARK: - Enriched Trip Card
@@ -455,41 +395,7 @@ struct EnrichedTripCard: View {
     }
 }
 
-// MARK: - Quick Action Card
 
-private struct QuickActionCard: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-    let color: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(color)
-                .frame(width: 40, height: 40)
-                .background(color.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-
-            Text(title)
-                .font(.system(size: 16, weight: .medium, design: .rounded))
-                .foregroundStyle(Color.primary)
-
-            Text(subtitle)
-                .font(.system(size: 16, weight: .regular, design: .rounded))
-                .foregroundStyle(Color(UIColor.tertiaryLabel))
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-        )
-        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
-    }
-}
 
 #Preview {
     NavigationStack {

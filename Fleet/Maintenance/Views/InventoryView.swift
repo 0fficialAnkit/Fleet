@@ -140,6 +140,7 @@ struct InventoryView: View {
                         }
                         .padding(.vertical, 16)
                     }
+                    .refreshable { await loadInventory() }
                 }
             }
             .navigationTitle("Inventory")

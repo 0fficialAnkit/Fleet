@@ -56,6 +56,42 @@ struct VehicleDetailView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .padding(.horizontal, 16)
 
+                    // Usage Report
+                    VStack(alignment: .leading, spacing: 8) {
+                        SectionHeader(title: "Usage Report")
+                            .padding(.horizontal, 16)
+                        
+                        NavigationLink(destination: UsageReportView(vehicle: vehicle, viewModel: viewModel)) {
+                            HStack(spacing: 16) {
+                                Circle()
+                                    .fill(Color.teal.opacity(0.1))
+                                    .frame(width: 44, height: 44)
+                                    .overlay(
+                                        Image(systemName: "chart.pie.fill")
+                                            .foregroundColor(Color.teal)
+                                            .font(.system(size: 20))
+                                    )
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("View Analytics")
+                                        .font(.headline)
+                                        .foregroundColor(Color.primary)
+                                    Text("Distance, trips, and insights")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundColor(Color(.tertiaryLabel))
+                            }
+                            .padding(16)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        }
+                        .padding(.horizontal, 16)
+                    }
+
                     // Assigned Driver Card
                     VStack(alignment: .leading, spacing: 8) {
                         SectionHeader(title: "Current Driver")
@@ -129,8 +165,6 @@ struct VehicleDetailView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(Color.primary)
                 }
             }
         }

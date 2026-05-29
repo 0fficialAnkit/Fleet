@@ -115,7 +115,7 @@ struct IssueReportDetailView: View {
     func statusColor(_ s: String) -> Color {
         switch s.lowercased() {
         case "open", "assigned": return Color.blue
-        case "in_progress": return Color.yellow
+        case "in_progress": return Color.orange
         case "resolved", "closed": return Color.green
         default: return Color.secondary
         }
@@ -144,7 +144,7 @@ struct IssueReportDetailView: View {
     func severityColor(_ p: String) -> Color {
         switch p.lowercased() {
         case "critical": return Color.red
-        case "high": return Color.yellow
+        case "high": return Color.orange
         case "medium": return Color.blue
         case "low": return Color.green
         default: return Color.secondary

@@ -16,6 +16,7 @@ private struct VehicleInsert: Encodable {
     let assigned_driver_id: UUID?  // nil → sends null (never empty string)
     let admin_id: UUID?
     let status: VehicleStatus?
+    let vehicle_type: VehicleType?
 }
 
 // MARK: - VehicleUpdate
@@ -30,6 +31,7 @@ private struct VehicleUpdate: Encodable {
     let assigned_driver_id: UUID?
     let admin_id: UUID?
     let status: VehicleStatus?
+    let vehicle_type: VehicleType?
 }
 
 enum VehicleService {
@@ -93,7 +95,8 @@ enum VehicleService {
         mileage: Double?,
         assignedDriverId: UUID?,
         adminId: UUID? = nil,
-        status: VehicleStatus?
+        status: VehicleStatus?,
+        vehicleType: VehicleType?
     ) async throws {
         let payload = VehicleInsert(
             id: UUID(),
@@ -106,7 +109,8 @@ enum VehicleService {
             mileage: mileage,
             assigned_driver_id: assignedDriverId, // nil → null, never empty string
             admin_id: adminId,
-            status: status
+            status: status,
+            vehicle_type: vehicleType
         )
         do {
             try await supabase
@@ -131,7 +135,8 @@ enum VehicleService {
             mileage: vehicle.mileage,
             assigned_driver_id: vehicle.assignedDriverId,
             admin_id: vehicle.adminId,
-            status: vehicle.status
+            status: vehicle.status,
+            vehicle_type: vehicle.vehicleType
         )
         do {
             try await supabase

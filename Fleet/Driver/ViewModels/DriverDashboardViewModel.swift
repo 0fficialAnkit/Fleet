@@ -64,21 +64,43 @@ final class DriverDashboardViewModel {
         trips.filter { $0.status == .completed }.count
     }
 
+    var currentTime: Date = Date()
+    private var liveTimer: Timer?
+
     var totalDistanceKm: Double {
-        trips
+        let completed = trips
             .filter { $0.status == .completed }
             .compactMap { $0.distance }
             .reduce(0, +)
+        let live = (activeTrip != nil) ? (locationManager.totalDistanceTraveled / 1000.0) : 0.0
+        return completed + live
     }
 
     var totalHoursActive: Double {
-        trips
+        let completed = trips
             .filter { $0.status == .completed }
             .compactMap { trip -> Double? in
                 guard let start = trip.startTime, let end = trip.endTime else { return nil }
                 return end.timeIntervalSince(start) / 3600.0
             }
             .reduce(0.0, +)
+            
+        let live: Double
+        if let active = activeTrip, let start = active.startTime {
+            live = currentTime.timeIntervalSince(start) / 3600.0
+        } else {
+            live = 0.0
+        }
+        return completed + live
+    }
+    
+    private func setupLiveTimer() {
+        liveTimer?.invalidate()
+        if activeTrip != nil {
+            liveTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+                self?.currentTime = Date()
+            }
+        }
     }
 
     var upcomingTrip: Trip? {
@@ -104,6 +126,7 @@ final class DriverDashboardViewModel {
         isLoading = false
         // Resume GPS tracking if a trip was already active when the app launched
         resumeTrackingIfNeeded()
+        setupLiveTimer()
     }
 
     /// Batch-fetch routes and vehicles referenced by trips
@@ -155,6 +178,7 @@ final class DriverDashboardViewModel {
                     try? await InspectionService.createInspectionPhoto(photo)
                 }
                 await loadData()
+                locationManager.resetDistance()
                 startLocationTracking(vehicleId: vehicleId)
             } catch {
                 errorMessage = error.localizedDescription
