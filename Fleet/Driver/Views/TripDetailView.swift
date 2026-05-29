@@ -254,7 +254,7 @@ struct TripDetailView: View {
                                 Image(systemName: TripIncidentType(rawValue: incident.incidentType)?.icon ?? "exclamationmark.triangle.fill")
                                     .foregroundStyle(.black)
                                     .padding(8)
-                                    .background(Color.yellow)
+                                    .background(Color(red: 1.0, green: 1.0, blue: 0.0))
                                     .clipShape(Circle())
                                 
                                 VStack(alignment: .leading, spacing: 4) {
@@ -276,7 +276,7 @@ struct TripDetailView: View {
                             .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .stroke(Color.yellow.opacity(0.5), lineWidth: 1)
+                                    .stroke(Color(red: 1.0, green: 1.0, blue: 0.0).opacity(0.5), lineWidth: 1)
                             )
                         }
                     }
@@ -386,11 +386,11 @@ struct TripDetailView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(16)
-                    .background(Color.yellow)
+                    .background(Color(red: 1.0, green: 1.0, blue: 0.0))
                     .foregroundStyle(.black)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .shadow(color: Color.yellow.opacity(0.4), radius: 10, y: 4)
+                .shadow(color: Color(red: 1.0, green: 1.0, blue: 0.0).opacity(0.4), radius: 10, y: 4)
             }
 
         case .completed:
