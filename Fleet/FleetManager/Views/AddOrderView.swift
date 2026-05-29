@@ -177,13 +177,15 @@ struct AddOrderView: View {
                 // ── Route Preview ─────────────────────────────────────
                 if pickupLocation != nil || dropoffLocation != nil {
                     Section("Route Preview") {
+                        // Map — full bleed, no insets
                         TripRouteMapView(
                             startAddress: pickupLocation?.fullAddress,
-                            endAddress: dropoffLocation?.fullAddress
+                            endAddress:   dropoffLocation?.fullAddress
                         )
-                        .frame(height: 220)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .frame(height: 240)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+
                     }
                 }
             }
@@ -259,6 +261,33 @@ struct AddOrderView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Navigate in Maps
+
+    private func openInMaps() {
+        guard let pickup  = pickupLocation?.fullAddress,
+              let dropoff = dropoffLocation?.fullAddress else { return }
+        Task {
+            async let srcSearch = geocodeForMaps(pickup)
+            async let dstSearch = geocodeForMaps(dropoff)
+            guard let src = await srcSearch,
+                  let dst = await dstSearch else { return }
+            MKMapItem.openMaps(
+                with: [src, dst],
+                launchOptions: [
+                    MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving,
+                    MKLaunchOptionsShowsTrafficKey: true
+                ]
+            )
+        }
+    }
+
+    private func geocodeForMaps(_ address: String) async -> MKMapItem? {
+        let req = MKLocalSearch.Request()
+        req.naturalLanguageQuery = address
+        req.resultTypes = .address
+        return try? await MKLocalSearch(request: req).start().mapItems.first
     }
 
     // MARK: - Save
