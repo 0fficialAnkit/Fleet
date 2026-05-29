@@ -13,7 +13,7 @@ private struct MaintenanceTaskInsert: Encodable {
     let description: String?
     let scheduled_date: Date?
     let target_mileage: Double?
-    let service_interval_months: Int?
+    let service_internal: Int?
     let schedule_type: MaintenanceScheduleType?
     let status: MaintenanceTaskStatus?
 }
@@ -75,7 +75,7 @@ enum MaintenanceTaskService {
             description: description,
             scheduled_date: scheduledDate,
             target_mileage: targetMileage,
-            service_interval_months: serviceIntervalMonths,
+            service_internal: serviceIntervalMonths,
             schedule_type: scheduleType,
             status: status
         )

@@ -19,7 +19,7 @@ enum TaskDisplayStatus: String, CaseIterable {
 }
 
 enum SchedulerTabType: String, CaseIterable {
-    case active     = "Active"
+    case pending    = "Pending"
     case inProgress = "In Progress"
     case completed  = "Completed"
 }
@@ -70,6 +70,7 @@ struct ScheduledWorkOrder: Identifiable, Hashable {
     let priority: WorkOrderPriority
     var status: WorkOrderStatus
     let createdAt: Date
+    var scheduledDate: Date? = nil    // When the maintenance tech schedules it
     let assignedBy: String
     let laborHours: String
     let laborCost: String
@@ -78,6 +79,9 @@ struct ScheduledWorkOrder: Identifiable, Hashable {
     let sourceWorkOrderId: UUID? // link to Supabase WorkOrder.id
     var sourceIssueReportId: UUID? = nil // link to Supabase IssueReportRecord.id
     let vehicleIssue: String
+
+    /// The effective calendar date — uses scheduledDate if set, otherwise createdAt
+    var effectiveDate: Date { scheduledDate ?? createdAt }
 }
 
 // MARK: - Unified Scheduler Item (task or work order in one type)
@@ -95,7 +99,7 @@ enum SchedulerUnifiedItem: Identifiable, Hashable {
     var sortDate: Date {
         switch self {
         case .task(let t):      return t.date
-        case .workOrder(let w): return w.createdAt
+        case .workOrder(let w): return w.effectiveDate
         }
     }
 }
@@ -110,7 +114,7 @@ final class MaintenanceSchedulerViewModel {
     var selectedTask: ScheduledTask? = nil
     var showTaskDetail: Bool = false
 
-    var selectedTab: SchedulerTabType = .active
+    var selectedTab: SchedulerTabType = .pending
     var selectedWorkOrder: ScheduledWorkOrder? = nil
     var showWorkOrderDetail: Bool = false
 
@@ -334,21 +338,21 @@ final class MaintenanceSchedulerViewModel {
         Calendar.current.isDate(date, inSameDayAs: selectedDate)
     }
 
-    // Active: pending / delayed / critical tasks  +  open work orders
-    var activeItemsForSelectedDate: [SchedulerUnifiedItem] {
+    // Pending: pending/delayed/critical tasks + all open work orders on this date
+    var pendingItemsForSelectedDate: [SchedulerUnifiedItem] {
         let cal = Calendar.current
         let tasks = allTasks
             .filter { cal.isDate($0.date, inSameDayAs: selectedDate) }
             .filter { [.pending, .delayed, .critical].contains($0.status) }
             .map    { SchedulerUnifiedItem.task($0) }
         let wos = allWorkOrders
-            .filter { cal.isDate($0.createdAt, inSameDayAs: selectedDate) }
+            .filter { cal.isDate($0.effectiveDate, inSameDayAs: selectedDate) }
             .filter { $0.status == .open }
             .map    { SchedulerUnifiedItem.workOrder($0) }
         return (tasks + wos).sorted { $0.sortDate < $1.sortDate }
     }
 
-    // In Progress: inProgress tasks  +  inProgress work orders
+    // In Progress: only items explicitly marked as inProgress
     var inProgressItemsForSelectedDate: [SchedulerUnifiedItem] {
         let cal = Calendar.current
         let tasks = allTasks
@@ -356,7 +360,7 @@ final class MaintenanceSchedulerViewModel {
             .filter { $0.status == .inProgress }
             .map    { SchedulerUnifiedItem.task($0) }
         let wos = allWorkOrders
-            .filter { cal.isDate($0.createdAt, inSameDayAs: selectedDate) }
+            .filter { cal.isDate($0.effectiveDate, inSameDayAs: selectedDate) }
             .filter { $0.status == .inProgress }
             .map    { SchedulerUnifiedItem.workOrder($0) }
         return (tasks + wos).sorted { $0.sortDate < $1.sortDate }
@@ -370,7 +374,7 @@ final class MaintenanceSchedulerViewModel {
             .filter { $0.status == .completed }
             .map    { SchedulerUnifiedItem.task($0) }
         let wos = allWorkOrders
-            .filter { cal.isDate($0.createdAt, inSameDayAs: selectedDate) }
+            .filter { cal.isDate($0.effectiveDate, inSameDayAs: selectedDate) }
             .filter { $0.status == .completed || $0.status == .cancelled }
             .map    { SchedulerUnifiedItem.workOrder($0) }
         return (tasks + wos).sorted { $0.sortDate < $1.sortDate }
@@ -383,10 +387,25 @@ final class MaintenanceSchedulerViewModel {
             counts[day, default: 0] += 1
         }
         for wo in allWorkOrders {
-            let day = Calendar.current.startOfDay(for: wo.createdAt)
+            let day = Calendar.current.startOfDay(for: wo.effectiveDate)
             counts[day, default: 0] += 1
         }
         return counts
+    }
+
+    // MARK: - Schedule Work Order
+
+    /// Schedules a work order for a specific date+time.
+    /// Status stays .open — the WO will appear under In Progress on the scheduled date
+    /// because the filter checks for (open + scheduledDate != nil).
+    func scheduleWorkOrder(id: UUID, date: Date) {
+        if let i = allWorkOrders.firstIndex(where: { $0.id == id }) {
+            allWorkOrders[i].scheduledDate = date
+            // Status stays .open — no Supabase status update needed
+        }
+        if selectedWorkOrder?.id == id {
+            selectedWorkOrder?.scheduledDate = date
+        }
     }
 
     // MARK: - Mutations
@@ -466,6 +485,7 @@ final class MaintenanceSchedulerViewModel {
                 Task {
                     let statusStr: String
                     switch status {
+                    case .pending: statusStr = "open"
                     case .open: statusStr = "open"
                     case .inProgress: statusStr = "in_progress"
                     case .completed: statusStr = "resolved"

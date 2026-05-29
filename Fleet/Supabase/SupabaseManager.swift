@@ -10,15 +10,28 @@ enum SupabaseManager {
     static let jsonDecoder: JSONDecoder = {
         let d = JSONDecoder()
         d.keyDecodingStrategy = .convertFromSnakeCase
+        
         let iso = ISO8601DateFormatter()
         iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
         let isoBasic = ISO8601DateFormatter()
         isoBasic.formatOptions = [.withInternetDateTime]
+        
+        let simpleDateFormatter = DateFormatter()
+        simpleDateFormatter.dateFormat = "yyyy-MM-dd"
+        simpleDateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        
+        let fallbackFormatter = DateFormatter()
+        fallbackFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+        fallbackFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        
         d.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
             let str = try container.decode(String.self)
             if let date = iso.date(from: str) { return date }
             if let date = isoBasic.date(from: str) { return date }
+            if let date = simpleDateFormatter.date(from: str) { return date }
+            if let date = fallbackFormatter.date(from: str) { return date }
             throw DecodingError.dataCorruptedError(
                 in: container,
                 debugDescription: "Cannot decode date: \(str)"

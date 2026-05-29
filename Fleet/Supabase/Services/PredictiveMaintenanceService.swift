@@ -26,10 +26,11 @@ enum PredictiveMaintenanceService {
     // Days-since-service thresholds by vehicle type
     private static func overdueThreshold(for type: VehicleType?) -> Int {
         switch type {
-        case .twoWheeler: return 60
-        case .car:        return 90
-        case .truck:      return 120
-        case .none:       return 90
+        case .twoWheeler:   return 60
+        case .threeWheeler: return 75
+        case .car:          return 90
+        case .truck:        return 120
+        case .none:         return 90
         }
     }
 

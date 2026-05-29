@@ -127,16 +127,31 @@ final class VehiclesViewModel {
         }
     }
 
-    func getStatusColor(_ status: VehicleStatus?) -> Color {
-        switch status {
-        case .active: return Color.green
-        case .maintenance: return Color.orange
-        case .inactive: return Color(.tertiaryLabel)
-        case nil: return Color(.tertiaryLabel)
+    func getVehicleStatusText(for vehicle: Vehicle) -> String {
+        if vehicle.status == .maintenance {
+            return "In Service"
+        } else if trips.contains(where: { $0.vehicleId == vehicle.id && $0.status == .active }) {
+            return "On Trip"
+        } else if vehicle.status == .active {
+            return "Available"
+        } else {
+            return vehicle.status?.rawValue.capitalized ?? "Unknown"
+        }
+    }
+    
+    func getVehicleStatusColor(for vehicle: Vehicle) -> Color {
+        if vehicle.status == .maintenance {
+            return Color.red // Undergoing service / maintenance
+        } else if trips.contains(where: { $0.vehicleId == vehicle.id && $0.status == .active }) {
+            return Color.green // On an active trip
+        } else if vehicle.status == .active {
+            return Color.orange // Available / Idle
+        } else {
+            return Color(.tertiaryLabel)
         }
     }
 
-    func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, licensePlate: String, vehicleType: VehicleType) async throws {
+    func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, licensePlate: String, vehicleType: VehicleType, adminId: UUID? = nil) async throws {
         print("[VehiclesViewModel] addVehicle: make=\(make) model=\(model) plate=\(licensePlate) type=\(vehicleType)")
         do {
             try await VehicleService.createVehicle(
@@ -148,6 +163,7 @@ final class VehiclesViewModel {
                 tankCapacity: tankCapacity,
                 mileage: mileage,
                 assignedDriverId: nil,   // Always nil on creation — assign via driver selection
+                adminId: adminId,
                 status: .active,
                 vehicleType: vehicleType
             )
