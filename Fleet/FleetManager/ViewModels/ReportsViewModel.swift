@@ -89,18 +89,18 @@ final class ReportsViewModel {
     func loadData() async {
         isLoading = true
         errorMessage = nil
-        do {
-            async let p  = ProfileService.fetchAllProfiles()
-            async let v  = VehicleService.fetchAllVehicles()
-            async let ir = IssueReportService.fetchAllIssueReports()
-            async let t  = MaintenanceTaskService.fetchAllTasks()
-            async let tr = TripService.fetchAllTrips()
 
-            profiles         = try await p
-            allVehicles      = try await v
-            let issueRecords = try await ir
-            maintenanceTasks = (try? await t) ?? []
-            allTrips         = (try? await tr) ?? []
+        async let p  = try? ProfileService.fetchAllProfiles()
+        async let v  = try? VehicleService.fetchAllVehicles()
+        async let ir = try? IssueReportService.fetchAllIssueReports()
+        async let t  = try? MaintenanceTaskService.fetchAllTasks()
+        async let tr = try? TripService.fetchAllTrips()
+
+        profiles         = (await p) ?? []
+        allVehicles      = (await v) ?? []
+        let issueRecords = (await ir) ?? []
+        maintenanceTasks = (await t) ?? []
+        allTrips         = (await tr) ?? []
 
             // Build display reports from issue_reports table
             self.reports = issueRecords.map { record in
@@ -135,9 +135,6 @@ final class ReportsViewModel {
                     status: IssueReportStatus.from(dbValue: record.status)
                 )
             }
-        } catch {
-            errorMessage = error.localizedDescription
-        }
         isLoading = false
     }
 

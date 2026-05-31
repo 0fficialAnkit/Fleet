@@ -5,46 +5,46 @@ struct DriverDashboardView: View {
 
     @State private var viewModel = DriverDashboardViewModel()
     @Environment(AuthViewModel.self) private var authViewModel
-    @State private var selectedTrip: Trip?
+    @State private var showingNotifications = false
+    @State private var showingProfile = false
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color(UIColor.systemGroupedBackground).ignoresSafeArea()
-
+            Group {
                 if viewModel.isLoading && viewModel.trips.isEmpty {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: Color.green))
+                        .tint(Color.green)
                 } else {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 24) {
-                            greetingHeader
-                            activeTripBanner
-                            statsRow
-                            upcomingTripSection
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                        .padding(.bottom, 40)
+                    List {
+                        Section { overviewCard }
+
+                        todayScheduleSection
                     }
                     .refreshable { await viewModel.loadData() }
+                    .listStyle(.insetGrouped)
                 }
             }
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("Dashboard")
             .toolbar {
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: NotificationsView()) {
-                        Image(systemName: "bell.badge")
-                            .font(.title3)
-                            .foregroundStyle(Color.green)
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button { showingNotifications = true } label: {
+                        Image(systemName: "bell")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(Color.primary)
                     }
-
-                    NavigationLink(destination: DriverProfileView()) {
+                    Button { showingProfile = true } label: {
                         Image(systemName: "person.crop.circle.fill")
-                            .font(.title2)
+                            .font(.system(size: 22, weight: .medium))
                             .foregroundStyle(Color.green)
                     }
                 }
+            }
+            .sheet(isPresented: $showingNotifications) {
+                NotificationsView()
+            }
+            .sheet(isPresented: $showingProfile) {
+                DriverProfileView()
+                    .environment(authViewModel)
             }
             .onChange(of: authViewModel.currentUser?.id, initial: true) { _, newUserId in
                 guard let userId = newUserId else { return }
@@ -52,260 +52,137 @@ struct DriverDashboardView: View {
                 viewModel.driverName = authViewModel.currentProfile?.fullName ?? "Driver"
                 Task {
                     viewModel.requestLocationPermission()
-                    
                     await viewModel.loadData()
                     viewModel.setupRealtime()
                 }
             }
             .onChange(of: authViewModel.currentProfile?.fullName) { _, newName in
-                if let newName {
-                    viewModel.driverName = newName
-                }
+                if let newName { viewModel.driverName = newName }
             }
         }
     }
-}
 
-// MARK: - Subviews
+    // MARK: - Overview Card
 
-extension DriverDashboardView {
+    private var overviewCard: some View {
+        let scheduledCount = viewModel.trips.filter { $0.status == .scheduled }.count
+        let completedCount = viewModel.totalCompletedTrips
+        let totalTrips     = viewModel.trips.count
 
-    // MARK: Greeting Header
-    private var greetingHeader: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("\(viewModel.greetingText()),")
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(Color.secondary)
-
-            Text(viewModel.driverName.components(separatedBy: " ").first ?? "Driver")
-                .font(.system(size: 30, weight: .bold, design: .rounded))
-                .foregroundStyle(Color.primary)
-
-            Text(Date().formatted(.dateTime.weekday(.wide).month(.wide).day()))
-                .font(.system(size: 16, weight: .regular, design: .rounded))
-                .foregroundStyle(Color(UIColor.tertiaryLabel))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 8)
-    }
-
-    // MARK: Active Trip Banner
-    @ViewBuilder
-    private var activeTripBanner: some View {
-        if let trip = viewModel.activeTrip {
-            let route = viewModel.routeForTrip(trip)
-            let vehicle = viewModel.vehicleForTrip(trip)
-
-            NavigationLink(destination: TripDetailView(
-                trip: trip,
-                onStart: { id, vId, notes, urls in viewModel.startTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) },
-                onEnd:   { id, vId, notes, urls in viewModel.endTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) }
-            )) {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        HStack(spacing: 8) {
-                            Circle()
-                                .fill(Color.green)
-                                .frame(width: 10, height: 10)
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.green.opacity(0.3), lineWidth: 3)
-                                )
-
-                            Text("Trip In Progress")
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
-                                .foregroundStyle(Color.green)
-                        }
-
-                        Spacer()
-
-                        if let orderType = trip.orderType {
-                            StatusBadge(text: orderType.displayName, color: Color.blue, icon: "shippingbox")
-                        }
-                    }
-
-                    // Route info
-                    HStack(spacing: 12) {
-                        VStack(spacing: 4) {
-                            Circle().fill(Color.green).frame(width: 8, height: 8)
-                            Rectangle().fill(Color(UIColor.separator)).frame(width: 2, height: 20)
-                            Image(systemName: "mappin.circle.fill")
-                                .font(.system(size: 12))
-                                .foregroundStyle(Color.red)
-                        }
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(route?.startLocation ?? "Pickup Location")
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
-                                .foregroundStyle(Color.primary)
-                                .lineLimit(1)
-                            Text(route?.endLocation ?? "Drop-off Location")
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
-                                .foregroundStyle(Color.primary)
-                                .lineLimit(1)
-                        }
-
-                        Spacer()
-                    }
-
-                    // Vehicle + time
-                    HStack(spacing: 16) {
-                        if let vehicle {
-                            Label("\(vehicle.make ?? "") \(vehicle.model ?? "")", systemImage: "truck.box.fill")
-                                .font(.system(size: 16, weight: .regular, design: .rounded))
-                                .foregroundStyle(Color.secondary)
-                        }
-
-                        Spacer()
-
-                        if let startTime = trip.startTime {
-                            Label("Started \(startTime.formatted(date: .omitted, time: .shortened))", systemImage: "clock.fill")
-                                .font(.system(size: 16, weight: .regular, design: .rounded))
-                                .foregroundStyle(Color(UIColor.tertiaryLabel))
-                        }
-                    }
+        return VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 16) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.green.opacity(0.12))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "truck.box.fill")
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundStyle(Color.green)
                 }
-                .padding(16)
-                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.green.opacity(0.4), lineWidth: 1.5)
-                )
-                .shadow(color: Color.green.opacity(0.15), radius: 12, y: 6)
-            }
-            .buttonStyle(.plain)
-        }
-    }
 
-    // MARK: Stats Row
-    private var statsRow: some View {
-        VStack(spacing: 16) {
-            HStack {
-                Label("Performance", systemImage: "chart.bar.fill")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.green)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("My Trips \(totalTrips)")
+                        .font(.title2.bold())
+                        .foregroundStyle(Color.primary)
+                }
+
                 Spacer()
-                Image(systemName: "checkmark.seal.fill")
-                    .foregroundStyle(Color.green)
             }
 
-            HStack(spacing: 12) {
-                // Completed
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(viewModel.totalCompletedTrips)")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.primary)
-                    Text("Completed")
-                        .font(.system(size: 14, weight: .regular, design: .rounded))
-                        .foregroundStyle(Color.secondary)
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            Divider()
+                .background(Color(.separator))
+                .padding(.vertical, 16)
 
-                Rectangle()
-                    .fill(Color(UIColor.separator))
-                    .frame(width: 1, height: 36)
-
-                // Distance
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(String(format: "%.0f km", viewModel.totalDistanceKm))
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.primary)
-                    Text("Distance")
-                        .font(.system(size: 14, weight: .regular, design: .rounded))
-                        .foregroundStyle(Color.secondary)
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                Rectangle()
-                    .fill(Color(UIColor.separator))
-                    .frame(width: 1, height: 36)
-
-                // Hours Active
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(String(format: "%.1f hrs", viewModel.totalHoursActive))
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.primary)
-                    Text("Active")
-                        .font(.system(size: 14, weight: .regular, design: .rounded))
-                        .foregroundStyle(Color.secondary)
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-        )
-        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
-    }
-
-    // MARK: Upcoming Trip
-    private var upcomingTripSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            SectionHeader(title: "Upcoming Assignment")
-
-            if let trip = viewModel.upcomingTrip {
-                NavigationLink(destination: TripDetailView(
-                    trip: trip,
-                    onStart: { id, vId, notes, urls in viewModel.startTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) },
-                    onEnd:   { id, vId, notes, urls in viewModel.endTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls) }
-                )) {
-                    EnrichedTripCard(
-                        trip: trip,
-                        route: viewModel.routeForTrip(trip),
-                        vehicle: viewModel.vehicleForTrip(trip)
-                    )
-                }
-                .buttonStyle(.plain)
-            } else {
-                VStack(spacing: 8) {
-                    Image(systemName: "calendar.badge.exclamationmark")
-                        .font(.system(size: 36))
-                        .foregroundStyle(Color(UIColor.tertiaryLabel))
-                    Text("No upcoming trips scheduled")
-                        .font(.system(size: 16, weight: .regular, design: .rounded))
-                        .foregroundStyle(Color.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 24)
-                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+            HStack(spacing: 8) {
+                FleetStatPill(
+                    value: scheduledCount,
+                    label: "Scheduled",
+                    color: Color.blue
+                )
+                FleetStatPill(
+                    value: completedCount,
+                    label: "Completed",
+                    color: Color.green
                 )
             }
         }
+        .padding(.vertical, 4)
     }
 
+    // MARK: - Today's Schedule Section
 
+    private var todayScheduleSection: some View {
+        let todayTrips = viewModel.todaysTrips
+
+        return Section(header: HStack {
+            Text("Today's Schedule")
+            Spacer()
+            if !todayTrips.isEmpty {
+                Text("\(todayTrips.count) trip\(todayTrips.count == 1 ? "" : "s")")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(Color.secondary)
+                    .textCase(.none)
+            }
+        }) {
+            if todayTrips.isEmpty {
+                HStack(spacing: 12) {
+                    Image(systemName: "calendar.badge.checkmark")
+                        .font(.system(size: 28))
+                        .foregroundStyle(Color.green)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("All caught up!")
+                            .font(.body.bold())
+                            .foregroundStyle(Color.primary)
+                        Text("No trips scheduled for today")
+                            .font(.caption)
+                            .foregroundStyle(Color.secondary)
+                    }
+                }
+                .padding(.vertical, 6)
+            } else {
+                ForEach(todayTrips) { trip in
+                    NavigationLink(destination: TripDetailView(
+                        trip: trip,
+                        onStart: { id, vId, notes, urls in
+                            viewModel.startTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls)
+                        },
+                        onEnd: { id, vId, notes, urls in
+                            viewModel.endTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls)
+                        }
+                    )) {
+                        DriverTripRow(
+                            trip: trip,
+                            route: viewModel.routeForTrip(trip),
+                            vehicle: viewModel.vehicleForTrip(trip)
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
-// MARK: - Enriched Trip Card
+// MARK: - Driver Trip Row
 
-struct EnrichedTripCard: View {
+struct DriverTripRow: View {
     let trip: Trip
     let route: Route?
     let vehicle: Vehicle?
 
     var statusColor: Color {
         switch trip.status {
-        case .scheduled: return Color.yellow
+        case .scheduled: return Color.blue
         case .active:    return Color.green
         case .completed: return Color.green
         case .cancelled: return Color.red
-        case .none:      return Color(UIColor.quaternaryLabel)
+        case .none:      return Color(.quaternaryLabel)
         }
     }
 
     var statusText: String {
         switch trip.status {
         case .scheduled: return "Scheduled"
-        case .active:    return "In Progress"
+        case .active:    return "Active"
         case .completed: return "Completed"
         case .cancelled: return "Cancelled"
         case .none:      return "Unknown"
@@ -313,93 +190,59 @@ struct EnrichedTripCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Top: Route ID + status + order type
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Route #\(trip.id.uuidString.prefix(6).uppercased())")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                Text(trip.orderType?.displayName ?? "Trip")
+                    .font(.body.bold())
                     .foregroundStyle(Color.primary)
-
+                    .lineLimit(1)
                 Spacer()
-
-                if let orderType = trip.orderType {
-                    StatusBadge(text: orderType.displayName, color: Color.blue, icon: orderTypeIcon(orderType))
-                }
-
                 StatusBadge(text: statusText, color: statusColor)
             }
 
-            // Origin → Destination
-            HStack(spacing: 10) {
-                VStack(spacing: 3) {
-                    Circle().fill(Color.green).frame(width: 7, height: 7)
-                    Rectangle().fill(Color(UIColor.separator)).frame(width: 1.5, height: 16)
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(Color.red)
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(route?.startLocation ?? "Pickup")
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                        .foregroundStyle(Color.primary)
-                        .lineLimit(1)
-                    Text(route?.endLocation ?? "Destination")
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
+            if let start = route?.startLocation, let end = route?.endLocation {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.forward")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.secondary)
+                    Text("\(start) → \(end)")
+                        .font(.subheadline)
                         .foregroundStyle(Color.secondary)
                         .lineLimit(1)
                 }
-
-                Spacer()
             }
 
-            // Bottom: Vehicle + time + distance
-            HStack(spacing: 16) {
+            HStack {
                 if let vehicle {
-                    Label("\(vehicle.make ?? "") \(vehicle.model ?? "")", systemImage: "truck.box.fill")
-                        .font(.system(size: 16, weight: .regular, design: .rounded))
-                        .foregroundStyle(Color(UIColor.tertiaryLabel))
-                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        Image(systemName: "truck.box.fill")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.green)
+                        Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
+                            .font(.subheadline)
+                            .foregroundStyle(Color.secondary)
+                    }
                 }
-
                 Spacer()
-
                 if let start = trip.startTime {
-                    Label(start.formatted(date: .omitted, time: .shortened), systemImage: "clock")
-                        .font(.system(size: 16, weight: .regular, design: .rounded))
-                        .foregroundStyle(Color(UIColor.tertiaryLabel))
-                }
-
-                if let distance = trip.distance, distance > 0 {
-                    Label(String(format: "%.1f km", distance), systemImage: "road.lanes")
-                        .font(.system(size: 16, weight: .regular, design: .rounded))
-                        .foregroundStyle(Color(UIColor.tertiaryLabel))
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color(.tertiaryLabel))
+                        Text(start.formatted(date: .omitted, time: .shortened))
+                            .font(.subheadline)
+                            .foregroundStyle(Color.secondary)
+                    }
                 }
             }
         }
-        .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(statusColor.opacity(0.25), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
-    }
-
-    private func orderTypeIcon(_ type: OrderType) -> String {
-        switch type {
-        case .pickUpAndDrop: return "shippingbox"
-        case .bulkOrderShip: return "cube.box.fill"
-        case .travel:        return "car.fill"
-        }
+        .padding(.vertical, 4)
     }
 }
 
-
+// MARK: - Preview
 
 #Preview {
-    NavigationStack {
-        DriverDashboardView()
-            .environment(AuthViewModel())
-    }
+    DriverDashboardView()
+        .environment(AuthViewModel())
 }

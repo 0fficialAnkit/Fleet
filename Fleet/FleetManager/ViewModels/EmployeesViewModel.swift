@@ -5,6 +5,7 @@ import SwiftUI
 final class EmployeesViewModel {
     private(set) var profiles: [Profile] = []
     private(set) var trips:   [Trip]   = []
+    private(set) var maintenanceTasks: [MaintenanceTask] = []
 
     var isLoading = false
     var errorMessage: String?
@@ -30,6 +31,9 @@ final class EmployeesViewModel {
         RealtimeManager.shared.addTripsChangeHandler { [weak self] in
             Task { await self?.loadData() }
         }
+        RealtimeManager.shared.addMaintenanceTasksChangeHandler { [weak self] in
+            Task { await self?.loadData() }
+        }
     }
 
     func loadData() async {
@@ -38,8 +42,10 @@ final class EmployeesViewModel {
         do {
             async let p = ProfileService.fetchAllProfiles()
             async let t = TripService.fetchAllTrips()
+            async let m = MaintenanceTaskService.fetchAllTasks()
             profiles = try await p
             trips    = try await t
+            maintenanceTasks = (try? await m) ?? []
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -97,6 +103,40 @@ final class EmployeesViewModel {
             } catch {
                 errorMessage = error.localizedDescription
             }
+        }
+    }
+
+    /// Dynamically determines the operational status label for any employee profile.
+    func getOperationalStatusText(for profile: Profile) -> String {
+        if profile.role == "driver" {
+            let isOnTrip = trips.contains { $0.driverId == profile.id && $0.status == .active }
+            return isOnTrip ? "On Trip" : "Idle"
+        } else if profile.role == "maintenance" {
+            let hasInProgress = maintenanceTasks.contains { $0.assignedTo == profile.id && $0.status == .inProgress }
+            if hasInProgress {
+                return "Servicing"
+            }
+            let hasPending = maintenanceTasks.contains { $0.assignedTo == profile.id && $0.status == .pending }
+            if hasPending {
+                return "Assigned"
+            }
+            return "Idle"
+        }
+        return "Idle"
+    }
+
+    /// Dynamically determines the color for the operational status badge.
+    func getOperationalStatusColor(for profile: Profile) -> Color {
+        let status = getOperationalStatusText(for: profile)
+        switch status {
+        case "On Trip", "Servicing":
+            return Color.blue
+        case "Assigned":
+            return Color.orange
+        case "Idle":
+            return Color.green
+        default:
+            return Color.secondary
         }
     }
 }

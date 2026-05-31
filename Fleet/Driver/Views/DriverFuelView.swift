@@ -156,7 +156,7 @@ struct DriverFuelView: View {
                 HStack {
                     if isSubmitting {
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .tint(.white)
                     } else {
                         Image(systemName: "arrow.up.doc")
                         Text("Submit Fuel Log")
@@ -172,28 +172,24 @@ struct DriverFuelView: View {
             .disabled(!isFormValid || isSubmitting)
         }
         .padding(16)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-        )
-        .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     @ViewBuilder
     private var successBannerSection: some View {
         if showSuccess {
-            HStack {
+            HStack(spacing: 10) {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(Color.green)
+                    .foregroundStyle(Color.green)
                 Text("Synced with Fleet Manager")
-                    .font(.body.weight(.medium))
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.primary)
                 Spacer()
             }
-            .padding(16)
-            .background(Color.green.opacity(0.15))
-            .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .padding(14)
+            .background(Color.green.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
             .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
@@ -236,13 +232,9 @@ struct DriverFuelView: View {
                                 .foregroundColor(Color.primary)
                         }
                     }
-                    .padding(16)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                    )
-                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                    .padding(14)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
         }

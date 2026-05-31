@@ -24,66 +24,29 @@ final class DashboardViewModel {
     func loadData() async {
         isLoading = true
         errorMessage = nil
-        do {
-            async let v  = VehicleService.fetchAllVehicles()
-            async let t  = TripService.fetchAllTrips()
-            async let w  = WorkOrderService.fetchAllWorkOrders()
-            async let r  = RouteService.fetchAllRoutes()
-            async let p  = ProfileService.fetchAllProfiles()
-            async let m  = MaintenanceTaskService.fetchAllTasks()
-            async let i  = InspectionService.fetchAllInspections()
-            async let ir = IssueReportService.fetchAllIssueReports()
-            async let mh = MaintenanceHistoryService.fetchAllHistory()
-            vehicles           = try await v
-            trips              = try await t
-            workOrders         = try await w
-            routes             = try await r
-            profiles           = try await p
-            maintenanceTasks   = try await m
-            inspections        = try await i
-            issueReports       = try await ir
-            maintenanceHistory = try await mh
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+        
+        async let v  = try? VehicleService.fetchAllVehicles()
+        async let t  = try? TripService.fetchAllTrips()
+        async let w  = try? WorkOrderService.fetchAllWorkOrders()
+        async let r  = try? RouteService.fetchAllRoutes()
+        async let p  = try? ProfileService.fetchAllProfiles()
+        async let m  = try? MaintenanceTaskService.fetchAllTasks()
+        async let i  = try? InspectionService.fetchAllInspections()
+        async let ir = try? IssueReportService.fetchAllIssueReports()
+        async let mh = try? MaintenanceHistoryService.fetchAllHistory()
+        
+        vehicles           = (await v) ?? []
+        trips              = (await t) ?? []
+        workOrders         = (await w) ?? []
+        routes             = (await r) ?? []
+        profiles           = (await p) ?? []
+        maintenanceTasks   = (await m) ?? []
+        inspections        = (await i) ?? []
+        issueReports       = (await ir) ?? []
+        maintenanceHistory = (await mh) ?? []
+        
         isLoading = false
         
-        // --- INJECT MOCK DATA FOR DEMO PURPOSES ---
-        let mockVehicleId = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
-        let mockVehicle = Vehicle(
-            id: mockVehicleId,
-            make: "Honda",
-            model: "Activa (Mock)",
-            year: 2024,
-            vin: "MOCK1234",
-            licensePlate: "MH-12-AB-1234",
-            tankCapacity: 5,
-            mileage: 45,
-            purchaseDate: Date(),
-            assignedDriverId: nil,
-            adminId: nil,
-            status: .active,
-            vehicleType: .twoWheeler
-        )
-        
-        let mockTrip = Trip(
-            id: UUID(),
-            vehicleId: mockVehicleId,
-            driverId: nil,
-            routeId: nil,
-            startTime: Date().addingTimeInterval(-86400 * 2),
-            endTime: Date(),
-            distance: 3100.0,
-            status: .completed,
-            orderType: .pickUpAndDrop,
-            createdAt: Date()
-        )
-        
-        if !vehicles.contains(where: { $0.vin == "MOCK1234" }) {
-            vehicles.append(mockVehicle)
-            trips.append(mockTrip)
-        }
-        // -------------------------------------------
 
         // Run predictive analysis on updated data
         predictiveAlerts = PredictiveMaintenanceService.analyze(
@@ -146,6 +109,11 @@ final class DashboardViewModel {
     // MARK: - Computed
 
     var totalVehicles: Int { vehicles.count }
+
+    /// Vehicles fleet manager has explicitly sent to the service bay (status == .maintenance).
+    var inServiceVehicles: Int {
+        vehicles.filter { $0.status == .maintenance }.count
+    }
 
     var activeTrips: Int {
         trips.filter { $0.status == .active }.count
