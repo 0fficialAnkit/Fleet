@@ -46,19 +46,19 @@ struct MaintenanceDashboardView: View {
                                     .padding(.vertical, 12)
                                 HStack(spacing: 8) {
                                     MaintenanceStatPill(
-                                        value: viewModel.inventory.count,
-                                        label: "Total Parts",
-                                        color: Color.brown
+                                        value: viewModel.availablePartsPercentage,
+                                        label: "Available %",
+                                        color: Color.green
                                     )
                                     MaintenanceStatPill(
                                         value: viewModel.lowStockItemsCount,
                                         label: "Low Stock",
                                         color: Color.red
                                     )
-                                    MaintenanceStatPillText(
-                                        value: viewModel.estimatedValueFormatted,
-                                        label: "Est. Value",
-                                        color: Color.green
+                                    MaintenanceStatPill(
+                                        value: viewModel.inventory.count,
+                                        label: "Total Parts",
+                                        color: Color.brown
                                     )
                                 }
                             }
@@ -368,32 +368,6 @@ struct MaintenanceStatPill: View {
     var body: some View {
         VStack(spacing: 5) {
             Text("\(value)")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(Color.primary)
-            Text(label)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Color.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .background(color.opacity(0.08))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(color.opacity(0.25), lineWidth: 0.5)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-}
-
-// MARK: - Maintenance Stat Pill (Text variant for string values)
-struct MaintenanceStatPillText: View {
-    let value: String
-    let label: String
-    let color: Color
-
-    var body: some View {
-        VStack(spacing: 5) {
-            Text(value)
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(Color.primary)
             Text(label)

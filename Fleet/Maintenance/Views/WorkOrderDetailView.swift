@@ -156,11 +156,6 @@ struct WorkOrderDetailView: View {
 
                     // MARK: - Action Buttons
                     VStack(spacing: 16) {
-                        if currentStatus == .pending {
-                            ActionButton(title: "Open Work Order", icon: "play.circle.fill", color: Color.brown) {
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .open }
-                            }
-                        }
                         if currentStatus == .open {
                             ActionButton(title: "Start Work Order", icon: "play.circle.fill", color: Color.brown) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .inProgress }
@@ -233,17 +228,15 @@ struct WorkOrderDetailView: View {
     // MARK: - Helpers
     func statusIcon(_ s: WorkOrderStatus?) -> String {
         switch s {
-        case .pending:    return "hourglass"
         case .open:       return "tray.circle"
         case .inProgress: return "wrench.adjustable"
         case .completed:  return "checkmark.circle.fill"
         case .cancelled:  return "xmark.circle.fill"
-        case .none:       return "hourglass"
+        case .none:       return "tray.circle"
         }
     }
     func statusLabel(_ s: WorkOrderStatus?) -> String {
         switch s {
-        case .pending:    return "Pending"
         case .open:       return "Open"
         case .inProgress: return "In Progress"
         case .completed:  return "Completed"
@@ -253,7 +246,6 @@ struct WorkOrderDetailView: View {
     }
     func statusColor(_ s: WorkOrderStatus?) -> Color {
         switch s {
-        case .pending:    return Color.gray
         case .open:       return Color.blue
         case .inProgress: return Color.orange
         case .completed:  return Color.green

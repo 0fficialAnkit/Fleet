@@ -210,19 +210,10 @@ struct ReportDetailView: View {
                     // Update Issue Report status
                     assignStaff(staffId)
                     
-                    // Create Work Order
-                    let workOrderId = try await WorkOrderService.createWorkOrder(
-                        vehicleId: report.vehicleId,
-                        createdBy: nil,
-                        assignedTo: staffId,
-                        priority: report.severity == .critical ? .critical : (report.severity == .high ? .high : .medium),
-                        status: .open
-                    )
-                    
                     // Create Maintenance Task
                     let task = MaintenanceTask(
                         id: UUID(),
-                        workOrderId: workOrderId,
+                        workOrderId: nil,
                         vehicleId: report.vehicleId,
                         scheduledBy: nil,
                         assignedTo: staffId,

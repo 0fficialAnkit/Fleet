@@ -261,7 +261,15 @@ struct DriverFuelView: View {
             .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Fuel")
             .navigationBarTitleDisplayMode(.large)
-            .toolbar { }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: DriverFuelAnalyticsView()) {
+                        Image(systemName: "chart.bar.xaxis")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(Color.green)
+                    }
+                }
+            }
             .onChange(of: selectedPhotoItem) { _, newItem in
                 Task {
                     if let data = try? await newItem?.loadTransferable(type: Data.self),
