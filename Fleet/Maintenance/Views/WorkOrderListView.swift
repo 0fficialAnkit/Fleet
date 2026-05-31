@@ -56,6 +56,7 @@ struct WorkOrderListView: View {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
                                     FilterChip(label: "All",        isSelected: selectedFilter == nil,              color: Color.brown) { selectedFilter = nil }
+                                    FilterChip(label: "Pending",    isSelected: selectedFilter == .pending,         color: Color.gray)    { selectedFilter = .pending }
                                     FilterChip(label: "Open",       isSelected: selectedFilter == .open,            color: Color.blue)     { selectedFilter = .open }
                                     FilterChip(label: "In Progress",isSelected: selectedFilter == .inProgress,      color: Color.yellow)  { selectedFilter = .inProgress }
                                     FilterChip(label: "Completed",  isSelected: selectedFilter == .completed,       color: Color.green)  { selectedFilter = .completed }
@@ -252,6 +253,7 @@ struct UnifiedWorkItemRow: View {
 
     func statusLabel(_ status: WorkOrderStatus?) -> String {
         switch status {
+        case .pending:    return "Pending"
         case .open:       return "Open"
         case .inProgress: return "In Progress"
         case .completed:  return "Completed"
@@ -262,6 +264,7 @@ struct UnifiedWorkItemRow: View {
 
     func statusColor(_ status: WorkOrderStatus?) -> Color {
         switch status {
+        case .pending:    return Color.gray
         case .open:       return Color.blue
         case .inProgress: return Color.orange
         case .completed:  return Color.green

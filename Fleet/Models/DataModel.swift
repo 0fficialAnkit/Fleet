@@ -27,6 +27,7 @@ enum MaintenanceTaskStatus: String, Codable, CaseIterable, Sendable {
 }
 
 enum WorkOrderStatus: String, Codable, CaseIterable, Sendable {
+  case pending = "pending" // Add this case
   case open = "open"
   case inProgress = "in_progress"
   case completed = "completed"
@@ -169,6 +170,7 @@ struct User: Codable, Identifiable, Hashable, Sendable {
 
 enum VehicleType: String, Codable, CaseIterable, Sendable, Identifiable {
   case twoWheeler = "two_wheeler"
+  case threeWheeler = "three_wheeler"
   case car = "car"
   case truck = "truck"
   
@@ -177,6 +179,7 @@ enum VehicleType: String, Codable, CaseIterable, Sendable, Identifiable {
   var maintenanceThresholdKM: Double {
       switch self {
       case .twoWheeler: return 3000
+      case .threeWheeler: return 5000
       case .car: return 10000
       case .truck: return 20000
       }
@@ -185,7 +188,8 @@ enum VehicleType: String, Codable, CaseIterable, Sendable, Identifiable {
   var displayName: String {
       switch self {
       case .twoWheeler: return "Two Wheeler"
-      case .car: return "Car"
+      case .threeWheeler: return "Three Wheeler"
+      case .car: return "Four Wheeler"
       case .truck: return "Truck"
       }
   }
@@ -267,9 +271,9 @@ struct VehicleLocation: Codable, Identifiable, Hashable, Sendable {
 }
 //  MARK: - MaintenanceTask
 enum MaintenanceScheduleType: String, Codable, CaseIterable, Sendable, Identifiable {
-    case date = "Date"
-    case mileage = "Mileage"
-    case interval = "Interval"
+    case date = "date"
+    case mileage = "mileage"
+    case interval = "interval"
     
     var id: String { rawValue }
 }
@@ -298,7 +302,7 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
       case description
       case scheduledDate = "scheduled_date"
       case targetMileage = "target_mileage"
-      case serviceIntervalMonths = "service_interval_months"
+      case serviceIntervalMonths = "service_internal"
       case scheduleType = "schedule_type"
       case status
   }
@@ -319,7 +323,8 @@ struct WorkOrder: Codable, Identifiable, Hashable, Sendable {
       case vehicleId = "vehicle_id"
       case createdBy = "created_by"
       case assignedTo = "assigned_to"
-      case priority, status
+      case priority
+      case status = "lifecycle_status"
       case createdAt = "created_at"
   }
 }
@@ -472,9 +477,9 @@ struct InspectionPhoto: Codable, Identifiable, Hashable, Sendable {
 //  MARK: - DefectReport
 struct DefectReport: Codable, Identifiable, Hashable, Sendable {
   let id: UUID
-  var inspectionId: UUID? // FK — optional, defects can be reported without a linked inspection
+  var inspectionId: UUID // FK - required
   var reportedBy: UUID? // FK
-  var description: String?
+  var description: String // required
   var severity: DefectSeverity?
   var status: DefectStatus?
   var createdAt: Date?

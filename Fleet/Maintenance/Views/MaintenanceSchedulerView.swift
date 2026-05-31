@@ -10,7 +10,6 @@ struct MaintenanceSchedulerView: View {
     @Namespace private var calendarNS
     @State private var selectedTask: ScheduledTask? = nil
     @State private var selectedWorkOrder: ScheduledWorkOrder? = nil
-    @State private var isShowingCreateTaskSheet = false
     @Environment(AuthViewModel.self) private var authViewModel
 
     init(viewModel: MaintenanceSchedulerViewModel) {
@@ -50,25 +49,6 @@ struct MaintenanceSchedulerView: View {
             }
             .navigationDestination(item: $selectedWorkOrder) { wo in
                 WorkOrderDetailSheet(workOrder: wo, viewModel: viewModel)
-            }
-            .toolbar {
-                if viewModel.selectedTab == .active {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            isShowingCreateTaskSheet = true
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundStyle(Color.brown)
-                                .frame(width: 32, height: 32)
-                                .background(Color.brown.opacity(0.12), in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-            .sheet(isPresented: $isShowingCreateTaskSheet) {
-                CreateTaskSheet(viewModel: viewModel, initialDate: viewModel.selectedDate, currentUserId: authViewModel.currentUser?.id)
             }
             .task {
                 viewModel.currentUserId = authViewModel.currentUser?.id
@@ -232,7 +212,7 @@ private struct TaskListSection: View {
 
     private var currentItems: [SchedulerUnifiedItem] {
         switch viewModel.selectedTab {
-        case .active:     return viewModel.activeItemsForSelectedDate
+        case .pending:    return viewModel.pendingItemsForSelectedDate
         case .inProgress: return viewModel.inProgressItemsForSelectedDate
         case .completed:  return viewModel.completedItemsForSelectedDate
         }
@@ -240,7 +220,7 @@ private struct TaskListSection: View {
 
     private var emptyTitle: String {
         switch viewModel.selectedTab {
-        case .active:     return "No Active Tasks"
+        case .pending:    return "No Pending Tasks"
         case .inProgress: return "Nothing In Progress"
         case .completed:  return "No Completed Tasks"
         }
@@ -248,7 +228,7 @@ private struct TaskListSection: View {
 
     private var emptyMessage: String {
         switch viewModel.selectedTab {
-        case .active:     return "No pending work assigned for this day."
+        case .pending:    return "No pending work assigned for this day."
         case .inProgress: return "No tasks are currently being worked on."
         case .completed:  return "No tasks were completed on this day."
         }
@@ -283,15 +263,68 @@ private struct TaskListSection: View {
                     ))
             } else {
                 ForEach(currentItems) { item in
-                    Group {
-                        switch item {
-                        case .task(let task):
-                            Button { selectedTask = task } label: { TaskCard(task: task) }
-                        case .workOrder(let wo):
-                            Button { selectedWorkOrder = wo } label: { WorkOrderCard(workOrder: wo) }
+                    VStack(spacing: 10) {
+                        Group {
+                            switch item {
+                            case .task(let task):
+                                Button { selectedTask = task } label: { TaskCard(task: task) }
+                            case .workOrder(let wo):
+                                Button { selectedWorkOrder = wo } label: { WorkOrderCard(workOrder: wo) }
+                            }
+                        }
+                        .buttonStyle(ScaleButtonStyle())
+
+                        // MARK: Inline Action Buttons
+                        if viewModel.selectedTab == .pending {
+                            Button {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                                    switch item {
+                                    case .task(let task):
+                                        viewModel.updateTaskStatus(id: task.id, to: .inProgress)
+                                    case .workOrder(let wo):
+                                        viewModel.updateWorkOrderStatus(id: wo.id, to: .inProgress)
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 12, weight: .bold))
+                                    Text("Start")
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 42)
+                                .background(Color.brown, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            }
+                            .buttonStyle(ScaleButtonStyle())
+                        }
+
+                        if viewModel.selectedTab == .inProgress {
+                            Button {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                                    switch item {
+                                    case .task(let task):
+                                        viewModel.updateTaskStatus(id: task.id, to: .completed)
+                                    case .workOrder(let wo):
+                                        viewModel.updateWorkOrderStatus(id: wo.id, to: .completed)
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 14, weight: .bold))
+                                    Text("Mark as Complete")
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 42)
+                                .background(Color.green, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            }
+                            .buttonStyle(ScaleButtonStyle())
                         }
                     }
-                    .buttonStyle(ScaleButtonStyle())
                     .scrollTransition { content, phase in
                         content
                             .opacity(phase.isIdentity ? 1 : 0.7)
@@ -451,6 +484,7 @@ private struct WorkOrderCard: View {
 
     func statusLabel(_ status: WorkOrderStatus) -> String {
         switch status {
+        case .pending:    return "Pending"
         case .open:       return "Open"
         case .inProgress: return "In Progress"
         case .completed:  return "Completed"
@@ -460,6 +494,7 @@ private struct WorkOrderCard: View {
 
     func statusColor(_ status: WorkOrderStatus) -> Color {
         switch status {
+        case .pending:    return Color.gray
         case .open:       return Color.blue
         case .inProgress: return Color.orange
         case .completed:  return Color.green
@@ -805,6 +840,10 @@ struct WorkOrderDetailSheet: View {
     let workOrder: ScheduledWorkOrder
     let viewModel: MaintenanceSchedulerViewModel
 
+    @State private var scheduledDate = Date()
+    @State private var isScheduled = false
+    @Environment(\.dismiss) private var dismiss
+
     private var currentWO: ScheduledWorkOrder {
         viewModel.allWorkOrders.first(where: { $0.id == workOrder.id }) ?? workOrder
     }
@@ -865,6 +904,77 @@ struct WorkOrderDetailSheet: View {
                             }
                         }
 
+                        // MARK: Schedule Work Order (only if open/pending)
+                        if currentWO.status == .open {
+                            SheetSection(title: "Schedule Work Order") {
+                                VStack(spacing: 16) {
+                                    HStack(spacing: 14) {
+                                        Image(systemName: "calendar.badge.clock")
+                                            .font(.system(size: 20, weight: .semibold))
+                                            .foregroundStyle(Color.brown)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Pick a Date & Time")
+                                                .font(.subheadline.weight(.semibold))
+                                                .foregroundStyle(.primary)
+                                            Text("The work order will appear in Pending on the chosen date")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                                    DatePicker(
+                                        "Scheduled For",
+                                        selection: $scheduledDate,
+                                        in: Date()...,
+                                        displayedComponents: [.date, .hourAndMinute]
+                                    )
+                                    .datePickerStyle(.graphical)
+                                    .tint(Color.brown)
+
+                                    Button {
+                                        viewModel.scheduleWorkOrder(id: currentWO.id, date: scheduledDate)
+                                        withAnimation {
+                                            isScheduled = true
+                                        }
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                            dismiss()
+                                        }
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "calendar.badge.checkmark")
+                                            Text("Schedule")
+                                        }
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 48)
+                                        .background(Color.brown, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    }
+                                }
+                            }
+                        }
+
+                        // MARK: Scheduled confirmation (if already scheduled)
+                        if let scheduled = currentWO.scheduledDate {
+                            SheetSection(title: "Scheduled") {
+                                HStack(spacing: 14) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 22))
+                                        .foregroundStyle(.green)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Scheduled for")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(.secondary)
+                                        Text(scheduled.formatted(date: .long, time: .shortened))
+                                            .font(.headline)
+                                            .foregroundStyle(.primary)
+                                    }
+                                    Spacer()
+                                }
+                            }
+                        }
+
                         // MARK: Spare Parts Consumed (Read-Only)
                         if !currentWO.partsUsed.isEmpty {
                             SheetSection(title: "Parts Consumed") {
@@ -897,6 +1007,24 @@ struct WorkOrderDetailSheet: View {
                     }
                     .padding(16)
             }
+
+            // Scheduled confirmation overlay
+            if isScheduled {
+                VStack(spacing: 16) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 56))
+                        .foregroundStyle(.green)
+                        .symbolEffect(.bounce, value: isScheduled)
+                    Text("Scheduled!")
+                        .font(.title2.bold())
+                    Text(scheduledDate.formatted(date: .long, time: .shortened))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.ultraThinMaterial)
+                .transition(.opacity)
+            }
         }
         .navigationTitle("Work Order Details")
         .navigationBarTitleDisplayMode(.inline)
@@ -904,6 +1032,7 @@ struct WorkOrderDetailSheet: View {
 
     func statusIcon(_ status: WorkOrderStatus) -> String {
         switch status {
+        case .pending:    return "hourglass"
         case .open:       return "tray.circle"
         case .inProgress: return "wrench.adjustable"
         case .completed:  return "checkmark.circle.fill"
@@ -913,6 +1042,7 @@ struct WorkOrderDetailSheet: View {
 
     func statusLabel(_ status: WorkOrderStatus) -> String {
         switch status {
+        case .pending:    return "Pending"
         case .open:       return "Open"
         case .inProgress: return "In Progress"
         case .completed:  return "Completed"
@@ -922,6 +1052,7 @@ struct WorkOrderDetailSheet: View {
 
     func statusColor(_ status: WorkOrderStatus) -> Color {
         switch status {
+        case .pending:    return Color.gray
         case .open:       return Color.blue
         case .inProgress: return Color.orange
         case .completed:  return Color.green
