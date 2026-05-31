@@ -646,18 +646,9 @@ struct PredictiveAlertCardView: View {
                 recommendationDescription: alert.recommendation,
                 maintenanceStaff: maintenanceStaff
             ) { staffId, notes in
-                // Create Work Order
-                let workOrderId = try await WorkOrderService.createWorkOrder(
-                    vehicleId: alert.vehicle.id,
-                    createdBy: nil,
-                    assignedTo: staffId,
-                    priority: alert.severity == .critical ? .critical : .medium,
-                    status: .open
-                )
-                
                 let task = MaintenanceTask(
                     id: UUID(),
-                    workOrderId: workOrderId,
+                    workOrderId: nil,
                     vehicleId: alert.vehicle.id,
                     scheduledBy: nil,
                     assignedTo: staffId,

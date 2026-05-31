@@ -2,8 +2,7 @@ import Foundation
 import Supabase
 
 // MARK: - MaintenanceTaskInsert
-// Explicit insert struct — only columns confirmed to exist in maintenance_tasks table.
-// schedule_type is excluded: column does not exist in the current DB schema.
+// Explicit insert struct — all columns that exist in maintenance_tasks table.
 private struct MaintenanceTaskInsert: Encodable {
     let id: UUID
     let work_order_id: UUID?
@@ -15,21 +14,7 @@ private struct MaintenanceTaskInsert: Encodable {
     let scheduled_date: Date?
     let target_mileage: Double?
     let service_interval_months: Int?
-    let status: MaintenanceTaskStatus?
-}
-
-// MARK: - MaintenanceTaskUpdate
-// Safe update struct — only non-problematic columns.
-private struct MaintenanceTaskUpdate: Encodable {
-    let work_order_id: UUID?
-    let vehicle_id: UUID
-    let scheduled_by: UUID?
-    let assigned_to: UUID?
-    let task_type: MaintenanceTaskType?
-    let description: String?
-    let scheduled_date: Date?
-    let target_mileage: Double?
-    let service_interval_months: Int?
+    let schedule_type: MaintenanceScheduleType?
     let status: MaintenanceTaskStatus?
 }
 
@@ -66,7 +51,7 @@ enum MaintenanceTaskService {
         }
     }
 
-    /// Safe insert — explicitly lists every column that exists in maintenance_tasks.
+    /// Safe insert — explicitly lists every column to avoid sending unknown keys.
     static func createTask(
         workOrderId: UUID?,
         vehicleId: UUID,
@@ -77,7 +62,7 @@ enum MaintenanceTaskService {
         scheduledDate: Date?,
         targetMileage: Double?,
         serviceIntervalMonths: Int?,
-        scheduleType: MaintenanceScheduleType?,   // accepted for API compat, not sent to DB
+        scheduleType: MaintenanceScheduleType?,
         status: MaintenanceTaskStatus?
     ) async throws {
         let payload = MaintenanceTaskInsert(
@@ -91,6 +76,7 @@ enum MaintenanceTaskService {
             scheduled_date: scheduledDate,
             target_mileage: targetMileage,
             service_interval_months: serviceIntervalMonths,
+            schedule_type: scheduleType,
             status: status
         )
         do {
@@ -122,24 +108,11 @@ enum MaintenanceTaskService {
         )
     }
 
-    /// Safe update — uses an explicit struct to avoid sending schedule_type (non-existent column).
     static func updateTask(_ task: MaintenanceTask) async throws {
-        let payload = MaintenanceTaskUpdate(
-            work_order_id: task.workOrderId,
-            vehicle_id: task.vehicleId,
-            scheduled_by: task.scheduledBy,
-            assigned_to: task.assignedTo,
-            task_type: task.taskType,
-            description: task.description,
-            scheduled_date: task.scheduledDate,
-            target_mileage: task.targetMileage,
-            service_interval_months: task.serviceIntervalMonths,
-            status: task.status
-        )
         do {
             try await supabase
                 .from("maintenance_tasks")
-                .update(payload)
+                .update(task)
                 .eq("id", value: task.id)
                 .execute()
             print("[MaintenanceTaskService] updateTask(\(task.id)): OK")

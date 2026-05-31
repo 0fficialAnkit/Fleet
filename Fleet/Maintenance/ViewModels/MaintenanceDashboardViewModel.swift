@@ -32,8 +32,7 @@ final class MaintenanceDashboardViewModel {
     var upcomingItems: [UpcomingDisplayItem] {
         var items: [UpcomingDisplayItem] = []
 
-        // Tasks — show anything not completed
-        let tItems = tasks.filter { $0.status != .completed && $0.status != .cancelled }.map { task -> UpcomingDisplayItem in
+        let tItems = tasks.filter { $0.status != .completed }.map { task -> UpcomingDisplayItem in
             return UpcomingDisplayItem(
                 id: task.id,
                 priorityLabel: nil,
@@ -52,10 +51,7 @@ final class MaintenanceDashboardViewModel {
         }
         items.append(contentsOf: tItems)
 
-        // Work orders — treat nil status as active (not yet set by DB)
-        let woItems = workOrders.filter {
-            $0.status != .completed && $0.status != .cancelled
-        }.map { wo -> UpcomingDisplayItem in
+        let woItems = workOrders.filter { $0.status != .completed && $0.status != .cancelled }.map { wo -> UpcomingDisplayItem in
             return UpcomingDisplayItem(
                 id: wo.id,
                 priorityLabel: woPriorityLabel(wo.priority),
@@ -103,14 +99,8 @@ final class MaintenanceDashboardViewModel {
     }
 
     var priorityQueueItems: [UnifiedMaintenanceItem] {
-        // Include items that are open, in-progress, OR have nil status (newly created, DB default not decoded yet)
         unifiedItems
-            .filter {
-                $0.unifiedStatus == .open ||
-                $0.unifiedStatus == .inProgress ||
-                $0.unifiedStatus == .pending ||
-                $0.unifiedStatus == nil
-            }
+            .filter { $0.unifiedStatus == .open || $0.unifiedStatus == .inProgress }
             .sorted { (a, b) -> Bool in
                 let priorityScore: [WorkOrderPriority: Int] = [.critical: 4, .high: 3, .medium: 2, .low: 1]
                 let scoreA = priorityScore[a.unifiedPriority ?? .low] ?? 0
@@ -137,39 +127,24 @@ final class MaintenanceDashboardViewModel {
         return Int((Double(available) / Double(total)) * 100)
     }
 
-    var estimatedValue: Double {
-        inventory.reduce(0) { $0 + (($1.unitCost ?? 0) * Double($1.stockQuantity ?? 0)) }
-    }
-
-    var estimatedValueFormatted: String {
-        let value = estimatedValue
-        if value >= 100_000 {
-            return "₹\(String(format: "%.1fL", value / 100_000))"
-        } else if value >= 1_000 {
-            return "₹\(String(format: "%.1fK", value / 1_000))"
-        } else {
-            return "₹\(String(format: "%.0f", value))"
-        }
-    }
-
     func loadData() async {
         guard let userId = currentUserId else { return }
         isLoading = true
         errorMessage = nil
-
-        // Each fetch is independent — one DB failure won't block the others.
-        async let t  = MaintenanceTaskService.fetchTasksForUser(assignedTo: userId)
-        async let w  = WorkOrderService.fetchWorkOrdersForUser(assignedTo: userId)
-        async let ir = IssueReportService.fetchIssueReportsAssignedTo(userId: userId)
-        async let i  = InventoryService.fetchAllInventory()
-        async let v  = VehicleService.fetchAllVehicles()
-
-        if let result = try? await t  { tasks        = result }
-        if let result = try? await w  { workOrders   = result }
-        if let result = try? await ir { issueReports = result }
-        if let result = try? await i  { inventory    = result }
-        if let result = try? await v  { vehicles     = result }
-
+        do {
+            async let t = MaintenanceTaskService.fetchTasksForUser(assignedTo: userId)
+            async let w = WorkOrderService.fetchWorkOrdersForUser(assignedTo: userId)
+            async let ir = IssueReportService.fetchIssueReportsAssignedTo(userId: userId)
+            async let i = InventoryService.fetchAllInventory()
+            async let v = VehicleService.fetchAllVehicles()
+            tasks = try await t
+            workOrders = try await w
+            issueReports = try await ir
+            inventory = try await i
+            vehicles = try await v
+        } catch {
+            errorMessage = error.localizedDescription
+        }
         isLoading = false
     }
 
@@ -177,7 +152,6 @@ final class MaintenanceDashboardViewModel {
         let rt = RealtimeManager.shared
         rt.addMaintenanceTasksChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addWorkOrdersChangeHandler { [weak self] in Task { await self?.loadData() } }
-        rt.addIssueReportsChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addInventoryChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData() } }
     }
@@ -213,7 +187,6 @@ final class MaintenanceDashboardViewModel {
 
     func woStatusColor(_ status: WorkOrderStatus?) -> Color {
         switch status {
-        case .pending: return Color.gray
         case .open: return Color.blue
         case .inProgress: return Color.orange
         case .completed: return Color.green

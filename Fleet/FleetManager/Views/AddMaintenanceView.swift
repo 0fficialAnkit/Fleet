@@ -142,19 +142,6 @@ struct AddMaintenanceView: View {
                         saveError = nil
                         Task {
                             do {
-                                let wId: UUID
-                                if let selected = selectedWorkOrderId {
-                                    wId = selected
-                                } else {
-                                    wId = try await WorkOrderService.createWorkOrder(
-                                        vehicleId: vehicleId,
-                                        createdBy: authViewModel.currentUser?.id,
-                                        assignedTo: selectedAssignedTo,
-                                        priority: .medium,
-                                        status: .open
-                                    )
-                                }
-                                
                                 try await viewModel.addTask(
                                     vehicleId: vehicleId,
                                     taskType: selectedTaskType,
@@ -165,7 +152,7 @@ struct AddMaintenanceView: View {
                                     scheduleType: scheduleType,
                                     assignedTo: selectedAssignedTo,
                                     scheduledBy: authViewModel.currentUser?.id,
-                                    workOrderId: wId
+                                    workOrderId: selectedWorkOrderId
                                 )
                                 dismiss()
                             } catch {

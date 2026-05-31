@@ -88,9 +88,9 @@ enum InspectionService {
                 .from("inspection_photos")
                 .insert(photo)
                 .execute()
-            print("[InspectionService] createInspectionPhoto(\(photo.id)): OK")
+            print("[InspectionService] createInspectionPhoto(\\(photo.id)): OK")
         } catch {
-            print("[InspectionService] createInspectionPhoto ERROR: \(error)")
+            print("[InspectionService] createInspectionPhoto ERROR: \\(error)")
             throw error
         }
     }

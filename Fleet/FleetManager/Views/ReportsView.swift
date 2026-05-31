@@ -1,17 +1,10 @@
 import SwiftUI
 
-enum ReportSectionTab: String, CaseIterable {
-    case vehicles = "Vehicles"
-    case maintenance = "Maintenance"
-    case fuel = "Fuel"
-}
-
 // MARK: - Reports View
 struct ReportsView: View {
     @State private var viewModel = ReportsViewModel()
     @State private var selectedReport: IssueReport?
     @State private var filterStatus: IssueReportStatus? = nil
-    @State private var selectedTab: ReportSectionTab = .maintenance
 
     var filteredReports: [IssueReport] {
         guard let f = filterStatus else { return viewModel.reports }
@@ -23,43 +16,23 @@ struct ReportsView: View {
             ZStack {
                 Color(.systemGroupedBackground).ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    Picker("Section", selection: $selectedTab) {
-                        ForEach(ReportSectionTab.allCases, id: \.self) { tab in
-                            Text(tab.rawValue).tag(tab)
-                        }
+                List {
+                    // Filter chips — right below the "Reports" title
+                    Section {
+                        filterChips
                     }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                    .listSectionSeparator(.hidden)
 
-                    switch selectedTab {
-                    case .maintenance:
-                        List {
-                            // Filter chips — right below the "Reports" title
-                            Section {
-                                filterChips
-                            }
-                            .listRowBackground(Color.clear)
-                            .listRowInsets(EdgeInsets())
-                            .listSectionSeparator(.hidden)
-
-                            // Reports list
-                            Section {
-                                reportsListContent
-                            }
-                            .listSectionSeparator(.hidden)
-                        }
-                        .listStyle(.insetGrouped)
-                        .scrollContentBackground(.hidden)
-
-                    case .fuel:
-                        FleetFuelAnalyticsView()
-
-                    case .vehicles:
-                        Spacer()
+                    // Reports list
+                    Section {
+                        reportsListContent
                     }
+                    .listSectionSeparator(.hidden)
                 }
+                .listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Reports")
             .sheet(item: $selectedReport) { report in
