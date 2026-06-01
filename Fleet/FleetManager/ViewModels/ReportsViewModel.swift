@@ -62,6 +62,9 @@ struct IssueReport: Identifiable {
     let submittedAt: Date
     var assignedTo: UUID?
     var status: IssueReportStatus
+    let issuePhotoUrl: String?
+    /// When the report was assigned to maintenance staff (from the linked MaintenanceTask.scheduledDate)
+    var assignedAt: Date?
 }
 
 // MARK: - Status History Entry
@@ -119,6 +122,15 @@ final class ReportsViewModel {
                 default:         severity = .medium
                 }
 
+                // Find the most recent MaintenanceTask for this vehicle to get the assignment timestamp.
+                // Match on vehicleId; if report has an assignee, prefer tasks assigned to that person.
+                let tasksForVehicle = maintenanceTasks
+                    .filter { $0.vehicleId == record.vehicleId }
+                    .sorted { ($0.scheduledDate ?? .distantPast) > ($1.scheduledDate ?? .distantPast) }
+                let linkedTask = tasksForVehicle.first { $0.assignedTo == record.assignedTo }
+                    ?? tasksForVehicle.first
+                let assignedAt = linkedTask?.scheduledDate
+
                 return IssueReport(
                     id: record.id,
                     vehicleId: record.vehicleId,
@@ -132,7 +144,9 @@ final class ReportsViewModel {
                     description: record.description ?? "No description provided.",
                     submittedAt: record.createdAt ?? Date(),
                     assignedTo: record.assignedTo,
-                    status: IssueReportStatus.from(dbValue: record.status)
+                    status: IssueReportStatus.from(dbValue: record.status),
+                    issuePhotoUrl: record.issuePhoto,
+                    assignedAt: assignedAt
                 )
             }
         isLoading = false
@@ -215,10 +229,14 @@ final class ReportsViewModel {
     }
 
     // MARK: - Mutating Actions (persists to Supabase)
-    func update(reportId: UUID, assignedTo: UUID?, status: IssueReportStatus) {
+    func update(reportId: UUID, assignedTo: UUID?, status: IssueReportStatus, assignedAt: Date? = nil) {
         guard let idx = reports.firstIndex(where: { $0.id == reportId }) else { return }
         reports[idx].assignedTo = assignedTo
-        reports[idx].status = status
+        reports[idx].status     = status
+        // Set assignment timestamp in-memory so the card shows it immediately
+        if let t = assignedAt {
+            reports[idx].assignedAt = t
+        }
 
         Task {
             do {
