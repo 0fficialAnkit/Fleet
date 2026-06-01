@@ -5,13 +5,21 @@ struct ReportDetailView: View {
     let report: IssueReport
     @State var viewModel: ReportsViewModel
     @State private var selectedStaffId: UUID?
-    @State private var showingAssignment = false
+    @State private var isAssigning = false
     @Environment(\.dismiss) private var dismiss
 
+    // Track original assignment to detect changes on Done
+    private let originalStaffId: UUID?
+
     init(report: IssueReport, viewModel: ReportsViewModel) {
-        self.report = report
-        self.viewModel = viewModel
-        _selectedStaffId = State(initialValue: report.assignedTo)
+        self.report       = report
+        self.viewModel    = viewModel
+        self.originalStaffId = report.assignedTo
+        _selectedStaffId  = State(initialValue: report.assignedTo)
+    }
+
+    private var assignmentChanged: Bool {
+        selectedStaffId != originalStaffId && selectedStaffId != nil
     }
 
     // MARK: - Lookups
@@ -269,30 +277,36 @@ struct ReportDetailView: View {
                 }
 
                 // ── Assignment ────────────────────────────────────
-                Section("Assignment") {
-                    if let staffId = selectedStaffId,
-                       let staff = viewModel.maintenanceStaff.first(where: { $0.id == staffId }) {
-                        LabeledContent("Assigned To", value: staff.fullName)
-                        HStack {
-                            Text("Workload")
-                            Spacer()
-                            Text(viewModel.staffWorkloadStatus(staffId))
-                                .foregroundStyle(viewModel.staffWorkloadColor(staffId))
-                                .font(.footnote)
-                        }
-                    } else {
-                        Text("Not yet assigned")
+                Section {
+                    if viewModel.maintenanceStaff.isEmpty {
+                        Text("No maintenance staff available")
                             .foregroundStyle(Color.secondary)
-                    }
+                    } else {
+                        Picker("Assign To", selection: $selectedStaffId) {
+                            Text("Not assigned").tag(nil as UUID?)
+                            ForEach(viewModel.maintenanceStaff, id: \.id) { staff in
+                                Text(staff.fullName).tag(staff.id as UUID?)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .tint(Color.teal)
 
-                    Button {
-                        showingAssignment = true
-                    } label: {
-                        Label(
-                            selectedStaffId == nil ? "Assign to Maintenance Staff" : "Reassign",
-                            systemImage: "person.badge.plus"
-                        )
-                        .foregroundStyle(Color.teal)
+                        if let staffId = selectedStaffId {
+                            HStack {
+                                Text("Workload")
+                                Spacer()
+                                Text(viewModel.staffWorkloadStatus(staffId))
+                                    .foregroundStyle(viewModel.staffWorkloadColor(staffId))
+                                    .font(.footnote)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Assign to Maintenance")
+                } footer: {
+                    if assignmentChanged {
+                        Text("Tap Done to confirm assignment and notify the maintenance staff.")
+                            .foregroundStyle(Color.teal)
                     }
                 }
             }
@@ -306,26 +320,31 @@ struct ReportDetailView: View {
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Done") { dismiss() }
+                ToolbarItem(placement: .topBarTrailing) {
+                    if isAssigning {
+                        ProgressView()
+                    } else {
+                        Button("Done") { handleDone() }
+                            .fontWeight(.semibold)
+                            .foregroundStyle(assignmentChanged ? Color.teal : Color.primary)
+                    }
                 }
             }
-            .sheet(isPresented: $showingAssignment) {
-                MaintenanceAssignmentSheet(
-                    vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
-                    licensePlate: report.licensePlate,
-                    severityLabel: report.severity.rawValue.capitalized,
-                    severityColor: viewModel.severityColor(report.severity),
-                    severityIcon: report.severity == .critical
-                        ? "exclamationmark.triangle.fill"
-                        : "exclamationmark.circle.fill",
-                    issueTitle: "Reported Issue",
-                    issueDescription: cleanDescription.isEmpty ? "No description." : cleanDescription,
-                    recommendationTitle: "Category",
-                    recommendationDescription: report.issueCategory,
-                    maintenanceStaff: viewModel.maintenanceStaff
-                ) { staffId, notes in
-                    assignStaff(staffId)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func handleDone() {
+        // If staff was newly selected, create work order + task then dismiss
+        if assignmentChanged, let staffId = selectedStaffId {
+            isAssigning = true
+            Task {
+                do {
+                    // 1. Update report status
+                    viewModel.update(reportId: report.id, assignedTo: staffId, status: .assigned)
+
+                    // 2. Create work order
                     let workOrderId = try await WorkOrderService.createWorkOrder(
                         vehicleId: report.vehicleId,
                         createdBy: nil,
@@ -334,6 +353,8 @@ struct ReportDetailView: View {
                             : (report.severity == .high ? .high : .medium),
                         status: .open
                     )
+
+                    // 3. Create maintenance task
                     let task = MaintenanceTask(
                         id: UUID(),
                         workOrderId: workOrderId,
@@ -341,8 +362,7 @@ struct ReportDetailView: View {
                         scheduledBy: nil,
                         assignedTo: staffId,
                         taskType: .repair,
-                        description: "\(report.issueCategory): \(cleanDescription)"
-                            + (notes.isEmpty ? "" : "\nNotes: \(notes)"),
+                        description: "\(report.issueCategory): \(cleanDescription)",
                         scheduledDate: Date(),
                         targetMileage: nil,
                         serviceIntervalMonths: nil,
@@ -350,20 +370,30 @@ struct ReportDetailView: View {
                         status: .pending
                     )
                     try await MaintenanceTaskService.createTask(task)
+
+                    // 4. Notify maintenance staff
+                    let notification = Notification(
+                        id: UUID(),
+                        userId: staffId,
+                        title: "New Task Assigned",
+                        message: "\(report.issueCategory) on \(report.vehicleName) (\(report.licensePlate)) assigned to you.",
+                        type: .maintenance,
+                        isRead: false,
+                        createdAt: Date()
+                    )
+                    try? await NotificationService.createNotification(notification)
+
+                } catch {
+                    print("[ReportDetailView] Assignment error: \(error)")
+                }
+                await MainActor.run {
+                    isAssigning = false
+                    dismiss()
                 }
             }
+        } else {
+            dismiss()
         }
-    }
-
-    // MARK: - Helpers
-
-    private func assignStaff(_ staffId: UUID?) {
-        selectedStaffId = staffId
-        viewModel.update(
-            reportId: report.id,
-            assignedTo: staffId,
-            status: staffId == nil ? .open : .assigned
-        )
     }
 
     private func tripStatusColor(_ status: TripStatus) -> Color {
