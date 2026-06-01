@@ -2,7 +2,7 @@
 //  DataModel.swift
 //  Fleet
 //
-//  Created by Ankit Kumar on 19/05/26.
+//  Created by Vaibhav Singh on 19/05/26.
 //
 
 import Foundation
@@ -566,6 +566,7 @@ struct Notification: Codable, Identifiable, Hashable, Sendable {
   var message: String?
   var type: NotificationType?
   var isRead: Bool
+  var referenceId: UUID?
   var createdAt: Date?
 
   enum CodingKeys: String, CodingKey {
@@ -573,6 +574,7 @@ struct Notification: Codable, Identifiable, Hashable, Sendable {
       case userId = "user_id"
       case title, message, type
       case isRead = "is_read"
+      case referenceId = "reference_id"
       case createdAt = "created_at"
   }
 }

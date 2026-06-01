@@ -56,6 +56,34 @@ struct AddOrderView: View {
     var body: some View {
         NavigationStack {
             Form {
+
+                // ── Schedule ──────────────────────────────────────────
+                Section {
+                    DatePicker(
+                        "Date & Time",
+                        selection: $startTime,
+                        in: Date()...,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .tint(Color.teal)
+                } header: {
+                    Label("Schedule", systemImage: "calendar")
+                }
+
+                // ── Order Type ────────────────────────────────────────
+                Section {
+                    Picker("Type", selection: $orderType) {
+                        ForEach(OrderType.allCases) { type in
+                            Label(type.displayName, systemImage: orderTypeIcon(type))
+                                .tag(type)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(.primary)
+                } header: {
+                    Label("Order Type", systemImage: "shippingbox.fill")
+                }
+
                 // ── Route ─────────────────────────────────────────────
                 Section("Route") {
                     Button(action: { showingPickupSearch = true }) {
@@ -131,8 +159,8 @@ struct AddOrderView: View {
                         }
                     } else {
                         Picker(selection: $selectedVehicleId) {
-                            Text("Select a vehicle").tag(nil as UUID?)
-                            ForEach(availableVehicles, id: \.id) { (v: Vehicle) in
+                            Text("Select a vehicle").tag(UUID?.none)
+                            ForEach(availableVehicles) { v in
                                 Text("\(v.make ?? "Unknown") \(v.model ?? "") · \(v.licensePlate ?? "—")")
                                     .tag(v.id as UUID?)
                             }
@@ -154,8 +182,8 @@ struct AddOrderView: View {
                         }
                     } else {
                         Picker(selection: $selectedDriverId) {
-                            Text("Select a driver").tag(nil as UUID?)
-                            ForEach(availableDrivers, id: \.id) { (d: Profile) in
+                            Text("Select a driver").tag(UUID?.none)
+                            ForEach(availableDrivers) { d in
                                 Text(d.fullName)
                                     .tag(d.id as UUID?)
                             }
