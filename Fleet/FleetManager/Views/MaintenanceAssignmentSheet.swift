@@ -234,3 +234,42 @@ struct MaintenanceAssignmentSheet: View {
         }
     }
 }
+
+#Preview {
+    MaintenanceAssignmentSheet(
+        vehicleName: "Tesla Model 3",
+        licensePlate: "CA-9988",
+        severityLabel: "Critical",
+        severityColor: .red,
+        severityIcon: "exclamationmark.triangle.fill",
+        issueTitle: "Brake System Malfunction",
+        issueDescription: "The driver reported that the brake pedal feels soft and the vehicle takes longer to stop than expected. Warning light on dashboard is active.",
+        recommendationTitle: "Immediate Service",
+        recommendationDescription: "Tow vehicle to maintenance depot. Inspect master cylinder, check brake fluid levels, and scan for OBD codes.",
+        maintenanceStaff: [
+            Profile(
+                id: UUID(uuidString: "e1aa00aa-bbbb-cccc-dddd-eeeeeeffffff") ?? UUID(),
+                fullName: "Alex Rivera",
+                email: "alex@fleet.com",
+                phone: "+1 (555) 019-2834",
+                licenseNumber: nil,
+                role: "maintenance",
+                status: "active",
+                createdAt: Date()
+            ),
+            Profile(
+                id: UUID(uuidString: "e2bb11bb-cccc-dddd-eeee-ffffff000000") ?? UUID(),
+                fullName: "Jordan Lee",
+                email: "jordan@fleet.com",
+                phone: "+1 (555) 019-5821",
+                licenseNumber: nil,
+                role: "maintenance",
+                status: "active",
+                createdAt: Date()
+            )
+        ],
+        onAssign: { staffId, notes in
+            print("Assigned to \(staffId) with notes: \(notes)")
+        }
+    )
+}
