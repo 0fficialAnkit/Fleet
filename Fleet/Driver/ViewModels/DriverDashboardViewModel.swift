@@ -177,9 +177,10 @@ final class DriverDashboardViewModel {
                     let photo = InspectionPhoto(id: UUID(), inspectionId: inspectionId, imageUrl: url)
                     try? await InspectionService.createInspectionPhoto(photo)
                 }
-                await loadData()
                 locationManager.resetDistance()
-                startLocationTracking(vehicleId: vehicleId)
+                await loadData()   // resumeTrackingIfNeeded() inside loadData starts tracking
+                // Set up geofences for pickup + dropoff
+                await setupGeofences(tripId: id, vehicleId: vehicleId)
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -191,6 +192,8 @@ final class DriverDashboardViewModel {
             do {
                 try await TripService.endTrip(id: id)
                 stopLocationTracking()
+                GeofenceMonitor.shared.stopAll()
+                try? await GeofenceService.deactivateGeofences(forTrip: id)
                 let inspectionId = UUID()
                 let inspection = VehicleInspection(id: inspectionId, vehicleId: vehicleId, driverId: currentUserId, tripId: id, inspectionType: .postTrip, notes: notes, createdAt: Date())
                 try? await InspectionService.createInspection(inspection)
@@ -217,6 +220,53 @@ final class DriverDashboardViewModel {
     func resumeTrackingIfNeeded() {
         guard let activeTrip else { return }
         startLocationTracking(vehicleId: activeTrip.vehicleId)
+        // Resume geofence monitoring for the active trip
+        Task {
+            await GeofenceMonitor.shared.resumeIfNeeded(
+                tripId:    activeTrip.id,
+                vehicleId: activeTrip.vehicleId,
+                driverId:  currentUserId
+            )
+        }
+    }
+
+    // MARK: - Geofencing
+
+    private func setupGeofences(tripId: UUID, vehicleId: UUID) async {
+        // Find the route for this trip
+        guard let trip  = trips.first(where: { $0.id == tripId }),
+              let rId   = trip.routeId,
+              let route = routes[rId],
+              let pickup  = route.startLocation, !pickup.isEmpty,
+              let dropoff = route.endLocation,   !dropoff.isEmpty
+        else { return }
+
+        let monitor = GeofenceMonitor.shared
+        async let pickupCoord  = monitor.geocode(pickup)
+        async let dropoffCoord = monitor.geocode(dropoff)
+
+        guard let pc = await pickupCoord, let dc = await dropoffCoord else {
+            print("[Geofence] ❌ Could not geocode pickup/dropoff for trip \(tripId)")
+            return
+        }
+
+        let fences: [TripGeofence] = [
+            TripGeofence(id: UUID(), tripId: tripId, vehicleId: vehicleId,
+                         driverId: currentUserId,
+                         name: pickup, latitude: pc.latitude, longitude: pc.longitude,
+                         radiusMeters: 5000, zoneType: "pickup", isActive: true, createdAt: Date()),
+            TripGeofence(id: UUID(), tripId: tripId, vehicleId: vehicleId,
+                         driverId: currentUserId,
+                         name: dropoff, latitude: dc.latitude, longitude: dc.longitude,
+                         radiusMeters: 5000, zoneType: "dropoff", isActive: true, createdAt: Date())
+        ]
+
+        // Save to Supabase (best-effort — never blocks the trip)
+        for fence in fences { try? await GeofenceService.createGeofence(fence) }
+
+        // Register with iOS native region monitoring
+        monitor.register(tripId: tripId, vehicleId: vehicleId, driverId: currentUserId, fences: fences)
+        print("[Geofence] ✅ Pickup + dropoff zones active for trip \(tripId.uuidString.prefix(6).uppercased())")
     }
 
     private func startLocationTracking(vehicleId: UUID) {

@@ -19,9 +19,22 @@
 		EFFF7FC62FB42CFA008A41DE /* Fleet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Fleet.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		EF04C0C62FCDE6DE008B1EDB /* Exceptions for "Fleet" folder in "Fleet" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = EFFF7FC52FB42CFA008A41DE /* Fleet */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		EFFF7FC82FB42CFA008A41DE /* Fleet */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EF04C0C62FCDE6DE008B1EDB /* Exceptions for "Fleet" folder in "Fleet" target */,
+			);
 			path = Fleet;
 			sourceTree = "<group>";
 		};
@@ -288,8 +301,10 @@
 				DEVELOPMENT_TEAM = 433L6U33WG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Fleet/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "need camera access";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet uses your location to show your position on the route map and guide you to your destination.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Fleet tracks your location during trips and sends alerts when you reach pickup or dropoff zones.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet needs your location to track the trip route.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -322,8 +337,10 @@
 				DEVELOPMENT_TEAM = 433L6U33WG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Fleet/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "need camera access";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet uses your location to show your position on the route map and guide you to your destination.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Fleet tracks your location during trips and sends alerts when you reach pickup or dropoff zones.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet needs your location to track the trip route.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

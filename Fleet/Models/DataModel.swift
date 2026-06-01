@@ -558,6 +558,83 @@ struct GeofenceEvent: Codable, Identifiable, Hashable, Sendable {
   }
 }
 
+// MARK: - Trip Geofence (circular zone auto-created per trip)
+// Supabase table: trip_geofences
+// SQL:
+//   create table trip_geofences (
+//     id uuid primary key default gen_random_uuid(),
+//     trip_id uuid references trips(id) on delete cascade,
+//     vehicle_id uuid references vehicles(id),
+//     driver_id uuid,
+//     name text not null,
+//     latitude double precision not null,
+//     longitude double precision not null,
+//     radius_meters double precision not null default 200,
+//     zone_type text not null default 'pickup',
+//     is_active boolean default true,
+//     created_at timestamptz default now()
+//   );
+struct TripGeofence: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var tripId: UUID
+    var vehicleId: UUID
+    var driverId: UUID?
+    var name: String
+    var latitude: Double
+    var longitude: Double
+    var radiusMeters: Double
+    var zoneType: String   // "pickup" | "dropoff" | "depot" | "restricted"
+    var isActive: Bool
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tripId       = "trip_id"
+        case vehicleId    = "vehicle_id"
+        case driverId     = "driver_id"
+        case name
+        case latitude, longitude
+        case radiusMeters = "radius_meters"
+        case zoneType     = "zone_type"
+        case isActive     = "is_active"
+        case createdAt    = "created_at"
+    }
+}
+
+// MARK: - Trip Geofence Event (entry/exit log)
+// Supabase table: trip_geofence_events
+// SQL:
+//   create table trip_geofence_events (
+//     id uuid primary key default gen_random_uuid(),
+//     geofence_id uuid references trip_geofences(id) on delete cascade,
+//     vehicle_id uuid,
+//     driver_id uuid,
+//     event_type text not null,
+//     latitude double precision,
+//     longitude double precision,
+//     occurred_at timestamptz default now()
+//   );
+struct TripGeofenceEvent: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var geofenceId: UUID
+    var vehicleId: UUID
+    var driverId: UUID?
+    var eventType: String   // "entered" | "exited"
+    var latitude: Double?
+    var longitude: Double?
+    var occurredAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case geofenceId = "geofence_id"
+        case vehicleId  = "vehicle_id"
+        case driverId   = "driver_id"
+        case eventType  = "event_type"
+        case latitude, longitude
+        case occurredAt = "occurred_at"
+    }
+}
+
 //  MARK: - Notification
 struct Notification: Codable, Identifiable, Hashable, Sendable {
   let id: UUID

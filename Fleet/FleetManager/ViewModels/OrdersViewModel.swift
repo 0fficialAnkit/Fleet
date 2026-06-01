@@ -36,7 +36,11 @@ final class OrdersViewModel {
         isLoading = false
     }
 
+    private var isRealtimeSetup = false
+
     func setupRealtime() {
+        guard !isRealtimeSetup else { return }
+        isRealtimeSetup = true
         RealtimeManager.shared.addTripsChangeHandler { [weak self] in
             Task { await self?.loadData() }
         }

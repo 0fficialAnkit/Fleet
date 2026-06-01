@@ -120,6 +120,7 @@ final class RealtimeManager {
                 guard self != nil else { break }
                 await MainActor.run {
                     onChange()
+                    NotificationCenter.default.post(name: NSNotification.Name("SupabaseTableDidChange_\(table)"), object: nil)
                 }
             }
         }
