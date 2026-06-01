@@ -200,3 +200,21 @@ private struct ActionButton: View {
         }
     }
 }
+
+#Preview {
+    NavigationStack {
+        IssueReportDetailView(
+            report: IssueReportRecord(
+                id: UUID(uuidString: "d1111111-2222-3333-4444-555555555555") ?? UUID(),
+                vehicleId: UUID(uuidString: "e2222222-3333-4444-5555-666666666666") ?? UUID(),
+                reportedBy: UUID(uuidString: "f3333333-4444-5555-6666-777777777777") ?? UUID(),
+                category: "Engine",
+                severity: "high",
+                description: "Check engine light is flashing and the engine is making a loud knocking sound from the cylinder block.",
+                status: "open",
+                assignedTo: nil,
+                createdAt: Date()
+            )
+        )
+    }
+}
