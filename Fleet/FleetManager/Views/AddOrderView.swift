@@ -56,34 +56,6 @@ struct AddOrderView: View {
     var body: some View {
         NavigationStack {
             Form {
-
-                // ── Schedule ──────────────────────────────────────────
-                Section {
-                    DatePicker(
-                        "Date & Time",
-                        selection: $startTime,
-                        in: Date()...,
-                        displayedComponents: [.date, .hourAndMinute]
-                    )
-                    .tint(Color.teal)
-                } header: {
-                    Label("Schedule", systemImage: "calendar")
-                }
-
-                // ── Order Type ────────────────────────────────────────
-                Section {
-                    Picker("Type", selection: $orderType) {
-                        ForEach(OrderType.allCases) { type in
-                            Label(type.displayName, systemImage: orderTypeIcon(type))
-                                .tag(type)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .tint(.primary)
-                } header: {
-                    Label("Order Type", systemImage: "shippingbox.fill")
-                }
-
                 // ── Route ─────────────────────────────────────────────
                 Section("Route") {
                     Button(action: { showingPickupSearch = true }) {
@@ -123,27 +95,27 @@ struct AddOrderView: View {
                 // ── Order Type ────────────────────────────────────────
                 Section("Order Type") {
                     Picker(selection: $orderType) {
-                        Text(OrderType.pickUpAndDrop.displayName).tag(OrderType.pickUpAndDrop)
-                        Text(OrderType.travel.displayName).tag(OrderType.travel)
+                        ForEach(OrderType.allCases) { type in
+                            Text(type.displayName).tag(type)
+                        }
                     } label: {
                         Text("Type")
                     }
                     .pickerStyle(.menu)
-                    .tint(.primary)
+                    .tint(.secondary)
                 }
 
                 // ── Vehicle Type ──────────────────────────────────────
                 Section("Vehicle Type") {
                     Picker(selection: $selectedVehicleType) {
-                        Text(VehicleType.twoWheeler.displayName).tag(VehicleType.twoWheeler)
-                        Text(VehicleType.threeWheeler.displayName).tag(VehicleType.threeWheeler)
-                        Text(VehicleType.car.displayName).tag(VehicleType.car)
-                        Text(VehicleType.truck.displayName).tag(VehicleType.truck)
+                        ForEach(VehicleType.allCases) { type in
+                            Text(type.displayName).tag(type)
+                        }
                     } label: {
                         Text("Vehicle Type")
                     }
                     .pickerStyle(.menu)
-                    .tint(.primary)
+                    .tint(.secondary)
                 }
 
                 // ── Assignment ────────────────────────────────────────
@@ -152,15 +124,14 @@ struct AddOrderView: View {
                     if availableVehicles.isEmpty {
                         LabeledContent {
                             Text("No vehicles available")
-                                .foregroundStyle(Color.secondary)
-                                .font(.caption)
+                                .foregroundStyle(Color.primary)
                         } label: {
                             Text("Vehicle")
                         }
                     } else {
                         Picker(selection: $selectedVehicleId) {
-                            Text("Select a vehicle").tag(UUID?.none)
-                            ForEach(availableVehicles) { v in
+                            Text("Select a vehicle").tag(nil as UUID?)
+                            ForEach(availableVehicles, id: \.id) { (v: Vehicle) in
                                 Text("\(v.make ?? "Unknown") \(v.model ?? "") · \(v.licensePlate ?? "—")")
                                     .tag(v.id as UUID?)
                             }
@@ -168,22 +139,21 @@ struct AddOrderView: View {
                             Text("Vehicle")
                         }
                         .pickerStyle(.menu)
-                        .tint(.primary)
+                        .tint(.secondary)
                     }
 
                     // Driver picker
                     if availableDrivers.isEmpty {
                         LabeledContent {
                             Text("No drivers available")
-                                .foregroundStyle(Color.secondary)
-                                .font(.caption)
+                                .foregroundStyle(Color.primary)
                         } label: {
                             Text("Driver")
                         }
                     } else {
                         Picker(selection: $selectedDriverId) {
-                            Text("Select a driver").tag(UUID?.none)
-                            ForEach(availableDrivers) { d in
+                            Text("Select a driver").tag(nil as UUID?)
+                            ForEach(availableDrivers, id: \.id) { (d: Profile) in
                                 Text(d.fullName)
                                     .tag(d.id as UUID?)
                             }
@@ -191,7 +161,7 @@ struct AddOrderView: View {
                             Text("Driver")
                         }
                         .pickerStyle(.menu)
-                        .tint(.primary)
+                        .tint(.secondary)
                     }
                 } header: {
                     Text("Assignment")
@@ -205,7 +175,6 @@ struct AddOrderView: View {
                 // ── Route Preview ─────────────────────────────────────
                 if pickupLocation != nil || dropoffLocation != nil {
                     Section("Route Preview") {
-                        // Map — full bleed, no insets
                         TripRouteMapView(
                             startAddress: pickupLocation?.fullAddress,
                             endAddress:   dropoffLocation?.fullAddress
@@ -213,7 +182,6 @@ struct AddOrderView: View {
                         .frame(height: 240)
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
-
                     }
                 }
             }
