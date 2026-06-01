@@ -60,4 +60,5 @@ enum IssueReportService {
             .eq("id", value: id)
             .execute()
     }
+
 }

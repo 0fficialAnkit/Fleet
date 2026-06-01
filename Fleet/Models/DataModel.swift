@@ -673,17 +673,19 @@ struct IssueReportRecord: Codable, Identifiable, Hashable, Sendable {
     var status: String
     var assignedTo: UUID?
     var createdAt: Date?
+    var issuePhoto: String?   // comma-separated public URLs
 
     enum CodingKeys: String, CodingKey {
         case id
-        case vehicleId = "vehicle_id"
+        case vehicleId  = "vehicle_id"
         case reportedBy = "reported_by"
         case category
         case severity
         case description
         case status
         case assignedTo = "assigned_to"
-        case createdAt = "created_at"
+        case createdAt  = "created_at"
+        case issuePhoto = "issue_photo"
     }
 }
 

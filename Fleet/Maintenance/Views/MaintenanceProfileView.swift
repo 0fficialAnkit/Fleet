@@ -7,10 +7,8 @@ struct MaintenanceProfileView: View {
     // Profile menu items
     private let menuItems: [(title: String, icon: String, isDestructive: Bool)] = [
         ("Certifications", "rosette", false),
-        ("Shift Schedule", "calendar", false),
-        ("Assigned Depot", "building.2.fill", false),
-        ("Notifications", "bell", false),
-        ("Performance Report", "chart.bar.xaxis", false)
+        ("Performance Report", "chart.bar.xaxis", false),
+        ("Notifications", "bell", false)
     ]
 
     var body: some View {
@@ -30,13 +28,6 @@ struct MaintenanceProfileView: View {
                         )
                         .padding(.top, 16)
 
-                        // MARK: - Stats Strip
-                        HStack(spacing: 16) {
-                            StatPill(value: "—", label: "Orders Done", color: Color.brown)
-                            StatPill(value: "—", label: "Accuracy", color: Color.green)
-                            StatPill(value: "—", label: "Rating", color: Color.yellow)
-                        }
-                        .padding(.horizontal, 16)
 
                         // MARK: - Personal Information
                         VStack(alignment: .leading, spacing: 16) {
@@ -98,15 +89,43 @@ struct MaintenanceProfileView: View {
                         // MARK: - Menu
                         VStack(spacing: 0) {
                             ForEach(menuItems, id: \.title) { item in
-                                Button(action: {}) {
-                                    ActionRow(
-                                        icon: item.icon,
-                                        title: item.title,
-                                        iconColor: Color.brown,
-                                        isDestructive: item.isDestructive
-                                    )
+                                Group {
+                                    if item.title == "Certifications" {
+                                        NavigationLink {
+                                            CertificationsView()
+                                        } label: {
+                                            ActionRow(
+                                                icon: item.icon,
+                                                title: item.title,
+                                                iconColor: Color.brown,
+                                                isDestructive: item.isDestructive
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+                                    } else if item.title == "Performance Report" {
+                                        NavigationLink {
+                                            PerformanceReportView()
+                                        } label: {
+                                            ActionRow(
+                                                icon: item.icon,
+                                                title: item.title,
+                                                iconColor: Color.brown,
+                                                isDestructive: item.isDestructive
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+                                    } else {
+                                        Button(action: {}) {
+                                            ActionRow(
+                                                icon: item.icon,
+                                                title: item.title,
+                                                iconColor: Color.brown,
+                                                isDestructive: item.isDestructive
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
                                 }
-                                .buttonStyle(.plain)
 
                                 if item.title != menuItems.last?.title {
                                     Divider()

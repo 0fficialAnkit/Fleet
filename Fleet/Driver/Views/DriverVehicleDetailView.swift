@@ -21,6 +21,14 @@ struct DriverVehicleDetailView: View {
                     // MARK: - Vehicle Info Card
                     vehicleInfoCard
 
+                    // MARK: - Compliance
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Compliance", systemImage: "shield.lefthalf.filled")
+                            .font(.headline)
+                            .foregroundStyle(Color.primary)
+                        VehicleComplianceSection(vehicle: vehicle, editable: false)
+                    }
+
                     // MARK: - Health Card
                     vehicleHealthCard
 
