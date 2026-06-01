@@ -437,8 +437,8 @@ final class MaintenanceSchedulerViewModel {
         if let i = allTasks.firstIndex(where: { $0.id == id }) {
             allTasks[i].status = status
 
-            // Write back to Supabase
-            if let sourceId = allTasks[i].sourceTaskId {
+            let task = allTasks[i] // Capture task safely outside the Task block
+            if let sourceId = task.sourceTaskId {
                 let dbStatus: MaintenanceTaskStatus
                 switch status {
                 case .pending: dbStatus = .pending
@@ -447,9 +447,8 @@ final class MaintenanceSchedulerViewModel {
                 case .delayed, .critical: dbStatus = .pending
                 }
                 Task {
-                    try? await MaintenanceTaskService.updateTaskStatus(id: sourceId, status: dbStatus)
                     if status == .completed {
-                        let task = allTasks[i]
+                        try? await MaintenanceTaskService.updateTaskStatusWithCompletion(id: sourceId, status: dbStatus, completedAt: Date())
                         if let vehicle = vehicles.first(where: { $0.licensePlate == task.vehicleNumber }) {
                             let cost = Double(task.laborCost ?? "") ?? nil
                             let history = MaintenanceHistory(
@@ -462,6 +461,8 @@ final class MaintenanceSchedulerViewModel {
                             )
                             try? await MaintenanceHistoryService.createHistory(history)
                         }
+                    } else {
+                        try? await MaintenanceTaskService.updateTaskStatus(id: sourceId, status: dbStatus)
                     }
                 }
             }
@@ -484,13 +485,11 @@ final class MaintenanceSchedulerViewModel {
         if let i = allWorkOrders.firstIndex(where: { $0.id == id }) {
             allWorkOrders[i].status = status
 
-            // Write back to Supabase
-            if let sourceId = allWorkOrders[i].sourceWorkOrderId {
+            let wo = allWorkOrders[i] // Capture wo safely outside the Task block
+            if let sourceId = wo.sourceWorkOrderId {
                 Task {
-                    try? await WorkOrderService.updateWorkOrderStatus(id: sourceId, status: status)
-                    // If completed, create maintenance history
                     if status == .completed {
-                        let wo = allWorkOrders[i]
+                        try? await WorkOrderService.updateWorkOrderStatusWithCompletion(id: sourceId, status: status, completedAt: Date())
                         if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
                             let history = MaintenanceHistory(
                                 id: UUID(),
@@ -502,9 +501,11 @@ final class MaintenanceSchedulerViewModel {
                             )
                             try? await MaintenanceHistoryService.createHistory(history)
                         }
+                    } else {
+                        try? await WorkOrderService.updateWorkOrderStatus(id: sourceId, status: status)
                     }
                 }
-            } else if let sourceIrId = allWorkOrders[i].sourceIssueReportId, let uid = currentUserId {
+            } else if let sourceIrId = wo.sourceIssueReportId, let uid = currentUserId {
                 Task {
                     let statusStr: String
                     switch status {
@@ -516,7 +517,6 @@ final class MaintenanceSchedulerViewModel {
                     }
                     try? await IssueReportService.updateIssueReport(id: sourceIrId, assignedTo: uid, status: statusStr)
                     if status == .completed {
-                        let wo = allWorkOrders[i]
                         if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
                             let history = MaintenanceHistory(
                                 id: UUID(),
