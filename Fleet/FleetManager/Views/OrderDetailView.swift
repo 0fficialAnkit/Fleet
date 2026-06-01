@@ -1,6 +1,17 @@
 import SwiftUI
 import MapKit
 
+enum TripPhase {
+    case scheduled
+    case enRouteToPickup
+    case nearPickup
+    case atPickup
+    case enRouteToDropoff
+    case nearDropoff
+    case completed
+    case cancelled
+}
+
 struct OrderDetailView: View {
 
     let trip: Trip
@@ -23,8 +34,9 @@ struct OrderDetailView: View {
     @State private var etaToPickupMin:  Int?
     @State private var etaToDropoffMin: Int?
 
-    // Geofence events for this trip
+    // Geofence events and trip geofences
     @State private var geofenceEvents: [TripGeofenceEvent] = []
+    @State private var tripGeofences: [TripGeofence] = []
 
     // Live pulse indicator state
     @State private var isPulsing = false
@@ -81,6 +93,190 @@ struct OrderDetailView: View {
         return ("En route to pickup", .blue, "road.lanes")
     }
 
+    // Dynamic Trip Phase derived from active metrics and database events
+    var tripPhase: TripPhase {
+        guard let status = currentTrip.status else { return .scheduled }
+        switch status {
+        case .scheduled:
+            return .scheduled
+        case .cancelled:
+            return .cancelled
+        case .completed:
+            return .completed
+        case .active:
+            // Check drop-off proximity
+            if let dd = distanceToDropoffKm {
+                if dd <= 0.1 {
+                    return .completed
+                }
+                if dd <= geofenceRadiusKm {
+                    return .nearDropoff
+                }
+            }
+            
+            // Check if we have entered the pickup geofence or are currently there
+            let hasEnteredPickup = geofenceEvents.contains { event in
+                let fence = tripGeofences.first { $0.id == event.geofenceId }
+                return fence?.zoneType == "pickup" && event.eventType == "entered"
+            }
+            
+            let hasExitedPickup = geofenceEvents.contains { event in
+                let fence = tripGeofences.first { $0.id == event.geofenceId }
+                return fence?.zoneType == "pickup" && event.eventType == "exited"
+            }
+            
+            // Check pickup proximity
+            if let dp = distanceToPickupKm {
+                if dp <= 0.1 || (hasEnteredPickup && !hasExitedPickup && dp <= 1.0) {
+                    return .atPickup
+                }
+                if dp <= geofenceRadiusKm {
+                    return .nearPickup
+                }
+            }
+            
+            if hasExitedPickup {
+                return .enRouteToDropoff
+            }
+            
+            if let dp = distanceToPickupKm, let dd = distanceToDropoffKm, dd < dp {
+                return .enRouteToDropoff
+            }
+            
+            return .enRouteToPickup
+        }
+    }
+
+    // Straight-line distance calculation between pickup and drop-off
+    var routeDistanceKm: Double {
+        guard let pc = pickupCoord, let dc = dropoffCoord else { return 5.0 }
+        let loc1 = CLLocation(latitude: pc.latitude, longitude: pc.longitude)
+        let loc2 = CLLocation(latitude: dc.latitude, longitude: dc.longitude)
+        return loc1.distance(from: loc2) / 1000.0
+    }
+
+    // Capsule Journey Progress Double Value (0.0 to 1.0)
+    var journeyProgress: Double {
+        switch tripPhase {
+        case .scheduled:
+            return 0.0
+        case .enRouteToPickup:
+            let currentDist = distanceToPickupKm ?? 10.0
+            let baseProgress = 0.5 * (1.0 - min(1.0, currentDist / 10.0))
+            return max(0.05, min(0.45, baseProgress))
+        case .nearPickup:
+            return 0.45
+        case .atPickup:
+            return 0.5
+        case .enRouteToDropoff:
+            let totalDist = routeDistanceKm
+            let remainingDist = distanceToDropoffKm ?? totalDist
+            let routeProgress = 1.0 - min(1.0, max(0.0, remainingDist / max(totalDist, 0.1)))
+            return 0.5 + 0.5 * routeProgress
+        case .nearDropoff:
+            return 0.95
+        case .completed:
+            return 1.0
+        case .cancelled:
+            return 0.0
+        }
+    }
+
+    // Calculated Trip Duration Text
+    var tripDurationText: String {
+        guard let start = currentTrip.startTime else { return "—" }
+        let end = currentTrip.endTime ?? Date()
+        let diff = end.timeIntervalSince(start)
+        let hours = Int(diff) / 3600
+        let minutes = (Int(diff) % 3600) / 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes) min"
+        }
+    }
+
+    // Dynamic stats values for chips
+    var completionText: String {
+        switch tripPhase {
+        case .scheduled:
+            return "0%"
+        case .enRouteToPickup, .nearPickup, .atPickup:
+            let currentDist = distanceToPickupKm ?? 10.0
+            let rawPct = Int((1.0 - min(1.0, currentDist / 10.0)) * 50)
+            return "\(max(0, min(49, rawPct)))%"
+        case .enRouteToDropoff, .nearDropoff:
+            let totalDist = routeDistanceKm
+            let remainingDist = distanceToDropoffKm ?? totalDist
+            let routeProgress = 1.0 - min(1.0, max(0.0, remainingDist / max(totalDist, 0.1)))
+            return "\(Int(50 + 50 * routeProgress))%"
+        case .completed:
+            return "100%"
+        case .cancelled:
+            return "0%"
+        }
+    }
+
+    var remainingDistText: String {
+        switch tripPhase {
+        case .scheduled:
+            return "—"
+        case .enRouteToPickup, .nearPickup, .atPickup:
+            if let d = distanceToPickupKm {
+                return d < 1 ? "\(Int(d * 1000)) m" : String(format: "%.1f km", d)
+            }
+            return "Locating…"
+        case .enRouteToDropoff, .nearDropoff:
+            if let d = distanceToDropoffKm {
+                return d < 1 ? "\(Int(d * 1000)) m" : String(format: "%.1f km", d)
+            }
+            return "Locating…"
+        case .completed:
+            return "0.0 km"
+        case .cancelled:
+            return "—"
+        }
+    }
+
+    var coveredDistText: String {
+        switch tripPhase {
+        case .scheduled:
+            return "0.0 km"
+        case .enRouteToPickup, .nearPickup, .atPickup:
+            if let dp = distanceToPickupKm {
+                let covered = max(0.0, 10.0 - dp)
+                return covered < 1 ? "\(Int(covered * 1000)) m" : String(format: "%.1f km", covered)
+            }
+            return "0.0 km"
+        case .enRouteToDropoff, .nearDropoff:
+            let total = routeDistanceKm
+            if let dd = distanceToDropoffKm {
+                let covered = max(0.0, total - dd)
+                return covered < 1 ? "\(Int(covered * 1000)) m" : String(format: "%.1f km", covered)
+            }
+            return "0.0 km"
+        case .completed:
+            return String(format: "%.1f km", routeDistanceKm)
+        case .cancelled:
+            return "0.0 km"
+        }
+    }
+
+    var etaText: String {
+        switch tripPhase {
+        case .scheduled:
+            return "—"
+        case .enRouteToPickup, .nearPickup, .atPickup:
+            return etaToPickupMin.map { "\($0) min" } ?? "—"
+        case .enRouteToDropoff, .nearDropoff:
+            return etaToDropoffMin.map { "\($0) min" } ?? "—"
+        case .completed:
+            return "Arrived"
+        case .cancelled:
+            return "—"
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // ── Live Map Header ─────────────────────────────────────
@@ -115,7 +311,11 @@ struct OrderDetailView: View {
                     .padding(.horizontal, 4)
 
                     // ── Proximity & Delivery Progress Card ─────────────────
-                    statusProgressCard
+                    if tripPhase == .completed {
+                        completedSuccessCard
+                    } else {
+                        statusProgressCard
+                    }
 
                     // ── Route Connected Timeline Section ───────────────────
                     if let start = route?.startLocation, let end = route?.endLocation {
@@ -325,42 +525,172 @@ struct OrderDetailView: View {
         }
     }
 
-    // MARK: - Status & Progress View Panel
+    // MARK: - Redesigned Live Trip Progress Card (Uber/Samsara/Tesla Style)
 
     private var statusProgressCard: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                // Status icon / badge
-                Image(systemName: proximityStatus.icon)
-                    .font(.title3)
-                    .foregroundStyle(proximityStatus.color)
-                    .frame(width: 36, height: 36)
-                    .background(proximityStatus.color.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(proximityStatus.label)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(proximityStatus.color)
-                    
-                    if isActive, let dp = distanceToPickupKm {
-                        Text(dp <= geofenceRadiusKm ? "Inside pickup zone" : "\(String(format: "%.1f km", dp - geofenceRadiusKm)) to enter zone")
-                            .font(.caption2)
+        VStack(spacing: 16) {
+            // Milestone Header (Above Capsule)
+            HStack {
+                // Pickup details
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(journeyProgress >= 0.5 ? Color.green : Color.blue)
+                            .frame(width: 6, height: 6)
+                        Text("PICKUP")
+                            .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(.secondary)
                     }
+                    Text(route?.startLocation ?? "Pickup Point")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Spacer()
+                
+                // Dynamic Status Banner Indicator
+                if tripPhase == .nearPickup {
+                    HStack(spacing: 6) {
+                        PulsingDot(color: .green)
+                        Text("Near Pickup")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Color.green)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.green.opacity(0.12))
+                    .clipShape(Capsule())
+                } else if tripPhase == .atPickup {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Color.green)
+                        Text("Pickup Reached")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Color.green)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.green.opacity(0.12))
+                    .clipShape(Capsule())
+                } else if tripPhase == .nearDropoff {
+                    HStack(spacing: 6) {
+                        PulsingDot(color: .teal)
+                        Text("Near Drop-off")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Color.teal)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.teal.opacity(0.12))
+                    .clipShape(Capsule())
+                } else {
+                    HStack(spacing: 4) {
+                        Image(systemName: proximityStatus.icon)
+                            .font(.system(size: 10))
+                            .foregroundStyle(proximityStatus.color)
+                        Text(proximityStatus.label)
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(proximityStatus.color)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(proximityStatus.color.opacity(0.12))
+                    .clipShape(Capsule())
                 }
                 
+                Spacer()
+                
+                // Drop-off details
+                VStack(alignment: .trailing, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text("DROP-OFF")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.system(size: 8))
+                            .foregroundStyle(Color.red)
+                    }
+                    Text(route?.endLocation ?? "Drop-off Point")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            
+            Divider()
+            
+            // Horizontal Journey Capsule Tracker
+            JourneyCapsuleView(progress: journeyProgress, phase: tripPhase)
+                .padding(.vertical, 4)
+            
+            Divider()
+            
+            // Statistics Grid (Below Capsule)
+            HStack(spacing: 8) {
+                statChip(title: "COMPLETED", value: completionText, icon: "percent", color: .blue)
+                statChip(title: "REMAINING", value: remainingDistText, icon: "arrow.right.circle", color: .orange)
+                statChip(title: "COVERED", value: coveredDistText, icon: "road.lanes", color: .green)
+                statChip(title: "ETA", value: etaText, icon: "clock.fill", color: .teal)
+            }
+        }
+        .padding(16)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: Color.black.opacity(0.03), radius: 6, x: 0, y: 3)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color(.separator).opacity(0.3), lineWidth: 0.5)
+        )
+    }
+
+    // MARK: - Redesigned Mission Control Completed Success View
+
+    private var completedSuccessCard: some View {
+        VStack(spacing: 16) {
+            // Success Header
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.green.opacity(0.12))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.title2)
+                        .foregroundStyle(Color.green)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Trip Completed Successfully")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    Text("Driver reached destination safely.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
             }
             
             Divider()
             
-            StepProgressView(currentStatus: currentTrip.status)
+            // Full Completed Capsule
+            JourneyCapsuleView(progress: 1.0, phase: .completed)
+            
+            Divider()
+            
+            // Final stats chips
+            HStack(spacing: 8) {
+                statChip(title: "TOTAL DISTANCE", value: String(format: "%.1f km", routeDistanceKm), icon: "road.lanes", color: .green)
+                statChip(title: "DURATION", value: tripDurationText, icon: "clock.fill", color: .blue)
+                statChip(title: "STATUS", value: "Completed", icon: "checkmark.circle.fill", color: .teal)
+            }
         }
         .padding(16)
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.02), radius: 4, x: 0, y: 2)
+        .shadow(color: Color.black.opacity(0.03), radius: 6, x: 0, y: 3)
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(Color(.separator).opacity(0.3), lineWidth: 0.5)
@@ -380,6 +710,26 @@ struct OrderDetailView: View {
                 .fontWeight(.medium)
                 .foregroundStyle(.primary)
         }
+    }
+
+    private func statChip(title: String, value: String, icon: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 8))
+                    .foregroundStyle(color)
+                Text(title)
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+            Text(value)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(.primary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(Color(.tertiarySystemGroupedBackground).opacity(0.6))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     // MARK: - Live Map
@@ -518,6 +868,9 @@ struct OrderDetailView: View {
     }
 
     private func loadGeofenceEvents() async {
+        let fences = (try? await GeofenceService.fetchGeofences(forTrip: currentTrip.id)) ?? []
+        tripGeofences = fences
+
         let events = (try? await GeofenceService.fetchEvents(forVehicle: currentTrip.vehicleId)) ?? []
         geofenceEvents = Array(events.prefix(10))
     }
@@ -639,69 +992,6 @@ struct DetailCard<Content: View>: View {
     }
 }
 
-struct StepProgressView: View {
-    let currentStatus: TripStatus?
-
-    var body: some View {
-        HStack {
-            stepItem(title: "Scheduled", isCompleted: isStepCompleted(step: .scheduled), isActive: currentStatus == .scheduled, color: .blue)
-            progressLine(isCompleted: isStepCompleted(step: .active))
-            stepItem(title: "Active", isCompleted: isStepCompleted(step: .active), isActive: currentStatus == .active, color: .green)
-            progressLine(isCompleted: isStepCompleted(step: .completed))
-            stepItem(title: "Completed", isCompleted: isStepCompleted(step: .completed), isActive: currentStatus == .completed, color: .green)
-        }
-        .padding(.vertical, 8)
-    }
-
-    private func isStepCompleted(step: TripStatus) -> Bool {
-        guard let current = currentStatus else { return false }
-        switch (current, step) {
-        case (.completed, _):
-            return true
-        case (.active, .scheduled), (.active, .active):
-            return true
-        case (.scheduled, .scheduled):
-            return true
-        default:
-            return false
-        }
-    }
-
-    private func stepItem(title: String, isCompleted: Bool, isActive: Bool, color: Color) -> some View {
-        VStack(spacing: 6) {
-            ZStack {
-                Circle()
-                    .stroke(isCompleted || isActive ? color : Color(.systemGray4), lineWidth: 2)
-                    .frame(width: 24, height: 24)
-                    .background(Circle().fill(isCompleted ? color : Color(.secondarySystemGroupedBackground)))
-
-                if isCompleted {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
-                } else if isActive {
-                    Circle()
-                        .fill(color)
-                        .frame(width: 10, height: 10)
-                }
-            }
-
-            Text(title)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(isActive ? .primary : .secondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private func progressLine(isCompleted: Bool) -> some View {
-        Rectangle()
-            .fill(isCompleted ? Color.green : Color(.systemGray4))
-            .frame(height: 2)
-            .frame(maxWidth: .infinity)
-            .padding(.bottom, 16) // align with circles
-    }
-}
-
 struct RouteTimelineView: View {
     let startLocation: String
     let endLocation: String
@@ -799,6 +1089,100 @@ struct RouteTimelineView: View {
                         .fontWeight(.semibold)
                         .foregroundStyle(.primary)
                 }
+            }
+        }
+    }
+}
+
+// MARK: - Custom Step/Journey Capsule Component
+
+struct JourneyCapsuleView: View {
+    let progress: Double // 0.0 to 1.0
+    let phase: TripPhase
+
+    var body: some View {
+        GeometryReader { geo in
+            let width = geo.size.width
+            let progressWidth = max(0, min(width, width * CGFloat(progress)))
+            
+            ZStack(alignment: .leading) {
+                // Background Track
+                Capsule()
+                    .fill(Color(.systemGray5))
+                    .frame(height: 14)
+                
+                // Filled Track (Green)
+                Capsule()
+                    .fill(Color.green.gradient)
+                    .frame(width: progressWidth, height: 14)
+                
+                // Milestones
+                HStack(spacing: 0) {
+                    // Milestone 1: Start
+                    milestoneNode(icon: "car.fill", isCompleted: progress >= 0.0, label: "Start")
+                    Spacer()
+                    // Milestone 2: Pickup
+                    milestoneNode(icon: "shippingbox.fill", isCompleted: progress >= 0.5, label: "Pickup")
+                    Spacer()
+                    // Milestone 3: Drop-off
+                    milestoneNode(icon: "mappin.and.ellipse", isCompleted: progress >= 1.0, label: "Drop-off")
+                }
+                .padding(.horizontal, -10)
+                
+                // Live Vehicle Icon moving smoothly
+                ZStack {
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 30, height: 30)
+                        .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 2)
+                    Image(systemName: "truck.box.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.green)
+                }
+                .offset(x: max(0, min(width - 30, (width - 30) * CGFloat(progress))))
+            }
+            .frame(height: 30, alignment: .center)
+        }
+        .frame(height: 30)
+    }
+
+    private func milestoneNode(icon: String, isCompleted: Bool, label: String) -> some View {
+        ZStack {
+            Circle()
+                .fill(isCompleted ? Color.green : Color(.systemGray4))
+                .frame(width: 22, height: 22)
+                .overlay(
+                    Circle()
+                        .stroke(Color.white, lineWidth: 2)
+                )
+
+            Image(systemName: isCompleted && label != "Drop-off" ? "checkmark" : icon)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.white)
+        }
+    }
+}
+
+// MARK: - Live Geofence Pulse Animation View
+
+struct PulsingDot: View {
+    @State private var animate = false
+    let color: Color
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Circle()
+                .stroke(color, lineWidth: 2)
+                .frame(width: 16, height: 16)
+                .scaleEffect(animate ? 1.8 : 1.0)
+                .opacity(animate ? 0.0 : 0.8)
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: false)) {
+                animate = true
             }
         }
     }
