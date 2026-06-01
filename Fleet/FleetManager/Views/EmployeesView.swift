@@ -12,18 +12,12 @@ struct EmployeesView: View {
 
     var body: some View {
         List(filteredEmployees) { profile in
-            let isActive: Bool = {
-                if profile.role == "driver" {
-                    return viewModel.activeDriverIds.contains(profile.id)
-                }
-                return true // maintenance is always active
-            }()
-
             NavigationLink(destination: EmployeeDetailView(profile: profile, viewModel: viewModel)) {
                 EmployeeRowView(
                     profile: profile,
                     roleName: viewModel.getRole(for: profile),
-                    isActive: isActive
+                    statusText: viewModel.getOperationalStatusText(for: profile),
+                    statusColor: viewModel.getOperationalStatusColor(for: profile)
                 )
             }
         }
@@ -35,18 +29,8 @@ struct EmployeesView: View {
 struct EmployeeRowView: View {
     let profile: Profile
     let roleName: String
-    let isActive: Bool
-
-    private var statusLabel: String {
-        if profile.role == "driver" {
-            return isActive ? "On Trip" : "Idle"
-        }
-        return isActive ? "Active" : "Idle"
-    }
-
-    private var statusColor: Color {
-        isActive ? .green : .orange
-    }
+    let statusText: String
+    let statusColor: Color
 
     var body: some View {
         HStack(spacing: 16) {
@@ -62,7 +46,7 @@ struct EmployeeRowView: View {
 
             Spacer()
 
-            StatusBadge(text: statusLabel, color: statusColor)
+            StatusBadge(text: statusText, color: statusColor)
         }
         .padding(.vertical, 4)
     }

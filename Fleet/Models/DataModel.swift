@@ -259,9 +259,9 @@ struct VehicleLocation: Codable, Identifiable, Hashable, Sendable {
 }
 //  MARK: - MaintenanceTask
 enum MaintenanceScheduleType: String, Codable, CaseIterable, Sendable, Identifiable {
-    case date = "Date"
-    case mileage = "Mileage"
-    case interval = "Interval"
+    case date = "date"
+    case mileage = "mileage"
+    case interval = "interval"
     
     var id: String { rawValue }
 }
@@ -314,7 +314,8 @@ struct WorkOrder: Codable, Identifiable, Hashable, Sendable {
       case vehicleId = "vehicle_id"
       case createdBy = "created_by"
       case assignedTo = "assigned_to"
-      case priority, status
+      case priority
+      case status = "lifecycle_status"
       case createdAt = "created_at"
       case completedAt = "completed_at"
   }

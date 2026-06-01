@@ -23,7 +23,7 @@ struct ContentView: View {
                 ZStack {
                     Color(red: 0.07, green: 0.09, blue: 0.13).ignoresSafeArea()
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .tint(.white)
                 }
             } else if authViewModel.isAuthenticated {
                 if let roleName = authViewModel.resolvedRoleName {
