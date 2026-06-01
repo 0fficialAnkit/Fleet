@@ -14,8 +14,11 @@ struct ReportsView: View {
     @State private var selectedTab: ReportSectionTab = .maintenance
 
     var filteredReports: [IssueReport] {
-        guard let f = filterStatus else { return viewModel.reports }
-        return viewModel.reports.filter { $0.status == f }
+        let base = filterStatus == nil
+            ? viewModel.reports
+            : viewModel.reports.filter { $0.status == filterStatus }
+        // Ascending — oldest report first (first in, first out for maintenance queue)
+        return base.sorted { $0.submittedAt < $1.submittedAt }
     }
 
     var body: some View {

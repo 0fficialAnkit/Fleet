@@ -142,6 +142,7 @@ final class OrdersViewModel {
             message: "A new \(orderType.displayName) trip has been assigned to you.",
             type: .info,
             isRead: false,
+            referenceId: newTrip.id,
             createdAt: Date()
         )
         try? await NotificationService.createNotification(notification)

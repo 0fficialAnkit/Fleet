@@ -2,7 +2,7 @@
 //  DataModel.swift
 //  Fleet
 //
-//  Created by Ankit Kumar on 19/05/26.
+//  Created by Vaibhav Singh on 19/05/26.
 //
 
 import Foundation
@@ -279,6 +279,7 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
   var serviceIntervalMonths: Int?
   var scheduleType: MaintenanceScheduleType?
   var status: MaintenanceTaskStatus?
+  var completedAt: Date?
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -293,6 +294,7 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
       case serviceIntervalMonths = "service_internal"
       case scheduleType = "schedule_type"
       case status
+      case completedAt = "completed_at"
   }
 }
 
@@ -305,6 +307,7 @@ struct WorkOrder: Codable, Identifiable, Hashable, Sendable {
   var priority: WorkOrderPriority?
   var status: WorkOrderStatus?
   var createdAt: Date?
+  var completedAt: Date?
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -314,6 +317,7 @@ struct WorkOrder: Codable, Identifiable, Hashable, Sendable {
       case priority
       case status = "lifecycle_status"
       case createdAt = "created_at"
+      case completedAt = "completed_at"
   }
 }
 
@@ -428,6 +432,47 @@ struct TripUpdate: Codable, Identifiable, Hashable, Sendable {
   }
 }
 
+//  MARK: - TripIncident
+enum TripIncidentType: String, Codable, CaseIterable, Sendable {
+    case traffic = "Traffic"
+    case accident = "Accident"
+    case breakdown = "Breakdown"
+    case weather = "Weather"
+    case other = "Other"
+    
+    var icon: String {
+        switch self {
+        case .traffic: return "car.2.fill"
+        case .accident: return "car.burst.fill"
+        case .breakdown: return "wrench.and.screwdriver.fill"
+        case .weather: return "cloud.heavyrain.fill"
+        case .other: return "exclamationmark.triangle.fill"
+        }
+    }
+}
+
+struct TripIncident: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var tripId: UUID
+    var driverId: UUID?
+    var incidentType: String
+    var description: String
+    var location: String
+    var photoUrl: String?
+    var createdAt: Date?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tripId = "trip_id"
+        case driverId = "driver_id"
+        case incidentType = "incident_type"
+        case description
+        case location
+        case photoUrl = "photo_url"
+        case createdAt = "created_at"
+    }
+}
+
 //  MARK: - VehicleInspection
 struct VehicleInspection: Codable, Identifiable, Hashable, Sendable {
   let id: UUID
@@ -521,6 +566,7 @@ struct Notification: Codable, Identifiable, Hashable, Sendable {
   var message: String?
   var type: NotificationType?
   var isRead: Bool
+  var referenceId: UUID?
   var createdAt: Date?
 
   enum CodingKeys: String, CodingKey {
@@ -528,6 +574,7 @@ struct Notification: Codable, Identifiable, Hashable, Sendable {
       case userId = "user_id"
       case title, message, type
       case isRead = "is_read"
+      case referenceId = "reference_id"
       case createdAt = "created_at"
   }
 }
