@@ -56,6 +56,14 @@ struct VehicleDetailView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .padding(.horizontal, 16)
 
+                    // Compliance & Reminders
+                    VStack(alignment: .leading, spacing: 8) {
+                        SectionHeader(title: "Compliance & Reminders")
+                            .padding(.horizontal, 16)
+                        VehicleComplianceSection(vehicle: vehicle, editable: true)
+                            .padding(.horizontal, 16)
+                    }
+
                     // Usage Report
                     VStack(alignment: .leading, spacing: 8) {
                         SectionHeader(title: "Usage Report")

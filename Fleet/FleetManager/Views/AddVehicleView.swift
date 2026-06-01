@@ -21,6 +21,15 @@ struct AddVehicleView: View {
     @State private var tankCapacity = ""
     @State private var mileage = ""
 
+    // Compliance & Reminders
+    @State private var hasInsuranceExpiry = false
+    @State private var insuranceExpiry    = Date()
+    @State private var hasServiceExpiry   = false
+    @State private var serviceExpiry      = Date()
+    @State private var showInsuranceScanner = false
+    @State private var showServiceScanner   = false
+    @State private var complianceStore = ComplianceSettingsStore.shared
+
     // State
     @State private var isSaving = false
     @State private var errorMessage: String?
@@ -105,6 +114,55 @@ struct AddVehicleView: View {
                     Text("Enter whole numbers only.")
                 }
 
+                // ── Compliance & Reminders ────────────────────────────
+                Section {
+                    // Insurance
+                    Toggle("Insurance Expiry", isOn: $hasInsuranceExpiry)
+
+                    if hasInsuranceExpiry {
+                        DatePicker("Expiry Date", selection: $insuranceExpiry,
+                                   in: Date()..., displayedComponents: .date)
+                            .tint(Color.teal)
+
+                        Button {
+                            showInsuranceScanner = true
+                        } label: {
+                            Label("Scan Insurance Document", systemImage: "doc.text.viewfinder")
+                                .foregroundStyle(Color.teal)
+                        }
+                    }
+                } header: {
+                    Text("Insurance")
+                } footer: {
+                    if hasInsuranceExpiry {
+                        Text("You will receive alerts 30, 15, 7 and 1 day before expiry.")
+                    }
+                }
+
+                Section {
+                    // Service
+                    Toggle("Next Service Due", isOn: $hasServiceExpiry)
+
+                    if hasServiceExpiry {
+                        DatePicker("Service Date", selection: $serviceExpiry,
+                                   in: Date()..., displayedComponents: .date)
+                            .tint(Color.teal)
+
+                        Button {
+                            showServiceScanner = true
+                        } label: {
+                            Label("Scan Service Receipt", systemImage: "doc.text.viewfinder")
+                                .foregroundStyle(Color.teal)
+                        }
+                    }
+                } header: {
+                    Text("Service")
+                } footer: {
+                    if hasServiceExpiry {
+                        Text("You will receive a reminder before the service date.")
+                    }
+                }
+
                 // ── Error ─────────────────────────────────────────────
                 if let error = errorMessage {
                     Section {
@@ -131,6 +189,18 @@ struct AddVehicleView: View {
                             .bold()
                             .disabled(!isValid)
                     }
+                }
+            }
+            .sheet(isPresented: $showInsuranceScanner) {
+                OCRDateScannerSheet(target: .insurance) { date in
+                    insuranceExpiry    = date
+                    hasInsuranceExpiry = true
+                }
+            }
+            .sheet(isPresented: $showServiceScanner) {
+                OCRDateScannerSheet(target: .insurance) { date in
+                    serviceExpiry    = date
+                    hasServiceExpiry = true
                 }
             }
         }
@@ -220,6 +290,16 @@ struct AddVehicleView: View {
                     updated.purchaseDate = purchaseDate
                     try? await VehicleService.updateVehicle(updated)
                 }
+
+                // Save compliance dates locally + schedule notifications
+                if hasInsuranceExpiry || hasServiceExpiry {
+                    let vehicleKey = plateTrimmed.isEmpty ? UUID().uuidString : plateTrimmed
+                    var compliance = complianceStore.settings(for: vehicleKey)
+                    if hasInsuranceExpiry { compliance.insuranceExpiry = insuranceExpiry }
+                    if hasServiceExpiry   { compliance.serviceExpiry   = serviceExpiry   }
+                    await MainActor.run { complianceStore.upsert(compliance) }
+                }
+
                 await MainActor.run { dismiss() }
             } catch {
                 await MainActor.run {

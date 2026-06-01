@@ -232,6 +232,15 @@ struct ReportDetailView: View {
                     }
                 }
 
+                // ── Compliance ────────────────────────────────────
+                if vehicle != nil {
+                    Section("Compliance & Reminders") {
+                        VehicleComplianceSection(vehicle: vehicle!, editable: false)
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                    }
+                }
+
                 // ── Last Trip ─────────────────────────────────────
                 if let trip = lastTrip {
                     Section("Last Trip on This Vehicle") {
