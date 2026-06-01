@@ -116,7 +116,7 @@ enum ProfileService {
                 case email
                 case phone
                 case licenseNumber = "license_number"
-                case userStatus    = "user_status"
+                case userStatus    = "status"
             }
         }
 
