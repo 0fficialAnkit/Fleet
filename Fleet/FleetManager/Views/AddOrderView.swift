@@ -8,6 +8,7 @@ struct AddOrderView: View {
     // MARK: - Form State
     @State private var startTime = Date()
     @State private var orderType: OrderType = .pickUpAndDrop
+    @State private var selectedVehicleType: VehicleType = .car
     @State private var pickupLocation: SelectedLocation?
     @State private var dropoffLocation: SelectedLocation?
     @State private var selectedVehicleId: UUID?
@@ -20,7 +21,13 @@ struct AddOrderView: View {
 
     // MARK: - Derived
     private var availableVehicles: [Vehicle] {
-        viewModel.availableVehicles(for: orderType, at: startTime)
+        let allAvailable = viewModel.availableVehicles(for: orderType, at: startTime)
+        return allAvailable.filter { vehicle in
+            if let type = vehicle.vehicleType {
+                return type == selectedVehicleType
+            }
+            return false
+        }
     }
 
     private var availableDrivers: [Profile] {
@@ -32,6 +39,17 @@ struct AddOrderView: View {
         dropoffLocation != nil &&
         selectedVehicleId != nil &&
         selectedDriverId != nil
+    }
+
+    private var isShowingError: Binding<Bool> {
+        Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { show in
+                if !show {
+                    viewModel.errorMessage = nil
+                }
+            }
+        )
     }
 
     // MARK: - Body
@@ -67,11 +85,9 @@ struct AddOrderView: View {
                 }
 
                 // ── Route ─────────────────────────────────────────────
-                Section {
-                    // Pickup row
-                    Button { showingPickupSearch = true } label: {
+                Section("Route") {
+                    Button(action: { showingPickupSearch = true }) {
                         locationRowLabel(
-                            icon: "circle.fill",
                             iconColor: .green,
                             caption: "Pickup / Origin",
                             value: pickupLocation?.title,
@@ -81,10 +97,8 @@ struct AddOrderView: View {
                     }
                     .foregroundStyle(.primary)
 
-                    // Drop-off row
-                    Button { showingDropoffSearch = true } label: {
+                    Button(action: { showingDropoffSearch = true }) {
                         locationRowLabel(
-                            icon: "mappin.circle.fill",
                             iconColor: .red,
                             caption: "Drop-off / Destination",
                             value: dropoffLocation?.title,
@@ -93,8 +107,43 @@ struct AddOrderView: View {
                         )
                     }
                     .foregroundStyle(.primary)
-                } header: {
-                    Label("Route", systemImage: "map.fill")
+                }
+
+                // ── Schedule ──────────────────────────────────────────
+                Section("Schedule") {
+                    DatePicker(
+                        "Date & Time",
+                        selection: $startTime,
+                        in: Date()...,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .tint(Color.teal)
+                }
+
+                // ── Order Type ────────────────────────────────────────
+                Section("Order Type") {
+                    Picker(selection: $orderType) {
+                        Text(OrderType.pickUpAndDrop.displayName).tag(OrderType.pickUpAndDrop)
+                        Text(OrderType.travel.displayName).tag(OrderType.travel)
+                    } label: {
+                        Text("Type")
+                    }
+                    .pickerStyle(.menu)
+                    .tint(.primary)
+                }
+
+                // ── Vehicle Type ──────────────────────────────────────
+                Section("Vehicle Type") {
+                    Picker(selection: $selectedVehicleType) {
+                        Text(VehicleType.twoWheeler.displayName).tag(VehicleType.twoWheeler)
+                        Text(VehicleType.threeWheeler.displayName).tag(VehicleType.threeWheeler)
+                        Text(VehicleType.car.displayName).tag(VehicleType.car)
+                        Text(VehicleType.truck.displayName).tag(VehicleType.truck)
+                    } label: {
+                        Text("Vehicle Type")
+                    }
+                    .pickerStyle(.menu)
+                    .tint(.primary)
                 }
 
                 // ── Assignment ────────────────────────────────────────
@@ -106,7 +155,7 @@ struct AddOrderView: View {
                                 .foregroundStyle(Color.secondary)
                                 .font(.caption)
                         } label: {
-                            Label("Vehicle", systemImage: "car.fill")
+                            Text("Vehicle")
                         }
                     } else {
                         Picker(selection: $selectedVehicleId) {
@@ -116,7 +165,7 @@ struct AddOrderView: View {
                                     .tag(v.id as UUID?)
                             }
                         } label: {
-                            Label("Vehicle", systemImage: "car.fill")
+                            Text("Vehicle")
                         }
                         .pickerStyle(.menu)
                         .tint(.primary)
@@ -129,7 +178,7 @@ struct AddOrderView: View {
                                 .foregroundStyle(Color.secondary)
                                 .font(.caption)
                         } label: {
-                            Label("Driver", systemImage: "person.crop.circle.fill")
+                            Text("Driver")
                         }
                     } else {
                         Picker(selection: $selectedDriverId) {
@@ -139,13 +188,13 @@ struct AddOrderView: View {
                                     .tag(d.id as UUID?)
                             }
                         } label: {
-                            Label("Driver", systemImage: "person.crop.circle.fill")
+                            Text("Driver")
                         }
                         .pickerStyle(.menu)
                         .tint(.primary)
                     }
                 } header: {
-                    Label("Assignment", systemImage: "person.badge.key.fill")
+                    Text("Assignment")
                 } footer: {
                     if !canSave {
                         Text("Fill in all fields to save the order.")
@@ -155,16 +204,16 @@ struct AddOrderView: View {
 
                 // ── Route Preview ─────────────────────────────────────
                 if pickupLocation != nil || dropoffLocation != nil {
-                    Section {
+                    Section("Route Preview") {
+                        // Map — full bleed, no insets
                         TripRouteMapView(
                             startAddress: pickupLocation?.fullAddress,
-                            endAddress: dropoffLocation?.fullAddress
+                            endAddress:   dropoffLocation?.fullAddress
                         )
-                        .frame(height: 220)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    } header: {
-                        Label("Route Preview", systemImage: "map.fill")
+                        .frame(height: 240)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+
                     }
                 }
             }
@@ -206,28 +255,22 @@ struct AddOrderView: View {
                     dropoffLocation = location
                 }
             }
-            // Clear vehicle/driver selection if they are no longer available on the new date
-            .onChange(of: startTime) { _, _ in
-                if let id = selectedVehicleId,
-                   !availableVehicles.contains(where: { $0.id == id }) {
-                    selectedVehicleId = nil
-                }
-                if let id = selectedDriverId,
-                   !availableDrivers.contains(where: { $0.id == id }) {
-                    selectedDriverId = nil
-                }
-            }
+            // Clear vehicle/driver selection if they are no longer available
+            .onChange(of: startTime) { _, _ in validateSelection() }
+            .onChange(of: orderType) { _, _ in validateSelection() }
+            .onChange(of: selectedVehicleType) { _, _ in validateSelection() }
             // Error alert
             .alert(
                 "Error",
-                isPresented: Binding(
-                    get: { viewModel.errorMessage != nil },
-                    set: { if !$0 { viewModel.errorMessage = nil } }
-                )
+                isPresented: isShowingError
             ) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text(viewModel.errorMessage ?? "Unknown error")
+                if let msg = viewModel.errorMessage {
+                    Text(msg)
+                } else {
+                    Text("Unknown error")
+                }
             }
             // Saving overlay
             .overlay {
@@ -246,6 +289,33 @@ struct AddOrderView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Navigate in Maps
+
+    private func openInMaps() {
+        guard let pickup  = pickupLocation?.fullAddress,
+              let dropoff = dropoffLocation?.fullAddress else { return }
+        Task {
+            async let srcSearch = geocodeForMaps(pickup)
+            async let dstSearch = geocodeForMaps(dropoff)
+            guard let src = await srcSearch,
+                  let dst = await dstSearch else { return }
+            MKMapItem.openMaps(
+                with: [src, dst],
+                launchOptions: [
+                    MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving,
+                    MKLaunchOptionsShowsTrafficKey: true
+                ]
+            )
+        }
+    }
+
+    private func geocodeForMaps(_ address: String) async -> MKMapItem? {
+        let req = MKLocalSearch.Request()
+        req.naturalLanguageQuery = address
+        req.resultTypes = .address
+        return try? await MKLocalSearch(request: req).start().mapItems.first
     }
 
     // MARK: - Save
@@ -286,26 +356,42 @@ struct AddOrderView: View {
         }
     }
 
-    // MARK: - View Helpers
+    // MARK: - Private Helpers
 
-    @ViewBuilder
+    private func validateSelection() {
+        if let id = selectedVehicleId,
+           !availableVehicles.contains(where: { $0.id == id }) {
+            selectedVehicleId = nil
+        }
+        if let id = selectedDriverId,
+           !availableDrivers.contains(where: { $0.id == id }) {
+            selectedDriverId = nil
+        }
+    }
+
+    private func orderTypeIcon(_ type: OrderType) -> String {
+        switch type {
+        case .pickUpAndDrop:
+            return "arrow.left.arrow.right"
+        case .bulkOrderShip:
+            return "shippingbox.fill"
+        case .travel:
+            return "car.fill"
+        }
+    }
+
     private func locationRowLabel(
-        icon: String,
         iconColor: Color,
         caption: String,
         value: String?,
         subtitle: String?,
         isSet: Bool
     ) -> some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(iconColor.opacity(0.15))
-                    .frame(width: 36, height: 36)
-                Image(systemName: icon)
-                    .font(.system(size: isSet ? 18 : 10))
-                    .foregroundStyle(iconColor)
-            }
+        HStack(spacing: 12) {
+            Circle()
+                .fill(iconColor)
+                .frame(width: 8, height: 8)
+                .padding(.horizontal, 4)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(caption)
@@ -324,25 +410,115 @@ struct AddOrderView: View {
             }
 
             Spacer()
-
-            Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color(.tertiaryLabel))
         }
         .padding(.vertical, 2)
-    }
-
-    private func orderTypeIcon(_ type: OrderType) -> String {
-        switch type {
-        case .pickUpAndDrop: return "arrow.left.arrow.right"
-        case .bulkOrderShip: return "shippingbox.fill"
-        case .travel:        return "car.fill"
-        }
     }
 }
 
 // MARK: - Preview
 
 #Preview {
-    AddOrderView(viewModel: OrdersViewModel())
+    let mockVehicles = [
+        Vehicle(
+            id: UUID(),
+            make: "Honda",
+            model: "Activa",
+            year: 2024,
+            vin: "V123",
+            licensePlate: "MH-12-AB-1234",
+            tankCapacity: 5,
+            mileage: 40,
+            purchaseDate: Date(),
+            assignedDriverId: nil,
+            adminId: nil,
+            status: .active,
+            vehicleType: .twoWheeler
+        ),
+        Vehicle(
+            id: UUID(),
+            make: "TVS",
+            model: "King",
+            year: 2023,
+            vin: "V456",
+            licensePlate: "MH-12-CD-5678",
+            tankCapacity: 10,
+            mileage: 30,
+            purchaseDate: Date(),
+            assignedDriverId: nil,
+            adminId: nil,
+            status: .active,
+            vehicleType: .threeWheeler
+        ),
+        Vehicle(
+            id: UUID(),
+            make: "Tata",
+            model: "Nexon",
+            year: 2024,
+            vin: "V789",
+            licensePlate: "MH-12-EF-9012",
+            tankCapacity: 44,
+            mileage: 18,
+            purchaseDate: Date(),
+            assignedDriverId: nil,
+            adminId: nil,
+            status: .active,
+            vehicleType: .car
+        ),
+        Vehicle(
+            id: UUID(),
+            make: "Ashok Leyland",
+            model: "Dost",
+            year: 2022,
+            vin: "V012",
+            licensePlate: "MH-12-GH-3456",
+            tankCapacity: 60,
+            mileage: 12,
+            purchaseDate: Date(),
+            assignedDriverId: nil,
+            adminId: nil,
+            status: .active,
+            vehicleType: .truck
+        )
+    ]
+    
+    let mockProfiles = [
+        Profile(
+            id: UUID(),
+            fullName: "Ramesh Kumar",
+            email: "ramesh@fleet.com",
+            phone: "+91 98765 43210",
+            licenseNumber: "DL-12345",
+            role: "driver",
+            status: "active",
+            createdAt: Date()
+        ),
+        Profile(
+            id: UUID(),
+            fullName: "Suresh Singh",
+            email: "suresh@fleet.com",
+            phone: "+91 87654 32109",
+            licenseNumber: "DL-67890",
+            role: "driver",
+            status: "active",
+            createdAt: Date()
+        )
+    ]
+    
+    let mockRoutes = [
+        Route(
+            id: UUID(),
+            routeName: "Office → Warehouse",
+            startLocation: "123 Office Road, Mumbai",
+            endLocation: "456 Warehouse Lane, Navi Mumbai"
+        )
+    ]
+    
+    let viewModel = OrdersViewModel(
+        trips: [],
+        routes: mockRoutes,
+        profiles: mockProfiles,
+        vehicles: mockVehicles
+    )
+    
+    return AddOrderView(viewModel: viewModel)
 }
