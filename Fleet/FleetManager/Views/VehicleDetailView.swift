@@ -5,6 +5,7 @@ struct VehicleDetailView: View {
     let viewModel: VehiclesViewModel
 
     @State private var isShowingEdit = false
+    @State private var deleteError: String?
     @Environment(\.dismiss) private var dismiss
 
     var driverName: String {
@@ -165,7 +166,7 @@ struct VehicleDetailView: View {
                                 try await viewModel.deleteVehicle(vehicle)
                                 dismiss()
                             } catch {
-                                viewModel.errorMessage = error.localizedDescription
+                                deleteError = error.localizedDescription
                             }
                         }
                     }) {
@@ -178,6 +179,16 @@ struct VehicleDetailView: View {
         }
         .sheet(isPresented: $isShowingEdit) {
             EditVehicleView(viewModel: viewModel, vehicle: vehicle)
+        }
+        .alert("Unable to Delete Vehicle", isPresented: Binding(
+            get: { deleteError != nil },
+            set: { if !$0 { deleteError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            if let msg = deleteError {
+                Text(msg)
+            }
         }
     }
 }
