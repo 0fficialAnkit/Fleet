@@ -73,11 +73,11 @@ struct UsageReportView: View {
                     VStack(spacing: 6) {
                         Text("\(vehicle.make ?? "Unknown") \(vehicle.model ?? "")")
                             .font(.title2.bold())
-                            .foregroundColor(Color.primary)
+                            .foregroundStyle(Color.primary)
                         
                         Text(vehicle.licensePlate ?? "NO PLATE")
                             .font(.system(size: 16, weight: .semibold, design: .monospaced))
-                            .foregroundColor(Color.teal)
+                            .foregroundStyle(Color.teal)
                     }
                     .padding(.top, 16)
                     
@@ -97,7 +97,7 @@ struct UsageReportView: View {
                                 DatePicker("Start", selection: $customStartDate, displayedComponents: .date)
                                     .labelsHidden()
                                 Text("to")
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                                 DatePicker("End", selection: $customEndDate, displayedComponents: .date)
                                     .labelsHidden()
                                 Spacer()
@@ -106,7 +106,7 @@ struct UsageReportView: View {
                         } else {
                             Text("\(dateRange.start.formatted(date: .abbreviated, time: .omitted)) - \(dateRange.end.formatted(date: .abbreviated, time: .omitted))")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .padding(.top, 4)
                         }
                     }
@@ -150,7 +150,7 @@ struct UsageReportView: View {
                         HStack(spacing: 16) {
                             Image(systemName: insight.status == "Overused" ? "flame.fill" : (insight.status == "Underused" ? "leaf.fill" : "checkmark.seal.fill"))
                                 .font(.system(size: 28))
-                                .foregroundColor(insight.color)
+                                .foregroundStyle(insight.color)
                                 .frame(width: 44, height: 44)
                                 .background(insight.color.opacity(0.15))
                                 .clipShape(Circle())
@@ -158,10 +158,10 @@ struct UsageReportView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(insight.status)
                                     .font(.headline)
-                                    .foregroundColor(insight.color)
+                                    .foregroundStyle(insight.color)
                                 Text(insight.description)
                                     .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                             Spacer()
@@ -183,7 +183,7 @@ struct UsageReportView: View {
                             Spacer()
                             Text("3 repairs")
                                 .font(.caption.weight(.semibold))
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                                 .background(Color(.tertiarySystemFill))
@@ -197,14 +197,14 @@ struct UsageReportView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Engine Oil Replacement")
                                         .font(.body.weight(.medium))
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
                                     Text((Calendar.current.date(byAdding: .day, value: -14, to: Date()) ?? Date()).formatted(date: .abbreviated, time: .omitted))
                                         .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                                 Spacer()
                                 Image(systemName: "wrench.and.screwdriver.fill")
-                                    .foregroundColor(Color.orange)
+                                    .foregroundStyle(Color.orange)
                             }
                             .padding(16)
                             
@@ -215,14 +215,14 @@ struct UsageReportView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Brake Pads Changed")
                                         .font(.body.weight(.medium))
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
                                     Text((Calendar.current.date(byAdding: .day, value: -45, to: Date()) ?? Date()).formatted(date: .abbreviated, time: .omitted))
                                         .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                                 Spacer()
                                 Image(systemName: "wrench.and.screwdriver.fill")
-                                    .foregroundColor(Color.orange)
+                                    .foregroundStyle(Color.orange)
                             }
                             .padding(16)
                             
@@ -233,14 +233,14 @@ struct UsageReportView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Tire Rotation")
                                         .font(.body.weight(.medium))
-                                        .foregroundColor(.primary)
+                                        .foregroundStyle(.primary)
                                     Text((Calendar.current.date(byAdding: .day, value: -120, to: Date()) ?? Date()).formatted(date: .abbreviated, time: .omitted))
                                         .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                                 Spacer()
                                 Image(systemName: "wrench.and.screwdriver.fill")
-                                    .foregroundColor(Color.orange)
+                                    .foregroundStyle(Color.orange)
                             }
                             .padding(16)
                         }
@@ -272,21 +272,21 @@ struct UsageMetricCard: View {
             HStack {
                 Image(systemName: icon)
                     .font(.system(size: 16))
-                    .foregroundColor(color)
+                    .foregroundStyle(color)
                 Text(title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundColor(Color(.secondaryLabel))
+                    .foregroundStyle(Color(.secondaryLabel))
                 Spacer()
             }
             
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text(value)
                     .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundColor(Color.primary)
+                    .foregroundStyle(Color.primary)
                 if !unit.isEmpty {
                     Text(unit)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(Color(.tertiaryLabel))
+                        .foregroundStyle(Color(.tertiaryLabel))
                 }
             }
         }

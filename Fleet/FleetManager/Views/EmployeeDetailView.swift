@@ -48,17 +48,17 @@ struct EmployeeDetailView: View {
                             .frame(width: 110, height: 110)
                         Image(systemName: viewModel.getIcon(for: currentRoleName))
                             .font(.system(size: 44))
-                            .foregroundColor(viewModel.getColor(for: currentRoleName))
+                            .foregroundStyle(viewModel.getColor(for: currentRoleName))
                     }
                     .padding(.bottom, 8)
 
                     Text(currentProfile.fullName)
                         .font(.title.bold())
-                        .foregroundColor(Color.primary)
+                        .foregroundStyle(Color.primary)
 
                     Text(currentRoleName)
                         .font(.subheadline.weight(.medium))
-                        .foregroundColor(viewModel.getColor(for: currentRoleName))
+                        .foregroundStyle(viewModel.getColor(for: currentRoleName))
                         .padding(.horizontal, 16)
                         .padding(.vertical, 6)
                         .background(viewModel.getColor(for: currentRoleName).opacity(0.15))
@@ -243,7 +243,7 @@ struct EmployeeDetailView: View {
                             .scaleEffect(1.2)
                         Text("Sending credentials...")
                             .font(.body.weight(.medium))
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                     }
                     .padding(32)
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -421,18 +421,18 @@ struct InfoRowView: View {
         HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 18))
-                .foregroundColor(Color(.tertiaryLabel))
+                .foregroundStyle(Color(.tertiaryLabel))
                 .frame(width: 24)
 
             Text(title)
                 .font(.body.weight(.medium))
-                .foregroundColor(Color.secondary)
+                .foregroundStyle(Color.secondary)
 
             Spacer()
 
             Text(value)
                 .font(.body)
-                .foregroundColor(valueColor)
+                .foregroundStyle(valueColor)
         }
         .padding(.vertical, 8)
     }

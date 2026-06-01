@@ -31,16 +31,16 @@ struct DriverFuelView: View {
             if assignedVehicleId == nil {
                 HStack(spacing: 12) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.yellow)
+                        .foregroundStyle(.yellow)
                         .font(.title3)
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text("No Assigned Vehicle")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                         Text("You must have a vehicle assigned by your Fleet Manager to log fuel expenses.")
                             .font(.footnote)
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .padding()
@@ -66,7 +66,7 @@ struct DriverFuelView: View {
                     .keyboardType(.decimalPad)
                     .padding(16)
                     .background(Color(UIColor.secondarySystemBackground))
-                    .cornerRadius(12)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
 
             // Price
@@ -82,7 +82,7 @@ struct DriverFuelView: View {
                     .keyboardType(.decimalPad)
                     .padding(16)
                     .background(Color(UIColor.secondarySystemBackground))
-                    .cornerRadius(12)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
 
             // MARK: - Bill Photo (mandatory)
@@ -166,7 +166,7 @@ struct DriverFuelView: View {
                 .frame(maxWidth: .infinity)
                 .padding(16)
                 .background(!isFormValid || isSubmitting ? Color(UIColor.tertiarySystemFill) : Color.green)
-                .foregroundColor(!isFormValid || isSubmitting ? Color(UIColor.tertiaryLabel) : Color(UIColor.systemBackground))
+                .foregroundStyle(!isFormValid || isSubmitting ? Color(UIColor.tertiaryLabel) : Color(UIColor.systemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .disabled(!isFormValid || isSubmitting)
@@ -208,17 +208,17 @@ struct DriverFuelView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
                                 Image(systemName: "drop.fill")
-                                    .foregroundColor(Color.green)
+                                    .foregroundStyle(Color.green)
                                 Text("\(String(format: "%.1f", log.litersUsed ?? 0.0)) Liters")
                                     .font(.headline)
-                                    .foregroundColor(Color.primary)
+                                    .foregroundStyle(Color.primary)
                             }
                             HStack {
                                 Image(systemName: "calendar")
-                                    .foregroundColor(Color.secondary)
+                                    .foregroundStyle(Color.secondary)
                                 Text((log.recordedAt ?? Date()).formatted(date: .abbreviated, time: .shortened))
                                     .font(.body)
-                                    .foregroundColor(Color.secondary)
+                                    .foregroundStyle(Color.secondary)
                             }
                         }
 
@@ -226,10 +226,10 @@ struct DriverFuelView: View {
 
                         HStack(spacing: 2) {
                             Image(systemName: "indianrupeesign")
-                                .foregroundColor(Color.secondary)
+                                .foregroundStyle(Color.secondary)
                             Text("\(Int(log.fuelCost ?? 0.0))")
                                 .font(.title3.bold())
-                                .foregroundColor(Color.primary)
+                                .foregroundStyle(Color.primary)
                         }
                     }
                     .padding(14)

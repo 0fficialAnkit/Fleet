@@ -28,7 +28,7 @@ struct AddEmployeeView: View {
                     if let error = viewModel.errorMessage {
                         Section {
                             Text(error)
-                                .foregroundColor(.red)
+                                .foregroundStyle(.red)
                         }
                     }
 
@@ -50,7 +50,7 @@ struct AddEmployeeView: View {
                                 isPasswordVisible.toggle()
                             }) {
                                 Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                         }
 
@@ -69,7 +69,7 @@ struct AddEmployeeView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(Color.teal)
+                    .foregroundStyle(Color.teal)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -108,7 +108,7 @@ struct AddEmployeeView: View {
                             }
                         }
                     }
-                    .foregroundColor(Color.teal)
+                    .foregroundStyle(Color.teal)
                     .bold()
                     .disabled(fullName.isEmpty || email.isEmpty || password.isEmpty || viewModel.isCreatingUser)
                 }
@@ -123,7 +123,7 @@ struct AddEmployeeView: View {
                                 .scaleEffect(1.2)
                             Text("Creating user...")
                                 .font(.body.weight(.medium))
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                         }
                         .padding(32)
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))

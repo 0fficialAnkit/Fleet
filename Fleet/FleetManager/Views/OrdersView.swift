@@ -64,7 +64,7 @@ struct OrdersView: View {
                             Section {
                                 Text("No orders found.")
                                     .font(.body)
-                                    .foregroundColor(Color.secondary)
+                                    .foregroundStyle(Color.secondary)
                                     .padding(.vertical, 40)
                                     .frame(maxWidth: .infinity, alignment: .center)
                             }
@@ -178,7 +178,7 @@ struct OrderCardView: View {
                 HStack(spacing: 8) {
                     Image(systemName: orderIcon)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
+                        .foregroundStyle(.white)
                         .frame(width: 28, height: 28)
                         .background(
                             Circle()
@@ -188,7 +188,7 @@ struct OrderCardView: View {
                     Text(trip.orderType?.displayName ?? "Custom Order")
                         .font(.headline)
                         .fontWeight(.bold)
-                        .foregroundColor(Color.primary)
+                        .foregroundStyle(Color.primary)
                 }
 
                 Spacer()
@@ -222,12 +222,12 @@ struct OrderCardView: View {
                         VStack(alignment: .leading, spacing: 10) {
                             Text(start)
                                 .font(.subheadline)
-                                .foregroundColor(Color.secondary)
+                                .foregroundStyle(Color.secondary)
                                 .lineLimit(1)
                             
                             Text(end)
                                 .font(.subheadline.bold())
-                                .foregroundColor(Color.primary)
+                                .foregroundStyle(Color.primary)
                                 .lineLimit(1)
                         }
                     }
@@ -237,11 +237,11 @@ struct OrderCardView: View {
                 // Fallback route name
                 HStack(spacing: 8) {
                     Image(systemName: "map.fill")
-                        .foregroundColor(.teal)
+                        .foregroundStyle(.teal)
                         .font(.subheadline)
                     Text(routeName)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.primary)
                 }
             }
 
@@ -254,15 +254,15 @@ struct OrderCardView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "person.circle.fill")
                         .font(.system(size: 18))
-                        .foregroundColor(Color.teal)
+                        .foregroundStyle(Color.teal)
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text("DRIVER")
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(Color(.secondaryLabel))
+                            .foregroundStyle(Color(.secondaryLabel))
                         Text(driver?.fullName ?? "Unassigned")
                             .font(.footnote.weight(.medium))
-                            .foregroundColor(driver != nil ? Color.primary : Color.secondary)
+                            .foregroundStyle(driver != nil ? Color.primary : Color.secondary)
                             .lineLimit(1)
                     }
                 }
@@ -272,15 +272,15 @@ struct OrderCardView: View {
                 HStack(spacing: 8) {
                     Image(systemName: vehicleIcon)
                         .font(.system(size: 18))
-                        .foregroundColor(Color.indigo)
+                        .foregroundStyle(Color.indigo)
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text("VEHICLE")
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(Color(.secondaryLabel))
+                            .foregroundStyle(Color(.secondaryLabel))
                         Text(vehicle != nil ? "\(vehicle?.make ?? "") \(vehicle?.model ?? "")" : "No Vehicle")
                             .font(.footnote.weight(.medium))
-                            .foregroundColor(vehicle != nil ? Color.primary : Color.secondary)
+                            .foregroundStyle(vehicle != nil ? Color.primary : Color.secondary)
                             .lineLimit(1)
                     }
                 }
@@ -295,10 +295,10 @@ struct OrderCardView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "clock.fill")
                         .font(.caption)
-                        .foregroundColor(Color.teal)
+                        .foregroundStyle(Color.teal)
                     Text(formattedDate)
                         .font(.caption.weight(.semibold))
-                        .foregroundColor(Color.teal)
+                        .foregroundStyle(Color.teal)
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
@@ -309,11 +309,11 @@ struct OrderCardView: View {
 
                 Text("#\(trip.id.uuidString.prefix(8).uppercased())")
                     .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(Color(.tertiaryLabel))
+                    .foregroundStyle(Color(.tertiaryLabel))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
                     .background(Color(.quaternarySystemFill))
-                    .cornerRadius(4)
+                    .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
             }
         }
         .padding(16)

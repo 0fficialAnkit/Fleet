@@ -86,7 +86,7 @@ VStack(spacing: 0) {
                     }
                 } else {
                     Text("Profile not found")
-                        .foregroundColor(Color.secondary)
+                        .foregroundStyle(Color.secondary)
                 }
             }
             .navigationTitle("Profile")
@@ -94,13 +94,13 @@ VStack(spacing: 0) {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close") { dismiss() }
-                        .foregroundColor(Color.primary)
+                        .foregroundStyle(Color.primary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Edit") {
                         isEditing = true
                     }
-                    .foregroundColor(Color.teal)
+                    .foregroundStyle(Color.teal)
                 }
             }
             .sheet(isPresented: $isEditing) {

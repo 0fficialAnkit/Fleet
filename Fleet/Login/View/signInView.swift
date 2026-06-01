@@ -52,7 +52,7 @@ struct SignInView: View {
                 .frame(width: 80, height: 80)
             Image(systemName: "truck.box.fill")
                 .font(.system(size: 36))
-                .foregroundColor(Color(.systemBackground))
+                .foregroundStyle(Color(.systemBackground))
         }
     }
     // MARK: - Title
@@ -60,10 +60,10 @@ struct SignInView: View {
         VStack(spacing: 8) {
             Text("GoFleet")
                 .font(.system(size: 34, weight: .bold))
-                .foregroundColor(Color.primary)
+                .foregroundStyle(Color.primary)
             Text("Sign in to GoFleet")
             .font(.system(size: 16))
-            .foregroundColor(Color.secondary)
+            .foregroundStyle(Color.secondary)
         }
     }
 
@@ -72,7 +72,7 @@ struct SignInView: View {
         VStack(spacing: 14) {
             if let errorMessage = authViewModel.errorMessage {
                 Text(errorMessage)
-                    .foregroundColor(Color.red)
+                    .foregroundStyle(Color.red)
                     .font(.caption)
                     .multilineTextAlignment(.center)
             }
@@ -80,15 +80,15 @@ struct SignInView: View {
                 "",
                 text: $emailOrPhone,
                 prompt: Text("Enter email or phone")
-                    .foregroundColor(Color(.placeholderText))
+                    .foregroundStyle(Color(.placeholderText))
             )
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
-                .foregroundColor(Color.primary)
+                .foregroundStyle(Color.primary)
                 .padding(.horizontal, 18)
                 .frame(height: 56)
                 .background(Color(.secondarySystemBackground))
-                .cornerRadius(14)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
                         .stroke(Color(.separator), lineWidth: 1)
@@ -100,28 +100,28 @@ struct SignInView: View {
                         "",
                         text: $password,
                         prompt: Text("Password")
-                            .foregroundColor(Color(.placeholderText))
+                            .foregroundStyle(Color(.placeholderText))
                     )
                 } else {
                     SecureField(
                         "",
                         text: $password,
                         prompt: Text("Password")
-                            .foregroundColor(Color(.placeholderText))
+                            .foregroundStyle(Color(.placeholderText))
                     )
                 }
                 Button {
                     isPasswordVisible.toggle()
                 } label: {
                     Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
-                        .foregroundColor(Color.secondary)
+                        .foregroundStyle(Color.secondary)
                 }
             }
-            .foregroundColor(Color.primary)
+            .foregroundStyle(Color.primary)
             .padding(.horizontal, 18)
             .frame(height: 56)
             .background(Color(.secondarySystemBackground))
-            .cornerRadius(14)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
                     .stroke(Color(.separator), lineWidth: 1)
@@ -142,15 +142,15 @@ struct SignInView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
                     .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.teal)
-                    .cornerRadius(16)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             } else {
                 Text("Sign In")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(isButtonDisabled ? Color(.tertiaryLabel) : Color(.systemBackground))
+                    .foregroundStyle(isButtonDisabled ? Color(.tertiaryLabel) : Color(.systemBackground))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
                     .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.teal)
-                    .cornerRadius(16)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
         }
         .disabled(authViewModel.isLoading || isButtonDisabled)

@@ -21,9 +21,9 @@ struct ContentView: View {
         Group {
             if !authViewModel.isSessionChecked {
                 ZStack {
-                    Color(red: 0.07, green: 0.09, blue: 0.13).ignoresSafeArea()
+                    Color(.systemBackground).ignoresSafeArea()
                     ProgressView()
-                        .tint(.white)
+                        .tint(Color.primary)
                 }
             } else if authViewModel.isAuthenticated {
                 if let roleName = authViewModel.resolvedRoleName {

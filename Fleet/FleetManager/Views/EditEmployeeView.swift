@@ -76,7 +76,7 @@ struct EditEmployeeView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(Color.teal)
+                    .foregroundStyle(Color.teal)
                     .disabled(isLoading)
                 }
 
@@ -111,7 +111,7 @@ struct EditEmployeeView: View {
                                 .bold()
                         }
                     }
-                    .foregroundColor(Color.teal)
+                    .foregroundStyle(Color.teal)
                     .disabled(fullName.isEmpty || isLoading)
                 }
             }
