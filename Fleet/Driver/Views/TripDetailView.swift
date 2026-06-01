@@ -263,26 +263,16 @@ struct TripDetailView: View {
 
         case .active:
             Section {
-                // Status row
-                HStack(spacing: 10) {
-                    Circle()
-                        .fill(.green)
-                        .frame(width: 8, height: 8)
-                    Text("Trip in Progress")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.green)
-                }
-                .listRowBackground(Color.green.opacity(0.08))
-
-                // Report delay
                 Button {
                     showingTripIssue = true
                 } label: {
                     Label("Report Delay / Issue", systemImage: "clock.badge.exclamationmark")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(.black)
                 }
+                .listRowBackground(Color.yellow)
+            }
 
-                // End trip
+            Section {
                 Button {
                     showingChecklist = .postTrip
                 } label: {
