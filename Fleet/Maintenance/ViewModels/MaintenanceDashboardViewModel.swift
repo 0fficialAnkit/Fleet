@@ -46,7 +46,7 @@ final class MaintenanceDashboardViewModel {
                 location: "Bay 01",
                 actionButtonTitle: "Start Task",
                 actionButtonIcon: "play.fill",
-                destination: nil,
+                destination: .scheduledWorkOrderDetail(buildScheduledWOFromTask(task)),
                 isTask: true
             )
         }
@@ -68,7 +68,7 @@ final class MaintenanceDashboardViewModel {
                 location: "Bay 04",
                 actionButtonTitle: "Start Work",
                 actionButtonIcon: "play.fill",
-                destination: .workOrderDetail(wo),
+                destination: .scheduledWorkOrderDetail(buildScheduledWO(wo)),
                 isTask: false
             )
         }
@@ -78,7 +78,7 @@ final class MaintenanceDashboardViewModel {
             return UpcomingDisplayItem(
                 id: ir.id,
                 priorityLabel: ir.severity.uppercased(),
-                priorityColor: irStatusColor(ir.severity), // We use severity color
+                priorityColor: irStatusColor(ir.severity),
                 referenceId: "REP-\(ir.id.uuidString.prefix(4).uppercased())",
                 assignmentTag: "ASSIGNED TO YOU",
                 vehicleName: vehiclePlate(for: ir.vehicleId),
@@ -87,7 +87,7 @@ final class MaintenanceDashboardViewModel {
                 location: "Bay 02",
                 actionButtonTitle: "Start Repair",
                 actionButtonIcon: "play.fill",
-                destination: .issueReportDetail(ir),
+                destination: .scheduledWorkOrderDetail(buildScheduledWOFromIR(ir)),
                 isTask: false
             )
         }
@@ -268,10 +268,96 @@ final class MaintenanceDashboardViewModel {
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
+
+    // MARK: - ScheduledWorkOrder Builders (for dashboard → detail navigation)
+
+    func buildScheduledWO(_ wo: WorkOrder) -> ScheduledWorkOrder {
+        let vehicle = vehicles.first { $0.id == wo.vehicleId }
+        return ScheduledWorkOrder(
+            id: wo.id,
+            vehicleNumber: vehicle?.licensePlate ?? "Unknown",
+            vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
+            priority: wo.priority ?? .medium,
+            status: wo.status ?? .open,
+            createdAt: wo.createdAt ?? Date(),
+            assignedBy: "Fleet Manager",
+            laborHours: "—",
+            laborCost: "—",
+            notes: "",
+            partsUsed: [],
+            sourceWorkOrderId: wo.id,
+            vehicleIssue: "Scheduled maintenance / Service required."
+        )
+    }
+
+    func buildScheduledWOFromTask(_ task: MaintenanceTask) -> ScheduledWorkOrder {
+        let vehicle = vehicles.first { $0.id == task.vehicleId }
+        let status: WorkOrderStatus = {
+            switch task.status {
+            case .pending:    return .open
+            case .inProgress: return .inProgress
+            case .completed:  return .completed
+            case .cancelled:  return .cancelled
+            case .none:       return .open
+            }
+        }()
+        return ScheduledWorkOrder(
+            id: task.id,
+            vehicleNumber: vehicle?.licensePlate ?? "Unknown",
+            vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
+            priority: .medium,
+            status: status,
+            createdAt: task.scheduledDate ?? Date(),
+            assignedBy: "Fleet Manager",
+            laborHours: "—",
+            laborCost: "—",
+            notes: task.description ?? "",
+            partsUsed: [],
+            sourceWorkOrderId: task.workOrderId,
+            vehicleIssue: task.description ?? "Scheduled task."
+        )
+    }
+
+    func buildScheduledWOFromIR(_ ir: IssueReportRecord) -> ScheduledWorkOrder {
+        let vehicle = vehicles.first { $0.id == ir.vehicleId }
+        let priority: WorkOrderPriority = {
+            switch ir.severity.lowercased() {
+            case "critical": return .critical
+            case "high":     return .high
+            case "medium":   return .medium
+            case "low":      return .low
+            default:         return .medium
+            }
+        }()
+        let status: WorkOrderStatus = {
+            switch ir.status.lowercased() {
+            case "open", "assigned": return .open
+            case "in_progress":      return .inProgress
+            case "resolved", "closed": return .completed
+            default:                 return .open
+            }
+        }()
+        return ScheduledWorkOrder(
+            id: ir.id,
+            vehicleNumber: vehicle?.licensePlate ?? "Unknown",
+            vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
+            priority: priority,
+            status: status,
+            createdAt: ir.createdAt ?? Date(),
+            assignedBy: "Driver Report",
+            laborHours: "—",
+            laborCost: "—",
+            notes: ir.description ?? "",
+            partsUsed: [],
+            sourceWorkOrderId: nil,
+            sourceIssueReportId: ir.id,
+            vehicleIssue: ir.description ?? "Issue reported by driver."
+        )
+    }
 }
 
 enum MaintenanceDestination: Hashable {
-    case workOrderDetail(WorkOrder)
+    case scheduledWorkOrderDetail(ScheduledWorkOrder)
     case issueReportDetail(IssueReportRecord)
     case workOrderList(filter: WorkOrderStatus?, assignedTo: UUID?, priority: WorkOrderPriority?)
 }

@@ -45,6 +45,35 @@ struct WorkOrderDetailView: View {
         _localParts = State(initialValue: [])
     }
 
+    // Init from MaintenanceTask (used by Dashboard task cards)
+    init(task: MaintenanceTask) {
+        let taskStatus: WorkOrderStatus? = {
+            switch task.status {
+            case .pending:    return .open
+            case .inProgress: return .inProgress
+            case .completed:  return .completed
+            case .cancelled:  return .cancelled
+            case .none:       return .open
+            }
+        }()
+        let d = WorkOrderDisplayData(
+            id: task.id,
+            vehicleDisplay: "VH-\(task.vehicleId.uuidString.prefix(8).uppercased())",
+            priority: nil,
+            status: taskStatus,
+            createdAt: task.scheduledDate.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "N/A",
+            assignedBy: "N/A",
+            laborHours: "N/A",
+            laborCost: "N/A",
+            notes: task.description ?? "",
+            partsUsed: []
+        )
+        self.data = d
+        _currentStatus = State(initialValue: taskStatus)
+        _notes = State(initialValue: task.description ?? "")
+        _localParts = State(initialValue: [])
+    }
+
     // Init from ScheduledWorkOrder (used by MaintenanceSchedulerView cards)
     init(scheduledWorkOrder wo: ScheduledWorkOrder) {
         let d = WorkOrderDisplayData(
