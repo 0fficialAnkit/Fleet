@@ -234,4 +234,31 @@ enum ProfileService {
 
         return newUserId
     }
+
+    // MARK: - Share Credentials
+
+    static func invokeShareCredentials(for profile: Profile) async throws {
+        struct ShareCredentialsRequest: Encodable {
+            let userId: String
+            let email: String
+            let fullName: String
+        }
+
+        let request = ShareCredentialsRequest(
+            userId: profile.id.uuidString,
+            email: profile.email,
+            fullName: profile.fullName
+        )
+
+        do {
+            try await supabase.functions.invoke(
+                "share-credentials",
+                options: FunctionInvokeOptions(body: request)
+            )
+            print("[ProfileService] invokeShareCredentials success")
+        } catch {
+            print("[ProfileService] invokeShareCredentials error: \(error)")
+            throw error
+        }
+    }
 }
