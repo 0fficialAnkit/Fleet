@@ -237,6 +237,9 @@ final class MaintenanceSchedulerViewModel {
             let vehicle = vehicles.first { $0.id == wo.vehicleId }
             let createdBy = profiles.first { $0.id == wo.createdBy }
 
+            let savedTime = UserDefaults.standard.double(forKey: "WO_SCHED_\(wo.id.uuidString)")
+            let scheduledDate = savedTime > 0 ? Date(timeIntervalSince1970: savedTime) : nil
+
             return ScheduledWorkOrder(
                 id: UUID(),
                 vehicleNumber: vehicle?.licensePlate ?? "Unknown",
@@ -244,6 +247,7 @@ final class MaintenanceSchedulerViewModel {
                 priority: wo.priority ?? .medium,
                 status: wo.status ?? .open,
                 createdAt: wo.createdAt ?? Date(),
+                scheduledDate: scheduledDate,
                 assignedBy: createdBy?.fullName ?? "Fleet Manager",
                 laborHours: "—",
                 laborCost: "—",
@@ -275,6 +279,9 @@ final class MaintenanceSchedulerViewModel {
             default: status = .open
             }
 
+            let savedTime = UserDefaults.standard.double(forKey: "IR_SCHED_\(ir.id.uuidString)")
+            let scheduledDate = savedTime > 0 ? Date(timeIntervalSince1970: savedTime) : nil
+
             return ScheduledWorkOrder(
                 id: UUID(),
                 vehicleNumber: vehicle?.licensePlate ?? "Unknown",
@@ -282,6 +289,7 @@ final class MaintenanceSchedulerViewModel {
                 priority: priority,
                 status: status,
                 createdAt: ir.createdAt ?? Date(),
+                scheduledDate: scheduledDate,
                 assignedBy: reportedBy?.fullName ?? "Driver",
                 laborHours: "—",
                 laborCost: "—",
@@ -410,7 +418,13 @@ final class MaintenanceSchedulerViewModel {
     func scheduleWorkOrder(id: UUID, date: Date) {
         if let i = allWorkOrders.firstIndex(where: { $0.id == id }) {
             allWorkOrders[i].scheduledDate = date
-            // Status stays .open — no Supabase status update needed
+            
+            // Save to UserDefaults persistently
+            if let sourceWoId = allWorkOrders[i].sourceWorkOrderId {
+                UserDefaults.standard.set(date.timeIntervalSince1970, forKey: "WO_SCHED_\(sourceWoId.uuidString)")
+            } else if let sourceIrId = allWorkOrders[i].sourceIssueReportId {
+                UserDefaults.standard.set(date.timeIntervalSince1970, forKey: "IR_SCHED_\(sourceIrId.uuidString)")
+            }
         }
         if selectedWorkOrder?.id == id {
             selectedWorkOrder?.scheduledDate = date

@@ -1028,6 +1028,11 @@ struct WorkOrderDetailSheet: View {
         }
         .navigationTitle("Work Order Details")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            if let existingDate = currentWO.scheduledDate {
+                scheduledDate = existingDate
+            }
+        }
     }
 
     func statusIcon(_ status: WorkOrderStatus) -> String {
