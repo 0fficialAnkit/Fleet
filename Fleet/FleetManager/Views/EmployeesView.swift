@@ -37,11 +37,11 @@ struct EmployeeRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(profile.fullName)
                     .font(.headline)
-                    .foregroundColor(Color.primary)
+                    .foregroundStyle(Color.primary)
 
                 Text(roleName)
                     .font(.subheadline)
-                    .foregroundColor(Color.secondary)
+                    .foregroundStyle(Color.secondary)
             }
 
             Spacer()

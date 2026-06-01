@@ -152,14 +152,8 @@ struct TripDetailView: View {
                     }
                 }
                 .padding(16)
-                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                )
-                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
-
-
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                 // ── Assigned Vehicle ───────────────────────────────
                 sectionTitle("Assigned Vehicle")
@@ -214,26 +208,18 @@ struct TripDetailView: View {
                         }
                     }
                     .padding(16)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                    )
-                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 } else {
-                    HStack {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                        Text("Loading vehicle info...")
-                            .font(.body)
+                    HStack(spacing: 10) {
+                        ProgressView().scaleEffect(0.8)
+                        Text("Loading vehicle info…")
+                            .font(.subheadline)
                             .foregroundStyle(Color.secondary)
                     }
                     .padding(16)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                    )
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
 
                 // ── Route Map ─────────────────────────────────────
@@ -252,9 +238,9 @@ struct TripDetailView: View {
                         ForEach(incidents) { incident in
                             HStack(alignment: .top, spacing: 12) {
                                 Image(systemName: TripIncidentType(rawValue: incident.incidentType)?.icon ?? "exclamationmark.triangle.fill")
-                                    .foregroundStyle(.black)
+                                    .foregroundStyle(.white)
                                     .padding(8)
-                                    .background(Color(red: 1.0, green: 1.0, blue: 0.0))
+                                    .background(Color.orange)
                                     .clipShape(Circle())
                                 
                                 VStack(alignment: .leading, spacing: 4) {
@@ -273,11 +259,9 @@ struct TripDetailView: View {
                                 Spacer()
                             }
                             .padding(12)
-                            .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .stroke(Color(red: 1.0, green: 1.0, blue: 0.0).opacity(0.5), lineWidth: 1)
-                            )
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.orange.opacity(0.3), lineWidth: 1))
                         }
                     }
                 }
@@ -386,11 +370,11 @@ struct TripDetailView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(16)
-                    .background(Color(red: 1.0, green: 1.0, blue: 0.0))
-                    .foregroundStyle(.black)
+                    .background(Color.orange)
+                    .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .shadow(color: Color(red: 1.0, green: 1.0, blue: 0.0).opacity(0.4), radius: 10, y: 4)
+                .shadow(color: Color.orange.opacity(0.35), radius: 10, y: 4)
             }
 
         case .completed:
@@ -489,13 +473,11 @@ struct TripDetailView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
-        .padding(16)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(color.opacity(0.2), lineWidth: 1)
-        )
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(color.opacity(0.2), lineWidth: 1))
     }
 }
 

@@ -317,7 +317,7 @@ struct FleetFuelAnalyticsView: View {
                         LinearGradient(colors: [.blue, .blue.opacity(0.45)],
                                        startPoint: .top, endPoint: .bottom)
                     )
-                    .cornerRadius(6)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     .annotation(position: .top) {
                         if point.distance > 0 {
                             Text(String(format: "%.0f", point.distance))
@@ -387,7 +387,7 @@ struct FleetFuelAnalyticsView: View {
                             .foregroundStyle(LinearGradient(
                                 colors: [.orange, .orange.opacity(0.4)],
                                 startPoint: .top, endPoint: .bottom))
-                            .cornerRadius(6)
+                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                             .annotation(position: .top) {
                                 if point.cost > 0 {
                                     Text("₹\(Int(point.cost))")
@@ -400,7 +400,7 @@ struct FleetFuelAnalyticsView: View {
                             .foregroundStyle(LinearGradient(
                                 colors: [.orange, .orange.opacity(0.4)],
                                 startPoint: .top, endPoint: .bottom))
-                            .cornerRadius(6)
+                            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                             .annotation(position: .top) {
                                 if point.liters > 0 {
                                     Text(String(format: "%.1fL", point.liters))

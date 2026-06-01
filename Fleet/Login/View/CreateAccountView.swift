@@ -29,18 +29,18 @@ struct CreateAccountView: View {
 
                     Text("Create Account")
                         .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(Color.primary)
+                        .foregroundStyle(Color.primary)
 
                     Text("Join GoFleet today")
                         .font(.system(size: 15))
-                        .foregroundColor(Color.secondary)
+                        .foregroundStyle(Color.secondary)
                         .padding(.top, 4)
 
                     Spacer().frame(height: 32)
 
                     Text("SELECT YOUR ROLE")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(Color.secondary)
+                        .foregroundStyle(Color.secondary)
                         .kerning(1.2)
 
                     Spacer().frame(height: 16)
@@ -64,26 +64,26 @@ struct CreateAccountView: View {
 
                     VStack(spacing: 14) {
                         // Full Name
-                        TextField("", text: $fullName, prompt: Text("Full Name").foregroundColor(Color(.placeholderText)))
-                            .foregroundColor(Color.primary)
+                        TextField("", text: $fullName, prompt: Text("Full Name").foregroundStyle(Color(.placeholderText)))
+                            .foregroundStyle(Color.primary)
                             .padding(.horizontal, 18)
                             .frame(height: 56)
                             .background(Color(.secondarySystemBackground))
-                            .cornerRadius(14)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14)
                                     .stroke(Color(.separator), lineWidth: 1)
                             )
 
                         // Email
-                        TextField("", text: $email, prompt: Text("Email address").foregroundColor(Color(.placeholderText)))
+                        TextField("", text: $email, prompt: Text("Email address").foregroundStyle(Color(.placeholderText)))
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
-                            .foregroundColor(Color.primary)
+                            .foregroundStyle(Color.primary)
                             .padding(.horizontal, 18)
                             .frame(height: 56)
                             .background(Color(.secondarySystemBackground))
-                            .cornerRadius(14)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14)
                                     .stroke(Color(.separator), lineWidth: 1)
@@ -92,21 +92,21 @@ struct CreateAccountView: View {
                         // Password
                         HStack {
                             if isPasswordVisible {
-                                TextField("", text: $password, prompt: Text("Password").foregroundColor(Color(.placeholderText)))
-                                    .foregroundColor(Color.primary)
+                                TextField("", text: $password, prompt: Text("Password").foregroundStyle(Color(.placeholderText)))
+                                    .foregroundStyle(Color.primary)
                             } else {
-                                SecureField("", text: $password, prompt: Text("Password").foregroundColor(Color(.placeholderText)))
-                                    .foregroundColor(Color.primary)
+                                SecureField("", text: $password, prompt: Text("Password").foregroundStyle(Color(.placeholderText)))
+                                    .foregroundStyle(Color.primary)
                             }
                             Button(action: { isPasswordVisible.toggle() }) {
                                 Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
-                                    .foregroundColor(Color.secondary)
+                                    .foregroundStyle(Color.secondary)
                             }
                         }
                         .padding(.horizontal, 18)
                         .frame(height: 56)
                         .background(Color(.secondarySystemBackground))
-                        .cornerRadius(14)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: 14)
                                 .stroke(Color(.separator), lineWidth: 1)
@@ -137,11 +137,11 @@ struct CreateAccountView: View {
                                         .font(.system(size: 18, weight: .semibold))
                                 }
                             }
-                            .foregroundColor(isButtonDisabled ? Color(.tertiaryLabel) : Color(.systemBackground))
+                            .foregroundStyle(isButtonDisabled ? Color(.tertiaryLabel) : Color(.systemBackground))
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
                             .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.teal)
-                            .cornerRadius(16)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                         }
                         .disabled(authViewModel.isLoading || isButtonDisabled)
                     }
@@ -164,11 +164,11 @@ struct SquareRoleCardView: View {
         VStack(spacing: 8) {
             Image(systemName: item.iconName)
                 .font(.system(size: 20))
-                .foregroundColor(isSelected ? Color.teal : Color.secondary)
+                .foregroundStyle(isSelected ? Color.teal : Color.secondary)
 
             Text(item.roleName)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(isSelected ? Color.teal : Color.secondary)
+                .foregroundStyle(isSelected ? Color.teal : Color.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
@@ -179,7 +179,7 @@ struct SquareRoleCardView: View {
             ? Color.teal.opacity(0.12)
             : Color(.systemBackground)
         )
-        .cornerRadius(12)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(isSelected ? Color.teal : Color(.opaqueSeparator), lineWidth: 1.5)

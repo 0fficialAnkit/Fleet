@@ -29,7 +29,7 @@ struct AddMaintenanceView: View {
 
                 Form {
                     // Vehicle picker
-                    Section(header: Text("Vehicle").foregroundColor(Color.secondary)) {
+                    Section(header: Text("Vehicle").foregroundStyle(Color.secondary)) {
                         Picker("Select Vehicle", selection: $selectedVehicleId) {
                             Text("Select a vehicle").tag(UUID?.none)
                             ForEach(viewModel.vehicles) { vehicle in
@@ -37,16 +37,16 @@ struct AddMaintenanceView: View {
                                     .tag(UUID?.some(vehicle.id))
                             }
                         }
-                        .foregroundColor(Color.primary)
+                        .foregroundStyle(Color.primary)
                     }
                     .listRowBackground(Color(.systemBackground))
 
                     // Assign to Maintenance Staff
-                    Section(header: Text("Assign To").foregroundColor(Color.secondary)) {
+                    Section(header: Text("Assign To").foregroundStyle(Color.secondary)) {
                         if viewModel.maintenanceStaff.isEmpty {
                             Text("No maintenance staff found. Add staff in Supabase.")
                                 .font(.caption)
-                                .foregroundColor(Color(.tertiaryLabel))
+                                .foregroundStyle(Color(.tertiaryLabel))
                         } else {
                             Picker("Assign to", selection: $selectedAssignedTo) {
                                 Text("Unassigned").tag(UUID?.none)
@@ -54,14 +54,14 @@ struct AddMaintenanceView: View {
                                     Text(staff.fullName).tag(UUID?.some(staff.id))
                                 }
                             }
-                            .foregroundColor(Color.primary)
+                            .foregroundStyle(Color.primary)
                         }
                     }
                     .listRowBackground(Color(.systemBackground))
 
                     // Link to Work Order (optional)
                     if !viewModel.workOrders.isEmpty {
-                        Section(header: Text("Link Work Order (Optional)").foregroundColor(Color.secondary)) {
+                        Section(header: Text("Link Work Order (Optional)").foregroundStyle(Color.secondary)) {
                             Picker("Work Order", selection: $selectedWorkOrderId) {
                                 Text("None").tag(UUID?.none)
                                 ForEach(viewModel.workOrders) { wo in
@@ -69,39 +69,39 @@ struct AddMaintenanceView: View {
                                         .tag(UUID?.some(wo.id))
                                 }
                             }
-                            .foregroundColor(Color.primary)
+                            .foregroundStyle(Color.primary)
                         }
                         .listRowBackground(Color(.systemBackground))
                     }
 
                     // Task Details
-                    Section(header: Text("Task Details").foregroundColor(Color.secondary)) {
+                    Section(header: Text("Task Details").foregroundStyle(Color.secondary)) {
                         Picker("Task Type", selection: $selectedTaskType) {
                             ForEach(MaintenanceTaskType.allCases, id: \.self) { type in
                                 Text(type.rawValue.replacingOccurrences(of: "_", with: " ").capitalized)
                                     .tag(type)
                             }
                         }
-                        .foregroundColor(Color.primary)
+                        .foregroundStyle(Color.primary)
 
-                        TextField("", text: $description, prompt: Text("Description").foregroundColor(Color(.placeholderText)))
-                            .foregroundColor(Color.primary)
+                        TextField("", text: $description, prompt: Text("Description").foregroundStyle(Color(.placeholderText)))
+                            .foregroundStyle(Color.primary)
                             
                         Picker("Schedule By", selection: $scheduleType) {
                             ForEach(MaintenanceScheduleType.allCases) { type in
                                 Text(type.rawValue).tag(type)
                             }
                         }
-                        .foregroundColor(Color.primary)
+                        .foregroundStyle(Color.primary)
 
                         if scheduleType == .date {
                             DatePicker("Scheduled Date", selection: $scheduledDate, displayedComponents: .date)
-                                .foregroundColor(Color.primary)
+                                .foregroundStyle(Color.primary)
                                 .tint(Color.teal)
                         } else if scheduleType == .mileage {
                             TextField("Target Mileage (km)", text: $targetMileage)
                                 .keyboardType(.numberPad)
-                                .foregroundColor(Color.primary)
+                                .foregroundStyle(Color.primary)
                         } else if scheduleType == .interval {
                             Picker("Interval (Months)", selection: $serviceIntervalMonths) {
                                 Text("1 Month").tag(1)
@@ -109,7 +109,7 @@ struct AddMaintenanceView: View {
                                 Text("6 Months").tag(6)
                                 Text("12 Months").tag(12)
                             }
-                            .foregroundColor(Color.primary)
+                            .foregroundStyle(Color.primary)
                         }
                     }
                     .listRowBackground(Color(.systemBackground))
@@ -119,7 +119,7 @@ struct AddMaintenanceView: View {
                         Section {
                             Text(err)
                                 .font(.caption)
-                                .foregroundColor(Color.red)
+                                .foregroundStyle(Color.red)
                         }
                         .listRowBackground(Color(.systemBackground))
                     }
@@ -132,7 +132,7 @@ struct AddMaintenanceView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundColor(Color.teal)
+                        .foregroundStyle(Color.teal)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -175,7 +175,7 @@ struct AddMaintenanceView: View {
                             isSaving = false
                         }
                     }
-                    .foregroundColor(Color.teal)
+                    .foregroundStyle(Color.teal)
                     .bold()
                     .disabled(!isFormValid || isSaving)
                 }
@@ -186,7 +186,7 @@ struct AddMaintenanceView: View {
                         Color.black.opacity(0.4).ignoresSafeArea()
                         ProgressView("Saving…")
                             .tint(.white)
-                            .foregroundColor(.white)
+                            .foregroundStyle(.white)
                             .padding(32)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     }
