@@ -570,9 +570,20 @@ struct TaskDetailSheet: View {
     @State private var estimatedDuration: String = ""
     @State private var extraCost: String = ""
     @State private var inventoryItems: [Inventory] = []
-    @State private var selectedParts: Set<UUID> = []
+    @State private var partQuantities: [UUID: Int] = [:]
     @State private var isCompleted = false
     @Environment(\.dismiss) private var dismiss
+
+    private var partsCost: Double {
+        partQuantities.reduce(0) { total, entry in
+            let item = inventoryItems.first { $0.id == entry.key }
+            return total + (item?.unitCost ?? 0) * Double(entry.value)
+        }
+    }
+
+    private var totalCost: Double {
+        (Double(laborCost) ?? 0) + partsCost + (Double(extraCost) ?? 0)
+    }
 
     var body: some View {
         ZStack {
@@ -835,45 +846,121 @@ struct TaskDetailSheet: View {
                                 } else {
                                     VStack(spacing: 0) {
                                         ForEach(inventoryItems) { item in
-                                            Button {
-                                                withAnimation(.spring(response: 0.3)) {
-                                                    if selectedParts.contains(item.id) {
-                                                        selectedParts.remove(item.id)
-                                                    } else {
-                                                        selectedParts.insert(item.id)
-                                                    }
-                                                }
-                                            } label: {
+                                            VStack(spacing: 8) {
                                                 HStack(spacing: 14) {
-                                                    Image(systemName: selectedParts.contains(item.id) ? "checkmark.circle.fill" : "circle")
-                                                        .font(.system(size: 20))
-                                                        .foregroundStyle(selectedParts.contains(item.id) ? Color.brown : Color(.tertiaryLabel))
+                                                    Image(systemName: "gearshape.fill")
+                                                        .font(.system(size: 16))
+                                                        .foregroundStyle(Color.brown)
 
                                                     VStack(alignment: .leading, spacing: 2) {
                                                         Text(item.partName ?? "Unknown Part")
                                                             .font(.subheadline.weight(.medium))
                                                             .foregroundStyle(Color.primary)
-                                                        Text("Stock: \(item.stockQuantity ?? 0)")
+                                                        Text("Stock: \(item.stockQuantity ?? 0) · \u{20B9}\(String(format: "%.0f", item.unitCost ?? 0))/unit")
                                                             .font(.caption)
                                                             .foregroundStyle(Color.secondary)
                                                     }
 
                                                     Spacer()
 
-                                                    if let cost = item.unitCost {
-                                                        Text("\u{20B9}\(String(format: "%.0f", cost))")
-                                                            .font(.subheadline.weight(.semibold))
+                                                    // Quantity stepper
+                                                    HStack(spacing: 10) {
+                                                        Button {
+                                                            let current = partQuantities[item.id] ?? 0
+                                                            if current > 0 {
+                                                                withAnimation(.spring(response: 0.25)) {
+                                                                    partQuantities[item.id] = current - 1
+                                                                    if partQuantities[item.id] == 0 {
+                                                                        partQuantities.removeValue(forKey: item.id)
+                                                                    }
+                                                                }
+                                                            }
+                                                        } label: {
+                                                            Image(systemName: "minus.circle.fill")
+                                                                .font(.system(size: 22))
+                                                                .foregroundStyle((partQuantities[item.id] ?? 0) > 0 ? Color.brown : Color(.tertiaryLabel))
+                                                        }
+
+                                                        Text("\(partQuantities[item.id] ?? 0)")
+                                                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                                                            .frame(width: 28)
+                                                            .foregroundStyle(Color.primary)
+
+                                                        Button {
+                                                            let current = partQuantities[item.id] ?? 0
+                                                            let maxQty = item.stockQuantity ?? 0
+                                                            if current < maxQty {
+                                                                withAnimation(.spring(response: 0.25)) {
+                                                                    partQuantities[item.id] = current + 1
+                                                                }
+                                                            }
+                                                        } label: {
+                                                            Image(systemName: "plus.circle.fill")
+                                                                .font(.system(size: 22))
+                                                                .foregroundStyle((partQuantities[item.id] ?? 0) < (item.stockQuantity ?? 0) ? Color.brown : Color(.tertiaryLabel))
+                                                        }
+                                                    }
+                                                }
+
+                                                // Show subtotal if qty > 0
+                                                if let qty = partQuantities[item.id], qty > 0 {
+                                                    HStack {
+                                                        Spacer()
+                                                        Text("\(qty) × \u{20B9}\(String(format: "%.0f", item.unitCost ?? 0)) = \u{20B9}\(String(format: "%.0f", Double(qty) * (item.unitCost ?? 0)))")
+                                                            .font(.caption.weight(.medium))
                                                             .foregroundStyle(Color.brown)
                                                     }
                                                 }
-                                                .padding(.vertical, 10)
                                             }
-                                            .buttonStyle(.plain)
+                                            .padding(.vertical, 10)
 
                                             if item.id != inventoryItems.last?.id {
                                                 Divider().background(Color(.separator))
                                             }
                                         }
+                                    }
+                                }
+                            }
+
+                            // MARK: Total Cost Summary
+                            SheetSection(title: "Total Cost") {
+                                VStack(spacing: 10) {
+                                    HStack {
+                                        Text("Labour Cost")
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.secondary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", Double(laborCost) ?? 0))")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                    }
+                                    HStack {
+                                        Text("Parts Cost")
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.secondary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", partsCost))")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                    }
+                                    HStack {
+                                        Text("Extra Cost")
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.secondary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", Double(extraCost) ?? 0))")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                    }
+                                    Divider()
+                                    HStack {
+                                        Text("Total")
+                                            .font(.headline)
+                                            .foregroundStyle(Color.primary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", totalCost))")
+                                            .font(.headline)
+                                            .foregroundStyle(Color.brown)
                                     }
                                 }
                             }
@@ -966,8 +1053,19 @@ struct WorkOrderDetailSheet: View {
     @State private var extraCostInput = ""
     @State private var serviceNotes = ""
     @State private var inventoryItems: [Inventory] = []
-    @State private var selectedParts: Set<UUID> = []
+    @State private var partQuantities: [UUID: Int] = [:]
     @Environment(\.dismiss) private var dismiss
+
+    private var partsCost: Double {
+        partQuantities.reduce(0) { total, entry in
+            let item = inventoryItems.first { $0.id == entry.key }
+            return total + (item?.unitCost ?? 0) * Double(entry.value)
+        }
+    }
+
+    private var totalCost: Double {
+        (Double(laborCostInput) ?? 0) + partsCost + (Double(extraCostInput) ?? 0)
+    }
 
     private var currentWO: ScheduledWorkOrder {
         viewModel.allWorkOrders.first(where: { $0.id == workOrder.id }) ?? workOrder
@@ -1155,40 +1253,73 @@ struct WorkOrderDetailSheet: View {
                                 } else {
                                     VStack(spacing: 0) {
                                         ForEach(inventoryItems) { item in
-                                            Button {
-                                                withAnimation(.spring(response: 0.3)) {
-                                                    if selectedParts.contains(item.id) {
-                                                        selectedParts.remove(item.id)
-                                                    } else {
-                                                        selectedParts.insert(item.id)
-                                                    }
-                                                }
-                                            } label: {
+                                            VStack(spacing: 8) {
                                                 HStack(spacing: 14) {
-                                                    Image(systemName: selectedParts.contains(item.id) ? "checkmark.circle.fill" : "circle")
-                                                        .font(.system(size: 20))
-                                                        .foregroundStyle(selectedParts.contains(item.id) ? Color.brown : Color(.tertiaryLabel))
+                                                    Image(systemName: "gearshape.fill")
+                                                        .font(.system(size: 16))
+                                                        .foregroundStyle(Color.brown)
 
                                                     VStack(alignment: .leading, spacing: 2) {
                                                         Text(item.partName ?? "Unknown Part")
                                                             .font(.subheadline.weight(.medium))
                                                             .foregroundStyle(Color.primary)
-                                                        Text("Stock: \(item.stockQuantity ?? 0)")
+                                                        Text("Stock: \(item.stockQuantity ?? 0) · \u{20B9}\(String(format: "%.0f", item.unitCost ?? 0))/unit")
                                                             .font(.caption)
                                                             .foregroundStyle(Color.secondary)
                                                     }
 
                                                     Spacer()
 
-                                                    if let cost = item.unitCost {
-                                                        Text("\u{20B9}\(String(format: "%.0f", cost))")
-                                                            .font(.subheadline.weight(.semibold))
+                                                    // Quantity stepper
+                                                    HStack(spacing: 10) {
+                                                        Button {
+                                                            let current = partQuantities[item.id] ?? 0
+                                                            if current > 0 {
+                                                                withAnimation(.spring(response: 0.25)) {
+                                                                    partQuantities[item.id] = current - 1
+                                                                    if partQuantities[item.id] == 0 {
+                                                                        partQuantities.removeValue(forKey: item.id)
+                                                                    }
+                                                                }
+                                                            }
+                                                        } label: {
+                                                            Image(systemName: "minus.circle.fill")
+                                                                .font(.system(size: 22))
+                                                                .foregroundStyle((partQuantities[item.id] ?? 0) > 0 ? Color.brown : Color(.tertiaryLabel))
+                                                        }
+
+                                                        Text("\(partQuantities[item.id] ?? 0)")
+                                                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                                                            .frame(width: 28)
+                                                            .foregroundStyle(Color.primary)
+
+                                                        Button {
+                                                            let current = partQuantities[item.id] ?? 0
+                                                            let maxQty = item.stockQuantity ?? 0
+                                                            if current < maxQty {
+                                                                withAnimation(.spring(response: 0.25)) {
+                                                                    partQuantities[item.id] = current + 1
+                                                                }
+                                                            }
+                                                        } label: {
+                                                            Image(systemName: "plus.circle.fill")
+                                                                .font(.system(size: 22))
+                                                                .foregroundStyle((partQuantities[item.id] ?? 0) < (item.stockQuantity ?? 0) ? Color.brown : Color(.tertiaryLabel))
+                                                        }
+                                                    }
+                                                }
+
+                                                // Show subtotal if qty > 0
+                                                if let qty = partQuantities[item.id], qty > 0 {
+                                                    HStack {
+                                                        Spacer()
+                                                        Text("\(qty) × \u{20B9}\(String(format: "%.0f", item.unitCost ?? 0)) = \u{20B9}\(String(format: "%.0f", Double(qty) * (item.unitCost ?? 0)))")
+                                                            .font(.caption.weight(.medium))
                                                             .foregroundStyle(Color.brown)
                                                     }
                                                 }
-                                                .padding(.vertical, 10)
                                             }
-                                            .buttonStyle(.plain)
+                                            .padding(.vertical, 10)
 
                                             if item.id != inventoryItems.last?.id {
                                                 Divider().background(Color(.separator))
@@ -1204,6 +1335,49 @@ struct WorkOrderDetailSheet: View {
                                     .lineLimit(3...6)
                                     .font(.body)
                                     .foregroundStyle(Color.primary)
+                            }
+
+                            // MARK: Total Cost Summary
+                            SheetSection(title: "Total Cost") {
+                                VStack(spacing: 10) {
+                                    HStack {
+                                        Text("Labour Cost")
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.secondary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", Double(laborCostInput) ?? 0))")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                    }
+                                    HStack {
+                                        Text("Parts Cost")
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.secondary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", partsCost))")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                    }
+                                    HStack {
+                                        Text("Extra Cost")
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.secondary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", Double(extraCostInput) ?? 0))")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                    }
+                                    Divider()
+                                    HStack {
+                                        Text("Total")
+                                            .font(.headline)
+                                            .foregroundStyle(Color.primary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", totalCost))")
+                                            .font(.headline)
+                                            .foregroundStyle(Color.brown)
+                                    }
+                                }
                             }
 
                             // Mark as Complete Button
