@@ -475,8 +475,8 @@ final class MaintenanceSchedulerViewModel {
         if let i = allTasks.firstIndex(where: { $0.id == id }) {
             allTasks[i].status = status
 
-            // Write back to Supabase
-            let sourceId = allTasks[i].sourceTaskId ?? id
+            let task = allTasks[i] // Capture task safely outside the Task block
+            let sourceId = task.sourceTaskId ?? id
             let dbStatus: MaintenanceTaskStatus
             switch status {
             case .pending: dbStatus = .pending
@@ -486,9 +486,8 @@ final class MaintenanceSchedulerViewModel {
             }
             isUpdating = true
             Task {
-                try? await MaintenanceTaskService.updateTaskStatus(id: sourceId, status: dbStatus)
                 if status == .completed {
-                    let task = allTasks[i]
+                    try? await MaintenanceTaskService.updateTaskStatusWithCompletion(id: sourceId, status: dbStatus, completedAt: Date())
                     if let vehicle = vehicles.first(where: { $0.licensePlate == task.vehicleNumber }) {
                         let cost = Double(task.laborCost ?? "") ?? nil
                         let history = MaintenanceHistory(
@@ -501,6 +500,8 @@ final class MaintenanceSchedulerViewModel {
                         )
                         try? await MaintenanceHistoryService.createHistory(history)
                     }
+                } else {
+                    try? await MaintenanceTaskService.updateTaskStatus(id: sourceId, status: dbStatus)
                 }
                 // Clear override and unblock after DB write completes
                 try? await Task.sleep(for: .seconds(2))
@@ -529,9 +530,10 @@ final class MaintenanceSchedulerViewModel {
         if let i = allWorkOrders.firstIndex(where: { $0.id == id }) {
             allWorkOrders[i].status = status
 
+            let wo = allWorkOrders[i]
             isUpdating = true
             // Write back to Supabase
-            if let sourceId = allWorkOrders[i].sourceWorkOrderId {
+            if let sourceId = wo.sourceWorkOrderId {
                 Task {
                     if status == .completed {
                         try? await WorkOrderService.updateWorkOrderStatusWithCompletion(id: sourceId, status: status, completedAt: Date())
