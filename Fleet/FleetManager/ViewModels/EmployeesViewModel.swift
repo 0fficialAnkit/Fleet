@@ -95,14 +95,14 @@ final class EmployeesViewModel {
         await loadData()
     }
 
-    func deleteEmployee(_ profile: Profile) {
-        Task {
-            do {
-                try await UserService.deleteUser(id: profile.id)
-                await loadData()
-            } catch {
-                errorMessage = error.localizedDescription
-            }
+    func deleteEmployee(_ profile: Profile) async throws {
+        errorMessage = nil
+        do {
+            try await UserService.deleteUser(id: profile.id)
+            await loadData()
+        } catch {
+            errorMessage = error.localizedDescription
+            throw error
         }
     }
 

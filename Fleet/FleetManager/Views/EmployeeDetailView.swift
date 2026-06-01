@@ -6,6 +6,7 @@ struct EmployeeDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var isShowingEditSheet = false
+    @State private var deleteError: String?
 
     @State private var trips:    [Trip] = []
     @State private var tasks:    [MaintenanceTask] = []
@@ -181,8 +182,14 @@ struct EmployeeDetailView: View {
                         Label("Edit", systemImage: "pencil")
                     }
                     Button(role: .destructive) {
-                        viewModel.deleteEmployee(currentProfile)
-                        dismiss()
+                        Task {
+                            do {
+                                try await viewModel.deleteEmployee(currentProfile)
+                                dismiss()
+                            } catch {
+                                deleteError = error.localizedDescription
+                            }
+                        }
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }
@@ -193,6 +200,16 @@ struct EmployeeDetailView: View {
         }
         .sheet(isPresented: $isShowingEditSheet) {
             EditEmployeeView(profile: currentProfile, viewModel: viewModel)
+        }
+        .alert("Unable to Delete Driver/Employee", isPresented: Binding(
+            get: { deleteError != nil },
+            set: { if !$0 { deleteError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            if let msg = deleteError {
+                Text(msg)
+            }
         }
         .task { await loadHistory() }
     }

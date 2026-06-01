@@ -26,12 +26,29 @@ struct NotificationsView: View {
                 } else {
                     List {
                         ForEach(viewModel.notifications) { notification in
-                            NotificationRow(notification: notification) {
-                                viewModel.markAsRead(notification)
+                            if notification.referenceId != nil {
+                                NavigationLink {
+                                    NotificationDetailDestination(notification: notification)
+                                        .onAppear {
+                                            viewModel.markAsRead(notification)
+                                        }
+                                } label: {
+                                    NotificationRowContent(notification: notification)
+                                }
+                                .listRowBackground(Color.clear)
+                                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                                .listRowSeparator(.hidden)
+                            } else {
+                                Button {
+                                    viewModel.markAsRead(notification)
+                                } label: {
+                                    NotificationRowContent(notification: notification)
+                                }
+                                .buttonStyle(.plain)
+                                .listRowBackground(Color.clear)
+                                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                                .listRowSeparator(.hidden)
                             }
-                            .listRowBackground(Color.clear)
-                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                            .listRowSeparator(.hidden)
                         }
                     }
                     .refreshable { await viewModel.loadData() }
@@ -67,9 +84,40 @@ struct NotificationsView: View {
     }
 }
 
-struct NotificationRow: View {
+struct NotificationDetailDestination: View {
     let notification: Notification
-    let onTap: () -> Void
+    @State private var trip: Trip?
+    @State private var isLoading = true
+
+    var body: some View {
+        Group {
+            if isLoading {
+                ProgressView("Loading...")
+            } else if let trip = trip {
+                TripDetailView(
+                    trip: trip,
+                    onStart: { id, vId, notes, urls in
+                        Task { try? await TripService.startTrip(id: id) }
+                    },
+                    onEnd: { id, vId, notes, urls in
+                        Task { try? await TripService.endTrip(id: id) }
+                    }
+                )
+            } else {
+                Text("Details not found")
+            }
+        }
+        .task {
+            if let tripId = notification.referenceId {
+                trip = try? await TripService.fetchTrip(id: tripId)
+            }
+            isLoading = false
+        }
+    }
+}
+
+struct NotificationRowContent: View {
+    let notification: Notification
 
     var iconName: String {
         switch notification.type {
@@ -92,42 +140,39 @@ struct NotificationRow: View {
     }
 
     var body: some View {
-        Button(action: onTap) {
-            HStack(alignment: .top, spacing: 16) {
-                Image(systemName: iconName)
-                    .font(.title2)
-                    .foregroundColor(iconColor)
-                    .padding(.top, 4)
+        HStack(alignment: .top, spacing: 16) {
+            Image(systemName: iconName)
+                .font(.title2)
+                .foregroundColor(iconColor)
+                .padding(.top, 4)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(notification.title ?? "Notification")
-                            .font(.body.bold())
-                            .foregroundColor(notification.isRead ? Color.secondary : Color.primary)
-                        Spacer()
-                        if let date = notification.createdAt {
-                            Text(date.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
-                                .foregroundColor(Color(.tertiaryLabel))
-                        }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(notification.title ?? "Notification")
+                        .font(.body.bold())
+                        .foregroundColor(notification.isRead ? Color.secondary : Color.primary)
+                    Spacer()
+                    if let date = notification.createdAt {
+                        Text(date.formatted(date: .abbreviated, time: .shortened))
+                            .font(.caption)
+                            .foregroundColor(Color(.tertiaryLabel))
                     }
-
-                    Text(notification.message ?? "")
-                        .font(.subheadline)
-                        .foregroundColor(Color.secondary)
-                        .multilineTextAlignment(.leading)
                 }
+
+                Text(notification.message ?? "")
+                    .font(.subheadline)
+                    .foregroundColor(Color.secondary)
+                    .multilineTextAlignment(.leading)
             }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(notification.isRead ? Color.white.opacity(0.02) : Color.white.opacity(0.06))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(notification.isRead ? Color.clear : iconColor.opacity(0.3), lineWidth: 1)
-            )
         }
-        .buttonStyle(.plain)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(notification.isRead ? Color.white.opacity(0.02) : Color.white.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(notification.isRead ? Color.clear : iconColor.opacity(0.3), lineWidth: 1)
+        )
     }
 }

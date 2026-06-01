@@ -125,6 +125,13 @@ final class MaintenanceSchedulerViewModel {
     var errorMessage: String?
     var currentUserId: UUID?
 
+    /// Local status overrides: keyed by source entity UUID
+    /// Prevents realtime re-fetches from reverting in-flight status changes
+    private var taskStatusOverrides: [UUID: TaskDisplayStatus] = [:]
+    private var woStatusOverrides: [UUID: WorkOrderStatus] = [:]
+    /// Flag to block realtime reload while a local mutation is being written to DB
+    private var isUpdating = false
+
     private var rawTasks: [MaintenanceTask] = []
     private var rawWorkOrders: [WorkOrder] = []
     private var rawIssueReports: [IssueReportRecord] = []
@@ -177,9 +184,24 @@ final class MaintenanceSchedulerViewModel {
 
     func setupRealtime() {
         let rt = RealtimeManager.shared
-        rt.addMaintenanceTasksChangeHandler { [weak self] in Task { await self?.loadData() } }
-        rt.addWorkOrdersChangeHandler { [weak self] in Task { await self?.loadData() } }
-        rt.addIssueReportsChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addMaintenanceTasksChangeHandler { [weak self] in
+            Task {
+                guard let self, !self.isUpdating else { return }
+                await self.loadData()
+            }
+        }
+        rt.addWorkOrdersChangeHandler { [weak self] in
+            Task {
+                guard let self, !self.isUpdating else { return }
+                await self.loadData()
+            }
+        }
+        rt.addIssueReportsChangeHandler { [weak self] in
+            Task {
+                guard let self, !self.isUpdating else { return }
+                await self.loadData()
+            }
+        }
     }
 
     // MARK: - Build UI display models from Supabase data
@@ -192,13 +214,18 @@ final class MaintenanceSchedulerViewModel {
             let vehicle = vehicles.first { $0.id == task.vehicleId }
             let scheduledBy = profiles.first { $0.id == task.scheduledBy }
 
+            // Use local override if we have one (in-flight mutation)
             let displayStatus: TaskDisplayStatus
-            switch task.status {
-            case .pending: displayStatus = .pending
-            case .inProgress: displayStatus = .inProgress
-            case .completed: displayStatus = .completed
-            case .cancelled: displayStatus = .delayed
-            case .none: displayStatus = .pending
+            if let override = taskStatusOverrides[task.id] {
+                displayStatus = override
+            } else {
+                switch task.status {
+                case .pending: displayStatus = .pending
+                case .inProgress: displayStatus = .inProgress
+                case .completed: displayStatus = .completed
+                case .cancelled: displayStatus = .delayed
+                case .none: displayStatus = .pending
+                }
             }
 
             let priority: TaskPriority
@@ -212,7 +239,7 @@ final class MaintenanceSchedulerViewModel {
             }
 
             return ScheduledTask(
-                id: UUID(),
+                id: task.id,
                 vehicleNumber: vehicle?.licensePlate ?? "Unknown",
                 vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
                 taskType: task.taskType ?? .other,
@@ -237,13 +264,20 @@ final class MaintenanceSchedulerViewModel {
             let vehicle = vehicles.first { $0.id == wo.vehicleId }
             let createdBy = profiles.first { $0.id == wo.createdBy }
 
+            let savedTime = UserDefaults.standard.double(forKey: "WO_SCHED_\(wo.id.uuidString)")
+            let scheduledDate = savedTime > 0 ? Date(timeIntervalSince1970: savedTime) : nil
+
+            // Use local override if we have one
+            let status = woStatusOverrides[wo.id] ?? wo.status ?? .open
+
             return ScheduledWorkOrder(
-                id: UUID(),
+                id: wo.id,
                 vehicleNumber: vehicle?.licensePlate ?? "Unknown",
                 vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
                 priority: wo.priority ?? .medium,
-                status: wo.status ?? .open,
+                status: status,
                 createdAt: wo.createdAt ?? Date(),
+                scheduledDate: scheduledDate,
                 assignedBy: createdBy?.fullName ?? "Fleet Manager",
                 laborHours: "—",
                 laborCost: "—",
@@ -267,21 +301,30 @@ final class MaintenanceSchedulerViewModel {
             default: priority = .medium
             }
 
+            // Use local override if we have one
             let status: WorkOrderStatus
-            switch ir.status.lowercased() {
-            case "open", "assigned": status = .open
-            case "in_progress": status = .inProgress
-            case "resolved", "closed": status = .completed
-            default: status = .open
+            if let override = woStatusOverrides[ir.id] {
+                status = override
+            } else {
+                switch ir.status.lowercased() {
+                case "open", "assigned": status = .open
+                case "in_progress": status = .inProgress
+                case "resolved", "closed": status = .completed
+                default: status = .open
+                }
             }
 
+            let savedTime = UserDefaults.standard.double(forKey: "IR_SCHED_\(ir.id.uuidString)")
+            let scheduledDate = savedTime > 0 ? Date(timeIntervalSince1970: savedTime) : nil
+
             return ScheduledWorkOrder(
-                id: UUID(),
+                id: ir.id,
                 vehicleNumber: vehicle?.licensePlate ?? "Unknown",
                 vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
                 priority: priority,
                 status: status,
                 createdAt: ir.createdAt ?? Date(),
+                scheduledDate: scheduledDate,
                 assignedBy: reportedBy?.fullName ?? "Driver",
                 laborHours: "—",
                 laborCost: "—",
@@ -410,7 +453,13 @@ final class MaintenanceSchedulerViewModel {
     func scheduleWorkOrder(id: UUID, date: Date) {
         if let i = allWorkOrders.firstIndex(where: { $0.id == id }) {
             allWorkOrders[i].scheduledDate = date
-            // Status stays .open — no Supabase status update needed
+            
+            // Save to UserDefaults persistently
+            if let sourceWoId = allWorkOrders[i].sourceWorkOrderId {
+                UserDefaults.standard.set(date.timeIntervalSince1970, forKey: "WO_SCHED_\(sourceWoId.uuidString)")
+            } else if let sourceIrId = allWorkOrders[i].sourceIssueReportId {
+                UserDefaults.standard.set(date.timeIntervalSince1970, forKey: "IR_SCHED_\(sourceIrId.uuidString)")
+            }
         }
         if selectedWorkOrder?.id == id {
             selectedWorkOrder?.scheduledDate = date
@@ -420,21 +469,44 @@ final class MaintenanceSchedulerViewModel {
     // MARK: - Mutations
 
     func updateTaskStatus(id: UUID, to status: TaskDisplayStatus) {
+        // Store local override so rebuilds don't revert
+        taskStatusOverrides[id] = status
+
         if let i = allTasks.firstIndex(where: { $0.id == id }) {
             allTasks[i].status = status
 
-            // Write back to Supabase
-            if let sourceId = allTasks[i].sourceTaskId {
-                let dbStatus: MaintenanceTaskStatus
-                switch status {
-                case .pending: dbStatus = .pending
-                case .inProgress: dbStatus = .inProgress
-                case .completed: dbStatus = .completed
-                case .delayed, .critical: dbStatus = .pending
-                }
-                Task {
+            let task = allTasks[i] // Capture task safely outside the Task block
+            let sourceId = task.sourceTaskId ?? id
+            let dbStatus: MaintenanceTaskStatus
+            switch status {
+            case .pending: dbStatus = .pending
+            case .inProgress: dbStatus = .inProgress
+            case .completed: dbStatus = .completed
+            case .delayed, .critical: dbStatus = .pending
+            }
+            isUpdating = true
+            Task {
+                if status == .completed {
+                    try? await MaintenanceTaskService.updateTaskStatusWithCompletion(id: sourceId, status: dbStatus, completedAt: Date())
+                    if let vehicle = vehicles.first(where: { $0.licensePlate == task.vehicleNumber }) {
+                        let cost = Double(task.laborCost ?? "") ?? nil
+                        let history = MaintenanceHistory(
+                            id: UUID(),
+                            vehicleId: vehicle.id,
+                            workOrderId: nil,
+                            serviceDetails: "Task completed: \(task.taskType.rawValue) - \(task.description)",
+                            cost: cost,
+                            completedAt: Date()
+                        )
+                        try? await MaintenanceHistoryService.createHistory(history)
+                    }
+                } else {
                     try? await MaintenanceTaskService.updateTaskStatus(id: sourceId, status: dbStatus)
                 }
+                // Clear override and unblock after DB write completes
+                try? await Task.sleep(for: .seconds(2))
+                taskStatusOverrides.removeValue(forKey: id)
+                isUpdating = false
             }
         }
         if selectedTask?.id == id {
@@ -452,16 +524,19 @@ final class MaintenanceSchedulerViewModel {
     }
 
     func updateWorkOrderStatus(id: UUID, to status: WorkOrderStatus) {
+        // Store local override so rebuilds don't revert
+        woStatusOverrides[id] = status
+
         if let i = allWorkOrders.firstIndex(where: { $0.id == id }) {
             allWorkOrders[i].status = status
 
+            let wo = allWorkOrders[i]
+            isUpdating = true
             // Write back to Supabase
-            if let sourceId = allWorkOrders[i].sourceWorkOrderId {
+            if let sourceId = wo.sourceWorkOrderId {
                 Task {
-                    try? await WorkOrderService.updateWorkOrderStatus(id: sourceId, status: status)
-                    // If completed, create maintenance history
                     if status == .completed {
-                        let wo = allWorkOrders[i]
+                        try? await WorkOrderService.updateWorkOrderStatusWithCompletion(id: sourceId, status: status, completedAt: Date())
                         if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
                             let history = MaintenanceHistory(
                                 id: UUID(),
@@ -473,9 +548,14 @@ final class MaintenanceSchedulerViewModel {
                             )
                             try? await MaintenanceHistoryService.createHistory(history)
                         }
+                    } else {
+                        try? await WorkOrderService.updateWorkOrderStatus(id: sourceId, status: status)
                     }
+                    try? await Task.sleep(for: .seconds(2))
+                    woStatusOverrides.removeValue(forKey: id)
+                    isUpdating = false
                 }
-            } else if let sourceIrId = allWorkOrders[i].sourceIssueReportId, let uid = currentUserId {
+            } else if let sourceIrId = wo.sourceIssueReportId, let uid = currentUserId {
                 Task {
                     let statusStr: String
                     switch status {
@@ -486,6 +566,29 @@ final class MaintenanceSchedulerViewModel {
                     case .cancelled: statusStr = "closed"
                     }
                     try? await IssueReportService.updateIssueReport(id: sourceIrId, assignedTo: uid, status: statusStr)
+                    if status == .completed {
+                        if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                            let history = MaintenanceHistory(
+                                id: UUID(),
+                                vehicleId: vehicle.id,
+                                workOrderId: nil,
+                                serviceDetails: "Issue resolved: \(wo.vehicleIssue)",
+                                cost: nil,
+                                completedAt: Date()
+                            )
+                            try? await MaintenanceHistoryService.createHistory(history)
+                        }
+                    }
+                    try? await Task.sleep(for: .seconds(2))
+                    woStatusOverrides.removeValue(forKey: id)
+                    isUpdating = false
+                }
+            } else {
+                // No backend source — just clear after delay
+                Task {
+                    try? await Task.sleep(for: .seconds(2))
+                    woStatusOverrides.removeValue(forKey: id)
+                    isUpdating = false
                 }
             }
         }

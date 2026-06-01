@@ -1,8 +1,10 @@
 import SwiftUI
+internal import Auth
 
 struct VehiclesRootView: View {
     @State private var vehiclesViewModel = VehiclesViewModel()
     @State private var isShowingAddVehicle = false
+    @Environment(AuthViewModel.self) private var authViewModel
 
     var body: some View {
         ZStack {
@@ -29,8 +31,9 @@ struct VehiclesRootView: View {
             AddVehicleView(viewModel: vehiclesViewModel)
         }
         .task {
-            await vehiclesViewModel.loadData()
-            vehiclesViewModel.setupRealtime()
+            let adminId = authViewModel.currentUser?.id
+            await vehiclesViewModel.loadData(adminId: adminId)
+            vehiclesViewModel.setupRealtime(adminId: adminId)
         }
     }
 }

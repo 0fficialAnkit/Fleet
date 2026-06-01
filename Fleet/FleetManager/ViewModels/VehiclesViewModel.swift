@@ -10,28 +10,32 @@ final class VehiclesViewModel {
     var isLoading = false
     var errorMessage: String?
 
-    func setupRealtime() {
+    func setupRealtime(adminId: UUID? = nil) {
         let rt = RealtimeManager.shared
-        rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData() } }
-        rt.addProfilesChangeHandler { [weak self] in Task { await self?.loadData() } }
-        rt.addTripsChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData(adminId: adminId) } }
+        rt.addProfilesChangeHandler { [weak self] in Task { await self?.loadData(adminId: adminId) } }
+        rt.addTripsChangeHandler { [weak self] in Task { await self?.loadData(adminId: adminId) } }
     }
 
-    func loadData() async {
+    func loadData(adminId: UUID? = nil) async {
         isLoading = true
         errorMessage = nil
         do {
             async let v = VehicleService.fetchAllVehicles()
             async let p = ProfileService.fetchAllProfiles()
             async let t = TripService.fetchAllTrips()
-            vehicles = try await v
+            let allVehicles = try await v
             profiles = try await p
             trips = try await t
+            
+            if let adminId = adminId {
+                vehicles = allVehicles.filter { $0.adminId == adminId }
+            } else {
+                vehicles = allVehicles
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
-        
-
         
         isLoading = false
     }

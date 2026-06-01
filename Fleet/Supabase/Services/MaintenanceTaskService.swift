@@ -165,4 +165,42 @@ enum MaintenanceTaskService {
             throw error
         }
     }
+
+    /// Updates task status and sets completed_at timestamp in a single DB call.
+    static func updateTaskStatusWithCompletion(id: UUID, status: MaintenanceTaskStatus, completedAt: Date?) async throws {
+        struct StatusCompletionUpdate: Encodable {
+            let status: MaintenanceTaskStatus
+            let completed_at: Date?
+        }
+        do {
+            try await supabase
+                .from("maintenance_tasks")
+                .update(StatusCompletionUpdate(status: status, completed_at: completedAt))
+                .eq("id", value: id)
+                .execute()
+            print("[MaintenanceTaskService] updateTaskStatusWithCompletion(\(id)) → \(status.rawValue), completedAt=\(String(describing: completedAt)): OK")
+        } catch {
+            print("[MaintenanceTaskService] updateTaskStatusWithCompletion(\(id)) ERROR: \(error)")
+            throw error
+        }
+    }
+
+    /// Fetches all completed tasks for a user (permanent history).
+    static func fetchCompletedTasksForUser(assignedTo: UUID) async throws -> [MaintenanceTask] {
+        do {
+            let result: [MaintenanceTask] = try await supabase
+                .from("maintenance_tasks")
+                .select()
+                .eq("assigned_to", value: assignedTo)
+                .eq("status", value: MaintenanceTaskStatus.completed.rawValue)
+                .order("completed_at", ascending: false)
+                .execute()
+                .value
+            print("[MaintenanceTaskService] fetchCompletedTasksForUser(\(assignedTo)): \(result.count) records")
+            return result
+        } catch {
+            print("[MaintenanceTaskService] fetchCompletedTasksForUser(\(assignedTo)) ERROR: \(error)")
+            throw error
+        }
+    }
 }
