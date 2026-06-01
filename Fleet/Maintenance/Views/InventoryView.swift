@@ -152,21 +152,21 @@ struct InventoryView: View {
 
     private func loadInventory() async {
         isLoading = true
-        errorMessage = nil
-
-        async let items = try? InventoryService.fetchAllInventory()
-        async let tasks = try? MaintenanceTaskService.fetchAllTasks()
-        async let orders = try? WorkOrderService.fetchAllWorkOrders()
-
-        inventoryItems = (await items) ?? []
-        maintenanceTasks = (await tasks) ?? []
-        workOrders = (await orders) ?? []
-
-        forecasts = DemandForecastingService.forecast(
-            inventory: inventoryItems,
-            tasks: maintenanceTasks,
-            workOrders: workOrders
-        )
+        do {
+            async let items = InventoryService.fetchAllInventory()
+            async let tasks = MaintenanceTaskService.fetchAllTasks()
+            async let orders = WorkOrderService.fetchAllWorkOrders()
+            inventoryItems = try await items
+            maintenanceTasks = try await tasks
+            workOrders = try await orders
+            forecasts = DemandForecastingService.forecast(
+                inventory: inventoryItems,
+                tasks: maintenanceTasks,
+                workOrders: workOrders
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+        }
         isLoading = false
     }
 }

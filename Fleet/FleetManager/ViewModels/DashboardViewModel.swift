@@ -110,6 +110,11 @@ final class DashboardViewModel {
 
     var totalVehicles: Int { vehicles.count }
 
+    /// Vehicles fleet manager has explicitly sent to the service bay (status == .maintenance).
+    var inServiceVehicles: Int {
+        vehicles.filter { $0.status == .maintenance }.count
+    }
+
     var activeTrips: Int {
         trips.filter { $0.status == .active }.count
     }
