@@ -369,6 +369,17 @@ struct AddOrderView: View {
         }
     }
 
+    private func orderTypeIcon(_ type: OrderType) -> String {
+        switch type {
+        case .pickUpAndDrop:
+            return "arrow.left.arrow.right"
+        case .bulkOrderShip:
+            return "shippingbox.fill"
+        case .travel:
+            return "car.fill"
+        }
+    }
+
     private func locationRowLabel(
         iconColor: Color,
         caption: String,
