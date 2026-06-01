@@ -232,6 +232,15 @@ struct ReportDetailView: View {
                     }
                 }
 
+                // ── Compliance ────────────────────────────────────
+                if vehicle != nil {
+                    Section("Compliance & Reminders") {
+                        VehicleComplianceSection(vehicle: vehicle!, editable: false)
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                    }
+                }
+
                 // ── Last Trip ─────────────────────────────────────
                 if let trip = lastTrip {
                     Section("Last Trip on This Vehicle") {
@@ -395,8 +404,8 @@ struct ReportDetailView: View {
             isAssigning = true
             Task {
                 do {
-                    // 1. Update report status
-                    viewModel.update(reportId: report.id, assignedTo: staffId, status: .assigned)
+                    // 1. Update report status + record assignment time in-memory
+                    viewModel.update(reportId: report.id, assignedTo: staffId, status: .assigned, assignedAt: Date())
 
                     // 2. Create work order
                     let workOrderId = try await WorkOrderService.createWorkOrder(
@@ -655,7 +664,7 @@ struct ShareSheet: UIViewControllerRepresentable {
             driverName: "Ravi Kumar", driverLicenseNumber: "DL-9876",
             issueCategory: "Engine Problem", severity: .high,
             description: "Strange knocking sound from engine when accelerating above 60 km/h.\n\nLocation: On Highway\nDriveable: No ⚠️\nOdometer: 45230 km\nReported at: 29 May 2026, 9:57 PM",
-            submittedAt: Date(), assignedTo: nil, status: .open
+            submittedAt: Date(), assignedTo: nil, status: .open, issuePhotoUrl: nil, assignedAt: nil
         ),
         viewModel: ReportsViewModel()
     )
