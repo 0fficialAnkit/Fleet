@@ -130,7 +130,7 @@ final class EmployeesViewModel {
         let status = getOperationalStatusText(for: profile)
         switch status {
         case "On Trip", "Servicing":
-            return Color.blue
+            return Color.green
         case "Assigned":
             return Color.orange
         case "Idle":

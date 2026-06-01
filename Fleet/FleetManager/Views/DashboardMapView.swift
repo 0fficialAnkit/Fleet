@@ -49,19 +49,28 @@ struct DashboardMapView: View {
             mapCard
             bottomBadge
         }
-        .onAppear { locationManager.requestPermission() }
+        .onAppear {
+            locationManager.requestPermission()
+            // Fit on appear so the camera is always correct whether or not
+            // tripRoutes / vehicleLocations changed since last render.
+            let pins = makeDriverPins(from: vehicleLocations, activeTrips: activeTrips, profiles: profiles)
+            fitCamera(with: pins)
+        }
         .task(id: tripsKey) {
             await buildTripRoutes()
             // fitCamera() is triggered by onChange(of: tripRoutes) once @State is committed
         }
         .onChange(of: tripRoutes) { _, _ in
-            fitCamera()   // re-frame whenever routes are built or cleared
+            fitCamera(with: makeDriverPins(from: vehicleLocations,
+                                           activeTrips: activeTrips,
+                                           profiles: profiles))
         }
         .onChange(of: vehicleLocations) { _, newLocs in
-            if !newLocs.isEmpty {
-                lastLocationUpdate = Date()
-                fitCamera()   // include driver's live position in the visible frame
-            }
+            lastLocationUpdate = newLocs.isEmpty ? lastLocationUpdate : Date()
+            // Pass freshly-arrived pins directly — avoids stale self capture
+            fitCamera(with: makeDriverPins(from: newLocs,
+                                           activeTrips: activeTrips,
+                                           profiles: profiles))
         }
         .fullScreenCover(isPresented: $showFullscreen) {
             DashboardMapFullscreenView(
@@ -212,7 +221,9 @@ struct DashboardMapView: View {
 
     // MARK: - Camera
 
-    private func fitCamera() {
+    /// Fit the compact-card camera to show the route + provided driver pins.
+    /// Passing pins explicitly prevents stale-capture issues in onChange closures.
+    private func fitCamera(with pins: [DriverPin] = []) {
         var routeCoords = allPolylineCoords(from: tripRoutes)
         if routeCoords.isEmpty {
             routeCoords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] }
@@ -231,12 +242,13 @@ struct DashboardMapView: View {
             return
         }
 
-        // Try to frame route + all driver pins together
-        let combined = routeCoords + driverPins.map(\.coordinate)
+        // Frame route + driver pins together.
+        // Intercontinental check (> 40° lat / > 60° lon) filters simulator fake GPS
+        // thousands of km from the real route (e.g. Apple Park vs India).
+        let pinCoords  = pins.map(\.coordinate)
+        let combined   = routeCoords + pinCoords
         let fullRegion = boundingRegion(for: combined, padding: 1.4)
 
-        // If the combined region is intercontinental (> 40° lat or > 60° lon),
-        // the driver GPS is a simulator/fake location — just show the route.
         if fullRegion.span.latitudeDelta > 40 || fullRegion.span.longitudeDelta > 60 {
             cameraPosition = .region(boundingRegion(for: routeCoords, padding: 1.4))
         } else {
@@ -393,7 +405,7 @@ struct DashboardMapFullscreenView: View {
         }
         .onAppear {
             locationManager.requestPermission()
-            fitCamera()
+            fitCamera(with: driverPins)
         }
     }
 
@@ -437,7 +449,7 @@ struct DashboardMapFullscreenView: View {
 
     // MARK: - Camera
 
-    private func fitCamera() {
+    private func fitCamera(with pins: [DriverPin]) {
         var routeCoords = allPolylineCoords(from: tripRoutes)
         if routeCoords.isEmpty {
             routeCoords = tripRoutes.flatMap { [$0.pickupCoord, $0.dropoffCoord] }
@@ -455,7 +467,7 @@ struct DashboardMapFullscreenView: View {
             return
         }
 
-        let combined   = routeCoords + driverPins.map(\.coordinate)
+        let combined   = routeCoords + pins.map(\.coordinate)
         let fullRegion = boundingRegion(for: combined, padding: 1.4)
 
         if fullRegion.span.latitudeDelta > 40 || fullRegion.span.longitudeDelta > 60 {
