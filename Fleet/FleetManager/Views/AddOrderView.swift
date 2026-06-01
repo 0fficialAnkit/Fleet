@@ -95,9 +95,8 @@ struct AddOrderView: View {
                 // ── Order Type ────────────────────────────────────────
                 Section("Order Type") {
                     Picker(selection: $orderType) {
-                        ForEach(OrderType.allCases) { type in
-                            Text(type.displayName).tag(type)
-                        }
+                        Text(OrderType.pickUpAndDrop.displayName).tag(OrderType.pickUpAndDrop)
+                        Text(OrderType.travel.displayName).tag(OrderType.travel)
                     } label: {
                         Text("Type")
                     }
