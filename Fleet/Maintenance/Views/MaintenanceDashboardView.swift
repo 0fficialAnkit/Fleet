@@ -92,7 +92,14 @@ struct MaintenanceDashboardView: View {
                             } else {
                                 VStack(spacing: 16) {
                                     ForEach(viewModel.upcomingItems) { item in
-                                        UpcomingMaintenanceCard(item: item)
+                                        if let destination = item.destination {
+                                            NavigationLink(value: destination) {
+                                                UpcomingMaintenanceCard(item: item)
+                                            }
+                                            .buttonStyle(.plain)
+                                        } else {
+                                            UpcomingMaintenanceCard(item: item)
+                                        }
                                     }
                                 }
                                 .padding(.horizontal, 16)
@@ -147,8 +154,8 @@ struct MaintenanceDashboardView: View {
             }
             .navigationDestination(for: MaintenanceDestination.self) { destination in
                 switch destination {
-                case .workOrderDetail(let order):
-                    WorkOrderDetailView(workOrder: order)
+                case .scheduledWorkOrderDetail(let scheduledWO):
+                    WorkOrderDetailSheet(workOrder: scheduledWO, viewModel: MaintenanceSchedulerViewModel())
                 case .issueReportDetail(let report):
                     IssueReportDetailView(report: report)
                 case .workOrderList(let filter, let assignedTo, let priority):
@@ -246,38 +253,17 @@ struct UpcomingMaintenanceCard: View {
                 .foregroundStyle(Color.secondary)
                 .padding(.vertical, 4)
 
-                // Action Buttons
-                VStack(spacing: 10) {
-                    Button {
-                        // Handle Start Action
-                    } label: {
-                        HStack {
-                            Image(systemName: item.actionButtonIcon)
-                            Text(item.actionButtonTitle)
-                        }
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.brown)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-
-                    if let destination = item.destination {
-                        NavigationLink(value: destination) {
-                            Text("View Details")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(Color.primary)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(Color.clear)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color(.opaqueSeparator), lineWidth: 1)
-                                )
-                        }
-                    }
+                // Action Button
+                HStack {
+                    Image(systemName: "doc.text.magnifyingglass")
+                    Text("View Details")
                 }
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.brown)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
                 .padding(.top, 4)
             }
             .padding(16)
