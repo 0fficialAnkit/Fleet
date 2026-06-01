@@ -185,7 +185,7 @@ struct AddMaintenanceView: View {
                     ZStack {
                         Color.black.opacity(0.4).ignoresSafeArea()
                         ProgressView("Saving…")
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .tint(.white)
                             .foregroundColor(.white)
                             .padding(32)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))

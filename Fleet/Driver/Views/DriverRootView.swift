@@ -5,7 +5,7 @@ struct DriverRootView: View {
         TabView {
             DriverDashboardView()
                 .tabItem {
-                    Label("Dashboard", systemImage: "house.fill")
+                    Label("Dashboard", systemImage: "square.grid.2x2.fill")
                 }
 
             DriverTripsView()

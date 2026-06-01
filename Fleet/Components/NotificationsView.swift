@@ -13,7 +13,7 @@ struct NotificationsView: View {
 
                 if viewModel.isLoading && viewModel.notifications.isEmpty {
                     ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .tint(.white)
                 } else if viewModel.notifications.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "bell.slash")

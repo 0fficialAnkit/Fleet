@@ -119,7 +119,7 @@ struct AddEmployeeView: View {
                         Color.black.opacity(0.4).ignoresSafeArea()
                         VStack(spacing: 16) {
                             ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .tint(.white)
                                 .scaleEffect(1.2)
                             Text("Creating user...")
                                 .font(.body.weight(.medium))

@@ -257,7 +257,7 @@ struct DriverChecklistView: View {
                         HStack {
                             if isSubmitting {
                                 ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .tint(.white)
                             } else {
                                 Text(isSubmitted ? "Submitted Successfully" : "Submit Inspection")
                             }
