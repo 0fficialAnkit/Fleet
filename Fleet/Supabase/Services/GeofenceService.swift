@@ -9,11 +9,20 @@ enum GeofenceService {
         try await supabase.from("trip_geofences").insert(g).execute()
     }
 
+    /// Active fences only (used during a live trip).
     static func fetchGeofences(forTrip tripId: UUID) async throws -> [TripGeofence] {
         try await supabase
             .from("trip_geofences").select()
             .eq("trip_id", value: tripId)
             .eq("is_active", value: true)
+            .execute().value
+    }
+
+    /// All fences regardless of active state (used in order history / completed trips).
+    static func fetchAllGeofences(forTrip tripId: UUID) async throws -> [TripGeofence] {
+        try await supabase
+            .from("trip_geofences").select()
+            .eq("trip_id", value: tripId)
             .execute().value
     }
 
