@@ -5,11 +5,13 @@ struct TripDetailView: View {
 
     let trip: Trip
     let onStart: (UUID, UUID, String, [String]) -> Void
-    let onEnd: (UUID, UUID, String, [String]) -> Void
+    let onEnd: (UUID, UUID, Double?, String, [String]) -> Void
+    var onPickupDone: ((UUID, UUID) -> Void)? = nil
 
     // Local status so UI reacts immediately after start/end
     @State private var currentStatus: TripStatus?
     @State private var showingChecklist: InspectionType? = nil
+    @State private var pickupCompleted = false   // geofencing: set when driver taps Pickup Done
 
     // Route loaded from Supabase
     @State private var route: Route?
@@ -18,10 +20,14 @@ struct TripDetailView: View {
     @State private var estimatedDistance: Double?
     @State private var incidents: [TripIncident] = []
 
-    init(trip: Trip, onStart: @escaping (UUID, UUID, String, [String]) -> Void, onEnd: @escaping (UUID, UUID, String, [String]) -> Void) {
+    init(trip: Trip,
+         onStart: @escaping (UUID, UUID, String, [String]) -> Void,
+         onEnd: @escaping (UUID, UUID, Double?, String, [String]) -> Void,
+         onPickupDone: ((UUID, UUID) -> Void)? = nil) {
         self.trip = trip
         self.onStart = onStart
         self.onEnd = onEnd
+        self.onPickupDone = onPickupDone
         self._currentStatus = State(initialValue: trip.status)
     }
 
@@ -117,7 +123,7 @@ struct TripDetailView: View {
                             Text("Pickup / Origin")
                                 .font(.body)
                                 .foregroundStyle(Color.secondary)
-                            Text(LocationParser.decode(route?.startLocation ?? "No start location").address)
+                            Text(route?.startLocation ?? "No start location")
                                 .font(.body.weight(.medium))
                                 .foregroundStyle(Color.primary)
                         }
@@ -144,7 +150,7 @@ struct TripDetailView: View {
                             Text("Drop-off / Destination")
                                 .font(.body)
                                 .foregroundStyle(Color.secondary)
-                            Text(LocationParser.decode(route?.endLocation ?? "No destination").address)
+                            Text(route?.endLocation ?? "No destination")
                                 .font(.body.weight(.medium))
                                 .foregroundStyle(Color.primary)
                         }
@@ -281,9 +287,20 @@ struct TripDetailView: View {
 
             route = try? await fetchedRoute
             vehicle = try? await fetchedVehicle
-            
+
             if let start = route?.startLocation, let end = route?.endLocation {
                 await calculateDistance(from: start, to: end)
+            }
+
+            // Restore pickup-done state across app restarts
+            if trip.status == .active {
+                let fences = (try? await GeofenceService.fetchGeofences(forTrip: trip.id)) ?? []
+                if let pf = fences.first(where: { $0.zoneType == "pickup" }) {
+                    let events = (try? await GeofenceService.fetchEvents(forVehicle: trip.vehicleId, limit: 30)) ?? []
+                    if events.contains(where: { $0.geofenceId == pf.id && $0.eventType == "pickup_done" }) {
+                        pickupCompleted = true
+                    }
+                }
             }
         }
         .onAppear {
@@ -299,7 +316,8 @@ struct TripDetailView: View {
                     // Open Apple Maps with turn-by-turn navigation to destination
                     openMapsNavigation()
                 } else {
-                    onEnd(trip.id, trip.vehicleId, notes, urls)
+                    print("[TripDetailView] calling onEnd with estimatedDistance: \(String(describing: estimatedDistance))")
+                    onEnd(trip.id, trip.vehicleId, estimatedDistance, notes, urls)
                     withAnimation { currentStatus = .completed }
                 }
                 showingChecklist = nil
@@ -331,37 +349,65 @@ struct TripDetailView: View {
 
         case .active:
             VStack(spacing: 12) {
-                // In-progress banner
+
+                // ── Status banner ─────────────────────────────────────────────
                 HStack(spacing: 10) {
-                    Image(systemName: "bolt.fill")
+                    Image(systemName: pickupCompleted
+                          ? "arrow.right.circle.fill" : "bolt.fill")
                         .foregroundStyle(Color.green)
-                    Text("Trip is currently in progress")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color.green)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(pickupCompleted
+                             ? "Heading to Drop-off"
+                             : "Trip In Progress")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color.green)
+                        Text(pickupCompleted
+                             ? "Mark drop-off done when you arrive"
+                             : "Mark pickup done after collecting")
+                            .font(.caption)
+                            .foregroundStyle(Color.green.opacity(0.8))
+                    }
                     Spacer()
                 }
-                .padding(16)
+                .padding(14)
                 .background(Color.green.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
-                // End Trip button
-                Button {
-                    showingChecklist = .postTrip
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "stop.fill")
-                        Text("End Trip")
+                // ── Phase 1: Pickup Done ──────────────────────────────────────
+                if !pickupCompleted {
+                    Button {
+                        withAnimation(.spring(response: 0.3)) { pickupCompleted = true }
+                        onPickupDone?(trip.id, trip.vehicleId)
+                    } label: {
+                        Label("Pickup Done", systemImage: "checkmark.circle.fill")
                             .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(16)
+                            .background(Color.blue)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(16)
-                    .background(Color.red)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .shadow(color: Color.blue.opacity(0.3), radius: 8, y: 3)
                 }
-                .shadow(color: Color.red.opacity(0.35), radius: 10, y: 4)
-                
-                // Report Incident button
+
+                // ── Phase 2: Drop-off Done (= existing End Trip flow) ─────────
+                if pickupCompleted {
+                    Button {
+                        showingChecklist = .postTrip
+                    } label: {
+                        Label("Drop-off Done", systemImage: "flag.checkered")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(16)
+                            .background(Color.red)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .shadow(color: Color.red.opacity(0.35), radius: 10, y: 4)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+
+                // ── Report Incident (always visible) ─────────────────────────
                 NavigationLink(destination: DriverReportIncidentView(trip: trip)) {
                     HStack(spacing: 10) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -414,30 +460,15 @@ struct TripDetailView: View {
         else { return }
 
         Task {
-            let startDecoded = LocationParser.decode(startAddr)
-            let endDecoded = LocationParser.decode(endAddr)
+            async let sourceResult = geocodeAddress(startAddr)
+            async let destResult   = geocodeAddress(endAddr)
 
-            let sourceItem: MKMapItem
-            let destItem: MKMapItem
+            guard let sourceItem = await sourceResult,
+                  let destItem   = await destResult
+            else { return }
 
-            if let startCoord = startDecoded.coordinate {
-                sourceItem = MKMapItem(placemark: MKPlacemark(coordinate: startCoord))
-            } else if let src = await geocodeAddress(startDecoded.address) {
-                sourceItem = src
-            } else {
-                return
-            }
-
-            if let endCoord = endDecoded.coordinate {
-                destItem = MKMapItem(placemark: MKPlacemark(coordinate: endCoord))
-            } else if let dst = await geocodeAddress(endDecoded.address, biasedTo: sourceItem.location.coordinate) {
-                destItem = dst
-            } else {
-                return
-            }
-
-            sourceItem.name = startDecoded.address
-            destItem.name   = endDecoded.address
+            sourceItem.name = startAddr
+            destItem.name   = endAddr
 
             MKMapItem.openMaps(
                 with: [sourceItem, destItem],
@@ -449,39 +480,29 @@ struct TripDetailView: View {
         }
     }
 
-    private func geocodeAddress(_ address: String, biasedTo coordinate: CLLocationCoordinate2D? = nil) async -> MKMapItem? {
+    private func geocodeAddress(_ address: String) async -> MKMapItem? {
+        if let range = address.range(of: "@latlng:") {
+            let coordsString = address[range.upperBound...]
+            let components = coordsString.components(separatedBy: ",")
+            if components.count == 2,
+               let lat = Double(components[0].trimmingCharacters(in: .whitespacesAndNewlines)),
+               let lon = Double(components[1].trimmingCharacters(in: .whitespacesAndNewlines)) {
+                let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                let placemark = MKPlacemark(coordinate: coordinate)
+                let mapItem = MKMapItem(placemark: placemark)
+                let name = address[..<range.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
+                mapItem.name = name.isEmpty ? "Location" : name
+                return mapItem
+            }
+        }
         let req = MKLocalSearch.Request()
         req.naturalLanguageQuery = address
-        req.resultTypes = .address
-        if let coord = coordinate {
-            req.region = MKCoordinateRegion(
-                center: coord,
-                span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
-            )
-        }
         return try? await MKLocalSearch(request: req).start().mapItems.first
     }
     
     private func calculateDistance(from startAddr: String, to endAddr: String) async {
-        let startDecoded = LocationParser.decode(startAddr)
-        let endDecoded = LocationParser.decode(endAddr)
-
-        let startItem: MKMapItem?
-        let endItem: MKMapItem?
-
-        if let startCoord = startDecoded.coordinate {
-            startItem = MKMapItem(placemark: MKPlacemark(coordinate: startCoord))
-        } else {
-            startItem = await geocodeAddress(startDecoded.address)
-        }
-        guard let startItem else { return }
-
-        if let endCoord = endDecoded.coordinate {
-            endItem = MKMapItem(placemark: MKPlacemark(coordinate: endCoord))
-        } else {
-            endItem = await geocodeAddress(endDecoded.address, biasedTo: startItem.location.coordinate)
-        }
-        guard let endItem else { return }
+        guard let startItem = await geocodeAddress(startAddr),
+              let endItem = await geocodeAddress(endAddr) else { return }
         
         let request = MKDirections.Request()
         request.source = startItem
@@ -536,7 +557,7 @@ struct TripDetailView: View {
                 orderType: .pickUpAndDrop
             ),
             onStart: { _, _, _, _ in },
-            onEnd:   { _, _, _, _ in }
+            onEnd:   { _, _, _, _, _ in }
         )
     }
     .environment(AuthViewModel())

@@ -193,13 +193,12 @@ struct AddOrderView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if isSaving {
-                        ProgressView().tint(Color.teal)
+                        ProgressView().tint(Color.primary)
                     } else {
                         Button("Save") {
                             Task { await save() }
                         }
-                        .bold()
-                        .foregroundStyle(canSave ? Color.teal : Color(.quaternaryLabel))
+                        .foregroundStyle(canSave ? Color.primary : Color(.quaternaryLabel))
                         .disabled(!canSave)
                     }
                 }
@@ -222,8 +221,7 @@ struct AddOrderView: View {
                     dropoffLocation = location
                 }
             }
-            // Clear stale selections on appear and whenever filters change
-            .task { validateSelection() }
+            // Clear vehicle/driver selection if they are no longer available
             .onChange(of: startTime) { _, _ in validateSelection() }
             .onChange(of: orderType) { _, _ in validateSelection() }
             .onChange(of: selectedVehicleType) { _, _ in validateSelection() }
@@ -265,9 +263,10 @@ struct AddOrderView: View {
         guard let pickup  = pickupLocation?.fullAddress,
               let dropoff = dropoffLocation?.fullAddress else { return }
         Task {
-            guard let src = await geocodeForMaps(pickup) else { return }
-            let dst = await geocodeForMaps(dropoff, biasedTo: src.placemark.coordinate)
-            guard let dst else { return }
+            async let srcSearch = geocodeForMaps(pickup)
+            async let dstSearch = geocodeForMaps(dropoff)
+            guard let src = await srcSearch,
+                  let dst = await dstSearch else { return }
             MKMapItem.openMaps(
                 with: [src, dst],
                 launchOptions: [
@@ -278,16 +277,23 @@ struct AddOrderView: View {
         }
     }
 
-    private func geocodeForMaps(_ address: String, biasedTo coordinate: CLLocationCoordinate2D? = nil) async -> MKMapItem? {
+    private func geocodeForMaps(_ address: String) async -> MKMapItem? {
+        if let range = address.range(of: "@latlng:") {
+            let coordsString = address[range.upperBound...]
+            let components = coordsString.components(separatedBy: ",")
+            if components.count == 2,
+               let lat = Double(components[0].trimmingCharacters(in: .whitespacesAndNewlines)),
+               let lon = Double(components[1].trimmingCharacters(in: .whitespacesAndNewlines)) {
+                let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                let placemark = MKPlacemark(coordinate: coordinate)
+                let mapItem = MKMapItem(placemark: placemark)
+                let name = address[..<range.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
+                mapItem.name = name.isEmpty ? "Location" : name
+                return mapItem
+            }
+        }
         let req = MKLocalSearch.Request()
         req.naturalLanguageQuery = address
-        req.resultTypes = .address
-        if let coord = coordinate {
-            req.region = MKCoordinateRegion(
-                center: coord,
-                span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
-            )
-        }
         return try? await MKLocalSearch(request: req).start().mapItems.first
     }
 
@@ -305,27 +311,12 @@ struct AddOrderView: View {
         defer { isSaving = false }
 
         do {
-            let pickupAddr = pickup.fullAddress
-            let dropoffAddr = dropoff.fullAddress
-            
-            var startLocString = pickupAddr
-            var endLocString = dropoffAddr
-            
-            if let srcItem = await geocodeForMaps(pickupAddr) {
-                let pickupCoord = srcItem.placemark.coordinate
-                startLocString = LocationParser.encode(address: pickupAddr, coordinate: pickupCoord)
-                
-                if let dstItem = await geocodeForMaps(dropoffAddr, biasedTo: pickupCoord) {
-                    endLocString = LocationParser.encode(address: dropoffAddr, coordinate: dstItem.placemark.coordinate)
-                }
-            }
-
-            // 1. Create route record with real addresses and encoded coordinates
+            // 1. Create route record with real addresses
             let route = Route(
                 id: UUID(),
                 routeName: "\(pickup.title) → \(dropoff.title)",
-                startLocation: startLocString,
-                endLocation: endLocString
+                startLocation: pickup.fullAddress,
+                endLocation: dropoff.fullAddress
             )
             try await RouteService.createRoute(route)
 
@@ -508,5 +499,5 @@ struct AddOrderView: View {
         vehicles: mockVehicles
     )
     
-    return AddOrderView(viewModel: viewModel)
+    AddOrderView(viewModel: viewModel)
 }

@@ -19,22 +19,9 @@
 		EFFF7FC62FB42CFA008A41DE /* Fleet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Fleet.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		EF04C0C62FCDE6DE008B1EDB /* Exceptions for "Fleet" folder in "Fleet" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = EFFF7FC52FB42CFA008A41DE /* Fleet */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		EFFF7FC82FB42CFA008A41DE /* Fleet */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				EF04C0C62FCDE6DE008B1EDB /* Exceptions for "Fleet" folder in "Fleet" target */,
-			);
 			path = Fleet;
 			sourceTree = "<group>";
 		};
@@ -296,15 +283,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Fleet/Fleet.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 433L6U33WG;
+				DEVELOPMENT_TEAM = 59J2DT7UL3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Fleet/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "need camera access";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Fleet tracks your location during trips and sends alerts when you reach pickup or dropoff zones.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet needs your location to track the trip route.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "need access";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet uses your location to show your position on the route map and guide you to your destination.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -315,7 +302,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = fleet.study.cookies;
+				PRODUCT_BUNDLE_IDENTIFIER = fleet.study.cookies.asdf;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -332,15 +319,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Fleet/Fleet.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 433L6U33WG;
+				DEVELOPMENT_TEAM = 59J2DT7UL3;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Fleet/Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "need camera access";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Fleet tracks your location during trips and sends alerts when you reach pickup or dropoff zones.";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet needs your location to track the trip route.";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "need access";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet uses your location to show your position on the route map and guide you to your destination.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -351,7 +338,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = fleet.study.cookies.kj;
+				PRODUCT_BUNDLE_IDENTIFIER = fleet.study.cookies.kmmmm;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

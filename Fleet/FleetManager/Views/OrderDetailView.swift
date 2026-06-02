@@ -1,128 +1,59 @@
 import SwiftUI
 import MapKit
-import CoreLocation
-
-// MARK: - Trip Phase
-
-enum TripPhase {
-    case scheduled
-    case enRouteToPickup    // active, road dist to pickup > 5 km
-    case nearPickup         // active, road dist to pickup ≤ 5 km
-    case atPickup           // active, road dist to pickup ≤ 0.5 km
-    case enRouteToDropoff   // active, driver closer to dropoff than pickup
-    case nearDropoff        // active, road dist to dropoff ≤ 5 km
-    case atDropoff          // active, road dist to dropoff ≤ 0.5 km
-    case completed
-    case cancelled
-
-    var label: String {
-        switch self {
-        case .scheduled:        return "Scheduled"
-        case .enRouteToPickup:  return "En route to pickup"
-        case .nearPickup:       return "Near pickup"
-        case .atPickup:         return "At pickup"
-        case .enRouteToDropoff: return "En route to drop-off"
-        case .nearDropoff:      return "Near drop-off"
-        case .atDropoff:        return "At drop-off"
-        case .completed:        return "Completed"
-        case .cancelled:        return "Cancelled"
-        }
-    }
-
-    var color: Color {
-        switch self {
-        case .scheduled:        return .blue
-        case .enRouteToPickup:  return .blue
-        case .nearPickup:       return .orange
-        case .atPickup:         return .green
-        case .enRouteToDropoff: return .blue
-        case .nearDropoff:      return .orange
-        case .atDropoff:        return .teal
-        case .completed:        return .green
-        case .cancelled:        return .red
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .scheduled:        return "clock"
-        case .enRouteToPickup:  return "road.lanes"
-        case .nearPickup:       return "location.fill"
-        case .atPickup:         return "mappin.circle.fill"
-        case .enRouteToDropoff: return "road.lanes"
-        case .nearDropoff:      return "location.fill"
-        case .atDropoff:        return "flag.checkered.circle.fill"
-        case .completed:        return "checkmark.circle.fill"
-        case .cancelled:        return "xmark.circle.fill"
-        }
-    }
-}
-
-// MARK: - Order Detail View
 
 struct OrderDetailView: View {
-
     let trip:      Trip
     let viewModel: OrdersViewModel
     @Environment(\.dismiss) private var dismiss
 
-    // Live location — same data flow as dashboard
-    @State private var liveVehicleLocations: [VehicleLocation] = []
-    @State private var driverCoordinate:     CLLocationCoordinate2D?
-    @State private var lastLocationUpdate:   Date?
+    // Live tracking state
+    @State private var liveLocations:  [VehicleLocation]  = []
+    @State private var driverProfile:  Profile?            = nil
+    @State private var geofences:      [TripGeofence]      = []
+    @State private var gfEvents:       [TripGeofenceEvent] = []
+    @State private var pollingTask:    Task<Void, Never>?  = nil
 
-    // Geocoded coords for distance calculations
-    @State private var pickupCoord:  CLLocationCoordinate2D?
-    @State private var dropoffCoord: CLLocationCoordinate2D?
+    var route:       Route? { viewModel.route(for: trip.routeId) }
+    var driverName:  String { viewModel.driverName(for: trip.driverId) }
+    var vehicleInfo: String { viewModel.vehicleName(for: trip.vehicleId) }
+    var isActive:    Bool   { trip.status == .active }
 
-    // Road distances (MKDirections) + ETAs — cached to avoid Apple Maps throttle
-    @State private var roadDistToPickupKm:  Double?
-    @State private var roadDistToDropoffKm: Double?
-    @State private var etaToPickupMin:      Int?
-    @State private var etaToDropoffMin:     Int?
-    /// Last driver position when MKDirections was called — skip recalc if moved < 500 m
-    @State private var lastCalcCoord: CLLocationCoordinate2D?
-
-    // Geofence events
-    @State private var geofenceEvents: [TripGeofenceEvent] = []
-
-    // MARK: - Computed
-
-    var currentTrip: Trip { viewModel.trips.first(where: { $0.id == trip.id }) ?? trip }
-    var route: Route?     { viewModel.route(for: currentTrip.routeId) }
-    var driverName: String { viewModel.driverName(for: currentTrip.driverId) }
-    var vehicleInfo: String { viewModel.vehicleName(for: currentTrip.vehicleId) }
-    var isActive: Bool    { currentTrip.status == .active }
-
-    var driver: Profile? {
-        guard let id = currentTrip.driverId else { return nil }
-        return viewModel.profiles.first(where: { $0.id == id })
+    var formattedDate: String {
+        guard let d = trip.startTime else { return "Not Scheduled" }
+        let f = DateFormatter(); f.dateStyle = .medium; f.timeStyle = .short
+        return f.string(from: d)
     }
 
-    var tripPhase: TripPhase {
-        switch currentTrip.status {
-        case .completed: return .completed
-        case .cancelled: return .cancelled
-        case .scheduled: return .scheduled
-        case .active:    break
-        default:         return .scheduled
+    // Events for this trip — oldest first, de-duplicated.
+    // Works for both active AND completed trips.
+    var tripEvents: [TripGeofenceEvent] {
+        // If we have fence IDs, filter precisely; otherwise show all fetched events
+        let sorted: [TripGeofenceEvent]
+        if geofences.isEmpty {
+            sorted = gfEvents.sorted { ($0.occurredAt ?? .distantPast) < ($1.occurredAt ?? .distantPast) }
+        } else {
+            let ids = Set(geofences.map { $0.id })
+            sorted = gfEvents
+                .filter { ids.contains($0.geofenceId) }
+                .sorted { ($0.occurredAt ?? .distantPast) < ($1.occurredAt ?? .distantPast) }
         }
 
-        guard let dp = roadDistToPickupKm, let dd = roadDistToDropoffKm else {
-            return .enRouteToPickup   // locating
+        // Keep only the first occurrence of each logical milestone (dedup)
+        var seen    = Set<String>()
+        var unique  = [TripGeofenceEvent]()
+        for event in sorted {
+            let fence    = geofences.first(where: { $0.id == event.geofenceId })
+            let isPickup = fence?.zoneType == "pickup"
+            let key: String
+            switch event.eventType {
+            case "enter":       key = isPickup ? "pickup_enter"  : "dropoff_enter"
+            case "pickup_done": key = "pickup_done"
+            case "dropoff_done":key = "dropoff_done"
+            default:            key = event.eventType
+            }
+            if !seen.contains(key) { seen.insert(key); unique.append(event) }
         }
-
-        // Driver is closer to dropoff → has passed pickup
-        if dd < dp {
-            if dd <= 0.5 { return .atDropoff }
-            if dd <= 5.0 { return .nearDropoff }
-            return .enRouteToDropoff
-        }
-
-        // Still heading to pickup
-        if dp <= 0.5 { return .atPickup }
-        if dp <= 5.0 { return .nearPickup }
-        return .enRouteToPickup
+        return unique
     }
 
     // MARK: - Body
@@ -130,366 +61,267 @@ struct OrderDetailView: View {
     var body: some View {
         List {
 
-            // ── Live Map ──────────────────────────────────────────
-            Section {
-                DashboardMapView(
-                    activeTrips:      [currentTrip],
-                    routes:           viewModel.routes,
-                    profiles:         viewModel.profiles,
-                    vehicleLocations: liveVehicleLocations
-                )
-                .frame(height: 260)
-                .listRowInsets(EdgeInsets())
-            } header: {
-                HStack {
-                    Text("Live Tracking")
-                    Spacer()
-                    if isActive {
-                        HStack(spacing: 5) {
-                            Circle().fill(Color.green).frame(width: 7, height: 7)
-                            Text(lastLocationUpdate.map { timeAgo($0) } ?? "Awaiting GPS")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
+            // ── Live map ────────────────────────────────────────────────────
+            if isActive, let route {
+                Section {
+                    ZStack(alignment: .topTrailing) {
+                        DashboardMapView(
+                            activeTrips: [trip],
+                            routes: [route],
+                            profiles: driverProfile.map { [$0] } ?? [],
+                            vehicleLocations: liveLocations
+                        )
+                        .frame(height: 260)
+
+                        // Live pill badge
+                        Label(
+                            liveLocations.isEmpty ? "Locating…" : "Live",
+                            systemImage: "dot.radiowaves.left.and.right"
+                        )
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8).padding(.vertical, 5)
+                        .background(
+                            liveLocations.isEmpty ? Color.orange : Color.green,
+                            in: Capsule()
+                        )
+                        .padding(10)
                     }
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
                 }
             }
 
-            // ── Trip Phase / Driver Status ─────────────────────────
-            if isActive {
-                Section("Driver Status") {
-                    // Phase banner
-                    HStack(spacing: 12) {
-                        Image(systemName: tripPhase.icon)
-                            .font(.title3)
-                            .foregroundStyle(tripPhase.color)
-                            .frame(width: 36, height: 36)
-                            .background(tripPhase.color.opacity(0.12))
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                        Text(tripPhase.label)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(tripPhase.color)
+            // ── Driver Status — shown for active trips AND completed trips with history ──
+            if !tripEvents.isEmpty || isActive {
+                Section {
+                    if tripEvents.isEmpty {
+                        Label("Waiting for driver to enter a zone…",
+                              systemImage: "location.magnifyingglass")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .padding(.vertical, 4)
+                    } else {
+                        ForEach(tripEvents) { event in
+                            eventRow(event)
+                        }
+                    }
+                } header: {
+                    HStack {
+                        Text("Driver Status")
                         Spacer()
-                        if driverCoordinate == nil {
-                            ProgressView().scaleEffect(0.8)
-                        }
-                    }
-
-                    // Distance to pickup (road distance)
-                    if let d = roadDistToPickupKm {
-                        HStack {
-                            Label("Pickup", systemImage: "circle.fill")
-                                .foregroundStyle(Color.green)
-                                .font(.subheadline)
-                            Spacer()
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text(formatDist(d))
-                                    .font(.subheadline.weight(.semibold))
-                                if let eta = etaToPickupMin {
-                                    Text("~\(eta) min via road")
-                                        .font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                    }
-
-                    // Distance to dropoff (road distance)
-                    if let d = roadDistToDropoffKm {
-                        HStack {
-                            Label("Drop-off", systemImage: "mappin.circle.fill")
-                                .foregroundStyle(Color.red)
-                                .font(.subheadline)
-                            Spacer()
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text(formatDist(d))
-                                    .font(.subheadline.weight(.semibold))
-                                if let eta = etaToDropoffMin {
-                                    Text("~\(eta) min via road")
-                                        .font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
+                        if isActive {
+                            Text("Real-time")
+                                .font(.caption)
+                                .foregroundStyle(.teal)
+                                .textCase(nil)
                         }
                     }
                 }
             }
 
-            // ── Order Info ────────────────────────────────────────
-            Section("Order") {
-                LabeledContent("Order ID",
-                               value: "#\(currentTrip.id.uuidString.prefix(8).uppercased())")
-                LabeledContent("Type",
-                               value: currentTrip.orderType?.displayName ?? "—")
-                HStack {
-                    Text("Status")
-                    Spacer()
-                    StatusBadge(text: currentTrip.status?.rawValue.capitalized ?? "—",
-                                color: viewModel.getStatusColor(for: currentTrip.status))
+            // ── Order details ────────────────────────────────────────────────
+            Section("Order Details") {
+                LabeledContent("Order ID") {
+                    Text("#\(trip.id.uuidString.prefix(8).uppercased())")
+                        .font(.body.monospaced())
+                        .foregroundStyle(.secondary)
                 }
-                if let start = currentTrip.startTime {
-                    LabeledContent("Started",
-                                   value: start.formatted(date: .abbreviated, time: .shortened))
+                LabeledContent("Type") {
+                    Text(trip.orderType?.displayName ?? "—")
                 }
-                if let end = currentTrip.endTime {
-                    LabeledContent("Ended",
-                                   value: end.formatted(date: .abbreviated, time: .shortened))
+                LabeledContent("Status") {
+                    StatusBadge(
+                        text: trip.status?.rawValue.capitalized ?? "—",
+                        color: viewModel.getStatusColor(for: trip.status))
                 }
-                if let dist = currentTrip.distance, dist > 0 {
-                    LabeledContent("Distance travelled",
-                                   value: String(format: "%.1f km", dist))
+                if let d = trip.startTime {
+                    LabeledContent("Started") {
+                        Text(d.formatted(date: .abbreviated, time: .shortened))
+                    }
                 }
             }
 
-            // ── Route ─────────────────────────────────────────────
+            // ── Route ────────────────────────────────────────────────────────
             Section("Route") {
-                HStack(spacing: 14) {
-                    Circle().fill(Color.green).frame(width: 10, height: 10).padding(.leading, 2)
+                Label {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Pickup").font(.caption).foregroundStyle(.secondary)
-                        Text(LocationParser.decode(route?.startLocation ?? "—").address).font(.subheadline)
+                        Text(route?.startLocation ?? "Not set")
                     }
+                } icon: {
+                    Image(systemName: "circle.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.green)
                 }
-                HStack(spacing: 14) {
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.system(size: 14)).foregroundStyle(.red).frame(width: 14)
+
+                Label {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Drop-off").font(.caption).foregroundStyle(.secondary)
-                        Text(LocationParser.decode(route?.endLocation ?? "—").address).font(.subheadline)
+                        Text(route?.endLocation ?? "Not set")
                     }
+                } icon: {
+                    Image(systemName: "mappin")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.red)
                 }
             }
 
-            // ── Driver ────────────────────────────────────────────
-            Section("Driver") {
-                LabeledContent("Name", value: driverName)
-                if let lic = driver?.licenseNumber, !lic.isEmpty {
-                    LabeledContent("Licence", value: lic)
-                }
-                if let phone = driver?.phone {
-                    LabeledContent("Phone", value: phone)
-                }
+            // ── Assignment ───────────────────────────────────────────────────
+            Section("Assignment") {
+                LabeledContent("Driver")  { Text(driverName) }
+                LabeledContent("Vehicle") { Text(vehicleInfo) }
             }
 
-            // ── Vehicle ───────────────────────────────────────────
-            Section("Vehicle") {
-                LabeledContent("Vehicle", value: vehicleInfo)
-                if let type = viewModel.vehicles.first(where: { $0.id == currentTrip.vehicleId })?.vehicleType {
-                    LabeledContent("Type", value: type.displayName)
-                }
-            }
-
-            // ── Zone Events ───────────────────────────────────────
-            if !geofenceEvents.isEmpty {
-                Section("Zone Events") {
-                    ForEach(geofenceEvents) { event in
-                        HStack(spacing: 10) {
-                            Image(systemName: event.eventType == "entered"
-                                  ? "arrow.down.circle.fill" : "arrow.up.circle.fill")
-                                .foregroundStyle(event.eventType == "entered" ? Color.green : Color.orange)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(event.eventType == "entered" ? "Arrived at zone" : "Departed zone")
-                                    .font(.subheadline)
-                                if let t = event.occurredAt {
-                                    Text(t.formatted(date: .abbreviated, time: .shortened))
-                                        .font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                        }
+            // ── Delete ───────────────────────────────────────────────────────
+            Section {
+                Button(role: .destructive) {
+                    Task {
+                        do {
+                            try await viewModel.deleteTrip(trip)
+                            await MainActor.run { dismiss() }
+                        } catch { print("Delete failed: \(error)") }
                     }
+                } label: {
+                    Label("Delete Order", systemImage: "trash")
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
         }
         .listStyle(.insetGrouped)
-        .navigationTitle("Order Details")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button(role: .destructive) {
-                        Task {
-                            try? await viewModel.deleteTrip(currentTrip)
-                            await MainActor.run { dismiss() }
-                        }
-                    } label: {
-                        Label("Delete Order", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                }
-            }
-        }
+        .navigationTitle(route?.routeName ?? "Order Details")
+        .navigationBarTitleDisplayMode(.large)
         .refreshable { await refreshAll() }
         .task {
-            await geocodeRoute()
-            await refreshAll()
-            if isActive { startLiveUpdates() }
-        }
-        .onAppear {
-            guard isActive else { return }
-            RealtimeManager.shared.addVehicleLocationsChangeHandler {
-                Task { @MainActor in
-                    await refreshDriverLocation()
-                    await calculateDistances()
+            await loadAll()          // loads geofences + events for all trip states
+            if isActive {
+                startPolling()
+                RealtimeManager.shared.addGeofenceEventsChangeHandler {
+                    Task { await self.refreshGeofenceData() }
+                }
+                RealtimeManager.shared.addVehicleLocationsChangeHandler {
+                    Task { await self.refreshLocations() }
                 }
             }
         }
+        .onDisappear { pollingTask?.cancel(); pollingTask = nil }
     }
 
-    // MARK: - Data
+    // MARK: - Event row (Apple native style)
 
-    private func refreshDriverLocation() async {
-        do {
-            let locs = try await VehicleLocationService.fetchLatestLocations(for: [currentTrip.vehicleId])
-            liveVehicleLocations = locs
-            if let loc = locs.first, let lat = loc.latitude, let lon = loc.longitude {
-                driverCoordinate   = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-                lastLocationUpdate = Date()
+    private func eventRow(_ event: TripGeofenceEvent) -> some View {
+        let fence    = geofences.first(where: { $0.id == event.geofenceId })
+        let isPickup = fence?.zoneType == "pickup"
+
+        // Map event type → display properties
+        let icon:  String
+        let tint:  Color
+        let title: String
+        let sub:   String
+
+        switch event.eventType {
+        case "enter" where isPickup:
+            icon = "mappin.circle.fill";      tint = .blue
+            title = "📍 Driver Entered Pickup Zone"
+            sub   = fence?.name ?? ""
+        case "pickup_done":
+            icon = "checkmark.circle.fill";   tint = .green
+            title = "✅ Pickup Done"
+            sub   = "Driver is heading to drop-off"
+        case "enter":   // dropoff
+            icon = "flag.circle.fill";        tint = .orange
+            title = "🏁 Driver Entered Drop-off Zone"
+            sub   = fence?.name ?? ""
+        case "dropoff_done":
+            icon = "flag.checkered.circle.fill"; tint = .teal
+            title = "🏁 Drop-off Done"
+            sub   = "Trip is ending"
+        default:
+            icon = "circle.fill";             tint = .secondary
+            title = event.eventType;          sub = ""
+        }
+
+        return HStack(alignment: .top, spacing: 14) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(tint)
+                .frame(width: 30)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                if !sub.isEmpty {
+                    Text(sub)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
-        } catch {
-            print("[OrderDetail] location fetch error: \(error)")
+
+            Spacer()
+
+            if let t = event.occurredAt {
+                Text(t.formatted(date: .omitted, time: .shortened))
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
         }
+        .padding(.vertical, 6)
     }
 
-    private func geocodeRoute() async {
-        guard let start = route?.startLocation, let end = route?.endLocation else { return }
-        let startDecoded = LocationParser.decode(start)
-        let endDecoded = LocationParser.decode(end)
+    // MARK: - Data helpers
 
-        let src: MKMapItem?
-        let dst: MKMapItem?
-
-        if let startCoord = startDecoded.coordinate {
-            src = MKMapItem(placemark: MKPlacemark(coordinate: startCoord))
-        } else {
-            src = await geocode(startDecoded.address)
-        }
-        guard let srcItem = src else { return }
-        pickupCoord  = srcItem.location.coordinate
-
-        if let endCoord = endDecoded.coordinate {
-            dst = MKMapItem(placemark: MKPlacemark(coordinate: endCoord))
-        } else {
-            dst = await geocode(endDecoded.address, biasedTo: pickupCoord)
-        }
-        dropoffCoord = dst?.location.coordinate
+    private func loadAll() async {
+        async let profile = ProfileService.fetchProfile(id: trip.driverId ?? UUID())
+        async let locs    = VehicleLocationService.fetchLatestLocations(for: [trip.vehicleId])
+        driverProfile  = try? await profile
+        liveLocations  = (try? await locs) ?? []
+        await refreshGeofenceData()
     }
 
-    /// Calculates ROAD distances via MKDirections.
-    /// Skips the call if driver hasn't moved more than 500 m since last calculation
-    /// — prevents Apple Maps throttling (max 50 requests / 60 s).
-    private func calculateDistances() async {
-        guard let driver = driverCoordinate else { return }
+    private func refreshLocations() async {
+        liveLocations = (try? await VehicleLocationService.fetchLatestLocations(for: [trip.vehicleId])) ?? []
+    }
 
-        // Skip if driver moved < 500 m (saves ~90% of MKDirections calls)
-        if let last = lastCalcCoord {
-            let moved = CLLocation(latitude: driver.latitude, longitude: driver.longitude)
-                .distance(from: CLLocation(latitude: last.latitude, longitude: last.longitude))
-            guard moved > 500 else { return }
-        }
-        lastCalcCoord = driver
-
-        if let pc = pickupCoord,
-           let r = await roadDistance(from: driver, to: pc) {
-            roadDistToPickupKm = r.distanceKm
-            etaToPickupMin     = r.etaMin
-        }
-        if let dc = dropoffCoord,
-           let r = await roadDistance(from: driver, to: dc) {
-            roadDistToDropoffKm = r.distanceKm
-            etaToDropoffMin     = r.etaMin
-        }
+    private func refreshGeofenceData() async {
+        // fetchAllGeofences includes inactive fences — keeps history visible after trip ends
+        geofences = (try? await GeofenceService.fetchAllGeofences(forTrip: trip.id)) ?? []
+        gfEvents  = (try? await GeofenceService.fetchEvents(forVehicle: trip.vehicleId, limit: 30)) ?? []
     }
 
     private func refreshAll() async {
-        await refreshDriverLocation()
-        await calculateDistances()
-        let events = (try? await GeofenceService.fetchEvents(forVehicle: currentTrip.vehicleId)) ?? []
-        geofenceEvents = Array(events.prefix(10))
+        await refreshLocations()
+        await refreshGeofenceData()
     }
 
-    private func startLiveUpdates() {
-        Task {
+    private func startPolling() {
+        pollingTask?.cancel()
+        pollingTask = Task {
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(60))
-                await refreshDriverLocation()
-                await calculateDistances()
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { break }
+                await refreshAll()
             }
         }
     }
-
-    // MARK: - Helpers
-
-    private struct RouteResult {
-        let distanceKm: Double
-        let etaMin: Int
-    }
-
-    private func roadDistance(from: CLLocationCoordinate2D,
-                              to: CLLocationCoordinate2D) async -> RouteResult? {
-        let req = MKDirections.Request()
-        req.source          = MKMapItem(placemark: MKPlacemark(coordinate: from))
-        req.destination     = MKMapItem(placemark: MKPlacemark(coordinate: to))
-        req.transportType   = .automobile
-        req.departureDate   = Date()
-        guard let resp  = try? await MKDirections(request: req).calculate(),
-              let route = resp.routes.first else { return nil }
-        return RouteResult(
-            distanceKm: route.distance / 1000.0,
-            etaMin: Int(route.expectedTravelTime / 60)
-        )
-    }
-
-    private func geocode(_ address: String, biasedTo coordinate: CLLocationCoordinate2D? = nil) async -> MKMapItem? {
-        let req = MKLocalSearch.Request()
-        req.naturalLanguageQuery = address
-        req.resultTypes = .address
-        if let coord = coordinate {
-            req.region = MKCoordinateRegion(
-                center: coord,
-                span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
-            )
-        }
-        return try? await MKLocalSearch(request: req).start().mapItems.first
-    }
-
-    private func formatDist(_ km: Double) -> String {
-        if km < 1 { return "\(Int(km * 1000)) m" }
-        return String(format: "%.1f km", km)
-    }
-
-    private func timeAgo(_ date: Date) -> String {
-        let s = Int(Date().timeIntervalSince(date))
-        if s < 60   { return "Updated \(s)s ago" }
-        if s < 3600 { return "Updated \(s/60)m ago" }
-        return "Updated \(s/3600)h ago"
-    }
 }
 
-// MARK: - Row Helpers
+// MARK: - Info row (kept for compatibility)
 
 struct OrderDetailInfoRow: View {
-    let icon: String
-    let title: String
-    let value: String
-    var valueColor: Color = Color.primary
-
+    let icon: String; let title: String; let value: String
+    var valueColor: Color = .primary
     var body: some View {
         HStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundStyle(Color(.tertiaryLabel))
-                .frame(width: 24)
-            Text(title)
-                .font(.body.weight(.medium))
-                .foregroundStyle(Color.secondary)
+            Image(systemName: icon).font(.system(size: 18))
+                .foregroundStyle(Color(.tertiaryLabel)).frame(width: 24)
+            Text(title).font(.body.weight(.medium)).foregroundStyle(.secondary)
             Spacer()
-            Text(value)
-                .font(.body)
-                .foregroundStyle(valueColor)
-        }
-        .padding(.vertical, 8)
+            Text(value).font(.body).foregroundStyle(valueColor)
+        }.padding(.vertical, 8)
     }
 }
-
-// MARK: - Preview
 
 #Preview {
     NavigationStack {
