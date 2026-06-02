@@ -31,16 +31,7 @@ struct AddEmployeeView: View {
     var body: some View {
         NavigationStack {
                 Form {
-                    Section {
-                        Picker("Role", selection: $selectedRole) {
-                            Text("Driver").tag("driver")
-                            Text("Maintenance Staff").tag("maintenance")
-                        }
-                        .pickerStyle(.segmented)
-                    }
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-                    .padding(.vertical, 8)
+
 
                     if let error = viewModel.errorMessage {
                         Section {
