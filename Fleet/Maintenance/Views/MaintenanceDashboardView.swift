@@ -120,8 +120,6 @@ struct MaintenanceDashboardView: View {
         }
     }
 
-    // MARK: - Upcoming Maintenance Section
-
     private var upcomingMaintenanceSection: some View {
         Section {
             if viewModel.upcomingItems.isEmpty {
@@ -141,7 +139,16 @@ struct MaintenanceDashboardView: View {
             } else {
                 ForEach(viewModel.upcomingItems) { item in
                     if let destination = item.destination {
-                        NavigationLink(value: destination) {
+                        NavigationLink {
+                            switch destination {
+                            case .scheduledWorkOrderDetail(let scheduledWO):
+                                WorkOrderDetailSheet(workOrder: scheduledWO, viewModel: MaintenanceSchedulerViewModel())
+                            case .issueReportDetail(let report):
+                                IssueReportDetailView(report: report)
+                            case .workOrderList(let filter, let assignedTo, let priority):
+                                WorkOrderListView(initialFilter: filter, assignedUserId: assignedTo, priorityFilter: priority)
+                            }
+                        } label: {
                             UpcomingMaintenanceRow(item: item)
                         }
                     } else {
@@ -174,7 +181,16 @@ struct MaintenanceDashboardView: View {
                 .padding(.vertical, 24)
             } else {
                 ForEach(viewModel.priorityQueueItems) { item in
-                    PriorityQueueRow(item: item, viewModel: viewModel)
+                    NavigationLink {
+                        switch item {
+                        case .workOrder(let wo):
+                            WorkOrderDetailSheet(workOrder: viewModel.buildScheduledWO(wo), viewModel: MaintenanceSchedulerViewModel())
+                        case .issueReport(let ir):
+                            WorkOrderDetailSheet(workOrder: viewModel.buildScheduledWOFromIR(ir), viewModel: MaintenanceSchedulerViewModel())
+                        }
+                    } label: {
+                        PriorityQueueRow(item: item, viewModel: viewModel)
+                    }
                 }
             }
         } header: {
