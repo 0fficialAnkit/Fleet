@@ -254,7 +254,7 @@ struct TripDetailView: View {
                                 Image(systemName: TripIncidentType(rawValue: incident.incidentType)?.icon ?? "exclamationmark.triangle.fill")
                                     .foregroundStyle(.black)
                                     .padding(8)
-                                    .background(Color(red: 1.0, green: 1.0, blue: 0.0))
+                                    .background(Color(red: 255/255, green: 193/255, blue: 7/255))
                                     .clipShape(Circle())
                                 
                                 VStack(alignment: .leading, spacing: 4) {
@@ -276,7 +276,7 @@ struct TripDetailView: View {
                             .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .stroke(Color(red: 1.0, green: 1.0, blue: 0.0).opacity(0.5), lineWidth: 1)
+                                    .stroke(Color(red: 255/255, green: 193/255, blue: 7/255).opacity(0.5), lineWidth: 1)
                             )
                         }
                     }
@@ -371,11 +371,11 @@ struct TripDetailView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(16)
-                    .background(Color.red)
+                    .background(Color(red: 248/255, green: 113/255, blue: 113/255))
                     .foregroundStyle(.white)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .shadow(color: Color.red.opacity(0.35), radius: 10, y: 4)
+                .shadow(color: Color(red: 248/255, green: 113/255, blue: 113/255).opacity(0.35), radius: 10, y: 4)
                 
                 // Report Incident button
                 NavigationLink(destination: DriverReportIncidentView(trip: trip)) {
@@ -386,11 +386,11 @@ struct TripDetailView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(16)
-                    .background(Color(red: 1.0, green: 1.0, blue: 0.0))
+                    .background(Color(red: 255/255, green: 193/255, blue: 7/255))
                     .foregroundStyle(.black)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .shadow(color: Color(red: 1.0, green: 1.0, blue: 0.0).opacity(0.4), radius: 10, y: 4)
+                .shadow(color: Color(red: 255/255, green: 193/255, blue: 7/255).opacity(0.4), radius: 10, y: 4)
             }
 
         case .completed:
