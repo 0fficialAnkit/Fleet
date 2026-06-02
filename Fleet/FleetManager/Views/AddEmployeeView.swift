@@ -5,7 +5,7 @@ struct AddEmployeeView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: EmployeesViewModel
     
-    @State private var selectedRole: String = "driver"
+    @State private var selectedRole: String
 
     @State private var fullName = ""
     @State private var email = ""
@@ -13,6 +13,11 @@ struct AddEmployeeView: View {
     @State private var phone = ""
     @State private var licenseNumber = ""
     @State private var isPasswordVisible = false
+
+    init(viewModel: EmployeesViewModel, initialRole: String = "driver") {
+        self.viewModel = viewModel
+        self._selectedRole = State(initialValue: initialRole)
+    }
 
     var isDriverSelected: Bool {
         return selectedRole == "driver"
