@@ -1,5 +1,6 @@
 import SwiftUI
 internal import Auth
+import Supabase
 
 struct NotificationsView: View {
     @State private var viewModel = NotificationsViewModel()
@@ -104,7 +105,7 @@ struct NotificationDetailDestination: View {
                     onStart: { id, vId, notes, urls in
                         Task { try? await TripService.startTrip(id: id) }
                     },
-                    onEnd: { id, vId, notes, urls in
+                    onEnd: { id, vId, reading, notes, urls in
                         Task { try? await TripService.endTrip(id: id) }
                     }
                 )
