@@ -158,25 +158,44 @@ struct TripRouteMapView: View {
             return
         }
 
-        // ── Phase 1: geocode both addresses concurrently ──────────────────
-        async let originResult = geocode(start)
-        async let destResult   = geocode(end)
-        let (origin, dest) = await (originResult, destResult)
+        let startDecoded = LocationParser.decode(start)
+        let endDecoded = LocationParser.decode(end)
 
-        guard let origin, let dest else {
+        let origin: MKMapItem?
+        let dest: MKMapItem?
+
+        if let startCoord = startDecoded.coordinate {
+            origin = MKMapItem(placemark: MKPlacemark(coordinate: startCoord))
+        } else {
+            origin = await geocode(startDecoded.address)
+        }
+
+        guard let originItem = origin else {
             errorMessage = "Could not find trip locations on the map."
             isLoading = false
             return
         }
 
-        originCoord        = origin.location.coordinate
-        destinationCoord   = dest.location.coordinate
-        originMapItem      = origin
-        destinationMapItem = dest
+        if let endCoord = endDecoded.coordinate {
+            dest = MKMapItem(placemark: MKPlacemark(coordinate: endCoord))
+        } else {
+            dest = await geocode(endDecoded.address, biasedTo: originItem.location.coordinate)
+        }
+
+        guard let destItem = dest else {
+            errorMessage = "Could not find trip locations on the map."
+            isLoading = false
+            return
+        }
+
+        originCoord        = originItem.location.coordinate
+        destinationCoord   = destItem.location.coordinate
+        originMapItem      = originItem
+        destinationMapItem = destItem
 
         // Show pins immediately — fit camera to both points
-        let oCoord = origin.location.coordinate
-        let dCoord = dest.location.coordinate
+        let oCoord = originItem.location.coordinate
+        let dCoord = destItem.location.coordinate
         cameraPosition = .region(MKCoordinateRegion(
             center: CLLocationCoordinate2D(
                 latitude:  (oCoord.latitude  + dCoord.latitude)  / 2,
@@ -219,10 +238,16 @@ struct TripRouteMapView: View {
         }
     }
 
-    private func geocode(_ address: String) async -> MKMapItem? {
+    private func geocode(_ address: String, biasedTo coordinate: CLLocationCoordinate2D? = nil) async -> MKMapItem? {
         let request = MKLocalSearch.Request()
         request.naturalLanguageQuery = address
         request.resultTypes = .address
+        if let coord = coordinate {
+            request.region = MKCoordinateRegion(
+                center: coord,
+                span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
+            )
+        }
         return try? await MKLocalSearch(request: request).start().mapItems.first
     }
 
@@ -230,8 +255,8 @@ struct TripRouteMapView: View {
 
     func openAppleMaps() {
         guard let source = originMapItem, let dest = destinationMapItem else { return }
-        source.name = startAddress ?? "Pickup"
-        dest.name   = endAddress   ?? "Drop-off"
+        source.name = LocationParser.decode(startAddress ?? "Pickup").address
+        dest.name   = LocationParser.decode(endAddress ?? "Drop-off").address
         MKMapItem.openMaps(
             with: [source, dest],
             launchOptions: [

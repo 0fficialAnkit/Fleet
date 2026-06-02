@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CoreLocation
 
 enum UserStatus: String, Codable, CaseIterable, Sendable {
   case active = "active"
@@ -793,5 +794,39 @@ struct MaintenanceStaffRecord: Codable, Identifiable, Hashable, Sendable {
         case profileId = "profile_id"
         case specialization
         case createdAt = "created_at"
+    }
+}
+
+// MARK: - LocationParser
+struct LocationParser {
+    static func encode(address: String, coordinate: CLLocationCoordinate2D) -> String {
+        return "\(address) @latlng:\(coordinate.latitude),\(coordinate.longitude)"
+    }
+    
+    static func decode(_ rawString: String) -> (address: String, coordinate: CLLocationCoordinate2D?) {
+        let pattern = "@latlng:(-?\\d+\\.?\\d*),(-?\\d+\\.?\\d*)"
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return (rawString, nil)
+        }
+        
+        let range = NSRange(rawString.startIndex..<rawString.endIndex, in: rawString)
+        if let match = regex.firstMatch(in: rawString, range: range) {
+            if let latRange = Range(match.range(at: 1), in: rawString),
+               let lonRange = Range(match.range(at: 2), in: rawString),
+               let lat = Double(rawString[latRange]),
+               let lon = Double(rawString[lonRange]) {
+                
+                let suffixRange = match.range(at: 0)
+                let cleanAddress: String
+                if let suffixIdx = Range(suffixRange, in: rawString) {
+                    cleanAddress = rawString[..<suffixIdx.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
+                } else {
+                    cleanAddress = rawString
+                }
+                
+                return (cleanAddress, CLLocationCoordinate2D(latitude: lat, longitude: lon))
+            }
+        }
+        return (rawString, nil)
     }
 }

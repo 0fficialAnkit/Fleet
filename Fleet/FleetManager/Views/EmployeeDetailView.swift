@@ -272,7 +272,7 @@ struct EmployeeDetailView: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("\(start) → \(end)")
+                        Text("\(LocationParser.decode(start).address) → \(LocationParser.decode(end).address)")
                             .font(.body.bold())
                             .foregroundStyle(Color.primary)
                             .lineLimit(1)

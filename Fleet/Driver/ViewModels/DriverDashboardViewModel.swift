@@ -227,33 +227,46 @@ final class DriverDashboardViewModel {
             return
         }
 
-        // Step 1: geocode pickup without bias (let it find the real location)
-        let srcReq = MKLocalSearch.Request()
-        srcReq.naturalLanguageQuery = start
-        srcReq.resultTypes = .address
-        guard let src = try? await MKLocalSearch(request: srcReq).start().mapItems.first else {
+        let startDecoded = LocationParser.decode(start)
+        let endDecoded = LocationParser.decode(end)
+
+        let src: MKMapItem?
+        let dst: MKMapItem?
+
+        if let startCoord = startDecoded.coordinate {
+            src = MKMapItem(placemark: MKPlacemark(coordinate: startCoord))
+        } else {
+            let srcReq = MKLocalSearch.Request()
+            srcReq.naturalLanguageQuery = startDecoded.address
+            srcReq.resultTypes = .address
+            src = try? await MKLocalSearch(request: srcReq).start().mapItems.first
+        }
+        guard let srcItem = src else {
             print("[endTrip] Pickup geocoding failed — distance not saved")
             return
         }
 
-        // Step 2: geocode dropoff BIASED to pickup's coordinate
-        // This prevents "Mysore Palace" matching a "Palace Road" 120 km away
-        let pickupCoord = src.placemark.coordinate
-        let dstReq = MKLocalSearch.Request()
-        dstReq.naturalLanguageQuery = end
-        dstReq.resultTypes = .address
-        dstReq.region = MKCoordinateRegion(
-            center: pickupCoord,
-            span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)  // ~200 km radius
-        )
-        guard let dst = try? await MKLocalSearch(request: dstReq).start().mapItems.first else {
+        if let endCoord = endDecoded.coordinate {
+            dst = MKMapItem(placemark: MKPlacemark(coordinate: endCoord))
+        } else {
+            let pickupCoord = srcItem.location.coordinate
+            let dstReq = MKLocalSearch.Request()
+            dstReq.naturalLanguageQuery = endDecoded.address
+            dstReq.resultTypes = .address
+            dstReq.region = MKCoordinateRegion(
+                center: pickupCoord,
+                span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)  // ~200 km radius
+            )
+            dst = try? await MKLocalSearch(request: dstReq).start().mapItems.first
+        }
+        guard let dstItem = dst else {
             print("[endTrip] Dropoff geocoding failed — distance not saved")
             return
         }
 
         // Step 3: road distance via MKDirections
         let dirReq = MKDirections.Request()
-        dirReq.source = src; dirReq.destination = dst
+        dirReq.source = srcItem; dirReq.destination = dstItem
         dirReq.transportType = .automobile
         guard let resp    = try? await MKDirections(request: dirReq).calculate(),
               let mkRoute = resp.routes.first else {
@@ -300,11 +313,12 @@ final class DriverDashboardViewModel {
         else { return }
 
         let monitor = GeofenceMonitor.shared
-        async let pickupCoord  = monitor.geocode(pickup)
-        async let dropoffCoord = monitor.geocode(dropoff)
-
-        guard let pc = await pickupCoord, let dc = await dropoffCoord else {
-            print("[Geofence] ❌ Could not geocode pickup/dropoff for trip \(tripId)")
+        guard let pc = await monitor.geocode(pickup) else {
+            print("[Geofence] ❌ Could not geocode pickup for trip \(tripId)")
+            return
+        }
+        guard let dc = await monitor.geocode(dropoff, biasedTo: pc) else {
+            print("[Geofence] ❌ Could not geocode dropoff for trip \(tripId)")
             return
         }
 

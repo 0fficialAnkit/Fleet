@@ -265,10 +265,9 @@ struct AddOrderView: View {
         guard let pickup  = pickupLocation?.fullAddress,
               let dropoff = dropoffLocation?.fullAddress else { return }
         Task {
-            async let srcSearch = geocodeForMaps(pickup)
-            async let dstSearch = geocodeForMaps(dropoff)
-            guard let src = await srcSearch,
-                  let dst = await dstSearch else { return }
+            guard let src = await geocodeForMaps(pickup) else { return }
+            let dst = await geocodeForMaps(dropoff, biasedTo: src.placemark.coordinate)
+            guard let dst else { return }
             MKMapItem.openMaps(
                 with: [src, dst],
                 launchOptions: [
@@ -279,10 +278,16 @@ struct AddOrderView: View {
         }
     }
 
-    private func geocodeForMaps(_ address: String) async -> MKMapItem? {
+    private func geocodeForMaps(_ address: String, biasedTo coordinate: CLLocationCoordinate2D? = nil) async -> MKMapItem? {
         let req = MKLocalSearch.Request()
         req.naturalLanguageQuery = address
         req.resultTypes = .address
+        if let coord = coordinate {
+            req.region = MKCoordinateRegion(
+                center: coord,
+                span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
+            )
+        }
         return try? await MKLocalSearch(request: req).start().mapItems.first
     }
 
@@ -300,12 +305,27 @@ struct AddOrderView: View {
         defer { isSaving = false }
 
         do {
-            // 1. Create route record with real addresses
+            let pickupAddr = pickup.fullAddress
+            let dropoffAddr = dropoff.fullAddress
+            
+            var startLocString = pickupAddr
+            var endLocString = dropoffAddr
+            
+            if let srcItem = await geocodeForMaps(pickupAddr) {
+                let pickupCoord = srcItem.placemark.coordinate
+                startLocString = LocationParser.encode(address: pickupAddr, coordinate: pickupCoord)
+                
+                if let dstItem = await geocodeForMaps(dropoffAddr, biasedTo: pickupCoord) {
+                    endLocString = LocationParser.encode(address: dropoffAddr, coordinate: dstItem.placemark.coordinate)
+                }
+            }
+
+            // 1. Create route record with real addresses and encoded coordinates
             let route = Route(
                 id: UUID(),
                 routeName: "\(pickup.title) → \(dropoff.title)",
-                startLocation: pickup.fullAddress,
-                endLocation: dropoff.fullAddress
+                startLocation: startLocString,
+                endLocation: endLocString
             )
             try await RouteService.createRoute(route)
 

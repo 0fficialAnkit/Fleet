@@ -244,7 +244,7 @@ struct OrderDetailView: View {
                     Circle().fill(Color.green).frame(width: 10, height: 10).padding(.leading, 2)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Pickup").font(.caption).foregroundStyle(.secondary)
-                        Text(route?.startLocation ?? "—").font(.subheadline)
+                        Text(LocationParser.decode(route?.startLocation ?? "—").address).font(.subheadline)
                     }
                 }
                 HStack(spacing: 14) {
@@ -252,7 +252,7 @@ struct OrderDetailView: View {
                         .font(.system(size: 14)).foregroundStyle(.red).frame(width: 14)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Drop-off").font(.caption).foregroundStyle(.secondary)
-                        Text(route?.endLocation ?? "—").font(.subheadline)
+                        Text(LocationParser.decode(route?.endLocation ?? "—").address).font(.subheadline)
                     }
                 }
             }
@@ -350,10 +350,26 @@ struct OrderDetailView: View {
 
     private func geocodeRoute() async {
         guard let start = route?.startLocation, let end = route?.endLocation else { return }
-        async let src = geocode(start)
-        async let dst = geocode(end)
-        pickupCoord  = await src?.placemark.coordinate
-        dropoffCoord = await dst?.placemark.coordinate
+        let startDecoded = LocationParser.decode(start)
+        let endDecoded = LocationParser.decode(end)
+
+        let src: MKMapItem?
+        let dst: MKMapItem?
+
+        if let startCoord = startDecoded.coordinate {
+            src = MKMapItem(placemark: MKPlacemark(coordinate: startCoord))
+        } else {
+            src = await geocode(startDecoded.address)
+        }
+        guard let srcItem = src else { return }
+        pickupCoord  = srcItem.location.coordinate
+
+        if let endCoord = endDecoded.coordinate {
+            dst = MKMapItem(placemark: MKPlacemark(coordinate: endCoord))
+        } else {
+            dst = await geocode(endDecoded.address, biasedTo: pickupCoord)
+        }
+        dropoffCoord = dst?.location.coordinate
     }
 
     /// Calculates ROAD distances via MKDirections.
@@ -421,10 +437,16 @@ struct OrderDetailView: View {
         )
     }
 
-    private func geocode(_ address: String) async -> MKMapItem? {
+    private func geocode(_ address: String, biasedTo coordinate: CLLocationCoordinate2D? = nil) async -> MKMapItem? {
         let req = MKLocalSearch.Request()
         req.naturalLanguageQuery = address
         req.resultTypes = .address
+        if let coord = coordinate {
+            req.region = MKCoordinateRegion(
+                center: coord,
+                span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
+            )
+        }
         return try? await MKLocalSearch(request: req).start().mapItems.first
     }
 

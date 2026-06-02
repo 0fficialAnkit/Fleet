@@ -259,10 +259,10 @@ struct ReportDetailView: View {
 
                         // Pickup → Drop-off
                         if let pickup = lastTripRoute?.startLocation {
-                            LabeledContent("Pickup", value: pickup)
+                            LabeledContent("Pickup", value: LocationParser.decode(pickup).address)
                         }
                         if let dropoff = lastTripRoute?.endLocation {
-                            LabeledContent("Drop-off", value: dropoff)
+                            LabeledContent("Drop-off", value: LocationParser.decode(dropoff).address)
                         }
 
                         if let start = trip.startTime {
@@ -524,8 +524,8 @@ struct ReportDetailView: View {
             if let s = trip.startTime      { rows.append(("Last Trip Started", s.formatted(date: .abbreviated, time: .shortened))) }
             if let e = trip.endTime        { rows.append(("Last Trip Ended",   e.formatted(date: .abbreviated, time: .shortened))) }
             if let d = trip.distance       { rows.append(("Last Trip Distance", String(format: "%.1f km", d))) }
-            if let p = lastTripRoute?.startLocation { rows.append(("Pickup",   p)) }
-            if let d2 = lastTripRoute?.endLocation  { rows.append(("Drop-off", d2)) }
+            if let p = lastTripRoute?.startLocation { rows.append(("Pickup",   LocationParser.decode(p).address)) }
+            if let d2 = lastTripRoute?.endLocation  { rows.append(("Drop-off", LocationParser.decode(d2).address)) }
         }
         if let staffId = selectedStaffId,
            let staff   = viewModel.maintenanceStaff.first(where: { $0.id == staffId }) {
@@ -623,8 +623,8 @@ struct ReportDetailView: View {
             if let trip = lastTrip {
                 section("Last Trip on This Vehicle")
                 if let t = trip.orderType  { row("Order Type", t.displayName) }
-                if let p = lastTripRoute?.startLocation { row("Pickup",   p) }
-                if let d = lastTripRoute?.endLocation   { row("Drop-off", d) }
+                if let p = lastTripRoute?.startLocation { row("Pickup",   LocationParser.decode(p).address) }
+                if let d = lastTripRoute?.endLocation   { row("Drop-off", LocationParser.decode(d).address) }
                 if let s = trip.startTime  { row("Started", s.formatted(date: .abbreviated, time: .shortened)) }
                 if let e = trip.endTime    { row("Ended",   e.formatted(date: .abbreviated, time: .shortened)) }
                 if let dist = trip.distance { row("Distance", String(format: "%.1f km", dist)) }

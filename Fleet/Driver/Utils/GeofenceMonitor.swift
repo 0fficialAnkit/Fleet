@@ -202,11 +202,22 @@ extension GeofenceMonitor: CLLocationManagerDelegate {
 extension GeofenceMonitor {
 
     /// Resolves a free-text address to a coordinate. Returns nil on failure.
-    func geocode(_ address: String) async -> CLLocationCoordinate2D? {
+    /// Resolves a free-text address to a coordinate. Returns nil on failure.
+    func geocode(_ address: String, biasedTo coordinate: CLLocationCoordinate2D? = nil) async -> CLLocationCoordinate2D? {
+        let decoded = LocationParser.decode(address)
+        if let coord = decoded.coordinate {
+            return coord
+        }
         let req = MKLocalSearch.Request()
-        req.naturalLanguageQuery = address
+        req.naturalLanguageQuery = decoded.address
         req.resultTypes = .address
+        if let coord = coordinate {
+            req.region = MKCoordinateRegion(
+                center: coord,
+                span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
+            )
+        }
         guard let item = try? await MKLocalSearch(request: req).start().mapItems.first else { return nil }
-        return item.placemark.coordinate
+        return item.location.coordinate
     }
 }

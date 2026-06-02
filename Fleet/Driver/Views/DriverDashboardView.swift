@@ -205,7 +205,7 @@ struct DriverTripRow: View {
                     Image(systemName: "arrow.forward")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(Color.secondary)
-                    Text("\(start) → \(end)")
+                    Text("\(LocationParser.decode(start).address) → \(LocationParser.decode(end).address)")
                         .font(.subheadline)
                         .foregroundStyle(Color.secondary)
                         .lineLimit(1)

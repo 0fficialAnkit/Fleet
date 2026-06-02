@@ -184,7 +184,7 @@ struct DashboardView: View {
                                 .font(.subheadline.bold())
                                 .foregroundStyle(Color.primary)
                             if let start = route?.startLocation, let end = route?.endLocation {
-                                Text("\(start) → \(end)")
+                                Text("\(LocationParser.decode(start).address) → \(LocationParser.decode(end).address)")
                                     .font(.caption)
                                     .foregroundStyle(Color.secondary)
                                     .lineLimit(1)

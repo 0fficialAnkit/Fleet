@@ -117,7 +117,7 @@ struct TripDetailView: View {
                             Text("Pickup / Origin")
                                 .font(.body)
                                 .foregroundStyle(Color.secondary)
-                            Text(route?.startLocation ?? "No start location")
+                            Text(LocationParser.decode(route?.startLocation ?? "No start location").address)
                                 .font(.body.weight(.medium))
                                 .foregroundStyle(Color.primary)
                         }
@@ -144,7 +144,7 @@ struct TripDetailView: View {
                             Text("Drop-off / Destination")
                                 .font(.body)
                                 .foregroundStyle(Color.secondary)
-                            Text(route?.endLocation ?? "No destination")
+                            Text(LocationParser.decode(route?.endLocation ?? "No destination").address)
                                 .font(.body.weight(.medium))
                                 .foregroundStyle(Color.primary)
                         }
@@ -414,15 +414,30 @@ struct TripDetailView: View {
         else { return }
 
         Task {
-            async let sourceResult = geocodeAddress(startAddr)
-            async let destResult   = geocodeAddress(endAddr)
+            let startDecoded = LocationParser.decode(startAddr)
+            let endDecoded = LocationParser.decode(endAddr)
 
-            guard let sourceItem = await sourceResult,
-                  let destItem   = await destResult
-            else { return }
+            let sourceItem: MKMapItem
+            let destItem: MKMapItem
 
-            sourceItem.name = startAddr
-            destItem.name   = endAddr
+            if let startCoord = startDecoded.coordinate {
+                sourceItem = MKMapItem(placemark: MKPlacemark(coordinate: startCoord))
+            } else if let src = await geocodeAddress(startDecoded.address) {
+                sourceItem = src
+            } else {
+                return
+            }
+
+            if let endCoord = endDecoded.coordinate {
+                destItem = MKMapItem(placemark: MKPlacemark(coordinate: endCoord))
+            } else if let dst = await geocodeAddress(endDecoded.address, biasedTo: sourceItem.location.coordinate) {
+                destItem = dst
+            } else {
+                return
+            }
+
+            sourceItem.name = startDecoded.address
+            destItem.name   = endDecoded.address
 
             MKMapItem.openMaps(
                 with: [sourceItem, destItem],
@@ -434,16 +449,39 @@ struct TripDetailView: View {
         }
     }
 
-    private func geocodeAddress(_ address: String) async -> MKMapItem? {
+    private func geocodeAddress(_ address: String, biasedTo coordinate: CLLocationCoordinate2D? = nil) async -> MKMapItem? {
         let req = MKLocalSearch.Request()
         req.naturalLanguageQuery = address
         req.resultTypes = .address
+        if let coord = coordinate {
+            req.region = MKCoordinateRegion(
+                center: coord,
+                span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
+            )
+        }
         return try? await MKLocalSearch(request: req).start().mapItems.first
     }
     
     private func calculateDistance(from startAddr: String, to endAddr: String) async {
-        guard let startItem = await geocodeAddress(startAddr),
-              let endItem = await geocodeAddress(endAddr) else { return }
+        let startDecoded = LocationParser.decode(startAddr)
+        let endDecoded = LocationParser.decode(endAddr)
+
+        let startItem: MKMapItem?
+        let endItem: MKMapItem?
+
+        if let startCoord = startDecoded.coordinate {
+            startItem = MKMapItem(placemark: MKPlacemark(coordinate: startCoord))
+        } else {
+            startItem = await geocodeAddress(startDecoded.address)
+        }
+        guard let startItem else { return }
+
+        if let endCoord = endDecoded.coordinate {
+            endItem = MKMapItem(placemark: MKPlacemark(coordinate: endCoord))
+        } else {
+            endItem = await geocodeAddress(endDecoded.address, biasedTo: startItem.location.coordinate)
+        }
+        guard let endItem else { return }
         
         let request = MKDirections.Request()
         request.source = startItem

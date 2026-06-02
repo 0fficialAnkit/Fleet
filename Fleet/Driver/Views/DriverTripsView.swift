@@ -188,11 +188,11 @@ struct TripListRow: View {
                             .foregroundStyle(Color.red)
                     }
                     VStack(alignment: .leading, spacing: 5) {
-                        Text(start)
+                        Text(LocationParser.decode(start).address)
                             .font(.subheadline)
                             .foregroundStyle(Color.secondary)
                             .lineLimit(1)
-                        Text(end)
+                        Text(LocationParser.decode(end).address)
                             .font(.subheadline)
                             .foregroundStyle(Color.secondary)
                             .lineLimit(1)

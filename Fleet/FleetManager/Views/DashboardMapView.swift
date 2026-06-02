@@ -184,13 +184,29 @@ struct DashboardMapView: View {
                 let tripId     = trip.id
 
                 group.addTask {
-                    async let startItem = geocodeAddress(route.startLocation)
-                    async let endItem   = geocodeAddress(route.endLocation)
-                    guard let origin = await startItem, let dest = await endItem else { return nil }
+                    let startDecoded = LocationParser.decode(route.startLocation ?? "")
+                    let endDecoded = LocationParser.decode(route.endLocation ?? "")
+
+                    let origin: MKMapItem?
+                    let dest: MKMapItem?
+
+                    if let startCoord = startDecoded.coordinate {
+                        origin = MKMapItem(placemark: MKPlacemark(coordinate: startCoord))
+                    } else {
+                        origin = await geocodeAddress(startDecoded.address)
+                    }
+                    guard let originItem = origin else { return nil }
+
+                    if let endCoord = endDecoded.coordinate {
+                        dest = MKMapItem(placemark: MKPlacemark(coordinate: endCoord))
+                    } else {
+                        dest = await geocodeAddress(endDecoded.address, biasedTo: originItem.location.coordinate)
+                    }
+                    guard let destItem = dest else { return nil }
 
                     let req = MKDirections.Request()
-                    req.source                  = origin
-                    req.destination             = dest
+                    req.source                  = originItem
+                    req.destination             = destItem
                     req.transportType           = .automobile
                     req.requestsAlternateRoutes = false
 
@@ -199,7 +215,8 @@ struct DashboardMapView: View {
                        let mkRoute  = response.routes.first {
                         polyline = mkRoute.polyline
                     } else {
-                        var coords = [origin.location.coordinate, dest.location.coordinate]
+                        var coords = [originItem.location.coordinate,
+                                      destItem.location.coordinate]
                         polyline = MKPolyline(coordinates: &coords, count: 2)
                     }
 
@@ -208,9 +225,9 @@ struct DashboardMapView: View {
                         polyline:     polyline,
                         color:        color,
                         pickupLabel:  "Pickup · \(driverName)",
-                        pickupCoord:  origin.location.coordinate,
+                        pickupCoord:  originItem.location.coordinate,
                         dropoffLabel: "Drop-off · \(driverName)",
-                        dropoffCoord: dest.location.coordinate
+                        dropoffCoord: destItem.location.coordinate
                     )
                 }
             }
@@ -578,10 +595,16 @@ func relativeTime(_ date: Date) -> String {
 }
 
 /// Geocodes a free-text address to the first matching MKMapItem.
-func geocodeAddress(_ address: String?) async -> MKMapItem? {
+func geocodeAddress(_ address: String?, biasedTo coordinate: CLLocationCoordinate2D? = nil) async -> MKMapItem? {
     guard let address, !address.isEmpty else { return nil }
     let request = MKLocalSearch.Request()
     request.naturalLanguageQuery = address
     request.resultTypes = .address
+    if let coord = coordinate {
+        request.region = MKCoordinateRegion(
+            center: coord,
+            span: MKCoordinateSpan(latitudeDelta: 2.0, longitudeDelta: 2.0)
+        )
+    }
     return try? await MKLocalSearch(request: request).start().mapItems.first
 }

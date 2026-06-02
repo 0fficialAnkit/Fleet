@@ -220,12 +220,12 @@ struct OrderCardView: View {
 
                         // Locations
                         VStack(alignment: .leading, spacing: 10) {
-                            Text(start)
+                            Text(LocationParser.decode(start).address)
                                 .font(.subheadline)
                                 .foregroundStyle(Color.secondary)
                                 .lineLimit(1)
                             
-                            Text(end)
+                            Text(LocationParser.decode(end).address)
                                 .font(.subheadline.bold())
                                 .foregroundStyle(Color.primary)
                                 .lineLimit(1)
