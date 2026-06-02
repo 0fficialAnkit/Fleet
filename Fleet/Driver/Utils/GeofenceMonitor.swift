@@ -40,6 +40,9 @@ final class GeofenceMonitor: NSObject {
         driverId:  UUID?,
         fences:    [TripGeofence]
     ) {
+        // Ensure notification permission so driver alerts can fire
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+
         // Request Always permission if not already granted
         if manager.authorizationStatus == .authorizedWhenInUse {
             manager.requestAlwaysAuthorization()
@@ -96,40 +99,67 @@ final class GeofenceMonitor: NSObject {
               let tripId  = currentTripId,
               let vId     = currentVehicleId else { return }
 
-        let emoji  = eventType == "entered" ? "📍" : "🚗"
-        let action = eventType == "entered"  ? "arrived at" : "departed from"
+        let isEntry   = eventType == "entered"
+        let emoji     = isEntry  ? "📍" : "🚗"
+        let action    = isEntry  ? "arrived at" : "departed from"
+        let isPickup  = fence.zoneType == "pickup"
         print("[GeofenceMonitor] \(emoji) \(action) '\(fence.name)'")
 
         Task {
             // 1. Log event to Supabase
             let event = TripGeofenceEvent(
-                id:         UUID(),
-                geofenceId: fence.id,
-                vehicleId:  vId,
-                driverId:   currentDriverId,
-                eventType:  eventType,
-                latitude:   nil,
-                longitude:  nil,
-                occurredAt: Date()
+                id: UUID(), geofenceId: fence.id, vehicleId: vId,
+                driverId: currentDriverId, eventType: eventType,
+                latitude: nil, longitude: nil, occurredAt: Date()
             )
             try? await GeofenceService.createEvent(event)
 
-            // 2. Notify fleet managers
-            guard let managers = try? await ProfileService.fetchProfilesByRole(role: "fleet_manager"),
-                  !managers.isEmpty else { return }
-
-            for manager in managers {
-                let notification = Notification(
-                    id:        UUID(),
-                    userId:    manager.id,
-                    title:     "\(emoji) \(fence.zoneType.capitalized) Zone Alert",
-                    message:   "Driver \(action) \(fence.name) — Trip #\(tripId.uuidString.prefix(6).uppercased())",
-                    type:      .info,
-                    isRead:    false,
-                    createdAt: Date()
-                )
-                try? await NotificationService.createNotification(notification)
+            // 2. Notify fleet managers (in-app)
+            if let managers = try? await ProfileService.fetchProfilesByRole(role: "fleet_manager") {
+                for manager in managers {
+                    let msg = isEntry
+                        ? "Driver approaching \(fence.name) — \(isPickup ? "ready to pick up" : "delivering now")"
+                        : "Driver left \(fence.name) — \(isPickup ? "heading to drop-off" : "trip nearly complete")"
+                    let notification = Notification(
+                        id: UUID(), userId: manager.id,
+                        title: "\(emoji) \(fence.zoneType.capitalized) Zone — Trip #\(tripId.uuidString.prefix(6).uppercased())",
+                        message: msg, type: .info, isRead: false, createdAt: Date()
+                    )
+                    try? await NotificationService.createNotification(notification)
+                }
             }
+
+            // 3. Local notification to the driver's device
+            sendDriverLocalNotification(fence: fence, isEntry: isEntry, isPickup: isPickup)
+        }
+    }
+
+    private func sendDriverLocalNotification(fence: TripGeofence, isEntry: Bool, isPickup: Bool) {
+        let center = UNUserNotificationCenter.current()
+        let content = UNMutableNotificationContent()
+        content.sound = .default
+
+        if isEntry && isPickup {
+            content.title = "📍 Approaching Pickup"
+            content.body  = "You are within 5 km of your pickup: \(fence.name). Prepare to arrive."
+        } else if isEntry && !isPickup {
+            content.title = "🏁 Approaching Drop-off"
+            content.body  = "You are within 5 km of your destination: \(fence.name)."
+        } else if !isEntry && isPickup {
+            content.title = "🚗 Departed Pickup"
+            content.body  = "You have left the pickup zone. Head to your drop-off location."
+        } else {
+            content.title = "✅ Departed Drop-off"
+            content.body  = "You have left the drop-off zone. Please complete your trip."
+        }
+
+        let req = UNNotificationRequest(
+            identifier: "geofence_\(fence.id.uuidString)_\(isEntry ? "enter" : "exit")",
+            content: content,
+            trigger: nil   // deliver immediately
+        )
+        center.add(req) { error in
+            if let error { print("[GeofenceMonitor] local notif error: \(error)") }
         }
     }
 }

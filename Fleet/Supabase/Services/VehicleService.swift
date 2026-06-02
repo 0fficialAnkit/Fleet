@@ -32,6 +32,7 @@ private struct VehicleUpdate: Encodable {
     let admin_id: UUID?
     let status: VehicleStatus?
     let vehicle_type: VehicleType?
+    let purchase_date: Date?   // Supabase column: purchase_date (timestamptz)
 }
 
 enum VehicleService {
@@ -136,7 +137,8 @@ enum VehicleService {
             assigned_driver_id: vehicle.assignedDriverId,
             admin_id: vehicle.adminId,
             status: vehicle.status,
-            vehicle_type: vehicle.vehicleType
+            vehicle_type: vehicle.vehicleType,
+            purchase_date: vehicle.purchaseDate
         )
         do {
             try await supabase

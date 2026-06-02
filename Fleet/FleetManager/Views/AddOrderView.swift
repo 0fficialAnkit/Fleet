@@ -222,7 +222,8 @@ struct AddOrderView: View {
                     dropoffLocation = location
                 }
             }
-            // Clear vehicle/driver selection if they are no longer available
+            // Clear stale selections on appear and whenever filters change
+            .task { validateSelection() }
             .onChange(of: startTime) { _, _ in validateSelection() }
             .onChange(of: orderType) { _, _ in validateSelection() }
             .onChange(of: selectedVehicleType) { _, _ in validateSelection() }
