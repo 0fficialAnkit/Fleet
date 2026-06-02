@@ -18,22 +18,27 @@ struct NotificationsView: View {
                     VStack(spacing: 16) {
                         Image(systemName: "bell.slash")
                             .font(.system(size: 48))
-                            .foregroundStyle(Color.secondary)
+                            .foregroundColor(Color.secondary)
                         Text("No notifications")
                             .font(.body)
-                            .foregroundStyle(Color.secondary)
+                            .foregroundColor(Color.secondary)
                     }
                 } else {
                     List {
                         ForEach(viewModel.notifications) { notification in
                             if notification.referenceId != nil {
-                                NavigationLink {
-                                    NotificationDetailDestination(notification: notification)
-                                        .onAppear {
-                                            viewModel.markAsRead(notification)
-                                        }
-                                } label: {
+                                ZStack {
                                     NotificationRowContent(notification: notification)
+                                    
+                                    NavigationLink {
+                                        NotificationDetailDestination(notification: notification)
+                                            .onAppear {
+                                                viewModel.markAsRead(notification)
+                                            }
+                                    } label: {
+                                        EmptyView()
+                                    }
+                                    .opacity(0)
                                 }
                                 .listRowBackground(Color.clear)
                                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -63,14 +68,14 @@ struct NotificationsView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundStyle(Color.primary)
+                    .foregroundColor(Color.primary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     if !viewModel.notifications.filter({ !$0.isRead }).isEmpty {
                         Button("Mark All Read") {
                             viewModel.markAllAsRead()
                         }
-                        .foregroundStyle(Color.teal)
+                        .foregroundColor(Color.teal)
                         .font(.footnote)
                     }
                 }
@@ -99,8 +104,8 @@ struct NotificationDetailDestination: View {
                     onStart: { id, vId, notes, urls in
                         Task { try? await TripService.startTrip(id: id) }
                     },
-                    onEnd: { id, vId, distance, notes, urls in
-                        Task { try? await TripService.endTrip(id: id, distance: distance) }
+                    onEnd: { id, vId, notes, urls in
+                        Task { try? await TripService.endTrip(id: id) }
                     }
                 )
             } else {
@@ -140,29 +145,38 @@ struct NotificationRowContent: View {
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
-            Image(systemName: iconName)
-                .font(.title2)
-                .foregroundStyle(iconColor)
-                .padding(.top, 4)
+        HStack(alignment: .center, spacing: 16) {
+            HStack(alignment: .top, spacing: 16) {
+                Image(systemName: iconName)
+                    .font(.title2)
+                    .foregroundColor(iconColor)
+                    .padding(.top, 4)
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(notification.title ?? "Notification")
-                        .font(.body.bold())
-                        .foregroundStyle(notification.isRead ? Color.secondary : Color.primary)
-                    Spacer()
-                    if let date = notification.createdAt {
-                        Text(date.formatted(date: .abbreviated, time: .shortened))
-                            .font(.caption)
-                            .foregroundStyle(Color(.tertiaryLabel))
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(notification.title ?? "Notification")
+                            .font(.body.bold())
+                            .foregroundColor(notification.isRead ? Color.secondary : Color.primary)
+                        Spacer()
+                        if let date = notification.createdAt {
+                            Text(date.formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption)
+                                .foregroundColor(Color(.tertiaryLabel))
+                        }
                     }
-                }
 
-                Text(notification.message ?? "")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.secondary)
-                    .multilineTextAlignment(.leading)
+                    Text(notification.message ?? "")
+                        .font(.subheadline)
+                        .foregroundColor(Color.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+            
+            if notification.referenceId != nil {
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color(.tertiaryLabel))
             }
         }
         .padding(16)
