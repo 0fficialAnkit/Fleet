@@ -174,18 +174,19 @@ enum TripService {
         }
     }
 
-    static func endTrip(id: UUID) async throws {
+    static func endTrip(id: UUID, distance: Double? = nil) async throws {
         struct EndUpdate: Encodable {
             let status: TripStatus
             let end_time: Date
+            let distance: Double?
         }
         do {
             try await supabase
                 .from("trips")
-                .update(EndUpdate(status: .completed, end_time: Date()))
+                .update(EndUpdate(status: .completed, end_time: Date(), distance: distance))
                 .eq("id", value: id)
                 .execute()
-            print("[TripService] endTrip(\(id)): OK")
+            print("[TripService] endTrip(\(id)) with distance \(String(describing: distance)): OK")
         } catch {
             print("[TripService] endTrip(\(id)) ERROR: \(error)")
             throw error

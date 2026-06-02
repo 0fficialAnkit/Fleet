@@ -82,6 +82,7 @@ struct AddEmployeeView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundStyle(Color.primary)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -120,7 +121,7 @@ struct AddEmployeeView: View {
                             }
                         }
                     }
-                    .bold()
+                    .foregroundStyle(Color.primary)
                     .disabled(fullName.isEmpty || email.isEmpty || password.isEmpty || viewModel.isCreatingUser)
                 }
             }
