@@ -487,5 +487,5 @@ struct AddOrderView: View {
         vehicles: mockVehicles
     )
     
-    return AddOrderView(viewModel: viewModel)
+    AddOrderView(viewModel: viewModel)
 }

@@ -47,7 +47,7 @@ struct FilterButton: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(isSelected ? Color.teal : Color(.tertiarySystemBackground))
-                .foregroundColor(isSelected ? .white : Color.secondary)
+                .foregroundStyle(isSelected ? .white : Color.secondary)
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)

@@ -303,7 +303,7 @@ struct DriverFuelAnalyticsView: View {
                             startPoint: .top, endPoint: .bottom
                         )
                     )
-                    .cornerRadius(6)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     .annotation(position: .top) {
                         if point.distance > 0 {
                             Text(String(format: "%.0f", point.distance))
@@ -382,7 +382,7 @@ struct DriverFuelAnalyticsView: View {
                                 startPoint: .top, endPoint: .bottom
                             )
                         )
-                        .cornerRadius(6)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                         .annotation(position: .top) {
                             if point.cost > 0 {
                                 Text("₹\(Int(point.cost))")
@@ -401,7 +401,7 @@ struct DriverFuelAnalyticsView: View {
                                 startPoint: .top, endPoint: .bottom
                             )
                         )
-                        .cornerRadius(6)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                         .annotation(position: .top) {
                             if point.liters > 0 {
                                 Text(String(format: "%.1fL", point.liters))

@@ -90,7 +90,7 @@ struct LoginView: View {
                     .frame(width: 80, height: 80)
                 Image(systemName: "truck.box.fill")
                     .font(.system(size: 36))
-                    .foregroundColor(Color(.systemBackground))
+                    .foregroundStyle(Color(.systemBackground))
             }
         }
         .buttonStyle(PlainButtonStyle())
@@ -101,10 +101,10 @@ struct LoginView: View {
         VStack(spacing: 8) {
             Text("GoFleet")
                 .font(.system(size: 34, weight: .bold))
-                .foregroundColor(Color.primary)
+                .foregroundStyle(Color.primary)
             Text("Select your role to continue")
                 .font(.system(size: 16))
-                .foregroundColor(Color.secondary)
+                .foregroundStyle(Color.secondary)
         }
     }
 
@@ -130,11 +130,11 @@ struct LoginView: View {
         Button(action: handleContinue) {
             Text("Continue")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(Color(.systemBackground))
+                .foregroundStyle(Color(.systemBackground))
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
                 .background(Color.teal)
-                .cornerRadius(16)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
     }
 
@@ -158,7 +158,7 @@ struct RoleCardView: View {
         .padding(16)
         .background(cardBackground)
         .overlay(cardBorder)
-        .cornerRadius(16)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     var iconBox: some View {
@@ -168,7 +168,7 @@ struct RoleCardView: View {
                 .frame(width: 52, height: 52)
             Image(systemName: item.iconName)
                 .font(.system(size: 22))
-                .foregroundColor(item.iconColor)
+                .foregroundStyle(item.iconColor)
         }
     }
 
@@ -176,10 +176,10 @@ struct RoleCardView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(item.roleName)
                 .font(.system(size: 17, weight: .bold))
-                .foregroundColor(Color.primary)
+                .foregroundStyle(Color.primary)
             Text(item.description)
                 .font(.system(size: 14))
-                .foregroundColor(Color.secondary)
+                .foregroundStyle(Color.secondary)
         }
     }
 

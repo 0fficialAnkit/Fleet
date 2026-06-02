@@ -98,7 +98,7 @@ struct ScheduleMaintenanceSheetView: View {
                             VStack(spacing: 12) {
                                 HStack {
                                     Text("Task Type")
-                                        .foregroundColor(Color.primary)
+                                        .foregroundStyle(Color.primary)
                                     Spacer()
                                     Picker("", selection: $selectedTaskType) {
                                         ForEach(MaintenanceTaskType.allCases, id: \.self) { type in

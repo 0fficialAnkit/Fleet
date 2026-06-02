@@ -85,14 +85,14 @@ struct DriverChecklistView: View {
                                     HStack(spacing: 8) {
                                         Image(systemName: item.icon)
                                             .font(.system(size: 18))
-                                            .foregroundColor(Color.primary)
+                                            .foregroundStyle(Color.primary)
                                             .frame(width: 24)
 
                                         VStack(alignment: .leading, spacing: 2) {
                                             HStack(spacing: 4) {
                                                 Text(item.name)
                                                     .font(.system(size: 14, weight: .regular, design: .rounded))
-                                                    .foregroundColor(Color.primary)
+                                                    .foregroundStyle(Color.primary)
                                                     .lineLimit(2)
                                                     .minimumScaleFactor(0.8)
                                                 if item.mandatory {
@@ -113,7 +113,7 @@ struct DriverChecklistView: View {
                                             if checkedItems.contains(item.name) {
                                                 Image(systemName: "checkmark")
                                                     .font(.system(size: 12, weight: .bold))
-                                                    .foregroundColor(.white)
+                                                    .foregroundStyle(.white)
                                             }
                                         }
                                     }
@@ -263,7 +263,7 @@ struct DriverChecklistView: View {
                             }
                         }
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundColor(allMandatoryChecked && !isSubmitted ? Color(UIColor.systemBackground) : Color(UIColor.tertiaryLabel))
+                        .foregroundStyle(allMandatoryChecked && !isSubmitted ? Color(UIColor.systemBackground) : Color(UIColor.tertiaryLabel))
                         .frame(maxWidth: .infinity)
                         .padding(16)
                         .background(allMandatoryChecked && !isSubmitted ? Color.green : Color(UIColor.tertiarySystemFill))

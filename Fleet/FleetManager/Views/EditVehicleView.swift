@@ -42,35 +42,35 @@ struct EditVehicleView: View {
                                 .padding(.horizontal, 16)
 
                             VStack(spacing: 0) {
-                                TextField("", text: $make, prompt: Text("Manufacturer (e.g. Ford)").foregroundColor(Color(.placeholderText)))
+                                TextField("", text: $make, prompt: Text("Manufacturer (e.g. Ford)").foregroundStyle(Color(.placeholderText)))
                                     .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
+                                    .foregroundStyle(Color.primary)
 
                                 Divider().background(Color(.separator))
 
-                                TextField("", text: $model, prompt: Text("Model (e.g. Transit)").foregroundColor(Color(.placeholderText)))
+                                TextField("", text: $model, prompt: Text("Model (e.g. Transit)").foregroundStyle(Color(.placeholderText)))
                                     .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
+                                    .foregroundStyle(Color.primary)
 
                                 Divider().background(Color(.separator))
 
-                                TextField("", text: $year, prompt: Text("Year (e.g. 2024)").foregroundColor(Color(.placeholderText)))
+                                TextField("", text: $year, prompt: Text("Year (e.g. 2024)").foregroundStyle(Color(.placeholderText)))
                                     .keyboardType(.numberPad)
                                     .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
+                                    .foregroundStyle(Color.primary)
 
                                 Divider().background(Color(.separator))
 
-                                TextField("", text: $licensePlate, prompt: Text("License Plate").foregroundColor(Color(.placeholderText)))
+                                TextField("", text: $licensePlate, prompt: Text("License Plate").foregroundStyle(Color(.placeholderText)))
                                     .textInputAutocapitalization(.characters)
                                     .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
+                                    .foregroundStyle(Color.primary)
                                 
                                 Divider().background(Color(.separator))
                                 
                                 HStack {
                                     Text("Vehicle Type")
-                                        .foregroundColor(Color.primary)
+                                        .foregroundStyle(Color.primary)
                                     Spacer()
                                     Picker("", selection: $selectedType) {
                                         ForEach(VehicleType.allCases) { type in
@@ -93,23 +93,23 @@ struct EditVehicleView: View {
                                 .padding(.horizontal, 16)
 
                             VStack(spacing: 0) {
-                                TextField("", text: $tankCapacity, prompt: Text("Tank Capacity (L)").foregroundColor(Color(.placeholderText)))
+                                TextField("", text: $tankCapacity, prompt: Text("Tank Capacity (L)").foregroundStyle(Color(.placeholderText)))
                                     .keyboardType(.decimalPad)
                                     .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
+                                    .foregroundStyle(Color.primary)
 
                                 Divider().background(Color(.separator))
 
-                                TextField("", text: $mileage, prompt: Text("Mileage (km/l)").foregroundColor(Color(.placeholderText)))
+                                TextField("", text: $mileage, prompt: Text("Mileage (km/l)").foregroundStyle(Color(.placeholderText)))
                                     .keyboardType(.decimalPad)
                                     .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
+                                    .foregroundStyle(Color.primary)
 
                                 Divider().background(Color(.separator))
 
                                 DatePicker("Purchase Date", selection: $purchaseDate, displayedComponents: .date)
                                     .padding(.vertical, 12)
-                                    .foregroundColor(Color.primary)
+                                    .foregroundStyle(Color.primary)
                                     .tint(Color.teal)
                             }
                             .padding(16)
@@ -128,7 +128,7 @@ struct EditVehicleView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(Color.teal)
+                    .foregroundStyle(Color.teal)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -156,29 +156,10 @@ struct EditVehicleView: View {
                             }
                         }
                     }
-                    .foregroundColor(Color.teal)
+                    .foregroundStyle(Color.teal)
                     .bold()
                 }
             }
         }
     }
-}
-
-#Preview {
-    EditVehicleView(
-        viewModel: VehiclesViewModel(),
-        vehicle: Vehicle(
-            id: UUID(),
-            make: "Ford",
-            model: "Transit",
-            year: 2024,
-            vin: "123456789",
-            licensePlate: "FL-99-TR",
-            tankCapacity: 80.0,
-            mileage: 12.4,
-            purchaseDate: Date(),
-            assignedDriverId: nil,
-            status: .active
-        )
-    )
 }

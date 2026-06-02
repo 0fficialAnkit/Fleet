@@ -58,13 +58,13 @@ struct OrderDetailView: View {
 
                             Image(systemName: orderIcon)
                                 .font(.system(size: 44))
-                                .foregroundColor(orderColor)
+                                .foregroundStyle(orderColor)
                         }
                         .padding(.bottom, 8)
 
                         Text(route?.routeName ?? "Unknown Route")
                             .font(.title3.bold())
-                            .foregroundColor(Color.primary)
+                            .foregroundStyle(Color.primary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 16)
 
@@ -93,7 +93,7 @@ struct OrderDetailView: View {
                     }
 //                    .padding(16)
 //                    .background(Color(.systemBackground))
-//                    .cornerRadius(20)
+//                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 //                    .padding(.horizontal, 16)
                     .padding(16)
                     .background(Color(.secondarySystemGroupedBackground))
@@ -138,18 +138,18 @@ struct OrderDetailInfoRow: View {
         HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 18))
-                .foregroundColor(Color(.tertiaryLabel))
+                .foregroundStyle(Color(.tertiaryLabel))
                 .frame(width: 24)
 
             Text(title)
                 .font(.body.weight(.medium))
-                .foregroundColor(Color.secondary)
+                .foregroundStyle(Color.secondary)
 
             Spacer()
 
             Text(value)
                 .font(.body)
-                .foregroundColor(valueColor)
+                .foregroundStyle(valueColor)
         }
         .padding(.vertical, 8)
     }

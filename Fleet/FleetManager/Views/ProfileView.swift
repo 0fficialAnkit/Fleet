@@ -84,7 +84,7 @@ struct ProfileView: View {
                     }
                 } else {
                     Text("Profile not found")
-                        .foregroundColor(Color.secondary)
+                        .foregroundStyle(Color.secondary)
                 }
             }
             .navigationTitle("Profile")
@@ -92,13 +92,13 @@ struct ProfileView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close") { dismiss() }
-                        .foregroundColor(Color.primary)
+                        .foregroundStyle(Color.primary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Edit") {
                         isEditing = true
                     }
-                    .foregroundColor(Color.teal)
+                    .foregroundStyle(Color.teal)
                 }
             }
             .sheet(isPresented: $isEditing) {

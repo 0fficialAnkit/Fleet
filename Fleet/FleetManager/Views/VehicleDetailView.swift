@@ -26,12 +26,12 @@ struct VehicleDetailView: View {
                     VStack(spacing: 8) {
                         Image(systemName: "truck.box.fill")
                             .font(.system(size: 60))
-                            .foregroundColor(Color.teal)
+                            .foregroundStyle(Color.teal)
                             .padding(.bottom, 8)
 
                         Text("\(vehicle.make ?? "Unknown") \(vehicle.model ?? "")")
                             .font(.title.bold())
-                            .foregroundColor(Color.primary)
+                            .foregroundStyle(Color.primary)
 
                         StatusBadge(text: vehicle.licensePlate ?? "No License Plate", color: Color.teal)
                     }
@@ -77,22 +77,22 @@ struct VehicleDetailView: View {
                                     .frame(width: 44, height: 44)
                                     .overlay(
                                         Image(systemName: "chart.pie.fill")
-                                            .foregroundColor(Color.teal)
+                                            .foregroundStyle(Color.teal)
                                             .font(.system(size: 20))
                                     )
                                 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("View Analytics")
                                         .font(.headline)
-                                        .foregroundColor(Color.primary)
+                                        .foregroundStyle(Color.primary)
                                     Text("Distance, trips, and insights")
                                         .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                                        .foregroundStyle(.secondary)
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.caption.weight(.semibold))
-                                    .foregroundColor(Color(.tertiaryLabel))
+                                    .foregroundStyle(Color(.tertiaryLabel))
                             }
                             .padding(16)
                             .background(Color(.secondarySystemGroupedBackground))
@@ -112,13 +112,13 @@ struct VehicleDetailView: View {
                                     .frame(width: 40, height: 40)
                                     .overlay(
                                         Image(systemName: "person.crop.circle.fill")
-                                            .foregroundColor(Color.teal)
+                                            .foregroundStyle(Color.teal)
                                             .font(.system(size: 20))
                                     )
 
                                 Text(driverName)
                                     .font(.body)
-                                    .foregroundColor(Color.primary)
+                                    .foregroundStyle(Color.primary)
 
                                 Spacer()
                             }
@@ -136,7 +136,7 @@ struct VehicleDetailView: View {
                         if pastTrips.isEmpty {
                             Text("No past trips recorded.")
                                 .font(.subheadline.weight(.medium))
-                                .foregroundColor(Color.secondary)
+                                .foregroundStyle(Color.secondary)
                                 .padding(.horizontal, 16)
                         } else {
                             ForEach(pastTrips) { trip in
@@ -206,23 +206,23 @@ struct TripHistoryRow: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Image(systemName: "map.fill")
-                        .foregroundColor(Color.blue)
+                        .foregroundStyle(Color.blue)
                     Text("Distance: \(String(format: "%.1f", trip.distance ?? 0)) km")
                         .font(.body.bold())
-                        .foregroundColor(Color.primary)
+                        .foregroundStyle(Color.primary)
                     Spacer()
                     Text(trip.endTime?.formatted(date: .abbreviated, time: .shortened) ?? "")
                         .font(.caption)
-                        .foregroundColor(Color(.tertiaryLabel))
+                        .foregroundStyle(Color(.tertiaryLabel))
                 }
 
                 HStack {
                     Image(systemName: "person.fill")
-                        .foregroundColor(Color.secondary)
+                        .foregroundStyle(Color.secondary)
                         .font(.system(size: 14))
                     Text("Driver: \(driverName)")
                         .font(.subheadline)
-                        .foregroundColor(Color.secondary)
+                        .foregroundStyle(Color.secondary)
                 }
             }
             .padding(16)
