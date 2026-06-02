@@ -44,6 +44,8 @@ struct VehicleDetailView: View {
                             Divider().background(Color(.separator))
                             InfoRow(icon: "tag", label: "Model", value: vehicle.model ?? "N/A")
                             Divider().background(Color(.separator))
+                            InfoRow(icon: "number", label: "License Plate", value: vehicle.licensePlate ?? "N/A")
+                            Divider().background(Color(.separator))
                             InfoRow(icon: "calendar", label: "Year", value: vehicle.year != nil ? String(vehicle.year!) : "N/A")
                             Divider().background(Color(.separator))
                             InfoRow(icon: "fuelpump", label: "Tank Capacity", value: vehicle.tankCapacity != nil ? "\(String(format: "%.1f", vehicle.tankCapacity!)) L" : "N/A")
