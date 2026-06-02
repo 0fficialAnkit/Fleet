@@ -102,6 +102,7 @@ struct OrdersView: View {
                             .font(.system(size: 17, weight: .medium))
                             .foregroundStyle(Color.primary)
                     }
+                    .buttonStyle(.plain)
                 }
             }
             .sheet(isPresented: $isAddingOrder) {

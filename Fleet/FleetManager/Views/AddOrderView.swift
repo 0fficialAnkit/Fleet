@@ -193,13 +193,12 @@ struct AddOrderView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if isSaving {
-                        ProgressView().tint(Color.teal)
+                        ProgressView().tint(Color.primary)
                     } else {
                         Button("Save") {
                             Task { await save() }
                         }
-                        .bold()
-                        .foregroundStyle(canSave ? Color.teal : Color(.quaternaryLabel))
+                        .foregroundStyle(canSave ? Color.primary : Color(.quaternaryLabel))
                         .disabled(!canSave)
                     }
                 }

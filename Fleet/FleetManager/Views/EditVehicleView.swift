@@ -213,15 +213,14 @@ struct EditVehicleView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundStyle(Color.teal)
+                        .foregroundStyle(Color.primary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if isSaving {
                         ProgressView()
                     } else {
                         Button("Save") { save() }
-                            .foregroundStyle(Color.teal)
-                            .bold()
+                            .foregroundStyle(Color.primary)
                             .disabled(!isValid)
                     }
                 }

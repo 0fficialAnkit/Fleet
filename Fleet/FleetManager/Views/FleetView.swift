@@ -31,8 +31,9 @@ struct FleetView: View {
                     }) {
                         Image(systemName: "plus")
                             .font(.body.weight(.semibold))
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(Color.primary)
                     }
+                    .buttonStyle(.plain)
                 }
             }
             .sheet(isPresented: $isAddingEmployee) {
