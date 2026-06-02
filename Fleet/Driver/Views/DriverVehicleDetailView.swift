@@ -107,6 +107,8 @@ struct DriverVehicleDetailView: View {
                 Divider().background(Color(UIColor.separator))
                 InfoRow(icon: "tag", label: "Model", value: vehicle.model ?? "N/A")
                 Divider().background(Color(UIColor.separator))
+                InfoRow(icon: "number", label: "License Plate", value: vehicle.licensePlate ?? "N/A")
+                Divider().background(Color(UIColor.separator))
                 InfoRow(icon: "calendar", label: "Year", value: vehicle.year.map(String.init) ?? "N/A")
                 Divider().background(Color(UIColor.separator))
                 InfoRow(

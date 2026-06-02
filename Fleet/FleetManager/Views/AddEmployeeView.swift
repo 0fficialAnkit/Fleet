@@ -5,7 +5,7 @@ struct AddEmployeeView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: EmployeesViewModel
     
-    @State private var selectedRole: String = "driver"
+    @State private var selectedRole: String
 
     @State private var fullName = ""
     @State private var email = ""
@@ -13,6 +13,11 @@ struct AddEmployeeView: View {
     @State private var phone = ""
     @State private var licenseNumber = ""
     @State private var isPasswordVisible = false
+
+    init(viewModel: EmployeesViewModel, initialRole: String = "driver") {
+        self.viewModel = viewModel
+        self._selectedRole = State(initialValue: initialRole)
+    }
 
     var isDriverSelected: Bool {
         return selectedRole == "driver"
@@ -26,16 +31,7 @@ struct AddEmployeeView: View {
     var body: some View {
         NavigationStack {
                 Form {
-                    Section {
-                        Picker("Role", selection: $selectedRole) {
-                            Text("Driver").tag("driver")
-                            Text("Maintenance Staff").tag("maintenance")
-                        }
-                        .pickerStyle(.segmented)
-                    }
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-                    .padding(.vertical, 8)
+
 
                     if let error = viewModel.errorMessage {
                         Section {
