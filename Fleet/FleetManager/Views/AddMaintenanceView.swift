@@ -132,7 +132,7 @@ struct AddMaintenanceView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundStyle(Color.teal)
+                        .foregroundStyle(Color.primary)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -175,8 +175,7 @@ struct AddMaintenanceView: View {
                             isSaving = false
                         }
                     }
-                    .foregroundStyle(Color.teal)
-                    .bold()
+                    .foregroundStyle(Color.primary)
                     .disabled(!isFormValid || isSaving)
                 }
             }

@@ -176,6 +176,7 @@ struct VehicleDetailView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis")
+                        .foregroundStyle(Color.primary)
                 }
             }
         }

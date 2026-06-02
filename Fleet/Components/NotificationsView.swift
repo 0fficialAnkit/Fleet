@@ -99,8 +99,8 @@ struct NotificationDetailDestination: View {
                     onStart: { id, vId, notes, urls in
                         Task { try? await TripService.startTrip(id: id) }
                     },
-                    onEnd: { id, vId, notes, urls in
-                        Task { try? await TripService.endTrip(id: id) }
+                    onEnd: { id, vId, distance, notes, urls in
+                        Task { try? await TripService.endTrip(id: id, distance: distance) }
                     }
                 )
             } else {

@@ -100,7 +100,7 @@ VStack(spacing: 0) {
                     Button("Edit") {
                         isEditing = true
                     }
-                    .foregroundStyle(Color.teal)
+                    .foregroundStyle(Color.primary)
                 }
             }
             .sheet(isPresented: $isEditing) {
@@ -154,12 +154,14 @@ struct EditProfileSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .foregroundStyle(Color.primary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         onSave(fullName, phone)
                         dismiss()
                     }
+                    .foregroundStyle(Color.primary)
                     .disabled(fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }

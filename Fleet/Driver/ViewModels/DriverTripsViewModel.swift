@@ -83,10 +83,11 @@ final class DriverTripsViewModel {
         }
     }
 
-    func endTrip(id: UUID, vehicleId: UUID, notes: String, imageUrls: [String]) {
+    func endTrip(id: UUID, vehicleId: UUID, distance: Double?, notes: String, imageUrls: [String]) {
+        print("[DriverTripsViewModel] endTrip called with distance: \(String(describing: distance))")
         Task {
             do {
-                try await TripService.endTrip(id: id)
+                try await TripService.endTrip(id: id, distance: distance)
                 let inspectionId = UUID()
                 let inspection = VehicleInspection(id: inspectionId, vehicleId: vehicleId, driverId: currentUserId, tripId: id, inspectionType: .postTrip, notes: notes, createdAt: Date())
                 try? await InspectionService.createInspection(inspection)
