@@ -6,10 +6,12 @@ struct TripDetailView: View {
     let trip: Trip
     let onStart: (UUID, UUID, String, [String]) -> Void
     let onEnd: (UUID, UUID, Double?, String, [String]) -> Void
+    var onPickupDone: ((UUID, UUID) -> Void)? = nil
 
     // Local status so UI reacts immediately after start/end
     @State private var currentStatus: TripStatus?
     @State private var showingChecklist: InspectionType? = nil
+    @State private var pickupCompleted = false   // geofencing: set when driver taps Pickup Done
 
     // Route loaded from Supabase
     @State private var route: Route?
@@ -18,10 +20,14 @@ struct TripDetailView: View {
     @State private var estimatedDistance: Double?
     @State private var incidents: [TripIncident] = []
 
-    init(trip: Trip, onStart: @escaping (UUID, UUID, String, [String]) -> Void, onEnd: @escaping (UUID, UUID, Double?, String, [String]) -> Void) {
+    init(trip: Trip,
+         onStart: @escaping (UUID, UUID, String, [String]) -> Void,
+         onEnd: @escaping (UUID, UUID, Double?, String, [String]) -> Void,
+         onPickupDone: ((UUID, UUID) -> Void)? = nil) {
         self.trip = trip
         self.onStart = onStart
         self.onEnd = onEnd
+        self.onPickupDone = onPickupDone
         self._currentStatus = State(initialValue: trip.status)
     }
 
@@ -281,9 +287,20 @@ struct TripDetailView: View {
 
             route = try? await fetchedRoute
             vehicle = try? await fetchedVehicle
-            
+
             if let start = route?.startLocation, let end = route?.endLocation {
                 await calculateDistance(from: start, to: end)
+            }
+
+            // Restore pickup-done state across app restarts
+            if trip.status == .active {
+                let fences = (try? await GeofenceService.fetchGeofences(forTrip: trip.id)) ?? []
+                if let pf = fences.first(where: { $0.zoneType == "pickup" }) {
+                    let events = (try? await GeofenceService.fetchEvents(forVehicle: trip.vehicleId, limit: 30)) ?? []
+                    if events.contains(where: { $0.geofenceId == pf.id && $0.eventType == "pickup_done" }) {
+                        pickupCompleted = true
+                    }
+                }
             }
         }
         .onAppear {
@@ -332,37 +349,65 @@ struct TripDetailView: View {
 
         case .active:
             VStack(spacing: 12) {
-                // In-progress banner
+
+                // ── Status banner ─────────────────────────────────────────────
                 HStack(spacing: 10) {
-                    Image(systemName: "bolt.fill")
+                    Image(systemName: pickupCompleted
+                          ? "arrow.right.circle.fill" : "bolt.fill")
                         .foregroundStyle(Color.green)
-                    Text("Trip is currently in progress")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color.green)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(pickupCompleted
+                             ? "Heading to Drop-off"
+                             : "Trip In Progress")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color.green)
+                        Text(pickupCompleted
+                             ? "Mark drop-off done when you arrive"
+                             : "Mark pickup done after collecting")
+                            .font(.caption)
+                            .foregroundStyle(Color.green.opacity(0.8))
+                    }
                     Spacer()
                 }
-                .padding(16)
+                .padding(14)
                 .background(Color.green.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
-                // End Trip button
-                Button {
-                    showingChecklist = .postTrip
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "stop.fill")
-                        Text("End Trip")
+                // ── Phase 1: Pickup Done ──────────────────────────────────────
+                if !pickupCompleted {
+                    Button {
+                        withAnimation(.spring(response: 0.3)) { pickupCompleted = true }
+                        onPickupDone?(trip.id, trip.vehicleId)
+                    } label: {
+                        Label("Pickup Done", systemImage: "checkmark.circle.fill")
                             .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(16)
+                            .background(Color.blue)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(16)
-                    .background(Color.red)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .shadow(color: Color.blue.opacity(0.3), radius: 8, y: 3)
                 }
-                .shadow(color: Color.red.opacity(0.35), radius: 10, y: 4)
-                
-                // Report Incident button
+
+                // ── Phase 2: Drop-off Done (= existing End Trip flow) ─────────
+                if pickupCompleted {
+                    Button {
+                        showingChecklist = .postTrip
+                    } label: {
+                        Label("Drop-off Done", systemImage: "flag.checkered")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(16)
+                            .background(Color.red)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .shadow(color: Color.red.opacity(0.35), radius: 10, y: 4)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+
+                // ── Report Incident (always visible) ─────────────────────────
                 NavigationLink(destination: DriverReportIncidentView(trip: trip)) {
                     HStack(spacing: 10) {
                         Image(systemName: "exclamationmark.triangle.fill")
