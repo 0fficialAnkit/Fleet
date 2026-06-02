@@ -53,123 +53,127 @@ struct DriverFuelView: View {
                 )
             }
 
-            // Volume
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: "drop.fill")
-                        .foregroundStyle(Color.secondary)
-                    Text("Fuel Volume (Liters)")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color.secondary)
-                }
-                TextField("0.0", text: $volume)
-                    .keyboardType(.decimalPad)
-                    .padding(16)
-                    .background(Color(UIColor.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-
-            // Price
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: "indianrupeesign")
-                        .foregroundStyle(Color.secondary)
-                    Text("Total Price Paid")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color.secondary)
-                }
-                TextField("0.00", text: $price)
-                    .keyboardType(.decimalPad)
-                    .padding(16)
-                    .background(Color(UIColor.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-
-            // MARK: - Bill Photo (mandatory)
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: "camera.fill")
-                        .foregroundStyle(Color.secondary)
-                    Text("Fuel Bill Photo")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color.secondary)
-                    Text("(Required)")
-                        .font(.body)
-                        .foregroundStyle(Color.red)
+            VStack(alignment: .leading, spacing: 24) {
+                // Volume
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "drop.fill")
+                            .foregroundStyle(Color.secondary)
+                        Text("Fuel Volume (Liters)")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.secondary)
+                    }
+                    TextField("0.0", text: $volume)
+                        .keyboardType(.decimalPad)
+                        .padding(16)
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
 
-                if let billImage {
-                    ZStack(alignment: .topTrailing) {
-                        Image(uiImage: billImage)
-                            .resizable()
-                            .scaledToFill()
+                // Price
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "indianrupeesign")
+                            .foregroundStyle(Color.secondary)
+                        Text("Total Price Paid")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.secondary)
+                    }
+                    TextField("0.00", text: $price)
+                        .keyboardType(.decimalPad)
+                        .padding(16)
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+
+                // MARK: - Bill Photo (mandatory)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: "camera.fill")
+                            .foregroundStyle(Color.secondary)
+                        Text("Fuel Bill Photo")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(Color.secondary)
+                        Text("(Required)")
+                            .font(.body)
+                            .foregroundStyle(Color.red)
+                    }
+
+                    if let billImage {
+                        ZStack(alignment: .topTrailing) {
+                            Image(uiImage: billImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 200)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Color.green.opacity(0.5), lineWidth: 1.5)
+                                )
+
+                            Button {
+                                self.billImage = nil
+                                selectedPhotoItem = nil
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.title2)
+                                    .symbolRenderingMode(.palette)
+                                    .foregroundStyle(.white, Color.red)
+                            }
+                            .padding(8)
+                        }
+                    } else {
+                        PhotosPicker(
+                            selection: $selectedPhotoItem,
+                            matching: .images,
+                            photoLibrary: .shared()
+                        ) {
+                            VStack(spacing: 8) {
+                                Image(systemName: "doc.viewfinder")
+                                    .font(.system(size: 32))
+                                    .foregroundStyle(Color.green)
+                                Text("Tap to attach bill photo")
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(Color.green)
+                                Text("Photo will be sent to Fleet Manager")
+                                    .font(.body)
+                                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+                            }
                             .frame(maxWidth: .infinity)
-                            .frame(height: 200)
+                            .frame(height: 140)
+                            .background(Color.green.opacity(0.06))
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 16)
-                                    .stroke(Color.green.opacity(0.5), lineWidth: 1.5)
+                                    .stroke(Color.green.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [8]))
                             )
-
-                        Button {
-                            self.billImage = nil
-                            selectedPhotoItem = nil
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title2)
-                                .symbolRenderingMode(.palette)
-                                .foregroundStyle(.white, Color.red)
                         }
-                        .padding(8)
-                    }
-                } else {
-                    PhotosPicker(
-                        selection: $selectedPhotoItem,
-                        matching: .images,
-                        photoLibrary: .shared()
-                    ) {
-                        VStack(spacing: 8) {
-                            Image(systemName: "doc.viewfinder")
-                                .font(.system(size: 32))
-                                .foregroundStyle(Color.green)
-                            Text("Tap to attach bill photo")
-                                .font(.body.weight(.medium))
-                                .foregroundStyle(Color.green)
-                            Text("Photo will be sent to Fleet Manager")
-                                .font(.body)
-                                .foregroundStyle(Color(UIColor.tertiaryLabel))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 140)
-                        .background(Color.green.opacity(0.06))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.green.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [8]))
-                        )
                     }
                 }
-            }
 
-            // Submit
-            Button(action: submitFuelLog) {
-                HStack {
-                    if isSubmitting {
-                        ProgressView()
-                            .tint(.white)
-                    } else {
-                        Image(systemName: "arrow.up.doc")
-                        Text("Submit Fuel Log")
+                // Submit
+                Button(action: submitFuelLog) {
+                    HStack {
+                        if isSubmitting {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Image(systemName: "arrow.up.doc")
+                            Text("Submit Fuel Log")
+                        }
                     }
+                    .font(.body.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(16)
+                    .background(!isFormValid || isSubmitting ? Color(UIColor.tertiarySystemFill) : Color.green)
+                    .foregroundStyle(!isFormValid || isSubmitting ? Color(UIColor.tertiaryLabel) : Color(UIColor.systemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .font(.body.weight(.medium))
-                .frame(maxWidth: .infinity)
-                .padding(16)
-                .background(!isFormValid || isSubmitting ? Color(UIColor.tertiarySystemFill) : Color.green)
-                .foregroundStyle(!isFormValid || isSubmitting ? Color(UIColor.tertiaryLabel) : Color(UIColor.systemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .disabled(!isFormValid || isSubmitting)
             }
-            .disabled(!isFormValid || isSubmitting)
+            .disabled(assignedVehicleId == nil)
+            .opacity(assignedVehicleId == nil ? 0.6 : 1.0)
         }
         .padding(16)
         .background(Color(.secondarySystemGroupedBackground))
