@@ -163,22 +163,3 @@ struct EditVehicleView: View {
         }
     }
 }
-
-#Preview {
-    EditVehicleView(
-        viewModel: VehiclesViewModel(),
-        vehicle: Vehicle(
-            id: UUID(),
-            make: "Ford",
-            model: "Transit",
-            year: 2024,
-            vin: "123456789",
-            licensePlate: "FL-99-TR",
-            tankCapacity: 80.0,
-            mileage: 12.4,
-            purchaseDate: Date(),
-            assignedDriverId: nil,
-            status: .active
-        )
-    )
-}

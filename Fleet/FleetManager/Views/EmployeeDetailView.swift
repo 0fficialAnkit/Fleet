@@ -103,18 +103,11 @@ struct EmployeeDetailView: View {
                     }
                 } else if trips.isEmpty {
                     Section(header: Text("Trip History")) {
-                        HStack {
-                            Spacer()
-                            VStack(spacing: 10) {
-                                Image(systemName: "road.lanes")
-                                    .font(.system(size: 32))
-                                    .foregroundStyle(Color(.quaternaryLabel))
-                                Text("No trips yet")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.secondary)
-                            }
-                            Spacer()
-                        }
+                        ContentUnavailableView(
+                            "No Trips",
+                            systemImage: "road.lanes",
+                            description: Text("This driver hasn't completed any trips yet.")
+                        )
                         .padding(.vertical, 20)
                         .listRowBackground(Color.clear)
                     }
@@ -135,18 +128,11 @@ struct EmployeeDetailView: View {
                     }
                 } else if tasks.isEmpty {
                     Section(header: Text("Work History")) {
-                        HStack {
-                            Spacer()
-                            VStack(spacing: 10) {
-                                Image(systemName: "wrench.and.screwdriver")
-                                    .font(.system(size: 32))
-                                    .foregroundStyle(Color(.quaternaryLabel))
-                                Text("No tasks yet")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.secondary)
-                            }
-                            Spacer()
-                        }
+                        ContentUnavailableView(
+                            "No Tasks",
+                            systemImage: "wrench.and.screwdriver",
+                            description: Text("No maintenance tasks assigned yet.")
+                        )
                         .padding(.vertical, 20)
                         .listRowBackground(Color.clear)
                     }

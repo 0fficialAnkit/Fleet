@@ -9,7 +9,15 @@ struct VehiclesRootView: View {
     var body: some View {
         ZStack {
             Color(.systemGroupedBackground).ignoresSafeArea()
-            VehiclesView(viewModel: vehiclesViewModel)
+            if let error = vehiclesViewModel.errorMessage {
+                ContentUnavailableView(
+                    "Error Loading Data",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(error)
+                )
+            } else {
+                VehiclesView(viewModel: vehiclesViewModel)
+            }
         }
         .navigationTitle("Vehicles")
         .toolbar {

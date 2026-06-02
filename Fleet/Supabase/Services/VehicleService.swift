@@ -17,6 +17,7 @@ private struct VehicleInsert: Encodable {
     let admin_id: UUID?
     let status: VehicleStatus?
     let vehicle_type: VehicleType?
+    let purchase_date: String?
 }
 
 // MARK: - VehicleUpdate
@@ -32,6 +33,7 @@ private struct VehicleUpdate: Encodable {
     let admin_id: UUID?
     let status: VehicleStatus?
     let vehicle_type: VehicleType?
+    let purchase_date: String?
 }
 
 enum VehicleService {
@@ -96,8 +98,16 @@ enum VehicleService {
         assignedDriverId: UUID?,
         adminId: UUID? = nil,
         status: VehicleStatus?,
-        vehicleType: VehicleType?
+        vehicleType: VehicleType?,
+        purchaseDate: Date? = nil
     ) async throws {
+        var formattedPurchaseDate: String? = nil
+        if let pDate = purchaseDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            formattedPurchaseDate = formatter.string(from: pDate)
+        }
+        
         let payload = VehicleInsert(
             id: UUID(),
             make: make,
@@ -110,7 +120,8 @@ enum VehicleService {
             assigned_driver_id: assignedDriverId, // nil → null, never empty string
             admin_id: adminId,
             status: status,
-            vehicle_type: vehicleType
+            vehicle_type: vehicleType,
+            purchase_date: formattedPurchaseDate
         )
         do {
             try await supabase
@@ -125,6 +136,13 @@ enum VehicleService {
     }
 
     static func updateVehicle(_ vehicle: Vehicle) async throws {
+        var formattedPurchaseDate: String? = nil
+        if let pDate = vehicle.purchaseDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            formattedPurchaseDate = formatter.string(from: pDate)
+        }
+        
         let payload = VehicleUpdate(
             make: vehicle.make,
             model: vehicle.model,
@@ -136,7 +154,8 @@ enum VehicleService {
             assigned_driver_id: vehicle.assignedDriverId,
             admin_id: vehicle.adminId,
             status: vehicle.status,
-            vehicle_type: vehicle.vehicleType
+            vehicle_type: vehicle.vehicleType,
+            purchase_date: formattedPurchaseDate
         )
         do {
             try await supabase
