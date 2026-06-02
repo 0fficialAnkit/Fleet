@@ -5,6 +5,7 @@ struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = ProfileViewModel()
     @State private var isEditing = false
+    @State private var showingChangePassword = false
 
     var body: some View {
         NavigationStack {
@@ -53,21 +54,18 @@ struct ProfileView: View {
                             .padding(.horizontal, 16)
 
                             // Settings & Support Sections
-
-                                VStack(spacing: 0) {
-                                    ActionRow(icon: "gearshape.fill", title: "Settings")
-                                    Divider().background(Color(.separator))
-                                    ActionRow(icon: "questionmark.circle.fill", title: "Help & Support")
-                                }
-                                .padding(16)
-                                .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
+                            VStack(spacing: 0) {
+                                ActionRow(icon: "gearshape.fill", title: "Settings")
+                                Divider().background(Color(.separator))
+                                ActionRow(icon: "questionmark.circle.fill", title: "Help & Support")
+                            }
+                            .padding(16)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                             .padding(.horizontal, 16)
 
                             // Logout Button
-
-VStack(spacing: 0) {
+                            VStack(spacing: 0) {
                                 Button(action: {
                                     Task {
                                         await authViewModel.signOut()
@@ -100,7 +98,7 @@ VStack(spacing: 0) {
                     Button("Edit") {
                         isEditing = true
                     }
-                    .foregroundStyle(Color.teal)
+                    .foregroundStyle(Color.primary)
                 }
             }
             .sheet(isPresented: $isEditing) {
@@ -116,6 +114,9 @@ VStack(spacing: 0) {
                         }
                     )
                 }
+            }
+            .sheet(isPresented: $showingChangePassword) {
+                ChangePasswordSheetView()
             }
         }
         .task {
@@ -154,12 +155,14 @@ struct EditProfileSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .foregroundStyle(Color.primary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         onSave(fullName, phone)
                         dismiss()
                     }
+                    .foregroundStyle(Color.primary)
                     .disabled(fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }

@@ -5,7 +5,7 @@ struct TripDetailView: View {
 
     let trip: Trip
     let onStart: (UUID, UUID, String, [String]) -> Void
-    let onEnd: (UUID, UUID, String, [String]) -> Void
+    let onEnd: (UUID, UUID, Double?, String, [String]) -> Void
 
     // Local status so UI reacts immediately after start/end
     @State private var currentStatus: TripStatus?
@@ -18,7 +18,7 @@ struct TripDetailView: View {
     @State private var estimatedDistance: Double?
     @State private var incidents: [TripIncident] = []
 
-    init(trip: Trip, onStart: @escaping (UUID, UUID, String, [String]) -> Void, onEnd: @escaping (UUID, UUID, String, [String]) -> Void) {
+    init(trip: Trip, onStart: @escaping (UUID, UUID, String, [String]) -> Void, onEnd: @escaping (UUID, UUID, Double?, String, [String]) -> Void) {
         self.trip = trip
         self.onStart = onStart
         self.onEnd = onEnd
@@ -299,7 +299,8 @@ struct TripDetailView: View {
                     // Open Apple Maps with turn-by-turn navigation to destination
                     openMapsNavigation()
                 } else {
-                    onEnd(trip.id, trip.vehicleId, notes, urls)
+                    print("[TripDetailView] calling onEnd with estimatedDistance: \(String(describing: estimatedDistance))")
+                    onEnd(trip.id, trip.vehicleId, estimatedDistance, notes, urls)
                     withAnimation { currentStatus = .completed }
                 }
                 showingChecklist = nil
@@ -498,7 +499,7 @@ struct TripDetailView: View {
                 orderType: .pickUpAndDrop
             ),
             onStart: { _, _, _, _ in },
-            onEnd:   { _, _, _, _ in }
+            onEnd:   { _, _, _, _, _ in }
         )
     }
     .environment(AuthViewModel())
