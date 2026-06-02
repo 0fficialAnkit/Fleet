@@ -34,14 +34,10 @@ struct IssueReportDetailView: View {
                     }
                     .padding(16)
                     .background(statusColor(currentStatus).opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(statusColor(currentStatus).opacity(0.25), lineWidth: 1)
-                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     // MARK: - Details Section
-                    GlassSection(title: "Report Details") {
+                    DetailSection(title: "Report Details") {
                         InfoRow(icon: "number", label: "Report ID", value: "REP-\(report.id.uuidString.prefix(8).uppercased())")
                         divider
                         InfoRow(icon: "car.fill", label: "Vehicle", value: "VH-\(report.vehicleId.uuidString.prefix(8).uppercased())")
@@ -55,7 +51,7 @@ struct IssueReportDetailView: View {
 
                     // MARK: - Description
                     if let desc = report.description, !desc.isEmpty {
-                        GlassSection(title: "Description") {
+                        DetailSection(title: "Description") {
                             Text(desc)
                                 .font(.body)
                                 .foregroundStyle(Color.primary)
@@ -65,17 +61,17 @@ struct IssueReportDetailView: View {
                     // MARK: - Action Buttons
                     VStack(spacing: 16) {
                         if currentStatus.lowercased() == "open" || currentStatus.lowercased() == "assigned" {
-                            ActionButton(title: "Start Work", icon: "play.circle.fill", color: Color.brown) {
+                            DetailActionButton(title: "Start Work", icon: "play.circle.fill", color: Color.brown) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = "in_progress" }
                             }
                         }
                         if currentStatus.lowercased() == "in_progress" {
-                            ActionButton(title: "Mark as Resolved", icon: "checkmark.circle.fill", color: Color.green) {
+                            DetailActionButton(title: "Mark as Resolved", icon: "checkmark.circle.fill", color: Color.green) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = "resolved" }
                             }
                         }
                         if currentStatus.lowercased() == "resolved" || currentStatus.lowercased() == "closed" {
-                            ActionButton(title: "Reopen Issue", icon: "arrow.counterclockwise.circle.fill", color: Color.yellow) {
+                            DetailActionButton(title: "Reopen Issue", icon: "arrow.counterclockwise.circle.fill", color: Color.yellow) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = "in_progress" }
                             }
                         }
@@ -152,8 +148,8 @@ struct IssueReportDetailView: View {
     }
 }
 
-// MARK: - GlassSection
-private struct GlassSection<Content: View>: View {
+// MARK: - DetailSection (solid grouped background)
+private struct DetailSection<Content: View>: View {
     let title: String
     @ViewBuilder let content: () -> Content
 
@@ -164,18 +160,14 @@ private struct GlassSection<Content: View>: View {
                 content()
             }
             .padding(16)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-            )
-
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 }
 
-// MARK: - Action Button
-private struct ActionButton: View {
+// MARK: - Detail Action Button (solid grouped background)
+private struct DetailActionButton: View {
     let title: String
     let icon: String
     let color: Color
@@ -191,12 +183,8 @@ private struct ActionButton: View {
             .foregroundStyle(color)
             .frame(maxWidth: .infinity)
             .padding(16)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(color.opacity(0.3), lineWidth: 1)
-            )
-
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 }

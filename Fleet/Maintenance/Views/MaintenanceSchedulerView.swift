@@ -391,11 +391,8 @@ private struct TaskCard: View {
                 .padding(.leading, 16)
             }
         }
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(statusColor(task.status).opacity(0.5), lineWidth: 1.0)
-        )
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -452,11 +449,8 @@ private struct WorkOrderCard: View {
                 .padding(.leading, 16)
             }
         }
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(statusColor(workOrder.status).opacity(0.5), lineWidth: 1.0)
-        )
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     func statusLabel(_ status: WorkOrderStatus) -> String {
@@ -613,11 +607,7 @@ struct TaskDetailSheet: View {
                         }
                         .padding(16)
                         .background(statusColor(currentTask.status).opacity(0.09))
-                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .stroke(statusColor(currentTask.status).opacity(0.3), lineWidth: 1)
-                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                         // MARK: Vehicle Details
                         SheetSection(title: "Task Details") {
@@ -1097,11 +1087,7 @@ struct WorkOrderDetailSheet: View {
                         }
                         .padding(16)
                         .background(statusColor(currentWO.status).opacity(0.09))
-                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .stroke(statusColor(currentWO.status).opacity(0.3), lineWidth: 1)
-                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                         // MARK: Work Order Details
                         SheetSection(title: "Order Details") {
@@ -1543,11 +1529,8 @@ private struct SheetSection<Content: View>: View {
                 content()
             }
             .padding(16)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-            )
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
         }
     }
@@ -1602,11 +1585,8 @@ private struct SheetActionButton: View {
             .foregroundStyle(color)
             .frame(maxWidth: .infinity)
             .padding(16)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(color.opacity(0.35), lineWidth: 1)
-            )
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
         }
     }
@@ -1630,11 +1610,8 @@ private struct SheetSecondaryButton: View {
             .foregroundStyle(Color.secondary)
             .frame(maxWidth: .infinity)
             .padding(16)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
-            )
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 }

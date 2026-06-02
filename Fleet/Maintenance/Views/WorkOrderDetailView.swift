@@ -118,14 +118,10 @@ struct WorkOrderDetailView: View {
                     }
                     .padding(16)
                     .background(statusColor(currentStatus).opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(statusColor(currentStatus).opacity(0.25), lineWidth: 1)
-                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     // MARK: - Details Section
-                    GlassSection(title: "Order Details") {
+                    DetailSection(title: "Order Details") {
                         InfoRow(icon: "number",       label: "Order ID",    value: "WO-\(data.id.uuidString.prefix(8).uppercased())")
                         divider
                         InfoRow(icon: "car.fill",     label: "Vehicle",     value: data.vehicleDisplay)
@@ -138,7 +134,7 @@ struct WorkOrderDetailView: View {
                     }
 
                     // MARK: - Labor & Notes
-                    GlassSection(title: "Labor & Financials") {
+                    DetailSection(title: "Labor & Financials") {
                         HStack(spacing: 16) {
                             LaborStat(label: "Est. Hours", value: data.laborHours, icon: "clock.fill",           color: Color.blue)
                             LaborStat(label: "Labor Cost",  value: data.laborCost,  icon: "indianrupeesign.circle.fill", color: Color.green)
@@ -146,7 +142,7 @@ struct WorkOrderDetailView: View {
                     }
 
                     // MARK: - Parts Used
-                    GlassSection(title: "Parts Used") {
+                    DetailSection(title: "Parts Used") {
                         Button(action: { showAddPartSheet = true }) {
                             ActionRow(
                                 icon: "plus.circle.fill",
@@ -176,7 +172,7 @@ struct WorkOrderDetailView: View {
                     }
 
                     // MARK: - Service Notes
-                    GlassSection(title: "Service Notes") {
+                    DetailSection(title: "Service Notes") {
                         TextField("Add service details, notes or observations...", text: $notes, axis: .vertical)
                             .lineLimit(4...8)
                             .font(.body)
@@ -186,27 +182,27 @@ struct WorkOrderDetailView: View {
                     // MARK: - Action Buttons
                     VStack(spacing: 16) {
                         if currentStatus == .pending {
-                            ActionButton(title: "Open Work Order", icon: "play.circle.fill", color: Color.brown) {
+                            DetailActionButton(title: "Open Work Order", icon: "play.circle.fill", color: Color.brown) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .open }
                             }
                         }
                         if currentStatus == .open {
-                            ActionButton(title: "Start Work Order", icon: "play.circle.fill", color: Color.brown) {
+                            DetailActionButton(title: "Start Work Order", icon: "play.circle.fill", color: Color.brown) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .inProgress }
                             }
                         }
                         if currentStatus == .inProgress {
-                            ActionButton(title: "Mark as Completed", icon: "checkmark.circle.fill", color: Color.green) {
+                            DetailActionButton(title: "Mark as Completed", icon: "checkmark.circle.fill", color: Color.green) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .completed }
                             }
                         }
                         if currentStatus == .completed {
-                            ActionButton(title: "Reopen Order", icon: "arrow.counterclockwise.circle.fill", color: Color.yellow) {
+                            DetailActionButton(title: "Reopen Order", icon: "arrow.counterclockwise.circle.fill", color: Color.yellow) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .inProgress }
                             }
                         }
                         if currentStatus != .cancelled {
-                            ActionButton(title: "Cancel Order", icon: "xmark.circle", color: Color.red) {
+                            DetailActionButton(title: "Cancel Order", icon: "xmark.circle", color: Color.red) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .cancelled }
                             }
                         }
@@ -319,8 +315,8 @@ struct WorkOrderDetailView: View {
     }
 }
 
-// MARK: - GlassSection
-private struct GlassSection<Content: View>: View {
+// MARK: - DetailSection (replaces GlassSection — uses solid grouped background)
+private struct DetailSection<Content: View>: View {
     let title: String
     @ViewBuilder let content: () -> Content
 
@@ -331,12 +327,8 @@ private struct GlassSection<Content: View>: View {
                 content()
             }
             .padding(16)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-            )
-
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 }
@@ -376,12 +368,12 @@ private struct LaborStat: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(color.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
-// MARK: - Action Button
-private struct ActionButton: View {
+// MARK: - Detail Action Button (replaces glass ActionButton — uses solid grouped background)
+private struct DetailActionButton: View {
     let title: String
     let icon: String
     let color: Color
@@ -397,12 +389,8 @@ private struct ActionButton: View {
             .foregroundStyle(color)
             .frame(maxWidth: .infinity)
             .padding(16)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(color.opacity(0.3), lineWidth: 1)
-            )
-
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 }
