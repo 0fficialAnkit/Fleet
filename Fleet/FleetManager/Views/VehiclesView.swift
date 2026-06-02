@@ -31,17 +31,17 @@ struct VehicleRowView: View {
 
                 Image(systemName: "truck.box.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(Color.teal)
+                    .foregroundStyle(Color.teal)
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(vehicle.make ?? "Unknown") \(vehicle.model ?? "")")
                     .font(.headline)
-                    .foregroundColor(Color.primary)
+                    .foregroundStyle(Color.primary)
 
                 Text(vehicle.licensePlate ?? "No License Plate")
                     .font(.subheadline)
-                    .foregroundColor(Color.secondary)
+                    .foregroundStyle(Color.secondary)
             }
 
             Spacer()

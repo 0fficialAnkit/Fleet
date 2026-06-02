@@ -70,6 +70,11 @@ final class EmployeesViewModel {
         }
     }
 
+    /// Convenience: returns the SF Symbol name for the given Profile's role.
+    func getRoleIcon(for profile: Profile) -> String {
+        getIcon(for: profile.role)
+    }
+
     func getColor(for roleName: String) -> Color {
         switch roleName.lowercased() {
         case "fleet_manager", "fleet manager": return Color.purple
