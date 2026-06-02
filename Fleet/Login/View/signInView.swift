@@ -61,10 +61,10 @@ struct SignInView: View {
     // MARK: - Title
     var titleSection: some View {
         VStack(spacing: 8) {
-            Text("GoFleet")
+            Text("Kafila")
                 .font(.system(size: 34, weight: .bold))
                 .foregroundStyle(Color.primary)
-            Text("Sign in to GoFleet")
+            Text("Sign in to Kafila")
             .font(.system(size: 16))
             .foregroundStyle(Color.secondary)
         }

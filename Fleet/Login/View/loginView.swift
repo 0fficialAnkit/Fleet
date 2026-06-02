@@ -99,7 +99,7 @@ struct LoginView: View {
     // MARK: - Title + Subtitle
     var titleSection: some View {
         VStack(spacing: 8) {
-            Text("GoFleet")
+            Text("Kafila")
                 .font(.system(size: 34, weight: .bold))
                 .foregroundStyle(Color.primary)
             Text("Select your role to continue")

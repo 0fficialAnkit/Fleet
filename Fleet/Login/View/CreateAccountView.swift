@@ -31,7 +31,7 @@ struct CreateAccountView: View {
                         .font(.system(size: 28, weight: .bold))
                         .foregroundStyle(Color.primary)
 
-                    Text("Join GoFleet today")
+                    Text("Join Kafila today")
                         .font(.system(size: 15))
                         .foregroundStyle(Color.secondary)
                         .padding(.top, 4)
