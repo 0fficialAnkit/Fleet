@@ -14,7 +14,7 @@ struct RoleDisplayItem: Identifiable {
 struct LoginView: View {
 
     enum Destination: Hashable {
-        case signIn
+        case signIn(roleId: Int)
         case createAccount
     }
 
@@ -69,11 +69,11 @@ struct LoginView: View {
             }
             .navigationDestination(for: Destination.self) { destination in
                 switch destination {
-                case .signIn:
-                    SignInView()
+                case .signIn(let roleId):
+                    SignInView(roleId: roleId)
                 case .createAccount:
                     CreateAccountView(onSuccess: {
-                        navigationPath = [.signIn]
+                        navigationPath = [.signIn(roleId: selectedRoleId)]
                     })
                 }
             }
@@ -140,7 +140,7 @@ struct LoginView: View {
 
     // MARK: - Continue Action
     func handleContinue() {
-        navigationPath.append(.signIn)
+        navigationPath.append(.signIn(roleId: selectedRoleId))
     }
 }
 

@@ -12,6 +12,10 @@ class AuthViewModel {
     var errorMessage: String?
     var isLoading = false
     var isSessionChecked = false
+    
+    var currentUserEmail: String? {
+        currentUser?.email
+    }
 
     /// Role name derived from the users + roles tables ("fleet_manager", "driver", "maintenance")
     var resolvedRoleName: String? {
@@ -121,6 +125,55 @@ class AuthViewModel {
         } catch {
             print("[AuthViewModel] signIn ERROR: \(error)")
             self.errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+    
+    func resetPassword(email: String) async {
+        print("[AuthViewModel] resetPassword: attempting email=\(email)")
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await supabase.auth.resetPasswordForEmail(email)
+            print("[AuthViewModel] resetPassword: reset email sent successfully")
+        } catch {
+            print("[AuthViewModel] resetPassword ERROR: \(error)")
+            self.errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+    
+    func updatePassword(newPassword: String) async {
+        print("[AuthViewModel] updatePassword: attempting to change password")
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await supabase.auth.update(user: UserAttributes(password: newPassword))
+            print("[AuthViewModel] updatePassword: password changed successfully")
+        } catch {
+            print("[AuthViewModel] updatePassword ERROR: \(error)")
+            self.errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+    
+    func changePassword(email: String, oldPassword: String, newPassword: String) async {
+        print("[AuthViewModel] changePassword: attempting for email=\(email)")
+        isLoading = true
+        errorMessage = nil
+        do {
+            // Temporarily sign in
+            let response = try await supabase.auth.signIn(email: email, password: oldPassword)
+            // Update password
+            try await supabase.auth.update(user: UserAttributes(password: newPassword))
+            // Sign out to force them to log in with new password
+            try await supabase.auth.signOut()
+            print("[AuthViewModel] changePassword: password changed and signed out successfully")
+        } catch {
+            print("[AuthViewModel] changePassword ERROR: \(error)")
+            self.errorMessage = error.localizedDescription
+            // In case signIn succeeded but update failed, try to sign out
+            try? await supabase.auth.signOut()
         }
         isLoading = false
     }

@@ -3,6 +3,7 @@ import SwiftUI
 struct DriverProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var profileVM = ProfileViewModel()
+    @State private var showingChangePassword = false
 
     var body: some View {
         ScrollView {
@@ -107,18 +108,32 @@ struct DriverProfileView: View {
                     .background(Color(.secondarySystemGroupedBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                    // Logout Button
-                    Button(action: {
-                        Task {
-                            await authViewModel.signOut()
+                    // Account Actions
+                    VStack(alignment: .leading, spacing: 16) {
+                        Button(action: {
+                            showingChangePassword = true
+                        }) {
+                            ActionRow(
+                                icon: "key.fill",
+                                title: "Change Password",
+                                iconColor: Color.green
+                            )
                         }
-                    }) {
-                        ActionRow(
-                            icon: "door.left.hand.open",
-                            title: "Logout",
-                            iconColor: Color.green,
-                            isDestructive: true
-                        )
+                        
+                        Divider().background(Color(UIColor.separator))
+                        
+                        Button(action: {
+                            Task {
+                                await authViewModel.signOut()
+                            }
+                        }) {
+                            ActionRow(
+                                icon: "door.left.hand.open",
+                                title: "Logout",
+                                iconColor: Color.green,
+                                isDestructive: true
+                            )
+                        }
                     }
                     .padding(16)
                     .background(Color(.secondarySystemGroupedBackground))
@@ -131,6 +146,9 @@ struct DriverProfileView: View {
         .navigationTitle("Profile")
         .task {
             await profileVM.loadProfile()
+        }
+        .sheet(isPresented: $showingChangePassword) {
+            ChangePasswordSheetView()
         }
     }
 }

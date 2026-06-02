@@ -3,6 +3,7 @@ import SwiftUI
 struct MaintenanceProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var profileVM = ProfileViewModel()
+    @State private var showingChangePassword = false
 
     // Profile menu items
     private let menuItems: [(title: String, icon: String, isDestructive: Bool)] = [
@@ -144,8 +145,28 @@ struct MaintenanceProfileView: View {
 
                         .padding(.horizontal, 16)
 
-                        // MARK: - Logout
-                        Button(action: {
+                        // MARK: - Logout & Change Password
+                        VStack(spacing: 16) {
+                            Button(action: {
+                                showingChangePassword = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "key.fill")
+                                    Text("Change Password")
+                                }
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(Color.brown)
+                                .frame(maxWidth: .infinity)
+                                .padding(16)
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                        .stroke(Color.brown.opacity(0.25), lineWidth: 0.8)
+                                )
+                            }
+                            .padding(.horizontal, 16)
+                            
+                            Button(action: {
                             Task { await authViewModel.signOut() }
                         }) {
                             HStack {
@@ -161,10 +182,10 @@ struct MaintenanceProfileView: View {
                                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                                     .stroke(Color.red.opacity(0.25), lineWidth: 0.8)
                             )
-
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 24)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 24)
                     }
                 }
             }
@@ -172,6 +193,9 @@ struct MaintenanceProfileView: View {
         }
         .task {
             await profileVM.loadProfile()
+        }
+        .sheet(isPresented: $showingChangePassword) {
+            ChangePasswordSheetView()
         }
     }
 }
