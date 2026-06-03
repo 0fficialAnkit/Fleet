@@ -189,7 +189,7 @@ struct OrderDetailView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .navigationTitle(route?.routeName ?? "Order Details")
+        .navigationTitle("Trip Details")
         .navigationBarTitleDisplayMode(.large)
         .refreshable { await refreshAll() }
         .task {
@@ -221,24 +221,24 @@ struct OrderDetailView: View {
 
         switch event.eventType {
         case "enter" where isPickup:
-            icon = "mappin.circle.fill";      tint = .blue
-            title = "📍 Driver Entered Pickup Zone"
+            icon = "mappin.circle.fill";         tint = .blue
+            title = "Driver Entered Pickup Zone"
             sub   = fence?.name ?? ""
         case "pickup_done":
-            icon = "checkmark.circle.fill";   tint = .green
-            title = "✅ Pickup Done"
+            icon = "checkmark.circle.fill";      tint = .green
+            title = "Pickup Done"
             sub   = "Driver is heading to drop-off"
         case "enter":   // dropoff
-            icon = "flag.circle.fill";        tint = .orange
-            title = "🏁 Driver Entered Drop-off Zone"
+            icon = "flag.circle.fill";           tint = .orange
+            title = "Driver Entered Drop-off Zone"
             sub   = fence?.name ?? ""
         case "dropoff_done":
             icon = "flag.checkered.circle.fill"; tint = .teal
-            title = "🏁 Drop-off Done"
+            title = "Drop-off Done"
             sub   = "Trip is ending"
         default:
-            icon = "circle.fill";             tint = .secondary
-            title = event.eventType;          sub = ""
+            icon = "circle.fill";                tint = .secondary
+            title = event.eventType;             sub = ""
         }
 
         return HStack(alignment: .top, spacing: 14) {

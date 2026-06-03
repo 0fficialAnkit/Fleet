@@ -5,7 +5,6 @@ struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = ProfileViewModel()
     @State private var isEditing = false
-    @State private var showingChangePassword = false
 
     var body: some View {
         NavigationStack {
@@ -114,9 +113,6 @@ struct ProfileView: View {
                         }
                     )
                 }
-            }
-            .sheet(isPresented: $showingChangePassword) {
-                ChangePasswordSheetView()
             }
         }
         .task {
