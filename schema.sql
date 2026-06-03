@@ -305,3 +305,17 @@ CREATE TABLE public.trip_incidents (
   CONSTRAINT trip_incidents_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.users(id),
   CONSTRAINT trip_incidents_trip_id_fkey FOREIGN KEY (trip_id) REFERENCES public.trips(id)
 );
+CREATE TABLE public.voice_trip_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  trip_id uuid NOT NULL,
+  driver_id uuid,
+  transcription text NOT NULL,
+  extracted_location text,
+  extracted_mileage numeric,
+  extracted_eta text,
+  extracted_status text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT voice_trip_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT voice_trip_logs_trip_id_fkey FOREIGN KEY (trip_id) REFERENCES public.trips(id),
+  CONSTRAINT voice_trip_logs_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.users(id)
+);

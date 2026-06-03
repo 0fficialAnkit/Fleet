@@ -212,39 +212,7 @@ struct FleetFuelAnalyticsView: View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 24) {
 
-                // MARK: Time-span dropdown
-                HStack {
-                    Spacer()
-                    Menu {
-                        ForEach(FleetFuelAnalyticsViewModel.TimeSpan.allCases) { span in
-                            Button {
-                                selectedSpan = span
-                            } label: {
-                                HStack {
-                                    Text(span.rawValue)
-                                    if selectedSpan == span {
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Text(selectedSpan.rawValue)
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(Color.primary)
-                            Image(systemName: "chevron.up.chevron.down")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(Color.secondary)
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    }
-                }
-                .padding(.horizontal, 16)
-
+                // MARK: Time-span dropdown removed from here, now in toolbar
                 // MARK: Stats row
                 fleetStatsRow
 
@@ -269,6 +237,19 @@ struct FleetFuelAnalyticsView: View {
         }
         .task { await viewModel.loadData() }
         .refreshable { await viewModel.loadData() }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Picker("Time Span", selection: $selectedSpan) {
+                        ForEach(FleetFuelAnalyticsViewModel.TimeSpan.allCases) { span in
+                            Text(span.rawValue).tag(span)
+                        }
+                    }
+                } label: {
+                    Image(systemName: "line.3.horizontal.decrease")
+                }
+            }
+        }
     }
 
     // MARK: - Stats row

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct OrdersView: View {
     @State private var viewModel = OrdersViewModel()
-    @State private var selectedFilter: TripStatus? = nil
+    @State private var selectedFilter: TripStatus? = .scheduled
     @State private var isAddingOrder = false
     @State private var navigationPath = [Trip]()
 
@@ -14,16 +14,14 @@ struct OrdersView: View {
             trips = viewModel.trips
         }
         return trips.sorted { lhs, rhs in
-            switch (lhs.startTime, rhs.startTime) {
-            case let (lDate?, rDate?):
-                return lDate < rDate
-            case (_?, nil):
-                return true
-            case (nil, _?):
-                return false
-            case (nil, nil):
-                return (lhs.createdAt ?? Date.distantPast) < (rhs.createdAt ?? Date.distantPast)
+            let lDate = lhs.createdAt ?? Date.distantPast
+            let rDate = rhs.createdAt ?? Date.distantPast
+            if lDate != rDate {
+                return lDate > rDate
             }
+            let lStart = lhs.startTime ?? Date.distantPast
+            let rStart = rhs.startTime ?? Date.distantPast
+            return lStart > rStart
         }
     }
 
@@ -41,14 +39,18 @@ struct OrdersView: View {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
                                     FilterButton(title: "All", isSelected: selectedFilter == nil) {
-                                        selectedFilter = nil
+                                        withAnimation(.spring) {
+                                            selectedFilter = nil
+                                        }
                                     }
                                     ForEach(TripStatus.allCases, id: \.self) { status in
                                         FilterButton(
-                                            title: status.rawValue.capitalized,
+                                            title: status == .scheduled ? "Upcoming" : status.rawValue.capitalized,
                                             isSelected: selectedFilter == status
                                         ) {
-                                            selectedFilter = status
+                                            withAnimation(.spring) {
+                                                selectedFilter = status
+                                            }
                                         }
                                     }
                                 }

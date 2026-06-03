@@ -1,6 +1,5 @@
 import SwiftUI
 internal import Auth
-import Supabase
 
 struct NotificationsView: View {
     @State private var viewModel = NotificationsViewModel()

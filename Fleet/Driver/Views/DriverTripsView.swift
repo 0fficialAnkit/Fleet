@@ -4,7 +4,7 @@ import Supabase
 struct DriverTripsView: View {
 
     @State private var viewModel = DriverTripsViewModel()
-    @State private var selectedFilter: TripFilter = .all
+    @State private var selectedFilter: TripFilter = .remaining
     @State private var showingSchedule = false
     @Environment(AuthViewModel.self) private var authViewModel
 
