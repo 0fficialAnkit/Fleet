@@ -122,6 +122,7 @@ enum TripUpdateType: String, Codable, CaseIterable, Sendable {
   case delayed = "delayed"
   case completed = "completed"
   case cancelled = "cancelled"
+  case voiceLog = "voice_log"
 }
 
 enum MaintenanceTaskType: String, Codable, CaseIterable, Sendable {
@@ -459,17 +460,119 @@ struct TripIncident: Codable, Identifiable, Hashable, Sendable {
     var description: String
     var location: String
     var photoUrl: String?
+    var source: String?         // "voice" | "manual"
     var createdAt: Date?
-    
+
     enum CodingKeys: String, CodingKey {
         case id
-        case tripId = "trip_id"
-        case driverId = "driver_id"
+        case tripId       = "trip_id"
+        case driverId     = "driver_id"
         case incidentType = "incident_type"
         case description
         case location
-        case photoUrl = "photo_url"
-        case createdAt = "created_at"
+        case photoUrl     = "photo_url"
+        case source
+        case createdAt    = "created_at"
+    }
+
+    /// True when this incident was reported via voice (not the manual form).
+    var isVoiceReported: Bool { source == "voice" }
+}
+
+// MARK: - VoiceLogStatus
+
+/// Structured trip status extracted from a driver's voice recording.
+enum VoiceLogStatus: String, Codable, CaseIterable, Sendable {
+    case enRoute   = "en_route"
+    case delayed   = "delayed"
+    case arrived   = "arrived"
+    case pickedUp  = "picked_up"
+    case breakdown = "breakdown"
+    case other     = "other"
+
+    var displayName: String {
+        switch self {
+        case .enRoute:   return "En Route"
+        case .delayed:   return "Delayed"
+        case .arrived:   return "Arrived"
+        case .pickedUp:  return "Picked Up"
+        case .breakdown: return "Breakdown"
+        case .other:     return "Update"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .enRoute:   return "arrow.triangle.turn.up.right.road.fill"
+        case .delayed:   return "clock.badge.exclamationmark.fill"
+        case .arrived:   return "checkmark.circle.fill"
+        case .pickedUp:  return "shippingbox.fill"
+        case .breakdown: return "wrench.and.screwdriver.fill"
+        case .other:     return "mic.fill"
+        }
+    }
+
+    /// Maps voice status to the closest TripIncidentType for saving to trip_incidents.
+    var incidentType: TripIncidentType? {
+        switch self {
+        case .delayed:   return .traffic
+        case .breakdown: return .breakdown
+        case .other:     return .other
+        case .enRoute, .arrived, .pickedUp: return nil   // factual updates, not incidents
+        }
+    }
+
+    /// True when this status represents an alert-worthy incident.
+    var isIncident: Bool { incidentType != nil }
+}
+
+// MARK: - VoiceExtractedData
+
+/// In-memory structured result from VoiceExtractorService.
+/// Not persisted — only lives during the driver review flow.
+struct VoiceExtractedData {
+    var location: String?
+    var mileageKM: Double?
+    var etaText: String?
+    var status: VoiceLogStatus?
+    var rawTranscription: String
+
+    /// True when NLP found no structured facts in the transcript.
+    var isEmpty: Bool {
+        location == nil && mileageKM == nil && etaText == nil && status == nil
+    }
+}
+
+// MARK: - VoiceTripLog
+
+/// Persisted record in the `voice_trip_logs` Supabase table.
+struct VoiceTripLog: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var tripId: UUID
+    var driverId: UUID?
+    var transcription: String
+    var extractedLocation: String?
+    var extractedMileage: Double?
+    var extractedETA: String?
+    var extractedStatus: String?
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tripId           = "trip_id"
+        case driverId         = "driver_id"
+        case transcription
+        case extractedLocation = "extracted_location"
+        case extractedMileage  = "extracted_mileage"
+        case extractedETA      = "extracted_eta"
+        case extractedStatus   = "extracted_status"
+        case createdAt         = "created_at"
+    }
+
+    /// Typed status parsed from the stored raw string.
+    var voiceLogStatus: VoiceLogStatus? {
+        guard let raw = extractedStatus else { return nil }
+        return VoiceLogStatus(rawValue: raw)
     }
 }
 
