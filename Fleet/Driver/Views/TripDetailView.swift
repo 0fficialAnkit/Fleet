@@ -25,7 +25,6 @@ struct TripDetailView: View {
     @State private var route:             Route?
     @State private var vehicle:           Vehicle?
     @State private var estimatedDistance: Double?
-    @State private var incidents:         [TripIncident] = []
     
     // Voice logging
     @State private var voiceViewModel = VoiceTripLogViewModel()
@@ -267,29 +266,6 @@ struct TripDetailView: View {
                 .listRowSeparator(.hidden)
             }
 
-            // ── 8. Incidents ─────────────────────────────────────────────
-            if !incidents.isEmpty {
-                Section("Incident History") {
-                    ForEach(incidents) { incident in
-                        Label {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(incident.incidentType)
-                                    .font(.subheadline.weight(.medium))
-                                Text(incident.description)
-                                    .font(.caption).foregroundStyle(.secondary)
-                                if let d = incident.createdAt {
-                                    Text(d.formatted(date: .abbreviated, time: .shortened))
-                                        .font(.caption2).foregroundStyle(.tertiary)
-                                }
-                            }
-                        } icon: {
-                            Image(systemName: TripIncidentType(rawValue: incident.incidentType)?.icon
-                                             ?? "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange)
-                        }
-                    }
-                }
-            }
 
             // ── 9. Completed ─────────────────────────────────────────────
             if isCompleted {
@@ -341,9 +317,6 @@ struct TripDetailView: View {
                 }
             }
         }
-        .onAppear {
-            Task { incidents = (try? await TripIncidentService.fetchIncidents(forTripId: trip.id)) ?? [] }
-        }
         // Instant unlock when zone is entered — no Supabase round-trip
         .onReceive(NotificationCenter.default.publisher(for: .gfZoneEntered)) { note in
             guard let type = note.userInfo?["zoneType"] as? String else { return }
@@ -367,14 +340,6 @@ struct TripDetailView: View {
                     withAnimation { currentStatus = .completed }
                 }
                 showingChecklist = nil
-            }
-        }
-        .onChange(of: voiceViewModel.justSaved) { _, saved in
-            if saved {
-                // Refresh incidents in case a voice incident was just filed
-                Task {
-                    incidents = (try? await TripIncidentService.fetchIncidents(forTripId: trip.id)) ?? []
-                }
             }
         }
     }
