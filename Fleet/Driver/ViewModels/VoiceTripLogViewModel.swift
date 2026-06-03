@@ -37,6 +37,7 @@ final class VoiceTripLogViewModel {
     var isSaving: Bool = false
     var saveError: String? = nil
     var justSaved: Bool = false
+    var lastSavedWasIncident: Bool = false
 
     // MARK: - Dependencies
 
@@ -56,8 +57,8 @@ final class VoiceTripLogViewModel {
         voiceService.startRecording()
     }
 
-    /// Stops recording, runs NLP extraction, then routes to the correct sheet.
-    func stopAndExtract() {
+    /// Stops recording, runs NLP extraction, and automatically saves the incident or voice log.
+    func stopAndExtract(tripId: UUID, driverId: UUID?, routeName: String) {
         let transcript = voiceService.stopRecording()
         guard !transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
@@ -66,14 +67,15 @@ final class VoiceTripLogViewModel {
         Task {
             let extracted = VoiceExtractorService.extract(from: transcript)
             self.pendingData = extracted
-            self.isProcessing = false
 
-            // Route: incident types → incident sheet; factual updates → log sheet
             if let status = extracted.status, status.isIncident {
-                self.showIncidentSheet = true
+                self.lastSavedWasIncident = true
+                await confirmIncident(tripId: tripId, driverId: driverId, routeName: routeName)
             } else {
-                self.showReviewSheet = true
+                self.lastSavedWasIncident = false
+                await confirmSave(tripId: tripId, driverId: driverId)
             }
+            self.isProcessing = false
         }
     }
 

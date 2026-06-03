@@ -6,7 +6,7 @@
 CREATE TABLE IF NOT EXISTS voice_trip_logs (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     trip_id             UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
-    driver_id           UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    driver_id           UUID REFERENCES users(id) ON DELETE SET NULL,
     transcription       TEXT NOT NULL,
     extracted_location  TEXT,
     extracted_mileage   NUMERIC(10, 2),

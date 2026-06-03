@@ -162,6 +162,14 @@ final class DashboardViewModel {
         return profiles.first { $0.id == id }?.fullName ?? "Unassigned"
     }
 
+    func vehicleName(for vehicleId: UUID?) -> String {
+        guard let id = vehicleId else { return "Unknown Vehicle" }
+        if let v = vehicles.first(where: { $0.id == id }) {
+            return "\(v.make ?? "") \(v.model ?? "") (\(v.licensePlate ?? "No Plate"))"
+        }
+        return "Unknown Vehicle"
+    }
+
     func maintenanceTask(for vehicleId: UUID) -> MaintenanceTask? {
         maintenanceTasks.first { $0.vehicleId == vehicleId && $0.status != .completed }
     }

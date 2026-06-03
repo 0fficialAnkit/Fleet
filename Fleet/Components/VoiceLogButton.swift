@@ -13,6 +13,7 @@ struct VoiceLogButton: View {
     @Bindable var viewModel: VoiceTripLogViewModel
     let tripId: UUID
     let driverId: UUID?
+    let routeName: String
 
     @State private var pulse1: Bool = false
     @State private var pulse2: Bool = false
@@ -156,8 +157,7 @@ struct VoiceLogButton: View {
     }
 
     private var savedPill: some View {
-        let isIncidentAlert = !(viewModel.showReviewSheet || viewModel.showIncidentSheet)
-            && viewModel.justSaved
+        let isIncidentAlert = viewModel.lastSavedWasIncident
         let label = isIncidentAlert ? "Alert sent to fleet!" : "Voice log saved"
         let icon  = isIncidentAlert ? "exclamationmark.triangle.fill" : "checkmark.circle.fill"
         let color = isIncidentAlert ? Color.orange : Color.green
@@ -190,8 +190,8 @@ struct VoiceLogButton: View {
 
     private func handleTap() {
         if viewModel.voiceService.isRecording {
-            // Stop → NLP extract → show review sheet
-            viewModel.stopAndExtract()
+            // Stop → NLP extract → auto-save/report
+            viewModel.stopAndExtract(tripId: tripId, driverId: driverId, routeName: routeName)
         } else {
             viewModel.startVoiceCapture()
         }

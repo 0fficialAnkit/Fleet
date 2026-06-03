@@ -293,7 +293,8 @@ struct TripDetailView: View {
                 VoiceLogButton(
                     viewModel: voiceViewModel,
                     tripId: trip.id,
-                    driverId: trip.driverId
+                    driverId: trip.driverId,
+                    routeName: "\(route?.startLocation ?? "Origin") → \(route?.endLocation ?? "Destination")"
                 )
                 .padding(.bottom, 24)
                 .animation(.spring(response: 0.4, dampingFraction: 0.75), value: currentStatus)
@@ -332,27 +333,6 @@ struct TripDetailView: View {
                 }
                 showingChecklist = nil
             }
-        }
-        // Voice log review sheet (factual updates)
-        .sheet(isPresented: $voiceViewModel.showReviewSheet) {
-            VoiceLogReviewSheet(
-                viewModel: voiceViewModel,
-                tripId: trip.id,
-                driverId: trip.driverId
-            )
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-        }
-        // Voice incident alert sheet (delays, breakdowns)
-        .sheet(isPresented: $voiceViewModel.showIncidentSheet) {
-            VoiceIncidentReviewSheet(
-                viewModel: voiceViewModel,
-                tripId: trip.id,
-                driverId: trip.driverId,
-                routeName: "\(route?.startLocation ?? "Origin") → \(route?.endLocation ?? "Destination")"
-            )
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
         }
         .onChange(of: voiceViewModel.justSaved) { _, saved in
             if saved {
@@ -418,20 +398,6 @@ struct TripDetailView: View {
                 }
                 .shadow(color: Color.red.opacity(0.35), radius: 10, y: 4)
                 
-                // Report Incident button
-                NavigationLink(destination: DriverReportIncidentView(trip: trip)) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                        Text("Report Incident")
-                            .font(.headline)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(16)
-                    .background(Color.orange)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .shadow(color: Color.orange.opacity(0.35), radius: 10, y: 4)
             }
 
         case .completed:

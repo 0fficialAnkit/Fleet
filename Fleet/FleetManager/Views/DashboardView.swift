@@ -23,8 +23,6 @@ struct DashboardView: View {
 
                         liveDriverAlertsSection
 
-                        recentDriverUpdatesSection
-
                         maintenanceSection
                     }
                     .refreshable { await viewModel.loadData() }
@@ -293,7 +291,11 @@ struct DashboardView: View {
     }
 
     private func incidentRow(_ incident: TripIncident) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+        let trip = viewModel.trips.first(where: { $0.id == incident.tripId })
+        let driverName = viewModel.driverName(for: incident.driverId ?? trip?.driverId)
+        let vehicleName = viewModel.vehicleName(for: trip?.vehicleId)
+
+        return HStack(alignment: .top, spacing: 12) {
             Image(systemName: incidentIcon(incident.incidentType))
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(incidentColor(incident.incidentType))
@@ -316,6 +318,16 @@ struct DashboardView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
+
+                HStack(spacing: 8) {
+                    Label(driverName, systemImage: "person.fill")
+                    Text("•")
+                    Label(vehicleName, systemImage: "truck.box.fill")
+                }
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.secondary)
+                .padding(.top, 2)
+
                 if !incident.location.isEmpty && incident.location != "Unknown Location" {
                     Label(incident.location, systemImage: "mappin")
                         .font(.caption2)
