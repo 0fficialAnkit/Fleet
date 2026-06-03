@@ -12,9 +12,6 @@ struct VehicleDetailView: View {
         viewModel.getDriver(for: vehicle.assignedDriverId)?.fullName ?? "Unassigned"
     }
 
-    var pastTrips: [Trip] {
-        viewModel.getPastTrips(for: vehicle.id)
-    }
 
     var body: some View {
         ZStack {
@@ -72,7 +69,7 @@ struct VehicleDetailView: View {
                         SectionHeader(title: "Usage Report")
                             .padding(.horizontal, 16)
                         
-                        NavigationLink(destination: UsageReportView(vehicle: vehicle, viewModel: viewModel)) {
+                        NavigationLink(destination: VehicleReportView(vehicle: vehicle)) {
                             HStack(spacing: 16) {
                                 Circle()
                                     .fill(Color.teal.opacity(0.1))
@@ -130,23 +127,7 @@ struct VehicleDetailView: View {
                         .padding(.horizontal, 16)
                     }
 
-                    // Past Trips History
-                    VStack(alignment: .leading, spacing: 8) {
-                        SectionHeader(title: "Past Trips")
-                            .padding(.horizontal, 16)
 
-                        if pastTrips.isEmpty {
-                            Text("No past trips recorded.")
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(Color.secondary)
-                                .padding(.horizontal, 16)
-                        } else {
-                            ForEach(pastTrips) { trip in
-                                TripHistoryRow(trip: trip, viewModel: viewModel)
-                            }
-                            .padding(.horizontal, 16)
-                        }
-                    }
                 }
                 .padding(.bottom, 40)
             }
@@ -196,43 +177,6 @@ struct VehicleDetailView: View {
     }
 }
 
-struct TripHistoryRow: View {
-    let trip: Trip
-    let viewModel: VehiclesViewModel
-
-    var driverName: String {
-        viewModel.getDriver(for: trip.driverId)?.fullName ?? "Unknown Driver"
-    }
-
-    var body: some View {
-
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Image(systemName: "map.fill")
-                        .foregroundStyle(Color.blue)
-                    Text("Distance: \(String(format: "%.1f", trip.distance ?? 0)) km")
-                        .font(.body.bold())
-                        .foregroundStyle(Color.primary)
-                    Spacer()
-                    Text(trip.endTime?.formatted(date: .abbreviated, time: .shortened) ?? "")
-                        .font(.caption)
-                        .foregroundStyle(Color(.tertiaryLabel))
-                }
-
-                HStack {
-                    Image(systemName: "person.fill")
-                        .foregroundStyle(Color.secondary)
-                        .font(.system(size: 14))
-                    Text("Driver: \(driverName)")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.secondary)
-                }
-            }
-            .padding(16)
-            .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-    }
-}
 
 #Preview {
     NavigationStack {

@@ -33,12 +33,6 @@ struct VehicleReportView: View {
             Color(.systemGroupedBackground).ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Vehicle Summary Header Card
-                vehicleHeaderCard
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 12)
-                
                 // Native Picker Segmented Control
                 Picker("Tab Selection", selection: $selectedTab) {
                     ForEach(ReportTab.allCases) { tab in
@@ -111,50 +105,7 @@ struct VehicleReportView: View {
         }
     }
     
-    // MARK: - Vehicle Header Card Component
-    
-    private var vehicleHeaderCard: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(Color.teal.opacity(0.1))
-                    .frame(width: 54, height: 54)
-                Image(systemName: vehicleIcon)
-                    .font(.system(size: 24))
-                    .foregroundStyle(Color.teal)
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text("\(vehicle.make ?? "Unknown") \(vehicle.model ?? "")")
-                    .font(.title3.bold())
-                    .foregroundStyle(Color.primary)
-                
-                HStack(spacing: 8) {
-                    Text(vehicle.licensePlate ?? "No Plate")
-                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                    
-                    Text("•")
-                        .foregroundStyle(.tertiary)
-                    
-                    Text("\(vehicle.year != nil ? String(vehicle.year!) : "N/A")")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            
-            Spacer()
-            
-            StatusBadge(
-                text: vehicle.status?.rawValue.uppercased() ?? "UNKNOWN",
-                color: statusColor(for: vehicle.status)
-            )
-        }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
-    }
+
     
     // MARK: - Overview Tab
     
