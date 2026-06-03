@@ -23,92 +23,90 @@ struct WorkOrderListView: View {
     }
 
     var body: some View {
-        ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
+        Group {
+            if isLoading && workOrders.isEmpty {
+                ProgressView()
+                    .tint(.brown)
+            } else {
+                List {
+                    // MARK: - Summary Strip
+                    Section {
+                        HStack(spacing: 16) {
+                            MiniStatBadge(
+                                count: workOrders.filter { $0.unifiedStatus == .open }.count,
+                                label: "Open",
+                                color: Color.blue
+                            )
+                            MiniStatBadge(
+                                count: workOrders.filter { $0.unifiedStatus == .inProgress }.count,
+                                label: "In Progress",
+                                color: Color.yellow
+                            )
+                            MiniStatBadge(
+                                count: workOrders.filter { $0.unifiedStatus == .completed }.count,
+                                label: "Done",
+                                color: Color.green
+                            )
+                        }
+                    }
 
-                if isLoading && workOrders.isEmpty {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                } else {
-                    ScrollView {
-                        VStack(spacing: 16) {
-
-                            // MARK: - Summary Strip
-                            HStack(spacing: 16) {
-                                MiniStatBadge(
-                                    count: workOrders.filter { $0.unifiedStatus == .open }.count,
-                                    label: "Open",
-                                    color: Color.blue
-                                )
-                                MiniStatBadge(
-                                    count: workOrders.filter { $0.unifiedStatus == .inProgress }.count,
-                                    label: "In Progress",
-                                    color: Color.yellow
-                                )
-                                MiniStatBadge(
-                                    count: workOrders.filter { $0.unifiedStatus == .completed }.count,
-                                    label: "Done",
-                                    color: Color.green
-                                )
-                            }
-                            .padding(.horizontal, 16)
-
-                            // MARK: - Filter Picker
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    FilterChip(label: "All",        isSelected: selectedFilter == nil,              color: Color.brown) { selectedFilter = nil }
-                                    FilterChip(label: "Pending",    isSelected: selectedFilter == .pending,         color: Color.gray)    { selectedFilter = .pending }
-                                    FilterChip(label: "Open",       isSelected: selectedFilter == .open,            color: Color.blue)     { selectedFilter = .open }
-                                    FilterChip(label: "In Progress",isSelected: selectedFilter == .inProgress,      color: Color.yellow)  { selectedFilter = .inProgress }
-                                    FilterChip(label: "Completed",  isSelected: selectedFilter == .completed,       color: Color.green)  { selectedFilter = .completed }
-                                    FilterChip(label: "Cancelled",  isSelected: selectedFilter == .cancelled,       color: Color.red)   { selectedFilter = .cancelled }
-                                }
-                                .padding(.horizontal, 16)
-                            }
-
-                            // MARK: - Order List
-                            if filteredOrders.isEmpty {
-                                VStack(spacing: 16) {
-                                    Image(systemName: "tray")
-                                        .font(.system(size: 44))
-                                        .foregroundStyle(Color(.tertiaryLabel))
-                                    Text("No orders found")
-                                        .font(.body.weight(.medium))
-                                        .foregroundStyle(Color.secondary)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 40)
-                            } else {
-                                LazyVStack(spacing: 16) {
-                                    ForEach(filteredOrders) { item in
-                                        NavigationLink(value: getDestination(for: item)) {
-                                            UnifiedWorkItemRow(item: item)
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                                .padding(.horizontal, 16)
+                    // MARK: - Filter Picker
+                    Section {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                FilterChip(label: "All",        isSelected: selectedFilter == nil,              color: Color.brown) { selectedFilter = nil }
+                                FilterChip(label: "Pending",    isSelected: selectedFilter == .pending,         color: Color.gray)    { selectedFilter = .pending }
+                                FilterChip(label: "Open",       isSelected: selectedFilter == .open,            color: Color.blue)     { selectedFilter = .open }
+                                FilterChip(label: "In Progress",isSelected: selectedFilter == .inProgress,      color: Color.yellow)  { selectedFilter = .inProgress }
+                                FilterChip(label: "Completed",  isSelected: selectedFilter == .completed,       color: Color.green)  { selectedFilter = .completed }
+                                FilterChip(label: "Cancelled",  isSelected: selectedFilter == .cancelled,       color: Color.red)   { selectedFilter = .cancelled }
                             }
                         }
-                        .padding(.vertical, 16)
                     }
-                    .refreshable { await loadWorkOrders() }
-                }
-            }
-            .navigationTitle("Work Orders")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showNewOrderSheet = true }) {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundStyle(Color.brown)
-                            .font(.system(size: 20))
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+
+                    // MARK: - Order List
+                    Section {
+                        if filteredOrders.isEmpty {
+                            VStack(spacing: 16) {
+                                Image(systemName: "tray")
+                                    .font(.system(size: 44))
+                                    .foregroundStyle(Color(.tertiaryLabel))
+                                Text("No orders found")
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(Color.secondary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 40)
+                        } else {
+                            ForEach(filteredOrders) { item in
+                                NavigationLink(value: getDestination(for: item)) {
+                                    UnifiedWorkItemRow(item: item)
+                                }
+                            }
+                        }
                     }
                 }
-            }
-            .task {
-                await loadWorkOrders()
+                .refreshable { await loadWorkOrders() }
+                .listStyle(.insetGrouped)
             }
         }
+        .navigationTitle("Work Orders")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showNewOrderSheet = true }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(Color.primary)
+                }
+            }
+        }
+        .task {
+            await loadWorkOrders()
+        }
+    }
 
     private func getDestination(for item: UnifiedMaintenanceItem) -> MaintenanceDestination {
         switch item {
@@ -215,12 +213,13 @@ private struct MiniStatBadge: View {
                 .foregroundStyle(Color(.tertiaryLabel))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.vertical, 14)
+        .background(color.opacity(0.08))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(color.opacity(0.2), lineWidth: 0.8)
+                .stroke(color.opacity(0.2), lineWidth: 0.5)
         )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -254,7 +253,7 @@ struct UnifiedWorkItemRow: View {
     let item: UnifiedMaintenanceItem
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 // Priority Indicator
                 HStack(spacing: 6) {
@@ -296,13 +295,7 @@ struct UnifiedWorkItemRow: View {
                 }
             }
         }
-        .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-        )
-
+        .padding(.vertical, 4)
     }
 
     func statusLabel(_ status: WorkOrderStatus?) -> String {
