@@ -13,6 +13,15 @@ struct TripDetailView: View {
     @State private var pickupCompleted  = false
     @State private var dropoffCompleted = false
 
+    // Zone entry — gated by geofence "enter" events from Supabase
+    @State private var inPickupZone     = false
+    @State private var inDropoffZone    = false
+    @State private var zoneTask: Task<Void, Never>? = nil
+
+    // Brief confirmation banners
+    @State private var showPickupBanner  = false
+    @State private var showDropoffBanner = false
+
     @State private var route:             Route?
     @State private var vehicle:           Vehicle?
     @State private var estimatedDistance: Double?
@@ -57,32 +66,6 @@ struct TripDetailView: View {
                 .listRowSeparator(.hidden)
             }
 
-            // ── 3. Active trip status banner ──────────────────────────────
-            if isActive {
-                Section {
-                    Label {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(dropoffCompleted ? "Ready to End Trip"
-                                 : pickupCompleted  ? "Heading to Drop-off"
-                                                    : "Trip In Progress")
-                                .font(.subheadline.weight(.semibold))
-                            Text(dropoffCompleted ? "Post-trip checklist opening…"
-                                 : pickupCompleted  ? "Mark drop-off done when you arrive"
-                                                    : "Mark pickup done after collecting")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                    } icon: {
-                        Image(systemName: dropoffCompleted ? "flag.checkered.circle.fill"
-                              : pickupCompleted  ? "arrow.right.circle.fill"
-                                                 : "bolt.circle.fill")
-                            .foregroundStyle(dropoffCompleted ? .teal : .green)
-                            .font(.title3)
-                    }
-                    .listRowBackground(
-                        (dropoffCompleted ? Color.teal : Color.green).opacity(0.08)
-                    )
-                }
-            }
 
             // ── 4. Route ─────────────────────────────────────────────────
             Section("Route") {
@@ -178,50 +161,56 @@ struct TripDetailView: View {
                 }
             }
 
-            // ── 8. In-trip actions ───────────────────────────────────────
-            if isActive && !dropoffCompleted {
+            // ── 8. In-trip actions ────────────────────────────────────────
+            if isActive {
+
                 Section {
-                    // Phase 1 — Pickup Done
-                    if !pickupCompleted {
-                        Button {
-                            withAnimation(.spring(response: 0.3)) { pickupCompleted = true }
-                            onPickupDone?(trip.id, trip.vehicleId)
-                        } label: {
-                            Label("Pickup Done", systemImage: "checkmark.circle.fill")
-                                .frame(maxWidth: .infinity)
+                    // ── Pickup toggle ─────────────────────────────────────
+                    TripZoneToggleRow(
+                        label:    "Pickup",
+                        locked:   !inPickupZone,
+                        done:     pickupCompleted,
+                        tint:     .green,
+                        lockHint: "Enter the pickup zone to enable",
+                        doneHint: "Pickup confirmed"
+                    ) {
+                        withAnimation(.spring(response: 0.3)) { pickupCompleted = true }
+                        onPickupDone?(trip.id, trip.vehicleId)
+                        withAnimation(.spring(response: 0.4)) { showPickupBanner = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+                            withAnimation(.easeOut) { showPickupBanner = false }
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.blue)
-                        .controlSize(.large)
-                        .buttonBorderShape(.capsule)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
                     }
 
-                    // Phase 2 — Drop-off Done → opens post-trip checklist sheet
+                    // ── Drop-off toggle (only after pickup confirmed) ──────
                     if pickupCompleted {
-                        Button {
+                        TripZoneToggleRow(
+                            label:    "Drop-off",
+                            locked:   !inDropoffZone,
+                            done:     dropoffCompleted,
+                            tint:     .indigo,
+                            lockHint: "Enter the drop-off zone to enable",
+                            doneHint: "Drop-off confirmed"
+                        ) {
                             withAnimation(.spring(response: 0.3)) { dropoffCompleted = true }
                             showingChecklist = .postTrip
-                        } label: {
-                            Label("Drop-off Done", systemImage: "flag.checkered")
-                                .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.teal)
-                        .controlSize(.large)
-                        .buttonBorderShape(.capsule)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
+                }
 
-                    // Report Incident
+                // Report Incident — bordered capsule
+                Section {
                     NavigationLink(destination: DriverReportIncidentView(trip: trip)) {
                         Label("Report Incident",
                               systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
+                            .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.bordered)
+                    .tint(.orange)
+                    .controlSize(.large)
+                    .buttonBorderShape(.capsule)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
 
@@ -261,6 +250,25 @@ struct TripDetailView: View {
         }
         .listStyle(.insetGrouped)
         .navigationTitle("Trip Details")
+        // ── Pickup confirmation banner ─────────────────────────────────
+        .overlay(alignment: .top) {
+            if showPickupBanner {
+                HStack(spacing: 10) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title3)
+                    Text("Pickup Done")
+                        .font(.headline)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 14)
+                .background(.green, in: Capsule())
+                .padding(.top, 12)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(1)
+            }
+        }
+        .animation(.spring(response: 0.4), value: showPickupBanner)
         .navigationBarTitleDisplayMode(.large)
         .task {
             async let r = trip.routeId != nil ? RouteService.fetchRoute(id: trip.routeId!) : nil
@@ -270,18 +278,30 @@ struct TripDetailView: View {
             if let s = route?.startLocation, let e = route?.endLocation {
                 await calculateDistance(from: s, to: e)
             }
+            // Restore state from Supabase
+            await refreshZoneStatus()
+            // Subscribe to geofence events for live zone entry detection
             if trip.status == .active {
-                let fences = (try? await GeofenceService.fetchGeofences(forTrip: trip.id)) ?? []
-                if let pf = fences.first(where: { $0.zoneType == "pickup" }) {
-                    let events = (try? await GeofenceService.fetchEvents(forVehicle: trip.vehicleId, limit: 30)) ?? []
-                    if events.contains(where: { $0.geofenceId == pf.id && $0.eventType == "pickup_done" }) {
-                        pickupCompleted = true
-                    }
+                startZonePolling()
+                RealtimeManager.shared.addGeofenceEventsChangeHandler {
+                    Task { await self.refreshZoneStatus() }
                 }
             }
         }
         .onAppear {
             Task { incidents = (try? await TripIncidentService.fetchIncidents(forTripId: trip.id)) ?? [] }
+        }
+        // Instant unlock when zone is entered — no Supabase round-trip
+        .onReceive(NotificationCenter.default.publisher(for: .gfZoneEntered)) { note in
+            guard let type = note.userInfo?["zoneType"] as? String else { return }
+            withAnimation(.spring(response: 0.35)) {
+                if type == "pickup"  { inPickupZone  = true }
+                if type == "dropoff" { inDropoffZone = true }
+            }
+        }
+        .onDisappear {
+            zoneTask?.cancel()
+            zoneTask = nil
         }
         .sheet(item: $showingChecklist) { type in
             DriverChecklistView(checklistType: type, vehicle: vehicle) { notes, urls in
@@ -294,6 +314,50 @@ struct TripDetailView: View {
                     withAnimation { currentStatus = .completed }
                 }
                 showingChecklist = nil
+            }
+        }
+    }
+
+    // MARK: - Zone status (gates button visibility)
+
+    /// Reads geofence events from Supabase and updates inPickupZone / inDropoffZone.
+    /// Also restores pickupCompleted so the correct phase shows after app restart.
+    private func refreshZoneStatus() async {
+        let fences = (try? await GeofenceService.fetchAllGeofences(forTrip: trip.id)) ?? []
+        guard !fences.isEmpty else { return }
+
+        let pFence = fences.first(where: { $0.zoneType == "pickup"  })
+        let dFence = fences.first(where: { $0.zoneType == "dropoff" })
+        let fenceIds = Set(fences.map { $0.id })
+
+        let all    = (try? await GeofenceService.fetchEvents(forVehicle: trip.vehicleId, limit: 30)) ?? []
+        let events = all.filter { fenceIds.contains($0.geofenceId) }
+
+        withAnimation(.spring(response: 0.35)) {
+            // Driver entered pickup zone?
+            inPickupZone = events.contains {
+                $0.geofenceId == pFence?.id && $0.eventType == "enter"
+            }
+            // Driver entered dropoff zone?
+            inDropoffZone = events.contains {
+                $0.geofenceId == dFence?.id && $0.eventType == "enter"
+            }
+            // Pickup already completed?
+            if !pickupCompleted {
+                pickupCompleted = events.contains {
+                    $0.geofenceId == pFence?.id && $0.eventType == "pickup_done"
+                }
+            }
+        }
+    }
+
+    private func startZonePolling() {
+        zoneTask?.cancel()
+        zoneTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { break }
+                await refreshZoneStatus()
             }
         }
     }
