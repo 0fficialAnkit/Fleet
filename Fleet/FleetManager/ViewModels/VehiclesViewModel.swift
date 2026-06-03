@@ -10,7 +10,12 @@ final class VehiclesViewModel {
     var isLoading = false
     var errorMessage: String?
 
+    var currentAdminId: UUID? = nil
+
     func setupRealtime(adminId: UUID? = nil) {
+        if let adminId {
+            self.currentAdminId = adminId
+        }
         let rt = RealtimeManager.shared
         rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData(adminId: adminId) } }
         rt.addProfilesChangeHandler { [weak self] in Task { await self?.loadData(adminId: adminId) } }
@@ -18,6 +23,10 @@ final class VehiclesViewModel {
     }
 
     func loadData(adminId: UUID? = nil) async {
+        if let adminId {
+            self.currentAdminId = adminId
+        }
+        let activeAdminId = adminId ?? self.currentAdminId
         isLoading = true
         errorMessage = nil
         do {
@@ -28,9 +37,9 @@ final class VehiclesViewModel {
             profiles = try await p
             trips = try await t
             
-            if let adminId = adminId {
+            if let activeAdminId = activeAdminId {
                 // Show vehicles assigned to this admin OR vehicles with no admin assigned (test data)
-                vehicles = allVehicles.filter { $0.adminId == adminId || $0.adminId == nil }
+                vehicles = allVehicles.filter { $0.adminId == activeAdminId || $0.adminId == nil }
             } else {
                 vehicles = allVehicles
             }
@@ -138,7 +147,7 @@ final class VehiclesViewModel {
                 vehicleType: vehicleType
             )
             print("[VehiclesViewModel] addVehicle: success, reloading...")
-            await loadData()
+            await loadData(adminId: adminId)
         } catch {
             print("[VehiclesViewModel] addVehicle ERROR: \(error)")
             throw error
@@ -148,7 +157,7 @@ final class VehiclesViewModel {
     func updateVehicle(_ updatedVehicle: Vehicle) async throws {
         do {
             try await VehicleService.updateVehicle(updatedVehicle)
-            await loadData()
+            await loadData(adminId: self.currentAdminId)
         } catch {
             print("[VehiclesViewModel] updateVehicle ERROR: \(error)")
             throw error
@@ -158,7 +167,7 @@ final class VehiclesViewModel {
     func deleteVehicle(_ vehicle: Vehicle) async throws {
         do {
             try await VehicleService.deleteVehicle(id: vehicle.id)
-            await loadData()
+            await loadData(adminId: self.currentAdminId)
         } catch {
             print("[VehiclesViewModel] deleteVehicle ERROR: \(error)")
             throw error

@@ -50,11 +50,8 @@ struct DriverTripsView: View {
                                         onStart: { id, vId, notes, urls in
                                             viewModel.startTrip(id: id, vehicleId: vId, notes: notes, imageUrls: urls)
                                         },
-                                        onEnd: { id, vId, distance, notes, urls in
-                                            viewModel.endTrip(id: id, vehicleId: vId, distance: distance, notes: notes, imageUrls: urls)
-                                        },
-                                        onPickupDone: { id, vId in
-                                            viewModel.gf_pickupDone(tripId: id, vehicleId: vId)
+                                        onEnd: { id, vId, notes, urls in
+                                            viewModel.endTrip(id: id, vehicleId: vId, distance: nil, notes: notes, imageUrls: urls)
                                         }
                                     )) {
                                         TripListRow(

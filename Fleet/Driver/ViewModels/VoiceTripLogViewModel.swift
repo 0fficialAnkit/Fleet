@@ -63,18 +63,16 @@ final class VoiceTripLogViewModel {
 
         isProcessing = true
 
-        Task.detached(priority: .userInitiated) {
+        Task {
             let extracted = VoiceExtractorService.extract(from: transcript)
-            await MainActor.run {
-                self.pendingData = extracted
-                self.isProcessing = false
+            self.pendingData = extracted
+            self.isProcessing = false
 
-                // Route: incident types → incident sheet; factual updates → log sheet
-                if let status = extracted.status, status.isIncident {
-                    self.showIncidentSheet = true
-                } else {
-                    self.showReviewSheet = true
-                }
+            // Route: incident types → incident sheet; factual updates → log sheet
+            if let status = extracted.status, status.isIncident {
+                self.showIncidentSheet = true
+            } else {
+                self.showReviewSheet = true
             }
         }
     }

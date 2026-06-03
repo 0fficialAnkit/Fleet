@@ -283,14 +283,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Fleet/Fleet.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 59J2DT7UL3;
+				DEVELOPMENT_TEAM = 433L6U33WG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "need camera access";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "need access";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet uses your location to show your position on the route map and guide you to your destination.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Fleet needs microphone access to record your voice for hands-free trip logging while driving.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Fleet uses speech recognition to convert your voice into trip update records, so you can log updates without taking your hands off the wheel.";
@@ -304,7 +302,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = fleet.study.cookies.asdf;
+				PRODUCT_BUNDLE_IDENTIFIER = fleet.study.cookies;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -321,14 +319,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Fleet/Fleet.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 59J2DT7UL3;
+				DEVELOPMENT_TEAM = 433L6U33WG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "need camera access";
-				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "need access";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet uses your location to show your position on the route map and guide you to your destination.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Fleet needs microphone access to record your voice for hands-free trip logging while driving.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Fleet uses speech recognition to convert your voice into trip update records, so you can log updates without taking your hands off the wheel.";
@@ -342,7 +338,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = fleet.study.cookies.kmmmm;
+				PRODUCT_BUNDLE_IDENTIFIER = fleet.study.cookies.kj;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

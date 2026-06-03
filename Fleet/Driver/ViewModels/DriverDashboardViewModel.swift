@@ -115,7 +115,11 @@ final class DriverDashboardViewModel {
         liveTimer?.invalidate()
         if activeTrip != nil {
             liveTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
-                self?.currentTime = Date()
+                if let target = self {
+                    Task { @MainActor in
+                        target.currentTime = Date()
+                    }
+                }
             }
         }
     }
