@@ -41,22 +41,6 @@ struct MaintenanceSchedulerView: View {
                     }
                 }
                 .refreshable { await viewModel.loadData() }
-
-                // Toast overlay
-                if let toastMessage = viewModel.toastMessage {
-                    VStack {
-                        Spacer()
-                        Text(toastMessage)
-                            .font(.subheadline.bold())
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
-                            .background(Color.black.opacity(0.8), in: Capsule())
-                            .padding(.bottom, 24)
-                    }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .zIndex(100)
-                }
             }
             .navigationTitle("Schedule")
             .navigationBarTitleDisplayMode(.large)
@@ -289,34 +273,7 @@ private struct TaskListSection: View {
                             }
                         }
                         .buttonStyle(ScaleButtonStyle())
-
-                        // MARK: Inline Action Buttons
-                        if viewModel.selectedTab == .pending {
-                            Button {
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                                    switch item {
-                                    case .task(let task):
-                                        viewModel.updateTaskStatus(id: task.id, to: .inProgress)
-                                    case .workOrder(let wo):
-                                        viewModel.updateWorkOrderStatus(id: wo.id, to: .inProgress)
-                                    }
-                                }
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "play.fill")
-                                        .font(.system(size: 12, weight: .bold))
-                                    Text("Start")
-                                        .font(.subheadline.weight(.semibold))
-                                }
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 42)
-                                .background(Color.brown, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            }
-                            .buttonStyle(ScaleButtonStyle())
-                        }
-
-
+                        
                     }
                     .scrollTransition { content, phase in
                         content
@@ -1118,14 +1075,17 @@ struct WorkOrderDetailSheet: View {
 
                         // MARK: Reported Problem
                         SheetSection(title: "Reported Problem") {
-                            HStack(alignment: .top, spacing: 16) {
-                                Image(systemName: "exclamationmark.bubble.fill")
+                            HStack(alignment: .top, spacing: 14) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 20))
                                     .foregroundStyle(Color.red)
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .padding(.top, 2)
+                                
                                 Text(currentWO.vehicleIssue)
-                                    .font(.body)
+                                    .font(.subheadline)
                                     .foregroundStyle(Color.primary)
-                                    .fixedSize(horizontal: false, vertical: true)
+                                    .lineSpacing(4)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
 
@@ -1175,6 +1135,23 @@ struct WorkOrderDetailSheet: View {
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 48)
                                         .background(Color.brown, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    }
+
+                                    Button {
+                                        viewModel.updateWorkOrderStatus(id: currentWO.id, to: .inProgress)
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                            dismiss()
+                                        }
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "play.fill")
+                                            Text("Start")
+                                        }
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(Color.brown)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 48)
+                                        .background(Color.brown.opacity(0.15), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                     }
                                 }
                             }

@@ -43,7 +43,7 @@ struct MaintenanceDashboardView: View {
                 case .scheduledWorkOrderDetail(let scheduledWO):
                     WorkOrderDetailSheet(workOrder: scheduledWO, viewModel: MaintenanceSchedulerViewModel())
                 case .issueReportDetail(let report):
-                    IssueReportDetailView(report: report)
+                    WorkOrderDetailSheet(workOrder: viewModel.buildScheduledWOFromIR(report), viewModel: MaintenanceSchedulerViewModel())
                 case .workOrderList(let filter, let assignedTo, let priority):
                     WorkOrderListView(initialFilter: filter, assignedUserId: assignedTo, priorityFilter: priority)
                 }

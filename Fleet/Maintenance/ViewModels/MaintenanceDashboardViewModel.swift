@@ -87,7 +87,7 @@ final class MaintenanceDashboardViewModel {
                 location: "Bay 02",
                 actionButtonTitle: "Start Repair",
                 actionButtonIcon: "play.fill",
-                destination: .issueReportDetail(ir),
+                destination: .scheduledWorkOrderDetail(buildScheduledWOFromIR(ir)),
                 isTask: false
             )
         }
