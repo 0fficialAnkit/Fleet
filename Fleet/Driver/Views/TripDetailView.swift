@@ -233,11 +233,6 @@ struct TripDetailView: View {
                     endAddress:   route?.endLocation
                 )
 
-                // ── Voice Log History ──────────────────────────────
-                if !voiceViewModel.voiceLogs.isEmpty || currentStatus == .active {
-                    voiceLogSection
-                }
-
                 // ── Incidents ─────────────────────────────────────
                 if !incidents.isEmpty {
                     sectionTitle("Incident History")
@@ -277,29 +272,12 @@ struct TripDetailView: View {
                 // ── Action Buttons ─────────────────────────────────
                 actionSection
 
-                // Bottom padding so content doesn't hide behind the floating button
-                if currentStatus == .active {
-                    Spacer().frame(height: 100)
-                }
             }
             .padding()
         }
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Trip Details")
         .navigationBarTitleDisplayMode(.large)
-        // Floating voice log button overlay (active trips only)
-        .overlay(alignment: .bottom) {
-            if currentStatus == .active {
-                VoiceLogButton(
-                    viewModel: voiceViewModel,
-                    tripId: trip.id,
-                    driverId: trip.driverId,
-                    routeName: "\(route?.startLocation ?? "Origin") → \(route?.endLocation ?? "Destination")"
-                )
-                .padding(.bottom, 24)
-                .animation(.spring(response: 0.4, dampingFraction: 0.75), value: currentStatus)
-            }
-        }
         .task {
             // Load route and vehicle details
             async let fetchedRoute = trip.routeId != nil ? RouteService.fetchRoute(id: trip.routeId!) : nil
@@ -311,9 +289,6 @@ struct TripDetailView: View {
             if let start = route?.startLocation, let end = route?.endLocation {
                 await calculateDistance(from: start, to: end)
             }
-
-            // Load existing voice logs
-            await voiceViewModel.loadLogs(tripId: trip.id)
         }
         .onAppear {
             Task {
@@ -397,7 +372,73 @@ struct TripDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .shadow(color: Color.red.opacity(0.35), radius: 10, y: 4)
-                
+
+                // Report Incident (Voice Command) Button
+                Button {
+                    if voiceViewModel.voiceService.isRecording {
+                        voiceViewModel.stopAndExtract(
+                            tripId: trip.id,
+                            driverId: trip.driverId,
+                            routeName: "\(route?.startLocation ?? "Origin") → \(route?.endLocation ?? "Destination")"
+                        )
+                    } else {
+                        voiceViewModel.startVoiceCapture()
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: voiceViewModel.voiceService.isRecording ? "stop.fill" : "mic.fill")
+                        Text(voiceViewModel.voiceService.isRecording ? "Stop & Send Alert" : "Report Incident (Voice)")
+                            .font(.headline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(16)
+                    .background(voiceViewModel.voiceService.isRecording ? Color.red : Color.orange)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .shadow(color: (voiceViewModel.voiceService.isRecording ? Color.red : Color.orange).opacity(0.35), radius: 10, y: 4)
+                .disabled(voiceViewModel.isProcessing)
+
+                // Native processing and live transcript feedback
+                if voiceViewModel.voiceService.isRecording && !voiceViewModel.voiceService.liveTranscript.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 6, height: 6)
+                            Text(voiceViewModel.voiceService.liveTranscript)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.primary)
+                                .multilineTextAlignment(.leading)
+                        }
+                        .padding(12)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.red.opacity(0.2), lineWidth: 1))
+                    }
+                    .padding(.top, 4)
+                }
+
+                if voiceViewModel.isProcessing {
+                    HStack(spacing: 8) {
+                        ProgressView().tint(.purple)
+                        Text("Analyzing voice report...")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.purple)
+                    }
+                    .padding(.top, 4)
+                }
+
+                if voiceViewModel.justSaved {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Color.orange)
+                        Text("Alert sent to fleet!")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.orange)
+                    }
+                    .padding(.top, 4)
+                }
             }
 
         case .completed:
@@ -427,147 +468,6 @@ struct TripDetailView: View {
             .foregroundStyle(Color.primary)
     }
 
-    // MARK: - Voice Log Section
-
-    @ViewBuilder
-    var voiceLogSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                sectionTitle("Voice Log")
-                Spacer()
-                // Recording live indicator
-                if voiceViewModel.voiceService.isRecording {
-                    HStack(spacing: 5) {
-                        Circle()
-                            .fill(Color.red)
-                            .frame(width: 7, height: 7)
-                            .opacity(0.9)
-                        Text("Recording")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.red)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color.red.opacity(0.1))
-                    .clipShape(Capsule())
-                } else if currentStatus == .active {
-                    Text("Tap mic to log")
-                        .font(.caption)
-                        .foregroundStyle(Color.secondary)
-                }
-            }
-
-            if voiceViewModel.voiceLogs.isEmpty {
-                // Empty state — only shown during active trip
-                HStack(spacing: 12) {
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(Color.green.opacity(0.6))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("No voice logs yet")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Color.primary)
-                        Text("Tap the mic button below to start logging")
-                            .font(.caption)
-                            .foregroundStyle(Color.secondary)
-                    }
-                    Spacer()
-                }
-                .padding(14)
-                .background(Color(.secondarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.green.opacity(0.2), lineWidth: 1)
-                )
-            } else {
-                VStack(spacing: 10) {
-                    ForEach(voiceViewModel.voiceLogs) { log in
-                        voiceLogRow(log)
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    func voiceLogRow(_ log: VoiceTripLog) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Header: timestamp
-            HStack(spacing: 6) {
-                ZStack {
-                    Circle()
-                        .fill(Color.green.opacity(0.12))
-                        .frame(width: 28, height: 28)
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.green)
-                }
-                if let date = log.createdAt {
-                    Text(date.formatted(date: .omitted, time: .shortened))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.primary)
-                    Text("·")
-                        .foregroundStyle(.tertiary)
-                    Text(date.formatted(date: .abbreviated, time: .omitted))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-            }
-
-            // Extracted fact chips row
-            let hasAnyFact = log.extractedLocation != nil || log.extractedMileage != nil
-                || log.extractedETA != nil || log.extractedStatus != nil
-            if hasAnyFact {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        if let status = log.voiceLogStatus {
-                            VoiceFactChip(icon: status.icon, text: status.displayName, color: voiceStatusColor(status))
-                        }
-                        if let loc = log.extractedLocation {
-                            VoiceFactChip(icon: "mappin.circle.fill", text: loc, color: .teal)
-                        }
-                        if let km = log.extractedMileage {
-                            VoiceFactChip(icon: "gauge.with.needle.fill", text: String(format: "%.1f km", km), color: .green)
-                        }
-                        if let eta = log.extractedETA {
-                            VoiceFactChip(icon: "clock.fill", text: "ETA \(eta)", color: .orange)
-                        }
-                    }
-                }
-            }
-
-            // Raw transcript (collapsible feel — secondary style)
-            Text(log.transcription)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .lineLimit(2)
-        }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.green.opacity(0.15), lineWidth: 1)
-        )
-        .transition(.asymmetric(
-            insertion: .move(edge: .top).combined(with: .opacity),
-            removal: .opacity
-        ))
-    }
-
-    private func voiceStatusColor(_ status: VoiceLogStatus) -> Color {
-        switch status {
-        case .enRoute:   return .green
-        case .delayed:   return .orange
-        case .arrived:   return .teal
-        case .pickedUp:  return .blue
-        case .breakdown: return .red
-        case .other:     return .gray
-        }
-    }
 
     // MARK: - Apple Maps Navigation
 
@@ -646,27 +546,7 @@ struct TripDetailView: View {
     }
 }
 
-// MARK: - VoiceFactChip
 
-struct VoiceFactChip: View {
-    let icon: String
-    let text: String
-    let color: Color
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .bold))
-            Text(text)
-                .font(.system(size: 11, weight: .bold))
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(color.opacity(0.1))
-        .foregroundStyle(color)
-        .clipShape(Capsule())
-    }
-}
 
 // MARK: - Preview
 
