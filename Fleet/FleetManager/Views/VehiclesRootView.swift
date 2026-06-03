@@ -38,9 +38,15 @@ struct VehiclesRootView: View {
             AddVehicleView(viewModel: vehiclesViewModel)
         }
         .task {
-            let adminId = authViewModel.currentUser?.id
-            await vehiclesViewModel.loadData(adminId: adminId)
-            vehiclesViewModel.setupRealtime(adminId: adminId)
+            // adminId is set via onChange below
+        }
+        .onChange(of: authViewModel.currentUser?.id, initial: true) { _, _ in
+            guard let adminId = authViewModel.currentUserId else { return }
+            vehiclesViewModel.adminId = adminId
+            Task {
+                await vehiclesViewModel.loadData()
+                vehiclesViewModel.setupRealtime()
+            }
         }
     }
 }

@@ -301,6 +301,7 @@ CREATE TABLE public.trip_incidents (
   location text NOT NULL,
   photo_url text,
   created_at timestamp with time zone DEFAULT now(),
+  source text DEFAULT 'manual'::text CHECK (source = ANY (ARRAY['manual'::text, 'voice'::text])),
   CONSTRAINT trip_incidents_pkey PRIMARY KEY (id),
   CONSTRAINT trip_incidents_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.users(id),
   CONSTRAINT trip_incidents_trip_id_fkey FOREIGN KEY (trip_id) REFERENCES public.trips(id)

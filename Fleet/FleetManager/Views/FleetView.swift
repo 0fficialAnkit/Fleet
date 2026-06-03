@@ -1,8 +1,10 @@
 import SwiftUI
+internal import Auth
 
 struct FleetView: View {
     @State private var viewModel = EmployeesViewModel()
     @State private var isAddingEmployee = false
+    @Environment(AuthViewModel.self) private var authViewModel
     
     // Filter and Sort state
     @State private var selectedRole: String = "driver"
@@ -40,8 +42,15 @@ struct FleetView: View {
                 AddEmployeeView(viewModel: viewModel, initialRole: selectedRole)
             }
             .task {
-                await viewModel.loadData()
-                viewModel.setupRealtime()
+                // adminId is set via onChange below
+            }
+            .onChange(of: authViewModel.currentUser?.id, initial: true) { _, _ in
+                guard let adminId = authViewModel.currentUserId else { return }
+                viewModel.adminId = adminId
+                Task {
+                    await viewModel.loadData()
+                    viewModel.setupRealtime()
+                }
             }
         }
     }

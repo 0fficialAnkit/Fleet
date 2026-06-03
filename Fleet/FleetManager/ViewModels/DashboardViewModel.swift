@@ -22,16 +22,18 @@ final class DashboardViewModel {
 
     var isLoading = false
     var errorMessage: String?
+    /// Set once on login from AuthViewModel.currentUserId
+    var adminId: UUID?
 
     func loadData() async {
         isLoading = true
         errorMessage = nil
         
-        async let v  = try? VehicleService.fetchAllVehicles()
-        async let t  = try? TripService.fetchAllTrips()
+        async let v  = try? VehicleService.fetchAllVehicles(adminId: adminId)
+        async let t  = try? TripService.fetchAllTrips(adminId: adminId)
         async let w  = try? WorkOrderService.fetchAllWorkOrders()
-        async let r  = try? RouteService.fetchAllRoutes()
-        async let p  = try? ProfileService.fetchAllProfiles()
+        async let r  = try? RouteService.fetchAllRoutes(managerId: adminId)
+        async let p  = try? ProfileService.fetchAllProfiles(managerId: adminId)
         async let m  = try? MaintenanceTaskService.fetchAllTasks()
         async let i  = try? InspectionService.fetchAllInspections()
         async let ir = try? IssueReportService.fetchAllIssueReports()

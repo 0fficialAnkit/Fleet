@@ -33,16 +33,42 @@ enum TripService {
         }
     }
 
-    static func fetchAllTrips() async throws -> [Trip] {
+    /// Fetches all trips. When `adminId` is provided, only trips for vehicles
+    /// owned by that fleet manager are returned.
+    static func fetchAllTrips(adminId: UUID? = nil) async throws -> [Trip] {
         do {
-            let result: [Trip] = try await supabase
-                .from("trips")
-                .select()
-                .order("created_at", ascending: false)
-                .execute()
-                .value
-            print("[TripService] fetchAllTrips: \(result.count) trips")
-            return result
+            if let adminId {
+                // Resolve vehicle IDs for this manager first, then filter trips
+                let vehicles: [Vehicle] = try await supabase
+                    .from("vehicles")
+                    .select("id")
+                    .eq("admin_id", value: adminId)
+                    .execute()
+                    .value
+                let vehicleIds = vehicles.map { $0.id.uuidString }
+                guard !vehicleIds.isEmpty else {
+                    print("[TripService] fetchAllTrips(adminId): no vehicles for this manager")
+                    return []
+                }
+                let result: [Trip] = try await supabase
+                    .from("trips")
+                    .select()
+                    .in("vehicle_id", values: vehicleIds)
+                    .order("created_at", ascending: false)
+                    .execute()
+                    .value
+                print("[TripService] fetchAllTrips(adminId:\(adminId.uuidString.prefix(6))): \(result.count) trips")
+                return result
+            } else {
+                let result: [Trip] = try await supabase
+                    .from("trips")
+                    .select()
+                    .order("created_at", ascending: false)
+                    .execute()
+                    .value
+                print("[TripService] fetchAllTrips: \(result.count) trips")
+                return result
+            }
         } catch {
             print("[TripService] fetchAllTrips ERROR: \(error)")
             throw error

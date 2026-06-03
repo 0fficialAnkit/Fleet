@@ -1,4 +1,5 @@
 import SwiftUI
+internal import Auth
 
 enum ReportSectionTab: String, CaseIterable {
     case vehicles    = "Vehicles"
@@ -13,6 +14,7 @@ struct ReportsView: View {
     @State private var viewModel    = ReportsViewModel()
     @State private var selectedReport: IssueReport?
     @State private var selectedTab: ReportSectionTab = .vehicles
+    @Environment(AuthViewModel.self) private var authViewModel
 
     // Per-tab severity filter (Vehicles tab)
     @State private var vehicleSeverityFilter: DefectSeverity? = nil
@@ -94,8 +96,15 @@ struct ReportsView: View {
                 ReportDetailView(report: report, viewModel: viewModel)
             }
             .task {
-                await viewModel.loadData()
-                viewModel.setupRealtime()
+                // adminId is set via onChange below
+            }
+            .onChange(of: authViewModel.currentUser?.id, initial: true) { _, _ in
+                guard let adminId = authViewModel.currentUserId else { return }
+                viewModel.adminId = adminId
+                Task {
+                    await viewModel.loadData()
+                    viewModel.setupRealtime()
+                }
             }
             .refreshable { await viewModel.loadData() }
         }

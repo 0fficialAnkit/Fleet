@@ -21,6 +21,12 @@ class AuthViewModel {
         currentUser?.email
     }
 
+    /// Convenience: the logged-in user's UUID (same as currentUser?.id).
+    /// All FleetManager ViewModels use this as their `adminId` to scope data.
+    var currentUserId: UUID? {
+        currentUser.map { UUID(uuidString: $0.id.uuidString) } ?? nil
+    }
+
     /// Role name derived from the users + roles tables ("fleet_manager", "driver", "maintenance")
     var resolvedRoleName: String? {
         currentProfile?.role

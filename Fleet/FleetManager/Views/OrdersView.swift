@@ -1,10 +1,12 @@
 import SwiftUI
+internal import Auth
 
 struct OrdersView: View {
     @State private var viewModel = OrdersViewModel()
     @State private var selectedFilter: TripStatus? = .scheduled
     @State private var isAddingOrder = false
     @State private var navigationPath = [Trip]()
+    @Environment(AuthViewModel.self) private var authViewModel
 
     var filteredTrips: [Trip] {
         let trips: [Trip]
@@ -114,8 +116,15 @@ struct OrdersView: View {
                 OrderDetailView(trip: trip, viewModel: viewModel)
             }
             .task {
-                await viewModel.loadData()
-                viewModel.setupRealtime()
+                // adminId is set via onChange below
+            }
+            .onChange(of: authViewModel.currentUser?.id, initial: true) { _, _ in
+                guard let adminId = authViewModel.currentUserId else { return }
+                viewModel.adminId = adminId
+                Task {
+                    await viewModel.loadData()
+                    viewModel.setupRealtime()
+                }
             }
         }
     }

@@ -10,6 +10,8 @@ final class EmployeesViewModel {
     var isLoading = false
     var errorMessage: String?
     var isCreatingUser = false
+    /// Set once on login from AuthViewModel.currentUserId
+    var adminId: UUID?
 
     /// IDs of drivers currently on an active trip
     var activeDriverIds: Set<UUID> {
@@ -40,8 +42,8 @@ final class EmployeesViewModel {
         isLoading = true
         errorMessage = nil
         do {
-            async let p = ProfileService.fetchAllProfiles()
-            async let t = TripService.fetchAllTrips()
+            async let p = ProfileService.fetchAllProfiles(managerId: adminId)
+            async let t = TripService.fetchAllTrips(adminId: adminId)
             async let m = MaintenanceTaskService.fetchAllTasks()
             profiles = try await p
             trips    = try await t
@@ -94,7 +96,8 @@ final class EmployeesViewModel {
             fullName: fullName,
             phone: phone,
             licenseNumber: licenseNumber,
-            role: role
+            role: role,
+            createdByManagerId: adminId
         )
 
         await loadData()

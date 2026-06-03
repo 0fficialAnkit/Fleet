@@ -155,6 +155,7 @@ struct User: Codable, Identifiable, Hashable, Sendable {
   var roleId: UUID //FK
   var status: UserStatus?
   var createdAt: Date?
+  var createdByManagerId: UUID? // FK — which fleet manager created this user
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -166,6 +167,7 @@ struct User: Codable, Identifiable, Hashable, Sendable {
       case roleId = "role_id"
       case status
       case createdAt = "created_at"
+      case createdByManagerId = "created_by_manager_id"
   }
 }
 
@@ -381,12 +383,14 @@ struct Route: Codable, Identifiable, Hashable, Sendable {
   var routeName: String?
   var startLocation: String?
   var endLocation: String?
+  var createdByManagerId: UUID? // FK — which fleet manager created this route
 
   enum CodingKeys: String, CodingKey {
       case id
       case routeName = "route_name"
       case startLocation = "start_location"
       case endLocation = "end_location"
+      case createdByManagerId = "created_by_manager_id"
   }
 }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+internal import Auth
 
 struct DashboardView: View {
     @State private var viewModel = DashboardViewModel()
@@ -76,8 +77,15 @@ struct DashboardView: View {
             }
         }
         .task {
-            await viewModel.loadData()
-            viewModel.setupRealtime()
+            // adminId is set via onChange below on first appear
+        }
+        .onChange(of: authViewModel.currentUser?.id, initial: true) { _, _ in
+            guard let adminId = authViewModel.currentUserId else { return }
+            viewModel.adminId = adminId
+            Task {
+                await viewModel.loadData()
+                viewModel.setupRealtime()
+            }
         }
     }
 
