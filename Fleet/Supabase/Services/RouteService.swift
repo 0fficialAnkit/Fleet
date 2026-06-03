@@ -18,7 +18,7 @@ enum RouteService {
             return try await supabase
                 .from("routes")
                 .select()
-                .eq("created_by_manager_id", value: managerId)
+                .or("created_by_manager_id.eq.\(managerId.uuidString),created_by_manager_id.is.null")
                 .execute()
                 .value
         } else {

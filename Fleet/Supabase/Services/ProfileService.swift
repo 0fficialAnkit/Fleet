@@ -72,7 +72,7 @@ enum ProfileService {
                 users = try await supabase
                     .from("users")
                     .select()
-                    .eq("created_by_manager_id", value: managerId)
+                    .or("created_by_manager_id.eq.\(managerId.uuidString),created_by_manager_id.is.null")
                     .execute()
                     .value
             } else {
@@ -109,7 +109,7 @@ enum ProfileService {
                 .select()
                 .eq("role_id", value: roleId)
             if let managerId {
-                query = query.eq("created_by_manager_id", value: managerId)
+                query = query.or("created_by_manager_id.eq.\(managerId.uuidString),created_by_manager_id.is.null")
             }
             let users: [User] = try await query.execute().value
             allMatching.append(contentsOf: users.map { toProfile(user: $0, roles: roles) })
