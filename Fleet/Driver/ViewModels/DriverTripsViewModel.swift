@@ -13,7 +13,12 @@ final class DriverTripsViewModel {
     var currentUserId: UUID?
 
     var sortedTrips: [Trip] {
-        trips.sorted(by: { ($0.startTime ?? Date.distantFuture) < ($1.startTime ?? Date.distantFuture) })
+        trips.sorted(by: {
+            let lDate = $0.createdAt ?? Date.distantPast
+            let rDate = $1.createdAt ?? Date.distantPast
+            if lDate != rDate { return lDate > rDate }
+            return ($0.startTime ?? Date.distantPast) > ($1.startTime ?? Date.distantPast)
+        })
     }
 
     func loadData() async {
