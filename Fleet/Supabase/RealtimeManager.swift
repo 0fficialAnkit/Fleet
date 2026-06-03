@@ -24,6 +24,8 @@ final class RealtimeManager {
     private var profilesHandlers: [() -> Void] = []
     private var usersHandlers: [() -> Void] = []
     private var fuelLogsHandlers: [() -> Void] = []
+    private var voiceTripLogsHandlers: [() -> Void] = []
+    private var tripIncidentsHandlers: [() -> Void] = []
     private var geofenceEventsHandlers: [() -> Void] = []
 
     private var channels: [RealtimeChannelV2] = []
@@ -84,6 +86,14 @@ final class RealtimeManager {
         fuelLogsHandlers.append(handler)
     }
 
+    func addVoiceTripLogsChangeHandler(_ handler: @escaping () -> Void) {
+        voiceTripLogsHandlers.append(handler)
+    }
+
+    func addTripIncidentsChangeHandler(_ handler: @escaping () -> Void) {
+        tripIncidentsHandlers.append(handler)
+    }
+
     func addGeofenceEventsChangeHandler(_ handler: @escaping () -> Void) {
         geofenceEventsHandlers.append(handler)
     }
@@ -104,6 +114,8 @@ final class RealtimeManager {
         await subscribe(table: "profiles") { [weak self] in self?.profilesHandlers.forEach { $0() } }
         await subscribe(table: "users") { [weak self] in self?.usersHandlers.forEach { $0() } }
         await subscribe(table: "fuel_logs") { [weak self] in self?.fuelLogsHandlers.forEach { $0() } }
+        await subscribe(table: "voice_trip_logs") { [weak self] in self?.voiceTripLogsHandlers.forEach { $0() } }
+        await subscribe(table: "trip_incidents") { [weak self] in self?.tripIncidentsHandlers.forEach { $0() } }
         await subscribe(table: "trip_geofence_events") { [weak self] in self?.geofenceEventsHandlers.forEach { $0() } }
     }
 
@@ -152,5 +164,8 @@ final class RealtimeManager {
         profilesHandlers.removeAll()
         usersHandlers.removeAll()
         fuelLogsHandlers.removeAll()
+        voiceTripLogsHandlers.removeAll()
+        tripIncidentsHandlers.removeAll()
+        geofenceEventsHandlers.removeAll()
     }
 }

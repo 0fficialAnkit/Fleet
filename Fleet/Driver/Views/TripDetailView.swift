@@ -3,11 +3,10 @@ import MapKit
 
 struct TripDetailView: View {
 
-    let trip:          Trip
-    let onStart:       (UUID, UUID, String, [String]) -> Void
-    let onEnd:         (UUID, UUID, Double?, String, [String]) -> Void
-    var onPickupDone:  ((UUID, UUID) -> Void)? = nil
-    var onDropoffDone: ((UUID, UUID, UUID?) -> Void)? = nil   // tripId, vehicleId, dropoffGeofenceId
+    let trip:         Trip
+    let onStart:      (UUID, UUID, String, [String]) -> Void
+    let onEnd:        (UUID, UUID, Double?, String, [String]) -> Void
+    var onPickupDone: ((UUID, UUID) -> Void)? = nil
 
     @State private var currentStatus:    TripStatus?
     @State private var showingChecklist: InspectionType? = nil
@@ -15,9 +14,8 @@ struct TripDetailView: View {
     @State private var dropoffCompleted = false
 
     // Zone entry — gated by geofence "enter" events from Supabase
-    @State private var inPickupZone      = false
-    @State private var inDropoffZone     = false
-    @State private var dropoffGeofenceId: UUID? = nil   // cached when dropoff zone fires
+    @State private var inPickupZone     = false
+    @State private var inDropoffZone    = false
     @State private var zoneTask: Task<Void, Never>? = nil
 
     // Brief confirmation banners
@@ -27,18 +25,18 @@ struct TripDetailView: View {
     @State private var route:             Route?
     @State private var vehicle:           Vehicle?
     @State private var estimatedDistance: Double?
-    @State private var incidents:         [TripIncident] = []
+    
+    // Voice logging
+    @State private var voiceViewModel = VoiceTripLogViewModel()
 
     init(trip: Trip,
-         onStart:       @escaping (UUID, UUID, String, [String]) -> Void,
-         onEnd:         @escaping (UUID, UUID, Double?, String, [String]) -> Void,
-         onPickupDone:  ((UUID, UUID) -> Void)? = nil,
-         onDropoffDone: ((UUID, UUID, UUID?) -> Void)? = nil) {
-        self.trip          = trip
-        self.onStart       = onStart
-        self.onEnd         = onEnd
-        self.onPickupDone  = onPickupDone
-        self.onDropoffDone = onDropoffDone
+         onStart:      @escaping (UUID, UUID, String, [String]) -> Void,
+         onEnd:        @escaping (UUID, UUID, Double?, String, [String]) -> Void,
+         onPickupDone: ((UUID, UUID) -> Void)? = nil) {
+        self.trip         = trip
+        self.onStart      = onStart
+        self.onEnd        = onEnd
+        self.onPickupDone = onPickupDone
         self._currentStatus = State(initialValue: trip.status)
     }
 
@@ -194,74 +192,80 @@ struct TripDetailView: View {
                             done:     dropoffCompleted,
                             tint:     .indigo,
                             lockHint: "Enter the drop-off zone to enable",
-                            doneHint: "Drop-off confirmed — tap End Trip to finish"
+                            doneHint: "Drop-off confirmed"
                         ) {
                             withAnimation(.spring(response: 0.3)) { dropoffCompleted = true }
-                            onDropoffDone?(trip.id, trip.vehicleId, dropoffGeofenceId)
-                        }
-                    }
-                }
-
-                // End Trip — appears after drop-off toggle is confirmed
-                if dropoffCompleted {
-                    Section {
-                        Button {
                             showingChecklist = .postTrip
-                        } label: {
-                            Label("End Trip", systemImage: "checkmark.seal.fill")
-                                .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.red)
-                        .controlSize(.large)
-                        .buttonBorderShape(.capsule)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .transition(.asymmetric(
-                            insertion: .push(from: .bottom).combined(with: .opacity),
-                            removal: .opacity))
                     }
                 }
 
-                // Report Incident — bordered capsule, always visible
+                // Report Incident (Voice Command) Button
                 Section {
-                    NavigationLink(destination: DriverReportIncidentView(trip: trip)) {
-                        Label("Report Incident",
-                              systemImage: "exclamationmark.triangle.fill")
-                            .frame(maxWidth: .infinity)
+                    Button {
+                        if voiceViewModel.voiceService.isRecording {
+                            voiceViewModel.stopAndExtract(
+                                tripId: trip.id,
+                                driverId: trip.driverId,
+                                routeName: "\(route?.startLocation ?? "Origin") → \(route?.endLocation ?? "Destination")"
+                            )
+                        } else {
+                            voiceViewModel.startVoiceCapture()
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: voiceViewModel.voiceService.isRecording ? "stop.fill" : "mic.fill")
+                            Text(voiceViewModel.voiceService.isRecording ? "Stop & Send Alert" : "Report Incident (Voice)")
+                                .font(.headline)
+                        }
+                        .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.orange)
+                    .buttonStyle(.borderedProminent)
+                    .tint(voiceViewModel.voiceService.isRecording ? .red : .orange)
                     .controlSize(.large)
                     .buttonBorderShape(.capsule)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                }
-            }
-
-            // ── 8. Incidents ─────────────────────────────────────────────
-            if !incidents.isEmpty {
-                Section("Incident History") {
-                    ForEach(incidents) { incident in
-                        Label {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(incident.incidentType)
-                                    .font(.subheadline.weight(.medium))
-                                Text(incident.description)
-                                    .font(.caption).foregroundStyle(.secondary)
-                                if let d = incident.createdAt {
-                                    Text(d.formatted(date: .abbreviated, time: .shortened))
-                                        .font(.caption2).foregroundStyle(.tertiary)
-                                }
-                            }
-                        } icon: {
-                            Image(systemName: TripIncidentType(rawValue: incident.incidentType)?.icon
-                                             ?? "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange)
+                    .disabled(voiceViewModel.isProcessing)
+                    
+                    // Native processing and live transcript feedback
+                    if voiceViewModel.voiceService.isRecording && !voiceViewModel.voiceService.liveTranscript.isEmpty {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 6, height: 6)
+                            Text(voiceViewModel.voiceService.liveTranscript)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.primary)
+                                .multilineTextAlignment(.leading)
+                        }
+                        .padding(12)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.red.opacity(0.2), lineWidth: 1))
+                    }
+                    
+                    if voiceViewModel.isProcessing {
+                        HStack(spacing: 8) {
+                            ProgressView().tint(.purple)
+                            Text("Analyzing voice report...")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.purple)
+                        }
+                    }
+                    
+                    if voiceViewModel.justSaved {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(Color.orange)
+                            Text("Alert sent to fleet!")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.orange)
                         }
                     }
                 }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
+
 
             // ── 9. Completed ─────────────────────────────────────────────
             if isCompleted {
@@ -313,20 +317,12 @@ struct TripDetailView: View {
                 }
             }
         }
-        .onAppear {
-            Task { incidents = (try? await TripIncidentService.fetchIncidents(forTripId: trip.id)) ?? [] }
-        }
-        // Instant unlock when zone is entered — cache fenceId for direct use in toggle
+        // Instant unlock when zone is entered — no Supabase round-trip
         .onReceive(NotificationCenter.default.publisher(for: .gfZoneEntered)) { note in
             guard let type = note.userInfo?["zoneType"] as? String else { return }
-            let fenceIdStr = note.userInfo?["geofenceId"] as? String
             withAnimation(.spring(response: 0.35)) {
                 if type == "pickup"  { inPickupZone  = true }
-                if type == "dropoff" {
-                    inDropoffZone    = true
-                    // Cache the exact geofenceId — avoids any DB lookup when toggle is flipped
-                    if let s = fenceIdStr { dropoffGeofenceId = UUID(uuidString: s) }
-                }
+                if type == "dropoff" { inDropoffZone = true }
             }
         }
         .onDisappear {
@@ -376,12 +372,6 @@ struct TripDetailView: View {
             if !pickupCompleted {
                 pickupCompleted = events.contains {
                     $0.geofenceId == pFence?.id && $0.eventType == "pickup_done"
-                }
-            }
-            // Drop-off already completed?
-            if !dropoffCompleted {
-                dropoffCompleted = events.contains {
-                    $0.geofenceId == dFence?.id && $0.eventType == "dropoff_done"
                 }
             }
         }

@@ -193,6 +193,23 @@ enum TripService {
         }
     }
 
+    static func updateTripDistance(id: UUID, distance: Double) async throws {
+        struct DistanceUpdate: Encodable {
+            let distance: Double
+        }
+        do {
+            try await supabase
+                .from("trips")
+                .update(DistanceUpdate(distance: distance))
+                .eq("id", value: id)
+                .execute()
+            print("[TripService] updateTripDistance(\(id)) to \(distance): OK")
+        } catch {
+            print("[TripService] updateTripDistance(\(id)) ERROR: \(error)")
+            throw error
+        }
+    }
+
     static func deleteTrip(id: UUID) async throws {
         do {
             try await supabase
