@@ -65,6 +65,9 @@ struct DriverTripsView: View {
                                             route: viewModel.routeForTrip(trip),
                                             vehicle: viewModel.vehicleForTrip(trip)
                                         )
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                                     }
                                 }
                             }
@@ -147,9 +150,11 @@ struct DriverTripsView: View {
 // MARK: - Trip List Row
 
 struct TripListRow: View {
-    let trip: Trip
-    let route: Route?
+    let trip:    Trip
+    let route:   Route?
     let vehicle: Vehicle?
+
+    // MARK: - Computed
 
     var statusColor: Color {
         switch trip.status {
@@ -157,7 +162,7 @@ struct TripListRow: View {
         case .active:    return .green
         case .completed: return .green
         case .cancelled: return .red
-        case .none:      return Color(.quaternaryLabel)
+        default:         return Color(.quaternaryLabel)
         }
     }
 
@@ -167,67 +172,143 @@ struct TripListRow: View {
         case .active:    return "Active"
         case .completed: return "Completed"
         case .cancelled: return "Cancelled"
-        case .none:      return "Unknown"
+        default:         return "Unknown"
         }
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+    var orderIcon: String {
+        switch trip.orderType {
+        case .bulkOrderShip: return "shippingbox.fill"
+        case .pickUpAndDrop:  return "arrow.left.arrow.right"
+        case .travel:         return "car.fill"
+        default:              return "shippingbox"
+        }
+    }
 
-            // Top row: order type + status badge
-            HStack {
-                Text(trip.orderType?.displayName ?? "Trip")
-                    .font(.body.bold())
-                    .foregroundStyle(Color.primary)
+    var orderColor: Color {
+        switch trip.orderType {
+        case .bulkOrderShip: return .orange
+        case .pickUpAndDrop:  return .teal
+        case .travel:         return .indigo
+        default:              return .secondary
+        }
+    }
+
+    var vehicleIcon: String {
+        guard let type = vehicle?.vehicleType else { return "car.fill" }
+        switch type {
+        case .twoWheeler:   return "scooter"
+        case .threeWheeler: return "car.2.fill"
+        case .car:          return "car.fill"
+        case .truck:        return "box.truck.fill"
+        }
+    }
+
+    var formattedDate: String {
+        guard let date = trip.startTime else { return "Not Scheduled" }
+        let f = DateFormatter(); f.dateStyle = .medium; f.timeStyle = .short
+        return f.string(from: date)
+    }
+
+    // MARK: - Body  (matches OrderCardView style, driver-green theme)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+
+            // ── Header: icon + order type + status badge ──────────────────
+            HStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: orderIcon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 28, height: 28)
+                        .background(Circle().fill(orderColor.gradient))
+
+                    Text(trip.orderType?.displayName ?? "Trip")
+                        .font(.headline.bold())
+                        .foregroundStyle(.primary)
+                }
                 Spacer()
                 StatusBadge(text: statusLabel, color: statusColor)
             }
 
-            // Route: pickup → dropoff
+            // ── Route timeline (green dot → line → red dot) ───────────────
             if let start = route?.startLocation, let end = route?.endLocation {
-                HStack(spacing: 8) {
-                    VStack(spacing: 3) {
-                        Circle().fill(Color.green).frame(width: 7, height: 7)
-                        Rectangle().fill(Color(.separator)).frame(width: 1.5, height: 14)
-                        Image(systemName: "mappin.circle.fill")
-                            .font(.system(size: 9))
-                            .foregroundStyle(Color.red)
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(spacing: 4) {
+                        Circle().fill(Color.green).frame(width: 8, height: 8)
+                        Rectangle().fill(Color(.separator)).frame(width: 2, height: 18)
+                        Circle().fill(Color.red).frame(width: 8, height: 8)
                     }
-                    VStack(alignment: .leading, spacing: 5) {
+                    .frame(width: 8)
+                    .padding(.top, 4)
+
+                    VStack(alignment: .leading, spacing: 10) {
                         Text(start)
                             .font(.subheadline)
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(.secondary)
                             .lineLimit(1)
                         Text(end)
-                            .font(.subheadline)
-                            .foregroundStyle(Color.secondary)
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.primary)
                             .lineLimit(1)
                     }
+                }
+                .padding(.horizontal, 4)
+            }
+
+            Divider()
+
+            // ── Vehicle info ──────────────────────────────────────────────
+            HStack(spacing: 8) {
+                Image(systemName: vehicleIcon)
+                    .font(.system(size: 18))
+                    .foregroundStyle(.green)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("VEHICLE")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Color(.secondaryLabel))
+                    Text(vehicle != nil
+                         ? "\(vehicle?.make ?? "") \(vehicle?.model ?? "")"
+                         : "No Vehicle")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(vehicle != nil ? .primary : .secondary)
+                        .lineLimit(1)
                 }
             }
 
-            // Bottom row: vehicle + date + distance
+            Divider()
+
+            // ── Footer: date pill + order ID ──────────────────────────────
             HStack {
-                if let vehicle {
-                    HStack(spacing: 5) {
-                        Image(systemName: "truck.box.fill")
-                            .font(.caption)
-                            .foregroundStyle(Color.green)
-                        Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
-                            .font(.caption)
-                            .foregroundStyle(Color.secondary)
-                            .lineLimit(1)
-                    }
-                }
-                Spacer()
-                if let date = trip.startTime {
-                    Text(date.formatted(date: .abbreviated, time: .shortened))
+                HStack(spacing: 6) {
+                    Image(systemName: "clock.fill")
                         .font(.caption)
-                        .foregroundStyle(Color(.tertiaryLabel))
+                        .foregroundStyle(.green)
+                    Text(formattedDate)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.green)
                 }
+                .padding(.horizontal, 8).padding(.vertical, 4)
+                .background(Color.green.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                Spacer()
+
+                Text("#\(trip.id.uuidString.prefix(8).uppercased())")
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(Color(.tertiaryLabel))
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(Color(.quaternarySystemFill))
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
             }
         }
-        .padding(.vertical, 4)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
     }
 }
 
