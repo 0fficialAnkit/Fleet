@@ -233,14 +233,14 @@ struct UpcomingMaintenanceCard: View {
 
     var body: some View {
         HStack(spacing: 16) {
-            // Placeholder Image for Vehicle
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color(.secondarySystemFill))
-                .frame(width: 60, height: 60)
+            // Placeholder Image for Vehicle - themed with colors
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(statusColor.opacity(0.12))
+                .frame(width: 48, height: 48)
                 .overlay(
                     Image(systemName: "truck.box.fill")
-                        .font(.system(size: 24))
-                        .foregroundStyle(Color(.tertiaryLabel))
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(statusColor)
                 )
 
             VStack(alignment: .leading, spacing: 4) {
@@ -267,10 +267,11 @@ struct UpcomingMaintenanceCard: View {
                 HStack(spacing: 4) {
                     Image(systemName: "clock")
                         .font(.caption)
+                        .foregroundStyle(statusColor)
                     Text("Est. \(item.estimatedDuration)")
                         .font(.caption)
+                        .foregroundStyle(Color.secondary)
                 }
-                .foregroundStyle(Color(.tertiaryLabel))
             }
         }
         .padding(.vertical, 6)

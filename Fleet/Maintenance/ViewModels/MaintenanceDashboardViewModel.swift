@@ -78,7 +78,7 @@ final class MaintenanceDashboardViewModel {
             return UpcomingDisplayItem(
                 id: ir.id,
                 priorityLabel: ir.severity.uppercased(),
-                priorityColor: irStatusColor(ir.severity),
+                priorityColor: irSeverityColor(ir.severity),
                 referenceId: "REP-\(ir.id.uuidString.prefix(4).uppercased())",
                 assignmentTag: "ASSIGNED TO YOU",
                 vehicleName: vehiclePlate(for: ir.vehicleId),
