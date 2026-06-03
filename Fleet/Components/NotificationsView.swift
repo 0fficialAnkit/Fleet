@@ -18,10 +18,10 @@ struct NotificationsView: View {
                     VStack(spacing: 16) {
                         Image(systemName: "bell.slash")
                             .font(.system(size: 48))
-                            .foregroundColor(Color.secondary)
+                            .foregroundStyle(Color.secondary)
                         Text("No notifications")
                             .font(.body)
-                            .foregroundColor(Color.secondary)
+                            .foregroundStyle(Color.secondary)
                     }
                 } else {
                     List {
@@ -68,14 +68,14 @@ struct NotificationsView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundColor(Color.primary)
+                    .foregroundStyle(Color.primary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     if !viewModel.notifications.filter({ !$0.isRead }).isEmpty {
                         Button("Mark All Read") {
                             viewModel.markAllAsRead()
                         }
-                        .foregroundColor(Color.teal)
+                        .foregroundStyle(Color.teal)
                         .font(.footnote)
                     }
                 }
@@ -149,25 +149,25 @@ struct NotificationRowContent: View {
             HStack(alignment: .top, spacing: 16) {
                 Image(systemName: iconName)
                     .font(.title2)
-                    .foregroundColor(iconColor)
+                    .foregroundStyle(iconColor)
                     .padding(.top, 4)
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(notification.title ?? "Notification")
                             .font(.body.bold())
-                            .foregroundColor(notification.isRead ? Color.secondary : Color.primary)
+                            .foregroundStyle(notification.isRead ? Color.secondary : Color.primary)
                         Spacer()
                         if let date = notification.createdAt {
                             Text(date.formatted(date: .abbreviated, time: .shortened))
                                 .font(.caption)
-                                .foregroundColor(Color(.tertiaryLabel))
+                                .foregroundStyle(Color(.tertiaryLabel))
                         }
                     }
 
                     Text(notification.message ?? "")
                         .font(.subheadline)
-                        .foregroundColor(Color.secondary)
+                        .foregroundStyle(Color.secondary)
                         .multilineTextAlignment(.leading)
                 }
             }
@@ -176,7 +176,7 @@ struct NotificationRowContent: View {
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color(.tertiaryLabel))
+                    .foregroundStyle(Color(.tertiaryLabel))
             }
         }
         .padding(16)

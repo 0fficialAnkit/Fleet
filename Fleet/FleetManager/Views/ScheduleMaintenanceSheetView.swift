@@ -4,7 +4,7 @@ internal import Auth   // needed for user.id from Supabase Auth module
 struct ScheduleMaintenanceSheetView: View {
     let vehicle: Vehicle
     let dashboardViewModel: DashboardViewModel
-    @State var viewModel: MaintenanceViewModel
+    @State private var viewModel: MaintenanceViewModel
     @Environment(AuthViewModel.self) private var authViewModel
     @Environment(\.dismiss) private var dismiss
 

@@ -129,10 +129,16 @@ struct ProfileView: View {
 struct EditProfileSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    @State var fullName: String
-    @State var phone: String
+    @State private var fullName: String
+    @State private var phone: String
 
     var onSave: (String, String) -> Void
+
+    init(fullName: String, phone: String, onSave: @escaping (String, String) -> Void) {
+        self._fullName = State(initialValue: fullName)
+        self._phone    = State(initialValue: phone)
+        self.onSave    = onSave
+    }
 
     var body: some View {
         NavigationStack {

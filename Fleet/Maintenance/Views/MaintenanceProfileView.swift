@@ -153,7 +153,7 @@ struct MaintenanceProfileView: View {
                     }
                 } else {
                     Text("Profile not found")
-                        .foregroundColor(Color.secondary)
+                        .foregroundStyle(Color.secondary)
                 }
             }
             .navigationTitle("Profile")

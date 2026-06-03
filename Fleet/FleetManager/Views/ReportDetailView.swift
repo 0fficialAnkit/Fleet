@@ -4,7 +4,7 @@ import UIKit
 struct ReportDetailView: View {
 
     let report: IssueReport
-    @State var viewModel: ReportsViewModel
+    @State private var viewModel: ReportsViewModel
     @State private var selectedStaffId: UUID?
     @State private var isAssigning = false
     @State private var exportURL: URL?
