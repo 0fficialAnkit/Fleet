@@ -21,6 +21,8 @@ struct DashboardView: View {
 
                         liveFleetSection
 
+                        liveDriverAlertsSection
+
                         maintenanceSection
                     }
                     .refreshable { await viewModel.loadData() }
@@ -248,6 +250,112 @@ struct DashboardView: View {
                         .foregroundStyle(Color.secondary)
                 }
             }
+        }
+    }
+
+    // MARK: - Live Driver Alerts Section
+
+    private var liveDriverAlertsSection: some View {
+        let incidents = viewModel.recentVoiceIncidents
+        return Section {
+            if incidents.isEmpty {
+                Label("No driver alerts", systemImage: "checkmark.shield.fill")
+                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
+            } else {
+                ForEach(incidents) { incident in
+                    Group {
+                        if let trip = viewModel.trips.first(where: { $0.id == incident.tripId }) {
+                            NavigationLink(value: DashboardDestination.orderDetail(trip)) {
+                                incidentRow(incident)
+                            }
+                        } else {
+                            incidentRow(incident)
+                        }
+                    }
+                }
+            }
+        } header: {
+            HStack {
+                Text("Live Driver Alerts")
+                if !incidents.isEmpty {
+                    Text("\(incidents.count)")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.orange)
+                        .clipShape(Capsule())
+                }
+            }
+        }
+    }
+
+    private func incidentRow(_ incident: TripIncident) -> some View {
+        let trip = viewModel.trips.first(where: { $0.id == incident.tripId })
+        let driverName = viewModel.driverName(for: incident.driverId ?? trip?.driverId)
+        let vehicleName = viewModel.vehicleName(for: trip?.vehicleId)
+
+        return HStack(alignment: .top, spacing: 12) {
+            Image(systemName: incidentIcon(incident.incidentType))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(incidentColor(incident.incidentType))
+                .frame(width: 32, height: 32)
+                .background(incidentColor(incident.incidentType).opacity(0.12))
+                .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    Text(incident.incidentType)
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    if let date = incident.createdAt {
+                        Text(date.formatted(date: .omitted, time: .shortened))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Text(incident.description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+
+                HStack(spacing: 8) {
+                    Label(driverName, systemImage: "person.fill")
+                    Text("•")
+                    Label(vehicleName, systemImage: "truck.box.fill")
+                }
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.secondary)
+                .padding(.top, 2)
+
+                if !incident.location.isEmpty && incident.location != "Unknown Location" {
+                    Label(incident.location, systemImage: "mappin")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func incidentIcon(_ type: String) -> String {
+        switch type {
+        case "Breakdown": return "wrench.and.screwdriver.fill"
+        case "Traffic":   return "car.2.fill"
+        case "Accident":  return "car.burst.fill"
+        case "Weather":   return "cloud.heavyrain.fill"
+        default:          return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private func incidentColor(_ type: String) -> Color {
+        switch type {
+        case "Breakdown": return .red
+        case "Traffic":   return .orange
+        case "Accident":  return .red
+        case "Weather":   return .blue
+        default:          return .orange
         }
     }
 }

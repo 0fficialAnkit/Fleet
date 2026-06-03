@@ -4,7 +4,7 @@ import Supabase
 struct DriverTripsView: View {
 
     @State private var viewModel = DriverTripsViewModel()
-    @State private var selectedFilter: TripFilter = .all
+    @State private var selectedFilter: TripFilter = .remaining
     @State private var showingSchedule = false
     @Environment(AuthViewModel.self) private var authViewModel
 
@@ -55,6 +55,9 @@ struct DriverTripsView: View {
                                         },
                                         onPickupDone: { id, vId in
                                             viewModel.gf_pickupDone(tripId: id, vehicleId: vId)
+                                        },
+                                        onDropoffDone: { id, vId, fenceId in
+                                            viewModel.gf_dropoffDone(tripId: id, vehicleId: vId, geofenceId: fenceId)
                                         }
                                     )) {
                                         TripListRow(

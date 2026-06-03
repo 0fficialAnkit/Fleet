@@ -139,8 +139,18 @@ final class TripGeofenceMonitor: NSObject {
         let title    = "\(emoji) Driver Entered \(label) Zone"
         let body     = "Driver is within \(Int(kGeofenceRadiusMeters/1000)) km of the \(label.lowercased()): \(fence.name)"
         let dId      = driverId
+        let pickupIds = Set(fenceMap.values.filter { $0.zoneType == "pickup" }.map { $0.id })
 
         Task {
+            // Strict ordering: dropoff entry only fires AFTER pickup_done is confirmed in DB.
+            if fence.zoneType == "dropoff" {
+                let recent    = (try? await GeofenceService.fetchEvents(forVehicle: vId, limit: 30)) ?? []
+                let pickupDone = recent.contains { pickupIds.contains($0.geofenceId) && $0.eventType == "pickup_done" }
+                guard pickupDone else {
+                    print("[GeofenceMonitor] ⏭ Dropoff entry blocked — pickup_done not yet in DB")
+                    return
+                }
+            }
             // 1 – log to Supabase
             try? await GeofenceService.createEvent(TripGeofenceEvent(
                 id: UUID(), geofenceId: fence.id, vehicleId: vId,
@@ -163,11 +173,11 @@ final class TripGeofenceMonitor: NSObject {
                     identifier: "gf_enter_\(fence.zoneType)_\(tId)",
                     content: content, trigger: nil))
         }
-        // Notify TripDetailView instantly — no Realtime round-trip needed
+        // Notify TripDetailView instantly — include fenceId so toggle uses it directly
         NotificationCenter.default.post(
             name: .gfZoneEntered,
             object: nil,
-            userInfo: ["zoneType": fence.zoneType])
+            userInfo: ["zoneType": fence.zoneType, "geofenceId": fence.id.uuidString])
         print("[GeofenceMonitor] \(emoji) Entered \(label) zone — trip \(tId.uuidString.prefix(6))")
     }
 }

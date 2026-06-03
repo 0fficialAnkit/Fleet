@@ -24,14 +24,19 @@ struct OrderDetailView: View {
         return f.string(from: d)
     }
 
-    // Events for this trip — oldest first, de-duplicated.
-    // Only events whose geofenceId matches this trip's fences are shown.
+    // Events for this trip in strict milestone order: pickup-enter → pickup-done → dropoff-enter → dropoff-done.
+    // Logical priority overrides timestamp so same-second events always display in the correct order.
     var tripEvents: [TripGeofenceEvent] {
-        guard !geofences.isEmpty else { return [] }   // no fences → nothing to show
+        guard !geofences.isEmpty else { return [] }
         let ids    = Set(geofences.map { $0.id })
         let sorted = gfEvents
             .filter { ids.contains($0.geofenceId) }
-            .sorted { ($0.occurredAt ?? .distantPast) < ($1.occurredAt ?? .distantPast) }
+            .sorted { a, b in
+                let pa = logicalPriority(a)
+                let pb = logicalPriority(b)
+                if pa != pb { return pa < pb }
+                return (a.occurredAt ?? .distantPast) < (b.occurredAt ?? .distantPast)
+            }
 
         // Keep only the first occurrence of each logical milestone (dedup)
         var seen    = Set<String>()
@@ -232,7 +237,11 @@ struct OrderDetailView: View {
         case "dropoff_done":
             icon = "flag.checkered.circle.fill"; tint = .teal
             title = "Drop-off Done"
-            sub   = "Trip is ending"
+            sub   = "Driver completing trip"
+        case "trip_ended":
+            icon = "checkmark.seal.fill";        tint = .green
+            title = "Trip Ended"
+            sub   = "Trip completed successfully"
         default:
             icon = "circle.fill";                tint = .secondary
             title = event.eventType;             sub = ""
@@ -265,6 +274,22 @@ struct OrderDetailView: View {
             }
         }
         .padding(.vertical, 6)
+    }
+
+    // MARK: - Helpers
+
+    /// Priority 0-3 enforces 1→2→3→4 display order regardless of same-second timestamps.
+    private func logicalPriority(_ event: TripGeofenceEvent) -> Int {
+        let fence    = geofences.first(where: { $0.id == event.geofenceId })
+        let isPickup = fence?.zoneType == "pickup"
+        switch event.eventType {
+        case "enter"         where isPickup: return 0  // 1. pickup zone entered
+        case "pickup_done":                  return 1  // 2. pickup confirmed
+        case "enter":                        return 2  // 3. dropoff zone entered
+        case "dropoff_done":                 return 3  // 4. dropoff confirmed
+        case "trip_ended":                   return 4  // 5. trip ended
+        default:                             return 5
+        }
     }
 
     // MARK: - Data helpers

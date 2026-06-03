@@ -14,6 +14,8 @@ final class DashboardViewModel {
     private(set) var inspections: [VehicleInspection] = []
     private(set) var issueReports: [IssueReportRecord] = []
     private(set) var maintenanceHistory: [MaintenanceHistory] = []
+    private(set) var recentVoiceLogs: [VoiceTripLog] = []
+    private(set) var recentVoiceIncidents: [TripIncident] = []
 
     /// Predictive alerts derived by the on-device rules engine after each data load.
     private(set) var predictiveAlerts: [PredictiveMaintenanceAlert] = []
@@ -34,6 +36,8 @@ final class DashboardViewModel {
         async let i  = try? InspectionService.fetchAllInspections()
         async let ir = try? IssueReportService.fetchAllIssueReports()
         async let mh = try? MaintenanceHistoryService.fetchAllHistory()
+        async let vl = try? VoiceTripLogService.fetchAllRecentLogs(limit: 10)
+        async let vi = try? TripIncidentService.fetchRecentVoiceIncidents(limit: 5)
         
         vehicles           = (await v) ?? []
         trips              = (await t) ?? []
@@ -44,6 +48,8 @@ final class DashboardViewModel {
         inspections        = (await i) ?? []
         issueReports       = (await ir) ?? []
         maintenanceHistory = (await mh) ?? []
+        recentVoiceLogs      = (await vl) ?? []
+        recentVoiceIncidents = (await vi) ?? []
         
         isLoading = false
         
@@ -93,6 +99,8 @@ final class DashboardViewModel {
         rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addMaintenanceTasksChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addProfilesChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addVoiceTripLogsChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addTripIncidentsChangeHandler { [weak self] in Task { await self?.loadData() } }
         // Refresh vehicle pins whenever a driver pushes a new location row
         rt.addVehicleLocationsChangeHandler { [weak self] in
             Task { await self?.refreshVehicleLocations() }
@@ -152,6 +160,14 @@ final class DashboardViewModel {
     func driverName(for driverId: UUID?) -> String {
         guard let id = driverId else { return "Unassigned" }
         return profiles.first { $0.id == id }?.fullName ?? "Unassigned"
+    }
+
+    func vehicleName(for vehicleId: UUID?) -> String {
+        guard let id = vehicleId else { return "Unknown Vehicle" }
+        if let v = vehicles.first(where: { $0.id == id }) {
+            return "\(v.make ?? "") \(v.model ?? "") (\(v.licensePlate ?? "No Plate"))"
+        }
+        return "Unknown Vehicle"
     }
 
     func maintenanceTask(for vehicleId: UUID) -> MaintenanceTask? {
