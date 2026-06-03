@@ -112,7 +112,11 @@ final class RealtimeManager {
             table: table
         )
 
-        await channel.subscribe()
+        do {
+            try await channel.subscribeWithError()
+        } catch {
+            print("[RealtimeManager] Subscription error for \(table): \(error)")
+        }
         channels.append(channel)
 
         Task { [weak self] in

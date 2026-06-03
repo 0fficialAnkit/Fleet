@@ -429,15 +429,9 @@ struct AIForecastBannerView: View {
     let forecasts: [SparePartForecast]
     @Binding var isExpanded: Bool
 
-    private var topUrgency: ForecastUrgency? { forecasts.first?.urgency }
-
     private var headerColor: Color {
-        switch topUrgency {
-        case .restock: return Color.red
-        case .high:    return Color.orange
-        case .monitor: return Color.blue
-        case .none:    return Color.green
-        }
+        // High intelligence Indigo/Purple theme for ML forecasts
+        return Color.indigo
     }
 
     private var summaryLabel: String {
@@ -544,8 +538,8 @@ private struct ForecastItemRow: View {
 
     private var urgencyColor: Color {
         switch forecast.urgency {
-        case .restock: return Color.red
-        case .high:    return Color.orange
+        case .restock: return Color.orange // Minimal warm amber/orange warning
+        case .high:    return Color.orange.opacity(0.8)
         case .monitor: return Color.blue
         }
     }
@@ -601,7 +595,7 @@ private struct ForecastItemRow: View {
                 } else if forecast.urgency == .restock {
                     Label("Restock now", systemImage: "exclamationmark.circle")
                         .font(.caption2)
-                        .foregroundStyle(Color.red)
+                        .foregroundStyle(Color.orange)
                 }
             }
         }
@@ -617,8 +611,8 @@ struct ForecastUrgencyBadge: View {
 
     private var color: Color {
         switch urgency {
-        case .restock: return Color.red
-        case .high:    return Color.orange
+        case .restock: return Color.orange
+        case .high:    return Color.orange.opacity(0.8)
         case .monitor: return Color.blue
         }
     }

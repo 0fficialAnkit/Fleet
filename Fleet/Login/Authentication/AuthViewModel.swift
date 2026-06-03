@@ -163,7 +163,7 @@ class AuthViewModel {
         errorMessage = nil
         do {
             // Temporarily sign in
-            let response = try await supabase.auth.signIn(email: email, password: oldPassword)
+            _ = try await supabase.auth.signIn(email: email, password: oldPassword)
             // Update password
             try await supabase.auth.update(user: UserAttributes(password: newPassword))
             // Sign out to force them to log in with new password
