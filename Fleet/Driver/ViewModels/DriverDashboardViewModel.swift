@@ -321,7 +321,10 @@ final class DriverDashboardViewModel {
 
     /// Geocodes pickup & dropoff, saves 5 km zones to Supabase, registers CLCircularRegions.
     private func gf_setupZones(tripId: UUID, vehicleId: UUID) async {
+        // Only set up geofences for ACTIVE trips — never for scheduled or completed.
+        // This prevents events from appearing before the driver has started the trip.
         guard let trip    = trips.first(where: { $0.id == tripId }),
+              trip.status == .active,                 // ← hard gate
               let routeId = trip.routeId,
               let route   = routes[routeId],
               let pickup  = route.startLocation, !pickup.isEmpty,
@@ -400,6 +403,11 @@ final class DriverDashboardViewModel {
         let label    = isPickup ? "Pickup" : "Drop-off"
         let title    = "\(emoji) Driver Entered \(label) Zone"
         let body     = "Driver is within \(Int(kGeofenceRadiusMeters/1000)) km of the \(label.lowercased()) location."
+        // Notify TripDetailView instantly on the driver's device
+        NotificationCenter.default.post(
+            name: .gfZoneEntered,
+            object: nil,
+            userInfo: ["zoneType": zoneType])
         // Save event
         try? await GeofenceService.createEvent(TripGeofenceEvent(
             id: UUID(), geofenceId: fenceId, vehicleId: vehicleId,

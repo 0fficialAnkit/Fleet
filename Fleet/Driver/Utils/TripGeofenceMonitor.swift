@@ -95,8 +95,10 @@ final class TripGeofenceMonitor: NSObject {
         region.notifyOnEntry = true
         region.notifyOnExit  = false
         manager.startMonitoring(for: region)
-        fenceMap[fence.id.uuidString]         = fence
-        registrationTime[fence.id.uuidString] = Date()   // guard against iOS catch-up
+        fenceMap[fence.id.uuidString] = fence
+        // NOTE: registrationTime is intentionally NOT set for dropoff.
+        // We want the iOS catch-up to fire immediately if the driver is already
+        // inside the dropoff zone — this is the correct behaviour after pickup.
         print("[GeofenceMonitor] 🏁 Transitioned to dropoff zone (\(Int(fence.radiusMeters/1000)) km)")
     }
 
@@ -161,6 +163,11 @@ final class TripGeofenceMonitor: NSObject {
                     identifier: "gf_enter_\(fence.zoneType)_\(tId)",
                     content: content, trigger: nil))
         }
+        // Notify TripDetailView instantly — no Realtime round-trip needed
+        NotificationCenter.default.post(
+            name: .gfZoneEntered,
+            object: nil,
+            userInfo: ["zoneType": fence.zoneType])
         print("[GeofenceMonitor] \(emoji) Entered \(label) zone — trip \(tId.uuidString.prefix(6))")
     }
 }
