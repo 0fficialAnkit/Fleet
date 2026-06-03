@@ -3,16 +3,17 @@ import MapKit
 
 struct TripDetailView: View {
 
-    let trip:         Trip
-    let onStart:      (UUID, UUID, String, [String]) -> Void
-    let onEnd:        (UUID, UUID, Double?, String, [String]) -> Void
-    var onPickupDone: ((UUID, UUID) -> Void)? = nil
-    var onDropoffDone: ((UUID, UUID, UUID?) -> Void)? = nil
+    let trip:          Trip
+    let onStart:       (UUID, UUID, String, [String]) -> Void
+    let onEnd:         (UUID, UUID, Double?, String, [String]) -> Void
+    var onPickupDone:  ((UUID, UUID) -> Void)? = nil
+    var onDropoffDone: ((UUID, UUID, UUID?) -> Void)? = nil   // tripId, vehicleId, dropoffGeofenceId
 
     @State private var currentStatus:    TripStatus?
     @State private var showingChecklist: InspectionType? = nil
     @State private var pickupCompleted  = false
     @State private var dropoffCompleted = false
+    @State private var dropoffGeofenceId: UUID? = nil   // cached when dropoff zone fires
 
     // Zone entry — gated by geofence "enter" events from Supabase
     @State private var inPickupZone     = false
@@ -31,14 +32,14 @@ struct TripDetailView: View {
     @State private var voiceViewModel = VoiceTripLogViewModel()
 
     init(trip: Trip,
-         onStart:      @escaping (UUID, UUID, String, [String]) -> Void,
-         onEnd:        @escaping (UUID, UUID, Double?, String, [String]) -> Void,
-         onPickupDone: ((UUID, UUID) -> Void)? = nil,
+         onStart:       @escaping (UUID, UUID, String, [String]) -> Void,
+         onEnd:         @escaping (UUID, UUID, Double?, String, [String]) -> Void,
+         onPickupDone:  ((UUID, UUID) -> Void)? = nil,
          onDropoffDone: ((UUID, UUID, UUID?) -> Void)? = nil) {
-        self.trip         = trip
-        self.onStart      = onStart
-        self.onEnd        = onEnd
-        self.onPickupDone = onPickupDone
+        self.trip          = trip
+        self.onStart       = onStart
+        self.onEnd         = onEnd
+        self.onPickupDone  = onPickupDone
         self.onDropoffDone = onDropoffDone
         self._currentStatus = State(initialValue: trip.status)
     }
@@ -198,7 +199,7 @@ struct TripDetailView: View {
                             doneHint: "Drop-off confirmed"
                         ) {
                             withAnimation(.spring(response: 0.3)) { dropoffCompleted = true }
-                            onDropoffDone?(trip.id, trip.vehicleId, nil)
+                            onDropoffDone?(trip.id, trip.vehicleId, dropoffGeofenceId)
                             showingChecklist = .postTrip
                         }
                     }
@@ -324,9 +325,13 @@ struct TripDetailView: View {
         // Instant unlock when zone is entered — no Supabase round-trip
         .onReceive(NotificationCenter.default.publisher(for: .gfZoneEntered)) { note in
             guard let type = note.userInfo?["zoneType"] as? String else { return }
+            let fenceIdStr = note.userInfo?["geofenceId"] as? String
             withAnimation(.spring(response: 0.35)) {
                 if type == "pickup"  { inPickupZone  = true }
-                if type == "dropoff" { inDropoffZone = true }
+                if type == "dropoff" {
+                    inDropoffZone    = true
+                    if let s = fenceIdStr { dropoffGeofenceId = UUID(uuidString: s) }
+                }
             }
         }
         .onDisappear {
@@ -377,6 +382,15 @@ struct TripDetailView: View {
                 pickupCompleted = events.contains {
                     $0.geofenceId == pFence?.id && $0.eventType == "pickup_done"
                 }
+            }
+            // Dropoff already completed?
+            if !dropoffCompleted {
+                dropoffCompleted = events.contains {
+                    $0.geofenceId == dFence?.id && $0.eventType == "dropoff_done"
+                }
+            }
+            if inDropoffZone {
+                dropoffGeofenceId = dFence?.id
             }
         }
     }
@@ -440,7 +454,9 @@ struct TripDetailView: View {
                        startTime: Date(), endTime: nil, distance: nil,
                        status: .scheduled, orderType: .pickUpAndDrop),
             onStart: { _, _, _, _ in },
-            onEnd:   { _, _, _, _, _ in }
+            onEnd:   { _, _, _, _, _ in },
+            onPickupDone: { _, _ in },
+            onDropoffDone: { _, _, _ in }
         )
     }
     .environment(AuthViewModel())
