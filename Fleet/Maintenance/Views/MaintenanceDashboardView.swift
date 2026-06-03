@@ -11,20 +11,17 @@ struct MaintenanceDashboardView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if viewModel.isLoading && viewModel.inventory.isEmpty {
+                if viewModel.isLoading && viewModel.inventory.isEmpty && viewModel.upcomingItems.isEmpty {
                     ProgressView()
                         .tint(.brown)
                 } else {
                     List {
-                        // MARK: - Inventory Status Card
                         Section {
-                            inventoryStatusCard
+                            inventoryOverviewCard
                         }
 
-                        // MARK: - Upcoming Scheduled Tasks
                         upcomingMaintenanceSection
 
-                        // MARK: - Priority Queue
                         priorityQueueSection
                     }
                     .refreshable { await viewModel.loadData() }
@@ -63,16 +60,17 @@ struct MaintenanceDashboardView: View {
         }
     }
 
-    private var inventoryStatusCard: some View {
+    // MARK: - Inventory Overview Card
+
+    private var inventoryOverviewCard: some View {
         ZStack {
-            NavigationLink {
-                InventoryView()
-            } label: {
+            NavigationLink(destination: InventoryView()) {
                 EmptyView()
             }
             .opacity(0)
 
             VStack(spacing: 0) {
+                // Header: icon badge + count + chevron on top trailing
                 HStack(alignment: .top, spacing: 16) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -82,12 +80,15 @@ struct MaintenanceDashboardView: View {
                             .font(.system(size: 22, weight: .medium))
                             .foregroundStyle(Color.brown)
                     }
+
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Inventory Status")
                             .font(.title2.bold())
                             .foregroundStyle(Color.primary)
                     }
+
                     Spacer()
+
                     Image(systemName: "chevron.right")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color(.tertiaryLabel))
@@ -98,18 +99,19 @@ struct MaintenanceDashboardView: View {
                     .background(Color(.separator))
                     .padding(.vertical, 16)
 
+                // Status breakdown row
                 HStack(spacing: 8) {
-                    MaintenanceStatPill(
+                    MaintenanceStatPillLocal(
                         value: viewModel.inventory.count,
                         label: "Total Parts",
                         color: Color.brown
                     )
-                    MaintenanceStatPill(
+                    MaintenanceStatPillLocal(
                         value: viewModel.lowStockItemsCount,
                         label: "Low Stock",
                         color: Color.red
                     )
-                    MaintenanceStatPillText(
+                    MaintenanceStatPillTextLocal(
                         value: viewModel.estimatedValueFormatted,
                         label: "Est. Value",
                         color: Color.green
@@ -120,8 +122,24 @@ struct MaintenanceDashboardView: View {
         }
     }
 
+    // MARK: - Upcoming Maintenance Section
+
     private var upcomingMaintenanceSection: some View {
-        Section {
+        Section(header: HStack {
+            Text("Upcoming Maintenance")
+            Spacer()
+            if !viewModel.upcomingItems.isEmpty {
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color.blue)
+                        .frame(width: 7, height: 7)
+                    Text("\(viewModel.upcomingItems.count) scheduled")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(Color.secondary)
+                        .textCase(.none)
+                }
+            }
+        }) {
             if viewModel.upcomingItems.isEmpty {
                 HStack {
                     Spacer()
@@ -139,25 +157,14 @@ struct MaintenanceDashboardView: View {
             } else {
                 ForEach(viewModel.upcomingItems) { item in
                     if let destination = item.destination {
-                        NavigationLink {
-                            switch destination {
-                            case .scheduledWorkOrderDetail(let scheduledWO):
-                                WorkOrderDetailSheet(workOrder: scheduledWO, viewModel: MaintenanceSchedulerViewModel())
-                            case .issueReportDetail(let report):
-                                IssueReportDetailView(report: report)
-                            case .workOrderList(let filter, let assignedTo, let priority):
-                                WorkOrderListView(initialFilter: filter, assignedUserId: assignedTo, priorityFilter: priority)
-                            }
-                        } label: {
-                            UpcomingMaintenanceRow(item: item)
+                        NavigationLink(value: destination) {
+                            UpcomingMaintenanceCard(item: item)
                         }
                     } else {
-                        UpcomingMaintenanceRow(item: item)
+                        UpcomingMaintenanceCard(item: item)
                     }
                 }
             }
-        } header: {
-            Text("Upcoming Maintenance")
         }
     }
 
@@ -166,30 +173,32 @@ struct MaintenanceDashboardView: View {
     private var priorityQueueSection: some View {
         Section {
             if viewModel.priorityQueueItems.isEmpty {
-                HStack {
-                    Spacer()
-                    VStack(spacing: 8) {
-                        Image(systemName: "checkmark.circle")
-                            .font(.system(size: 32))
-                            .foregroundStyle(Color.green)
-                        Text("No priority tasks")
-                            .font(.body.weight(.medium))
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.shield.fill")
+                        .font(.system(size: 28))
+                        .foregroundStyle(Color.green)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("All clear")
+                            .font(.body.bold())
+                            .foregroundStyle(Color.primary)
+                        Text("No priority tasks detected")
+                            .font(.caption)
                             .foregroundStyle(Color.secondary)
                     }
-                    Spacer()
                 }
-                .padding(.vertical, 24)
+                .padding(.vertical, 6)
             } else {
                 ForEach(viewModel.priorityQueueItems) { item in
-                    NavigationLink {
-                        switch item {
-                        case .workOrder(let wo):
-                            WorkOrderDetailSheet(workOrder: viewModel.buildScheduledWO(wo), viewModel: MaintenanceSchedulerViewModel())
-                        case .issueReport(let ir):
-                            WorkOrderDetailSheet(workOrder: viewModel.buildScheduledWOFromIR(ir), viewModel: MaintenanceSchedulerViewModel())
+                    if case .workOrder(let wo) = item {
+                        NavigationLink(value: MaintenanceDestination.scheduledWorkOrderDetail(viewModel.buildScheduledWO(wo))) {
+                            PriorityQueueCard(item: item, viewModel: viewModel)
                         }
-                    } label: {
-                        PriorityQueueRow(item: item, viewModel: viewModel)
+                    } else if case .issueReport(let report) = item {
+                        NavigationLink(value: MaintenanceDestination.issueReportDetail(report)) {
+                            PriorityQueueCard(item: item, viewModel: viewModel)
+                        }
+                    } else {
+                        PriorityQueueCard(item: item, viewModel: viewModel)
                     }
                 }
             }
@@ -198,14 +207,14 @@ struct MaintenanceDashboardView: View {
                 Text("Priority Queue")
                 Spacer()
                 if !viewModel.priorityQueueItems.isEmpty {
-                    NavigationLink(value: MaintenanceDestination.workOrderList(filter: nil, assignedTo: viewModel.currentUserId, priority: nil)) {
+                    NavigationLink(value: MaintenanceDestination.workOrderList(filter: nil, assignedTo: nil, priority: nil)) {
                         HStack(spacing: 4) {
-                            Text("View All")
+                            Text("See All (\(viewModel.priorityQueueItems.count))")
                                 .font(.caption.weight(.medium))
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 10, weight: .semibold))
                         }
-                        .foregroundStyle(Color.brown)
+                        .foregroundStyle(Color.orange)
                         .textCase(.none)
                     }
                 }
@@ -214,147 +223,132 @@ struct MaintenanceDashboardView: View {
     }
 }
 
-// MARK: - Upcoming Maintenance Row (compact, native)
-struct UpcomingMaintenanceRow: View {
+// MARK: - Upcoming Maintenance Card
+struct UpcomingMaintenanceCard: View {
     let item: UpcomingDisplayItem
 
+    var statusColor: Color {
+        item.priorityColor ?? Color.blue
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Tags
-            HStack(spacing: 8) {
-                Text(item.referenceId)
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color(.tertiarySystemFill))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+        HStack(spacing: 16) {
+            // Placeholder Image for Vehicle
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color(.secondarySystemFill))
+                .frame(width: 60, height: 60)
+                .overlay(
+                    Image(systemName: "truck.box.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(Color(.tertiaryLabel))
+                )
 
-                Text(item.assignmentTag)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.brown)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.brown.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-
-                Spacer()
-
-                if let priorityLabel = item.priorityLabel, let priorityColor = item.priorityColor {
-                    Text(priorityLabel.capitalized)
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(priorityColor)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(priorityColor.opacity(0.12))
-                        .clipShape(Capsule())
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(item.vehicleName)
+                        .font(.headline)
+                        .foregroundStyle(Color.primary)
+                        .lineLimit(1)
+                    
+                    Spacer()
+                    
+                    if let priorityLabel = item.priorityLabel {
+                        StatusBadge(text: priorityLabel.capitalized, color: statusColor)
+                    } else {
+                        StatusBadge(text: item.assignmentTag, color: Color.brown)
+                    }
                 }
-            }
 
-            // Title & Description
-            VStack(alignment: .leading, spacing: 3) {
-                Text(item.vehicleName)
-                    .font(.headline)
-                    .foregroundStyle(Color.primary)
                 Text(item.taskDescription)
                     .font(.subheadline)
                     .foregroundStyle(Color.secondary)
-                    .lineLimit(2)
-            }
-
-            // Meta Info
-            HStack(spacing: 14) {
-                HStack(spacing: 5) {
+                    .lineLimit(1)
+                
+                HStack(spacing: 4) {
                     Image(systemName: "clock")
-                        .font(.caption2)
+                        .font(.caption)
                     Text("Est. \(item.estimatedDuration)")
+                        .font(.caption)
                 }
-                HStack(spacing: 5) {
-                    Image(systemName: "wrench.adjustable")
-                        .font(.caption2)
-                    Text(item.location)
-                }
+                .foregroundStyle(Color(.tertiaryLabel))
             }
-            .font(.caption)
-            .foregroundStyle(Color(.tertiaryLabel))
         }
         .padding(.vertical, 6)
     }
 }
 
-// MARK: - Reusable Cards
-struct DashboardCard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let titleColor: Color
-    let valueColor: Color
-    let backgroundColor: Color
+// MARK: - Priority Queue Card
+struct PriorityQueueCard: View {
+    let item: UnifiedMaintenanceItem
+    let viewModel: MaintenanceDashboardViewModel
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text(title)
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundColor(titleColor)
-                    .lineLimit(2)
-                Spacer()
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(titleColor)
-            }
-
-            Text(value)
-                .font(.system(size: 34, weight: .heavy, design: .rounded))
-                .foregroundColor(valueColor)
+    var iconName: String {
+        switch item {
+        case .issueReport: return "exclamationmark.triangle.fill"
+        case .workOrder: return "wrench.and.screwdriver.fill"
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(backgroundColor)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-
     }
-}
 
-struct AvailablePartsCard: View {
-    let percentage: Int
+    var priorityColor: Color {
+        switch item.unifiedPriority {
+        case .critical, .high: return Color.red
+        case .medium: return Color.orange
+        case .low: return Color.blue
+        case nil: return Color.secondary
+        }
+    }
+
+    var priorityLabel: String {
+        switch item.unifiedPriority {
+        case .critical: return "Critical"
+        case .high: return "High"
+        case .medium: return "Medium"
+        case .low: return "Low"
+        case nil: return "Unknown"
+        }
+    }
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("AVAILABLE PARTS")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundColor(.gray)
-
-                HStack(alignment: .lastTextBaseline, spacing: 2) {
-                    Text("\(percentage)")
-                        .font(.system(size: 34, weight: .heavy, design: .rounded))
-                        .foregroundColor(.primary)
-                    Text("%")
-                        .font(.title3.bold())
-                        .foregroundColor(.gray)
-                }
+        HStack(spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(priorityColor.opacity(0.12))
+                    .frame(width: 40, height: 40)
+                Image(systemName: iconName)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(priorityColor)
             }
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(viewModel.vehiclePlate(for: item.vehicleId))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.primary)
+                Text(item.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(Color.secondary)
+                    .lineLimit(1)
+            }
+
             Spacer()
 
-            ZStack {
-                Circle()
-                    .fill(Color(.secondarySystemBackground))
-                    .frame(width: 60, height: 60)
-                Image(systemName: "shippingbox")
-                    .font(.system(size: 24))
-                    .foregroundColor(Color(red: 122/255, green: 140/255, blue: 158/255))
+            HStack(spacing: 4) {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(priorityLabel)
+                    .font(.system(size: 12, weight: .bold))
             }
+            .foregroundStyle(priorityColor)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(priorityColor.opacity(0.15))
+            .clipShape(Capsule())
         }
-        .padding(20)
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-
+        .padding(.vertical, 4)
     }
 }
 
-// MARK: - Maintenance Stat Pill (matches Fleet Manager style)
-struct MaintenanceStatPill: View {
+// MARK: - Maintenance Stat Pill (matches Fleet Manager style locally)
+struct MaintenanceStatPillLocal: View {
     let value: Int
     let label: String
     let color: Color
@@ -369,7 +363,7 @@ struct MaintenanceStatPill: View {
                 .foregroundStyle(Color.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
+        .padding(.vertical, 16)
         .background(color.opacity(0.08))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -379,8 +373,7 @@ struct MaintenanceStatPill: View {
     }
 }
 
-// MARK: - Maintenance Stat Pill (Text variant for string values)
-struct MaintenanceStatPillText: View {
+struct MaintenanceStatPillTextLocal: View {
     let value: String
     let label: String
     let color: Color
@@ -395,7 +388,7 @@ struct MaintenanceStatPillText: View {
                 .foregroundStyle(Color.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
+        .padding(.vertical, 16)
         .background(color.opacity(0.08))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -403,79 +396,4 @@ struct MaintenanceStatPillText: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
-}
-
-// MARK: - Priority Queue Row (native list style)
-struct PriorityQueueRow: View {
-    let item: UnifiedMaintenanceItem
-    let viewModel: MaintenanceDashboardViewModel
-
-    var iconName: String {
-        switch item {
-        case .issueReport: return "exclamationmark.triangle.fill"
-        case .workOrder: return "wrench.and.screwdriver.fill"
-        }
-    }
-
-    var priorityColor: Color {
-        switch item.unifiedPriority {
-        case .critical, .high: return Color.red
-        case .medium: return Color.blue
-        case .low: return Color.secondary
-        case nil: return Color.secondary
-        }
-    }
-
-    var priorityLabel: String {
-        switch item.unifiedPriority {
-        case .critical: return "CRITICAL"
-        case .high: return "HIGH"
-        case .medium: return "MED"
-        case .low: return "LOW"
-        case nil: return "NONE"
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(priorityColor.opacity(0.12))
-                    .frame(width: 44, height: 44)
-                Image(systemName: iconName)
-                    .font(.system(size: 18))
-                    .foregroundColor(priorityColor)
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(viewModel.vehiclePlate(for: item.vehicleId))
-                    .font(.body.bold())
-                    .foregroundStyle(Color.primary)
-
-                Text(item.subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.secondary)
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            Text(priorityLabel)
-                .font(.system(size: 10, weight: .bold))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(priorityColor.opacity(0.12))
-                .foregroundColor(priorityColor)
-                .clipShape(Capsule())
-        }
-        .padding(.vertical, 4)
-    }
-}
-
-#Preview {
-    MaintenanceDashboardView(
-        selectedTab: .constant(0),
-        schedulerViewModel: MaintenanceSchedulerViewModel()
-    )
-    .environment(AuthViewModel())
 }

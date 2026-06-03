@@ -41,6 +41,22 @@ struct MaintenanceSchedulerView: View {
                     }
                 }
                 .refreshable { await viewModel.loadData() }
+
+                // Toast overlay
+                if let toastMessage = viewModel.toastMessage {
+                    VStack {
+                        Spacer()
+                        Text(toastMessage)
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(Color.black.opacity(0.8), in: Capsule())
+                            .padding(.bottom, 24)
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .zIndex(100)
+                }
             }
             .navigationTitle("Schedule")
             .navigationBarTitleDisplayMode(.large)

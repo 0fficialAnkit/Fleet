@@ -124,6 +124,26 @@ final class MaintenanceSchedulerViewModel {
     var isLoading = false
     var errorMessage: String?
     var currentUserId: UUID?
+    var toastMessage: String? = nil
+
+    @MainActor
+    private func triggerToast(message: String) {
+        toastMessage = message
+        Task {
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            withAnimation {
+                if self.toastMessage == message {
+                    self.toastMessage = nil
+                }
+            }
+        }
+    }
+
+    func showToast(_ message: String) {
+        Task { @MainActor in
+            triggerToast(message: message)
+        }
+    }
 
     /// Local status overrides: keyed by source entity UUID
     /// Prevents realtime re-fetches from reverting in-flight status changes
@@ -469,6 +489,12 @@ final class MaintenanceSchedulerViewModel {
     // MARK: - Mutations
 
     func updateTaskStatus(id: UUID, to status: TaskDisplayStatus) {
+        if status == .inProgress {
+            showToast("Added to progress")
+        } else if status == .completed {
+            showToast("Marked as complete")
+        }
+
         // Store local override so rebuilds don't revert
         taskStatusOverrides[id] = status
 
@@ -524,6 +550,12 @@ final class MaintenanceSchedulerViewModel {
     }
 
     func updateWorkOrderStatus(id: UUID, to status: WorkOrderStatus) {
+        if status == .inProgress {
+            showToast("Added to progress")
+        } else if status == .completed {
+            showToast("Marked as complete")
+        }
+
         // Store local override so rebuilds don't revert
         woStatusOverrides[id] = status
 
