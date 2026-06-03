@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel = ProfileViewModel()
     @State private var isEditing = false
 
@@ -52,21 +53,18 @@ struct ProfileView: View {
                             .padding(.horizontal, 16)
 
                             // Settings & Support Sections
-
-                                VStack(spacing: 0) {
-                                    ActionRow(icon: "gearshape.fill", title: "Settings")
-                                    Divider().background(Color(.separator))
-                                    ActionRow(icon: "questionmark.circle.fill", title: "Help & Support")
-                                }
-                                .padding(16)
-                                .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
+                            VStack(spacing: 0) {
+                                ActionRow(icon: "gearshape.fill", title: "Settings")
+                                Divider().background(Color(.separator))
+                                ActionRow(icon: "questionmark.circle.fill", title: "Help & Support")
+                            }
+                            .padding(16)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                             .padding(.horizontal, 16)
 
                             // Logout Button
-
-VStack(spacing: 0) {
+                            VStack(spacing: 0) {
                                 Button(action: {
                                     Task {
                                         await authViewModel.signOut()
@@ -85,16 +83,21 @@ VStack(spacing: 0) {
                     }
                 } else {
                     Text("Profile not found")
-                        .foregroundColor(Color.secondary)
+                        .foregroundStyle(Color.secondary)
                 }
             }
             .navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") { dismiss() }
+                        .foregroundStyle(Color.primary)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Edit") {
                         isEditing = true
                     }
-                    .foregroundColor(Color.teal)
+                    .foregroundStyle(Color.primary)
                 }
             }
             .sheet(isPresented: $isEditing) {
@@ -148,12 +151,14 @@ struct EditProfileSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .foregroundStyle(Color.primary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         onSave(fullName, phone)
                         dismiss()
                     }
+                    .foregroundStyle(Color.primary)
                     .disabled(fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }

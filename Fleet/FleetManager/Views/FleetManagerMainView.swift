@@ -13,7 +13,7 @@ struct FleetManagerMainView: View {
                     Text("Dashboard")
                 }
                 .tag(0)
-            
+
             OrdersView()
                 .tabItem {
                     Image(systemName: "shippingbox.fill")
@@ -28,7 +28,7 @@ struct FleetManagerMainView: View {
                     Text("Fleet")
                 }
                 .tag(2)
-            
+
 
             // MARK: Reports
             ReportsView()

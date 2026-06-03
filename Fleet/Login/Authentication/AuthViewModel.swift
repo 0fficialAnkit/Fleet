@@ -12,6 +12,14 @@ class AuthViewModel {
     var errorMessage: String?
     var isLoading = false
     var isSessionChecked = false
+    
+    // OTP Variables
+    var isWaitingForOTP = false
+    var tempEmailForOTP: String?
+    
+    var currentUserEmail: String? {
+        currentUser?.email
+    }
 
     /// Role name derived from the users + roles tables ("fleet_manager", "driver", "maintenance")
     var resolvedRoleName: String? {
@@ -106,21 +114,113 @@ class AuthViewModel {
         isLoading = true
         errorMessage = nil
         do {
+            // 1. Verify Password First
             let response = try await supabase.auth.signIn(email: email, password: password)
+            
+            // 2. Send OTP
+            try await supabase.auth.signInWithOTP(email: email)
+            
+            // 3. Update state to show OTP screen
+            self.tempEmailForOTP = email
+            self.isWaitingForOTP = true
+            
+            // Note: We don't set isAuthenticated = true here because they still need to verify the OTP.
+            // Sign out the temporary session created by signIn so they are fully required to enter OTP.
+            try? await supabase.auth.signOut()
+            
+        } catch {
+            print("[AuthViewModel] signIn ERROR: \(error)")
+            self.errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    func verifyOTP(token: String) async {
+        guard let email = tempEmailForOTP else { return }
+        
+        print("[AuthViewModel] verifyOTP: attempting for email=\(email)")
+        isLoading = true
+        errorMessage = nil
+        do {
+            // Verify the OTP
+            let response = try await supabase.auth.verifyOTP(
+                email: email,
+                token: token,
+                type: .email // Use .magiclink if .email gives an issue, but .email is standard for 6-digit OTP
+            )
+            
             self.currentUser = response.user
-            print("[AuthViewModel] signIn: auth OK userId=\(response.user.id)")
+            print("[AuthViewModel] verifyOTP: auth OK userId=\(response.user.id)")
             await fetchProfile()
+            
             if self.currentProfile != nil {
                 self.isAuthenticated = true
-                print("[AuthViewModel] signIn: complete, role=\(self.resolvedRoleName ?? "nil")")
+                self.isWaitingForOTP = false // Reset state
+                print("[AuthViewModel] verifyOTP: complete, role=\(self.resolvedRoleName ?? "nil")")
             } else {
                 try? await supabase.auth.signOut()
                 self.isAuthenticated = false
                 self.currentUser = nil
+                self.errorMessage = "Profile not found."
             }
         } catch {
-            print("[AuthViewModel] signIn ERROR: \(error)")
+            print("[AuthViewModel] verifyOTP ERROR: \(error)")
             self.errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+    
+    func resetOTPState() {
+        self.isWaitingForOTP = false
+        self.tempEmailForOTP = nil
+        self.errorMessage = nil
+    }
+    
+    func resetPassword(email: String) async {
+        print("[AuthViewModel] resetPassword: attempting email=\(email)")
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await supabase.auth.resetPasswordForEmail(email)
+            print("[AuthViewModel] resetPassword: reset email sent successfully")
+        } catch {
+            print("[AuthViewModel] resetPassword ERROR: \(error)")
+            self.errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+    
+    func updatePassword(newPassword: String) async {
+        print("[AuthViewModel] updatePassword: attempting to change password")
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await supabase.auth.update(user: UserAttributes(password: newPassword))
+            print("[AuthViewModel] updatePassword: password changed successfully")
+        } catch {
+            print("[AuthViewModel] updatePassword ERROR: \(error)")
+            self.errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+    
+    func changePassword(email: String, oldPassword: String, newPassword: String) async {
+        print("[AuthViewModel] changePassword: attempting for email=\(email)")
+        isLoading = true
+        errorMessage = nil
+        do {
+            // Temporarily sign in
+            let response = try await supabase.auth.signIn(email: email, password: oldPassword)
+            // Update password
+            try await supabase.auth.update(user: UserAttributes(password: newPassword))
+            // Sign out to force them to log in with new password
+            try await supabase.auth.signOut()
+            print("[AuthViewModel] changePassword: password changed and signed out successfully")
+        } catch {
+            print("[AuthViewModel] changePassword ERROR: \(error)")
+            self.errorMessage = error.localizedDescription
+            // In case signIn succeeded but update failed, try to sign out
+            try? await supabase.auth.signOut()
         }
         isLoading = false
     }

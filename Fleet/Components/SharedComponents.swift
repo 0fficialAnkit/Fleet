@@ -15,17 +15,18 @@ struct StatusBadge: View {
         HStack(spacing: 4) {
             if let icon = icon {
                 Image(systemName: icon)
-                    .font(.system(size: 8, weight: .bold))
+                    .font(.system(size: 9, weight: .bold))
             }
             Text(text)
-                .font(.caption.weight(.medium))
-                .fontWeight(.semibold)
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
         }
         .foregroundStyle(color)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(color.opacity(0.12))
+        .background(color.opacity(0.15))
         .clipShape(Capsule())
+        .overlay(Capsule().strokeBorder(color.opacity(0.25), lineWidth: 0.5))
     }
 }
 
@@ -46,7 +47,7 @@ struct FilterButton: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(isSelected ? Color.teal : Color(.tertiarySystemBackground))
-                .foregroundColor(isSelected ? .white : Color.secondary)
+                .foregroundStyle(isSelected ? .white : Color.secondary)
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)

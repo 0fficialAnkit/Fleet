@@ -16,6 +16,10 @@ struct TripDetailView: View {
     @State private var vehicle: Vehicle?
     @State private var mapView: TripRouteMapView?
     @State private var estimatedDistance: Double?
+    @State private var incidents: [TripIncident] = []
+
+    // Voice logging
+    @State private var voiceViewModel = VoiceTripLogViewModel()
 
     init(trip: Trip, onStart: @escaping (UUID, UUID, String, [String]) -> Void, onEnd: @escaping (UUID, UUID, String, [String]) -> Void) {
         self.trip = trip
@@ -28,7 +32,7 @@ struct TripDetailView: View {
 
     var statusColor: Color {
         switch currentStatus {
-        case .scheduled: return Color.yellow
+        case .scheduled: return Color.blue
         case .active:    return Color.green
         case .completed: return Color.green
         case .cancelled: return Color.red
@@ -56,7 +60,7 @@ struct TripDetailView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Route #\(trip.id.uuidString.prefix(6).uppercased())")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .font(.title2.bold())
                             .foregroundStyle(Color.primary)
                         StatusBadge(text: statusText, color: statusColor)
                     }
@@ -114,10 +118,10 @@ struct TripDetailView: View {
                         }
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Pickup / Origin")
-                                .font(.system(size: 16, weight: .regular, design: .rounded))
+                                .font(.body)
                                 .foregroundStyle(Color.secondary)
                             Text(route?.startLocation ?? "No start location")
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .font(.body.weight(.medium))
                                 .foregroundStyle(Color.primary)
                         }
                         Spacer()
@@ -141,24 +145,18 @@ struct TripDetailView: View {
                         }
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Drop-off / Destination")
-                                .font(.system(size: 16, weight: .regular, design: .rounded))
+                                .font(.body)
                                 .foregroundStyle(Color.secondary)
                             Text(route?.endLocation ?? "No destination")
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
+                                .font(.body.weight(.medium))
                                 .foregroundStyle(Color.primary)
                         }
                         Spacer()
                     }
                 }
                 .padding(16)
-                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                )
-                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
-
-
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                 // ── Assigned Vehicle ───────────────────────────────
                 sectionTitle("Assigned Vehicle")
@@ -175,10 +173,10 @@ struct TripDetailView: View {
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("\(vehicle.make ?? "Vehicle") \(vehicle.model ?? "")")
-                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                    .font(.headline)
                                     .foregroundStyle(Color.primary)
                                 Text(vehicle.licensePlate ?? "—")
-                                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                                    .font(.body)
                                     .foregroundStyle(Color.secondary)
                             }
                             Spacer()
@@ -189,7 +187,7 @@ struct TripDetailView: View {
                         HStack(spacing: 16) {
                             NavigationLink(destination: DriverVehicleDetailView(vehicle: vehicle)) {
                                 Label("View Details", systemImage: "info.circle")
-                                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                                    .font(.body)
                                     .fontWeight(.semibold)
                                     .foregroundStyle(Color.green)
                                     .padding(.vertical, 8)
@@ -201,7 +199,7 @@ struct TripDetailView: View {
 
                             NavigationLink(destination: DriverReportIssueView(vehicle: vehicle)) {
                                 Label("Report Issue", systemImage: "exclamationmark.triangle")
-                                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                                    .font(.body)
                                     .fontWeight(.semibold)
                                     .foregroundStyle(Color.red)
                                     .padding(.vertical, 8)
@@ -213,26 +211,18 @@ struct TripDetailView: View {
                         }
                     }
                     .padding(16)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                    )
-                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 } else {
-                    HStack {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                        Text("Loading vehicle info...")
-                            .font(.system(size: 16, weight: .regular, design: .rounded))
+                    HStack(spacing: 10) {
+                        ProgressView().scaleEffect(0.8)
+                        Text("Loading vehicle info…")
+                            .font(.subheadline)
                             .foregroundStyle(Color.secondary)
                     }
                     .padding(16)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                    )
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
 
                 // ── Route Map ─────────────────────────────────────
@@ -243,8 +233,45 @@ struct TripDetailView: View {
                     endAddress:   route?.endLocation
                 )
 
+                // ── Incidents ─────────────────────────────────────
+                if !incidents.isEmpty {
+                    sectionTitle("Incident History")
+                    
+                    VStack(spacing: 12) {
+                        ForEach(incidents) { incident in
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: TripIncidentType(rawValue: incident.incidentType)?.icon ?? "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.white)
+                                    .padding(8)
+                                    .background(Color.orange)
+                                    .clipShape(Circle())
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(incident.incidentType)
+                                        .font(.headline)
+                                        .foregroundStyle(Color.primary)
+                                    Text(incident.description)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                    if let date = incident.createdAt {
+                                        Text(date.formatted(date: .abbreviated, time: .shortened))
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                                Spacer()
+                            }
+                            .padding(12)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.orange.opacity(0.3), lineWidth: 1))
+                        }
+                    }
+                }
+
                 // ── Action Buttons ─────────────────────────────────
                 actionSection
+
             }
             .padding()
         }
@@ -263,6 +290,11 @@ struct TripDetailView: View {
                 await calculateDistance(from: start, to: end)
             }
         }
+        .onAppear {
+            Task {
+                incidents = (try? await TripIncidentService.fetchIncidents(forTripId: trip.id)) ?? []
+            }
+        }
         .sheet(item: $showingChecklist) { type in
             DriverChecklistView(checklistType: type, vehicle: vehicle) { notes, urls in
                 if type == .preTrip {
@@ -275,6 +307,14 @@ struct TripDetailView: View {
                     withAnimation { currentStatus = .completed }
                 }
                 showingChecklist = nil
+            }
+        }
+        .onChange(of: voiceViewModel.justSaved) { _, saved in
+            if saved {
+                // Refresh incidents in case a voice incident was just filed
+                Task {
+                    incidents = (try? await TripIncidentService.fetchIncidents(forTripId: trip.id)) ?? []
+                }
             }
         }
     }
@@ -291,7 +331,7 @@ struct TripDetailView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "play.fill")
                     Text("Start Trip")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        .font(.headline)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(16)
@@ -308,7 +348,7 @@ struct TripDetailView: View {
                     Image(systemName: "bolt.fill")
                         .foregroundStyle(Color.green)
                     Text("Trip is currently in progress")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Color.green)
                     Spacer()
                 }
@@ -323,7 +363,7 @@ struct TripDetailView: View {
                     HStack(spacing: 10) {
                         Image(systemName: "stop.fill")
                         Text("End Trip")
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .font(.headline)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(16)
@@ -332,6 +372,73 @@ struct TripDetailView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .shadow(color: Color.red.opacity(0.35), radius: 10, y: 4)
+
+                // Report Incident (Voice Command) Button
+                Button {
+                    if voiceViewModel.voiceService.isRecording {
+                        voiceViewModel.stopAndExtract(
+                            tripId: trip.id,
+                            driverId: trip.driverId,
+                            routeName: "\(route?.startLocation ?? "Origin") → \(route?.endLocation ?? "Destination")"
+                        )
+                    } else {
+                        voiceViewModel.startVoiceCapture()
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: voiceViewModel.voiceService.isRecording ? "stop.fill" : "mic.fill")
+                        Text(voiceViewModel.voiceService.isRecording ? "Stop & Send Alert" : "Report Incident (Voice)")
+                            .font(.headline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(16)
+                    .background(voiceViewModel.voiceService.isRecording ? Color.red : Color.orange)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .shadow(color: (voiceViewModel.voiceService.isRecording ? Color.red : Color.orange).opacity(0.35), radius: 10, y: 4)
+                .disabled(voiceViewModel.isProcessing)
+
+                // Native processing and live transcript feedback
+                if voiceViewModel.voiceService.isRecording && !voiceViewModel.voiceService.liveTranscript.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 6, height: 6)
+                            Text(voiceViewModel.voiceService.liveTranscript)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.primary)
+                                .multilineTextAlignment(.leading)
+                        }
+                        .padding(12)
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.red.opacity(0.2), lineWidth: 1))
+                    }
+                    .padding(.top, 4)
+                }
+
+                if voiceViewModel.isProcessing {
+                    HStack(spacing: 8) {
+                        ProgressView().tint(.purple)
+                        Text("Analyzing voice report...")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.purple)
+                    }
+                    .padding(.top, 4)
+                }
+
+                if voiceViewModel.justSaved {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Color.orange)
+                        Text("Alert sent to fleet!")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.orange)
+                    }
+                    .padding(.top, 4)
+                }
             }
 
         case .completed:
@@ -339,7 +446,7 @@ struct TripDetailView: View {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Color.green)
                 Text("Trip completed successfully")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .font(.body.weight(.medium))
                     .foregroundStyle(Color.green)
                 Spacer()
             }
@@ -357,9 +464,10 @@ struct TripDetailView: View {
     @ViewBuilder
     func sectionTitle(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 18, weight: .semibold, design: .rounded))
+            .font(.headline)
             .foregroundStyle(Color.primary)
     }
+
 
     // MARK: - Apple Maps Navigation
 
@@ -422,23 +530,23 @@ struct TripDetailView: View {
                 .font(.system(size: 16))
                 .foregroundStyle(color)
             Text(label)
-                .font(.system(size: 16, weight: .regular, design: .rounded))
+                .font(.body)
                 .foregroundStyle(Color.secondary)
             Text(value)
-                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .font(.body.weight(.medium))
                 .foregroundStyle(Color.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
-        .padding(16)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(color.opacity(0.2), lineWidth: 1)
-        )
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(color.opacity(0.2), lineWidth: 1))
     }
 }
+
+
 
 // MARK: - Preview
 

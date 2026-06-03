@@ -10,6 +10,9 @@ struct EditEmployeeView: View {
     @State private var phone: String
     @State private var licenseNumber: String
     @State private var selectedStatus: UserStatus
+    @State private var isLoading = false
+    @State private var showError = false
+    @State private var errorMessage = ""
 
     let isDriverSelected: Bool
 
@@ -26,106 +29,61 @@ struct EditEmployeeView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 24) {
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            SectionHeader(title: "Personal Details")
-                                .padding(.horizontal, 16)
-
-                                VStack(spacing: 0) {
-                                    TextField("Full Name", text: $fullName)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(Color.primary)
-
-                                    Divider().background(Color(.separator))
-
-                                    TextField("Email", text: $email)
-                                        .keyboardType(.emailAddress)
-                                        .autocapitalization(.none)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(Color.primary)
-
-                                    Divider().background(Color(.separator))
-
-                                    TextField("Phone", text: $phone)
-                                        .keyboardType(.phonePad)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(Color.primary)
-
-                                    if isDriverSelected {
-                                        Divider().background(Color(.separator))
-
-                                        TextField("Driver License Number", text: $licenseNumber)
-                                            .padding(.vertical, 12)
-                                            .foregroundColor(Color.primary)
-                                    }
-                                }
-                                .padding(16)
-                                .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .padding(.horizontal, 16)
-                        }
-                        VStack(alignment: .leading, spacing: 8) {
-                            SectionHeader(title: "Account Status")
-                                .padding(.horizontal, 16)
-
-                            VStack(spacing: 0) {
-                                ForEach([UserStatus.active, .inactive], id: \.self) { status in
-                                    Button {
-                                        selectedStatus = status
-                                    } label: {
-                                        HStack {
-                                            HStack(spacing: 10) {
-                                                Circle()
-                                                    .fill(status == .active ? Color.green : Color.secondary)
-                                                    .frame(width: 8, height: 8)
-                                                Text(status.rawValue.capitalized)
-                                                    .font(.body)
-                                                    .foregroundStyle(Color.primary)
-                                            }
-                                            Spacer()
-                                            if selectedStatus == status {
-                                                Image(systemName: "checkmark")
-                                                    .font(.system(size: 14, weight: .semibold))
-                                                    .foregroundStyle(Color.teal)
-                                            }
-                                        }
-                                        .padding(.vertical, 12)
-                                        .contentShape(Rectangle())
-                                    }
-                                    .buttonStyle(.plain)
-
-                                    if status == .active {
-                                        Divider().background(Color(.separator))
-                                    }
-                                }
+            Form {
+                Section(header: Text("Personal Details")) {
+                    TextField("Full Name", text: $fullName)
+                        .textContentType(.name)
+                    
+                    TextField("Email", text: $email)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .textContentType(.emailAddress)
+                    
+                    TextField("Phone", text: $phone)
+                        .keyboardType(.phonePad)
+                        .textContentType(.telephoneNumber)
+                    
+                    if isDriverSelected {
+                        TextField("Driver License Number", text: $licenseNumber)
+                    }
+                }
+                
+                Section(header: Text("Account Status")) {
+                    Picker("Status", selection: $selectedStatus) {
+                        ForEach([UserStatus.active, .inactive], id: \.self) { status in
+                            HStack(spacing: 10) {
+                                Circle()
+                                    .fill(status == .active ? Color.green : Color.secondary)
+                                    .frame(width: 8, height: 8)
+                                Text(status.rawValue.capitalized)
                             }
-                            .padding(16)
-                            .background(Color(.secondarySystemGroupedBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .padding(.horizontal, 16)
+                            .tag(status)
                         }
                     }
-                    .padding(.vertical, 16)
+                    .pickerStyle(.inline)
+                    .labelsHidden()
                 }
             }
             .navigationTitle(isDriverSelected ? "Edit Driver" : "Edit Maintenance Staff")
             .navigationBarTitleDisplayMode(.inline)
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(Color.teal)
+                    .foregroundStyle(Color.primary)
+                    .disabled(isLoading)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button {
                         guard !fullName.isEmpty else { return }
+                        isLoading = true
                         var updatedProfile = originalProfile
                         updatedProfile.fullName = fullName
                         updatedProfile.email = email
@@ -139,13 +97,21 @@ struct EditEmployeeView: View {
                                 await viewModel.loadData()
                                 dismiss()
                             } catch {
+                                isLoading = false
+                                errorMessage = error.localizedDescription
+                                showError = true
                                 print("Error updating profile: \(error)")
                             }
                         }
+                    } label: {
+                        if isLoading {
+                            ProgressView()
+                        } else {
+                            Text("Save")
+                        }
                     }
-                    .foregroundColor(Color.teal)
-                    .bold()
-                    .disabled(fullName.isEmpty)
+                    .foregroundStyle(Color.primary)
+                    .disabled(fullName.isEmpty || isLoading)
                 }
             }
         }

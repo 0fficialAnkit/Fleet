@@ -10,63 +10,42 @@ final class VehiclesViewModel {
     var isLoading = false
     var errorMessage: String?
 
-    func setupRealtime() {
+    var currentAdminId: UUID? = nil
+
+    func setupRealtime(adminId: UUID? = nil) {
+        if let adminId {
+            self.currentAdminId = adminId
+        }
         let rt = RealtimeManager.shared
-        rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData() } }
-        rt.addProfilesChangeHandler { [weak self] in Task { await self?.loadData() } }
-        rt.addTripsChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData(adminId: adminId) } }
+        rt.addProfilesChangeHandler { [weak self] in Task { await self?.loadData(adminId: adminId) } }
+        rt.addTripsChangeHandler { [weak self] in Task { await self?.loadData(adminId: adminId) } }
     }
 
-    func loadData() async {
+    func loadData(adminId: UUID? = nil) async {
+        if let adminId {
+            self.currentAdminId = adminId
+        }
+        let activeAdminId = adminId ?? self.currentAdminId
         isLoading = true
         errorMessage = nil
         do {
             async let v = VehicleService.fetchAllVehicles()
             async let p = ProfileService.fetchAllProfiles()
             async let t = TripService.fetchAllTrips()
-            vehicles = try await v
+            let allVehicles = try await v
             profiles = try await p
             trips = try await t
+            
+            if let activeAdminId = activeAdminId {
+                // Show vehicles assigned to this admin OR vehicles with no admin assigned (test data)
+                vehicles = allVehicles.filter { $0.adminId == activeAdminId || $0.adminId == nil }
+            } else {
+                vehicles = allVehicles
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
-        
-        // --- INJECT MOCK DATA FOR DEMO PURPOSES ---
-        let mockVehicleId = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
-        let mockVehicle = Vehicle(
-            id: mockVehicleId,
-            make: "Honda",
-            model: "Activa (Mock)",
-            year: 2024,
-            vin: "MOCK1234",
-            licensePlate: "MH-12-AB-1234",
-            tankCapacity: 5,
-            mileage: 45,
-            purchaseDate: Date(),
-            assignedDriverId: nil,
-            adminId: nil,
-            status: .active,
-            vehicleType: .twoWheeler
-        )
-        
-        let mockTrip = Trip(
-            id: UUID(),
-            vehicleId: mockVehicleId,
-            driverId: nil,
-            routeId: nil,
-            startTime: Date().addingTimeInterval(-86400 * 2),
-            endTime: Date(),
-            distance: 3100.0,
-            status: .completed,
-            orderType: .pickUpAndDrop,
-            createdAt: Date()
-        )
-        
-        if !vehicles.contains(where: { $0.vin == "MOCK1234" }) {
-            vehicles.append(mockVehicle)
-            trips.append(mockTrip)
-        }
-        // -------------------------------------------
         
         isLoading = false
     }
@@ -119,7 +98,7 @@ final class VehiclesViewModel {
         let tripsPerDay = periodDays > 0 ? Double(tripsCount) / periodDays : Double(tripsCount)
         
         if distancePerDay < 10 && tripsPerDay < 0.5 {
-            return ("Underused", "This vehicle has very low activity and high idle time. Consider reallocating it.", .yellow)
+            return ("Underused", "This vehicle has very low activity and high idle time. Consider reallocating it.", .orange)
         } else if distancePerDay > 300 || tripsPerDay > 10 {
             return ("Overused", "This vehicle is seeing heavy usage. It may require more frequent maintenance.", .red)
         } else {
@@ -127,16 +106,31 @@ final class VehiclesViewModel {
         }
     }
 
-    func getStatusColor(_ status: VehicleStatus?) -> Color {
-        switch status {
-        case .active: return Color.green
-        case .maintenance: return Color.yellow
-        case .inactive: return Color(.tertiaryLabel)
-        case nil: return Color(.tertiaryLabel)
+    func getVehicleStatusText(for vehicle: Vehicle) -> String {
+        if vehicle.status == .maintenance {
+            return "In Service"
+        } else if trips.contains(where: { $0.vehicleId == vehicle.id && $0.status == .active }) {
+            return "On Trip"
+        } else if vehicle.status == .active {
+            return "Available"
+        } else {
+            return vehicle.status?.rawValue.capitalized ?? "Unknown"
+        }
+    }
+    
+    func getVehicleStatusColor(for vehicle: Vehicle) -> Color {
+        if vehicle.status == .maintenance {
+            return Color.red // Undergoing service / maintenance
+        } else if trips.contains(where: { $0.vehicleId == vehicle.id && $0.status == .active }) {
+            return Color.green // On an active trip
+        } else if vehicle.status == .active {
+            return Color.orange // Available / Idle
+        } else {
+            return Color(.tertiaryLabel)
         }
     }
 
-    func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, licensePlate: String, vehicleType: VehicleType) async throws {
+    func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, licensePlate: String, vehicleType: VehicleType, adminId: UUID? = nil) async throws {
         print("[VehiclesViewModel] addVehicle: make=\(make) model=\(model) plate=\(licensePlate) type=\(vehicleType)")
         do {
             try await VehicleService.createVehicle(
@@ -148,11 +142,12 @@ final class VehiclesViewModel {
                 tankCapacity: tankCapacity,
                 mileage: mileage,
                 assignedDriverId: nil,   // Always nil on creation — assign via driver selection
+                adminId: adminId,
                 status: .active,
                 vehicleType: vehicleType
             )
             print("[VehiclesViewModel] addVehicle: success, reloading...")
-            await loadData()
+            await loadData(adminId: adminId)
         } catch {
             print("[VehiclesViewModel] addVehicle ERROR: \(error)")
             throw error
@@ -162,7 +157,7 @@ final class VehiclesViewModel {
     func updateVehicle(_ updatedVehicle: Vehicle) async throws {
         do {
             try await VehicleService.updateVehicle(updatedVehicle)
-            await loadData()
+            await loadData(adminId: self.currentAdminId)
         } catch {
             print("[VehiclesViewModel] updateVehicle ERROR: \(error)")
             throw error
@@ -172,7 +167,7 @@ final class VehiclesViewModel {
     func deleteVehicle(_ vehicle: Vehicle) async throws {
         do {
             try await VehicleService.deleteVehicle(id: vehicle.id)
-            await loadData()
+            await loadData(adminId: self.currentAdminId)
         } catch {
             print("[VehiclesViewModel] deleteVehicle ERROR: \(error)")
             throw error

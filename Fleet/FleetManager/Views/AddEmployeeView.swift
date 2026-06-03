@@ -4,7 +4,8 @@ import Supabase
 struct AddEmployeeView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: EmployeesViewModel
-    let roleName: String
+    
+    @State private var selectedRole: String
 
     @State private var fullName = ""
     @State private var email = ""
@@ -13,8 +14,13 @@ struct AddEmployeeView: View {
     @State private var licenseNumber = ""
     @State private var isPasswordVisible = false
 
+    init(viewModel: EmployeesViewModel, initialRole: String = "driver") {
+        self.viewModel = viewModel
+        self._selectedRole = State(initialValue: initialRole)
+    }
+
     var isDriverSelected: Bool {
-        return roleName.lowercased() == "driver"
+        return selectedRole == "driver"
     }
 
     /// Map display role to database role string
@@ -25,37 +31,44 @@ struct AddEmployeeView: View {
     var body: some View {
         NavigationStack {
                 Form {
+
+
                     if let error = viewModel.errorMessage {
                         Section {
                             Text(error)
-                                .foregroundColor(.red)
+                                .foregroundStyle(.red)
                         }
                     }
 
                     Section(header: Text("Personal Details")) {
                         TextField("Full Name", text: $fullName)
+                            .textContentType(.name)
 
                         TextField("Email", text: $email)
                             .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
+                            .textInputAutocapitalization(.never)
+                            .textContentType(.emailAddress)
 
                         HStack {
                             if isPasswordVisible {
                                 TextField("Password", text: $password)
+                                    .textContentType(.newPassword)
                             } else {
                                 SecureField("Password", text: $password)
+                                    .textContentType(.newPassword)
                             }
 
                             Button(action: {
                                 isPasswordVisible.toggle()
                             }) {
                                 Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                             }
                         }
 
                         TextField("Phone", text: $phone)
                             .keyboardType(.phonePad)
+                            .textContentType(.telephoneNumber)
 
                         if isDriverSelected {
                             TextField("Driver License Number", text: $licenseNumber)
@@ -69,7 +82,7 @@ struct AddEmployeeView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(Color.teal)
+                    .foregroundStyle(Color.primary)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -108,8 +121,7 @@ struct AddEmployeeView: View {
                             }
                         }
                     }
-                    .foregroundColor(Color.teal)
-                    .bold()
+                    .foregroundStyle(Color.primary)
                     .disabled(fullName.isEmpty || email.isEmpty || password.isEmpty || viewModel.isCreatingUser)
                 }
             }
@@ -119,11 +131,11 @@ struct AddEmployeeView: View {
                         Color.black.opacity(0.4).ignoresSafeArea()
                         VStack(spacing: 16) {
                             ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .tint(.white)
                                 .scaleEffect(1.2)
                             Text("Creating user...")
                                 .font(.body.weight(.medium))
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                         }
                         .padding(32)
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -135,5 +147,5 @@ struct AddEmployeeView: View {
 }
 
 #Preview {
-    AddEmployeeView(viewModel: EmployeesViewModel(), roleName: "driver")
+    AddEmployeeView(viewModel: EmployeesViewModel())
 }

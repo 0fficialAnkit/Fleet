@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 struct EmployeeDetailView: View {
     let profile: Profile
@@ -6,6 +7,9 @@ struct EmployeeDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var isShowingEditSheet = false
+    @State private var deleteError: String?
+    @State private var isSharingCredentials = false
+    @State private var shareCredentialsAlertMessage: String?
 
     @State private var trips:    [Trip] = []
     @State private var tasks:    [MaintenanceTask] = []
@@ -30,17 +34,7 @@ struct EmployeeDetailView: View {
         tasks.sorted { ($0.scheduledDate ?? .distantPast) > ($1.scheduledDate ?? .distantPast) }
     }
 
-    var credentialsShareText: String {
-        """
-        Welcome to the Fleet App, \(currentProfile.fullName)!
-
-        Your login credentials are:
-        Email: \(currentProfile.email)
-        Password: [Set during account creation]
-
-        Please log in to access your portal.
-        """
-    }
+    // Removed credentialsShareText as we now send email via backend
 
     var body: some View {
         List {
@@ -54,17 +48,17 @@ struct EmployeeDetailView: View {
                             .frame(width: 110, height: 110)
                         Image(systemName: viewModel.getIcon(for: currentRoleName))
                             .font(.system(size: 44))
-                            .foregroundColor(viewModel.getColor(for: currentRoleName))
+                            .foregroundStyle(viewModel.getColor(for: currentRoleName))
                     }
                     .padding(.bottom, 8)
 
                     Text(currentProfile.fullName)
                         .font(.title.bold())
-                        .foregroundColor(Color.primary)
+                        .foregroundStyle(Color.primary)
 
                     Text(currentRoleName)
                         .font(.subheadline.weight(.medium))
-                        .foregroundColor(viewModel.getColor(for: currentRoleName))
+                        .foregroundStyle(viewModel.getColor(for: currentRoleName))
                         .padding(.horizontal, 16)
                         .padding(.vertical, 6)
                         .background(viewModel.getColor(for: currentRoleName).opacity(0.15))
@@ -109,28 +103,19 @@ struct EmployeeDetailView: View {
                     }
                 } else if trips.isEmpty {
                     Section(header: Text("Trip History")) {
-                        HStack {
-                            Spacer()
-                            VStack(spacing: 10) {
-                                Image(systemName: "road.lanes")
-                                    .font(.system(size: 32))
-                                    .foregroundStyle(Color(.quaternaryLabel))
-                                Text("No trips yet")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.secondary)
-                            }
-                            Spacer()
-                        }
+                        ContentUnavailableView(
+                            "No Trips",
+                            systemImage: "road.lanes",
+                            description: Text("This driver hasn't completed any trips yet.")
+                        )
                         .padding(.vertical, 20)
                         .listRowBackground(Color.clear)
                     }
                 } else {
-                    // First trip carries the section header; the rest each get their own card
                     Section(header: Text("Trip History")) {
-                        tripCard(tripsSorted[0])
-                    }
-                    ForEach(tripsSorted.dropFirst()) { trip in
-                        Section { tripCard(trip) }
+                        ForEach(tripsSorted) { trip in
+                            tripCard(trip)
+                        }
                     }
                 }
             }
@@ -143,27 +128,19 @@ struct EmployeeDetailView: View {
                     }
                 } else if tasks.isEmpty {
                     Section(header: Text("Work History")) {
-                        HStack {
-                            Spacer()
-                            VStack(spacing: 10) {
-                                Image(systemName: "wrench.and.screwdriver")
-                                    .font(.system(size: 32))
-                                    .foregroundStyle(Color(.quaternaryLabel))
-                                Text("No tasks yet")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.secondary)
-                            }
-                            Spacer()
-                        }
+                        ContentUnavailableView(
+                            "No Tasks",
+                            systemImage: "wrench.and.screwdriver",
+                            description: Text("No maintenance tasks assigned yet.")
+                        )
                         .padding(.vertical, 20)
                         .listRowBackground(Color.clear)
                     }
                 } else {
                     Section(header: Text("Work History")) {
-                        maintenanceCard(tasksSorted[0])
-                    }
-                    ForEach(tasksSorted.dropFirst()) { task in
-                        Section { maintenanceCard(task) }
+                        ForEach(tasksSorted) { task in
+                            maintenanceCard(task)
+                        }
                     }
                 }
             }
@@ -173,29 +150,92 @@ struct EmployeeDetailView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    ShareLink(
-                        item: credentialsShareText,
-                        subject: Text("Fleet App Login Credentials"),
-                        message: Text("Here are your login details:")
-                    ) {
-                        Label("Share Credentials", systemImage: "square.and.arrow.up")
+                    Button {
+                        Task {
+                            isSharingCredentials = true
+                            do {
+                                try await ProfileService.invokeShareCredentials(for: currentProfile)
+                                shareCredentialsAlertMessage = "Credentials successfully sent to \(currentProfile.email)."
+                            } catch let error as FunctionsError {
+                                switch error {
+                                case .httpError(let code, let data):
+                                    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                                       let serverError = json["error"] as? String {
+                                        shareCredentialsAlertMessage = "Error: \(serverError)"
+                                    } else {
+                                        shareCredentialsAlertMessage = "HTTP Error \(code)"
+                                    }
+                                case .relayError:
+                                    shareCredentialsAlertMessage = "Network relay error"
+                                }
+                            } catch {
+                                shareCredentialsAlertMessage = "Failed to send credentials: \(error.localizedDescription)"
+                            }
+                            isSharingCredentials = false
+                        }
+                    } label: {
+                        Label("Share Credentials", systemImage: "envelope")
                     }
                     Button { isShowingEditSheet = true } label: {
                         Label("Edit", systemImage: "pencil")
                     }
                     Button(role: .destructive) {
-                        viewModel.deleteEmployee(currentProfile)
-                        dismiss()
+                        Task {
+                            do {
+                                try await viewModel.deleteEmployee(currentProfile)
+                                dismiss()
+                            } catch {
+                                deleteError = error.localizedDescription
+                            }
+                        }
                     } label: {
                         Label("Delete", systemImage: "trash")
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Image(systemName: "ellipsis")
+                        .foregroundStyle(Color.primary)
                 }
             }
         }
         .sheet(isPresented: $isShowingEditSheet) {
             EditEmployeeView(profile: currentProfile, viewModel: viewModel)
+        }
+        .alert("Unable to Delete Driver/Employee", isPresented: Binding(
+            get: { deleteError != nil },
+            set: { if !$0 { deleteError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            if let msg = deleteError {
+                Text(msg)
+            }
+        }
+        .alert("Share Credentials", isPresented: Binding(
+            get: { shareCredentialsAlertMessage != nil },
+            set: { if !$0 { shareCredentialsAlertMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            if let msg = shareCredentialsAlertMessage {
+                Text(msg)
+            }
+        }
+        .overlay {
+            if isSharingCredentials {
+                ZStack {
+                    Color.black.opacity(0.4).ignoresSafeArea()
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .tint(.white)
+                            .scaleEffect(1.2)
+                        Text("Sending credentials...")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(.white)
+                    }
+                    .padding(32)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                }
+            }
         }
         .task { await loadHistory() }
     }
@@ -328,7 +368,7 @@ struct EmployeeDetailView: View {
     private func tripStatusColor(_ status: TripStatus?) -> Color {
         switch status {
         case .scheduled: return .blue
-        case .active:    return .yellow
+        case .active:    return .green
         case .completed: return .green
         case .cancelled: return .red
         case .none:      return .secondary
@@ -348,7 +388,7 @@ struct EmployeeDetailView: View {
     private func taskStatusColor(_ status: MaintenanceTaskStatus?) -> Color {
         switch status {
         case .pending:    return .blue
-        case .inProgress: return .yellow
+        case .inProgress: return .orange
         case .completed:  return .green
         case .cancelled:  return .red
         case .none:       return .secondary
@@ -368,18 +408,18 @@ struct InfoRowView: View {
         HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 18))
-                .foregroundColor(Color(.tertiaryLabel))
+                .foregroundStyle(Color(.tertiaryLabel))
                 .frame(width: 24)
 
             Text(title)
                 .font(.body.weight(.medium))
-                .foregroundColor(Color.secondary)
+                .foregroundStyle(Color.secondary)
 
             Spacer()
 
             Text(value)
                 .font(.body)
-                .foregroundColor(valueColor)
+                .foregroundStyle(valueColor)
         }
         .padding(.vertical, 8)
     }

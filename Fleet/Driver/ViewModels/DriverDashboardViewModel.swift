@@ -1,5 +1,7 @@
 import SwiftUI
 import CoreLocation
+import MapKit
+import UserNotifications
 
 @MainActor
 @Observable
@@ -17,6 +19,21 @@ final class DriverDashboardViewModel {
     // MARK: - Live location tracking
     private var locationManager = LocationManager()
     private var trackingTask: Task<Void, Never>?
+
+    // MARK: - Geofence distance state (backup for CLCircularRegion)
+    private struct GFDistState {
+        var pickupCoord:    CLLocationCoordinate2D
+        var dropoffCoord:   CLLocationCoordinate2D
+        var pickupFenceId:  UUID
+        var dropoffFenceId: UUID
+        var vehicleId:      UUID
+        var tripId:         UUID
+        var firedPickup    = false   // true once pickup zone-enter is logged
+        var firedDropoff   = false   // true once dropoff zone-enter is logged
+        // Dropoff monitoring only starts AFTER driver taps "Pickup Done"
+        var pickupPhaseDone = false
+    }
+    private var gfDistState: GFDistState?
 
     // MARK: - Computed stats
 
@@ -64,21 +81,47 @@ final class DriverDashboardViewModel {
         trips.filter { $0.status == .completed }.count
     }
 
+    var currentTime: Date = Date()
+    private var liveTimer: Timer?
+
     var totalDistanceKm: Double {
-        trips
+        let completed = trips
             .filter { $0.status == .completed }
             .compactMap { $0.distance }
             .reduce(0, +)
+        let live = (activeTrip != nil) ? (locationManager.totalDistanceTraveled / 1000.0) : 0.0
+        return completed + live
     }
 
     var totalHoursActive: Double {
-        trips
+        let completed = trips
             .filter { $0.status == .completed }
             .compactMap { trip -> Double? in
                 guard let start = trip.startTime, let end = trip.endTime else { return nil }
                 return end.timeIntervalSince(start) / 3600.0
             }
             .reduce(0.0, +)
+            
+        let live: Double
+        if let active = activeTrip, let start = active.startTime {
+            live = currentTime.timeIntervalSince(start) / 3600.0
+        } else {
+            live = 0.0
+        }
+        return completed + live
+    }
+    
+    private func setupLiveTimer() {
+        liveTimer?.invalidate()
+        if activeTrip != nil {
+            liveTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+                if let target = self {
+                    Task { @MainActor in
+                        target.currentTime = Date()
+                    }
+                }
+            }
+        }
     }
 
     var upcomingTrip: Trip? {
@@ -104,6 +147,7 @@ final class DriverDashboardViewModel {
         isLoading = false
         // Resume GPS tracking if a trip was already active when the app launched
         resumeTrackingIfNeeded()
+        setupLiveTimer()
     }
 
     /// Batch-fetch routes and vehicles referenced by trips
@@ -141,6 +185,19 @@ final class DriverDashboardViewModel {
     func setupRealtime() {
         let rt = RealtimeManager.shared
         rt.addTripsChangeHandler { [weak self] in Task { await self?.loadData() } }
+        // Sync pickupPhaseDone when pickup_done is saved by DriverTripsViewModel
+        rt.addGeofenceEventsChangeHandler { [weak self] in Task { await self?.syncPickupPhaseDone() } }
+    }
+
+    private func syncPickupPhaseDone() async {
+        guard let state = gfDistState, !state.pickupPhaseDone,
+              let trip  = activeTrip else { return }
+        let events = (try? await GeofenceService.fetchEvents(forVehicle: trip.vehicleId, limit: 20)) ?? []
+        let ids    = Set([state.pickupFenceId, state.dropoffFenceId])
+        if events.contains(where: { ids.contains($0.geofenceId) && $0.eventType == "pickup_done" }) {
+            gfDistState?.pickupPhaseDone = true
+            print("[Geofence] 🔄 pickupPhaseDone synced from Realtime")
+        }
     }
 
     func startTrip(id: UUID, vehicleId: UUID, notes: String, imageUrls: [String]) {
@@ -155,18 +212,28 @@ final class DriverDashboardViewModel {
                     try? await InspectionService.createInspectionPhoto(photo)
                 }
                 await loadData()
+                locationManager.resetDistance()
                 startLocationTracking(vehicleId: vehicleId)
+                Task { await gf_setupZones(tripId: id, vehicleId: vehicleId) }
             } catch {
                 errorMessage = error.localizedDescription
             }
         }
     }
 
-    func endTrip(id: UUID, vehicleId: UUID, notes: String, imageUrls: [String]) {
+    func endTrip(id: UUID, vehicleId: UUID, distance: Double?, notes: String, imageUrls: [String]) {
+        print("[DriverDashboardViewModel] endTrip called with distance: \(String(describing: distance))")
         Task {
             do {
-                try await TripService.endTrip(id: id)
+                try await TripService.endTrip(id: id, distance: distance)
                 stopLocationTracking()
+                TripGeofenceMonitor.shared.stopAll()
+                // Log dropoff_done before clearing state
+                if let state = gfDistState {
+                    await gf_logDropoffDone(fenceId: state.dropoffFenceId, vehicleId: vehicleId, tripId: id)
+                }
+                gfDistState = nil
+                try? await GeofenceService.deactivateGeofences(forTrip: id)
                 let inspectionId = UUID()
                 let inspection = VehicleInspection(id: inspectionId, vehicleId: vehicleId, driverId: currentUserId, tripId: id, inspectionType: .postTrip, notes: notes, createdAt: Date())
                 try? await InspectionService.createInspection(inspection)
@@ -193,6 +260,14 @@ final class DriverDashboardViewModel {
     func resumeTrackingIfNeeded() {
         guard let activeTrip else { return }
         startLocationTracking(vehicleId: activeTrip.vehicleId)
+        Task { await TripGeofenceMonitor.shared.resumeIfNeeded(
+            tripId: activeTrip.id, vehicleId: activeTrip.vehicleId, driverId: currentUserId) }
+        // Set up geofence zones whenever an active trip is detected —
+        // covers trips started from DriverTripsView (which bypasses startTrip in this VM)
+        // and app-relaunch-mid-trip scenarios.
+        if gfDistState == nil {
+            Task { await gf_setupZones(tripId: activeTrip.id, vehicleId: activeTrip.vehicleId) }
+        }
     }
 
     private func startLocationTracking(vehicleId: UUID) {
@@ -224,6 +299,8 @@ final class DriverDashboardViewModel {
                         longitude: coord.longitude,
                         speed: self?.locationManager.speed
                     )
+                    // Distance-based fallback: fires zone events even when CLCircularRegion can't
+                    await self?.gf_checkDistance(coord: coord)
                 } else {
                     print("[LocationTracking] ⚠️ No GPS fix yet — retrying in 5 s")
                     try? await Task.sleep(for: .seconds(5))
@@ -238,6 +315,185 @@ final class DriverDashboardViewModel {
     private func stopLocationTracking() {
         trackingTask?.cancel()
         trackingTask = nil
+    }
+
+    // MARK: - Geofencing (additive — does not touch any existing logic)
+
+    /// Geocodes pickup & dropoff, saves 5 km zones to Supabase, registers CLCircularRegions.
+    private func gf_setupZones(tripId: UUID, vehicleId: UUID) async {
+        guard let trip    = trips.first(where: { $0.id == tripId }),
+              let routeId = trip.routeId,
+              let route   = routes[routeId],
+              let pickup  = route.startLocation, !pickup.isEmpty,
+              let dropoff = route.endLocation,   !dropoff.isEmpty else { return }
+
+        guard let pickupCoord = await gf_geocode(pickup) else { return }
+        guard let dropCoord   = await gf_geocode(dropoff, near: pickupCoord) else { return }
+
+        let pId = UUID(), dId = UUID()
+        try? await GeofenceService.createGeofence(TripGeofence(
+            id: pId, tripId: tripId, vehicleId: vehicleId, driverId: currentUserId,
+            name: pickup, latitude: pickupCoord.latitude, longitude: pickupCoord.longitude,
+            radiusMeters: kGeofenceRadiusMeters, zoneType: "pickup",
+            isActive: true, createdAt: Date()))
+        try? await GeofenceService.createGeofence(TripGeofence(
+            id: dId, tripId: tripId, vehicleId: vehicleId, driverId: currentUserId,
+            name: dropoff, latitude: dropCoord.latitude, longitude: dropCoord.longitude,
+            radiusMeters: kGeofenceRadiusMeters, zoneType: "dropoff",
+            isActive: true, createdAt: Date()))
+
+        let pFence = TripGeofence(id: pId, tripId: tripId, vehicleId: vehicleId,
+            driverId: currentUserId, name: pickup,
+            latitude: pickupCoord.latitude, longitude: pickupCoord.longitude,
+            radiusMeters: kGeofenceRadiusMeters, zoneType: "pickup", isActive: true, createdAt: Date())
+        let dFence = TripGeofence(id: dId, tripId: tripId, vehicleId: vehicleId,
+            driverId: currentUserId, name: dropoff,
+            latitude: dropCoord.latitude, longitude: dropCoord.longitude,
+            radiusMeters: kGeofenceRadiusMeters, zoneType: "dropoff", isActive: true, createdAt: Date())
+
+        // Only register pickup zone initially — dropoff is activated when driver taps "Pickup Done"
+        TripGeofenceMonitor.shared.register(tripId: tripId, vehicleId: vehicleId,
+                                             driverId: currentUserId, fences: [pFence])
+
+        // Also set up distance state for the fallback check in the GPS loop
+        gfDistState = GFDistState(
+            pickupCoord:    pickupCoord,
+            dropoffCoord:   dropCoord,
+            pickupFenceId:  pId,
+            dropoffFenceId: dId,
+            vehicleId:      vehicleId,
+            tripId:         tripId)
+        print("[Geofence] ✅ Distance fallback ready — pickup: \(pickup)  dropoff: \(dropoff)")
+    }
+
+    /// Checks distance every 15 s as a backup when CLCircularRegion doesn't fire.
+    /// Deduplicates by checking the in-memory `firedPickup`/`firedDropoff` flags.
+    private func gf_checkDistance(coord: CLLocationCoordinate2D) async {
+        guard var state = gfDistState else { return }
+        let driver  = CLLocation(latitude: coord.latitude, longitude: coord.longitude)
+        let pickup  = CLLocation(latitude: state.pickupCoord.latitude,  longitude: state.pickupCoord.longitude)
+        let dropoff = CLLocation(latitude: state.dropoffCoord.latitude, longitude: state.dropoffCoord.longitude)
+        var dirty   = false
+
+        // Phase 1: monitor pickup zone only
+        if !state.firedPickup, driver.distance(from: pickup) <= kGeofenceRadiusMeters {
+            state.firedPickup = true; dirty = true
+            await gf_fireZoneEvent(fenceId: state.pickupFenceId, vehicleId: state.vehicleId,
+                                   tripId: state.tripId, zoneType: "pickup")
+        }
+
+        // Phase 2: monitor dropoff zone ONLY after driver has completed pickup
+        if state.pickupPhaseDone,
+           !state.firedDropoff,
+           driver.distance(from: dropoff) <= kGeofenceRadiusMeters {
+            state.firedDropoff = true; dirty = true
+            await gf_fireZoneEvent(fenceId: state.dropoffFenceId, vehicleId: state.vehicleId,
+                                   tripId: state.tripId, zoneType: "dropoff")
+        }
+        if dirty { gfDistState = state }
+    }
+
+    private func gf_fireZoneEvent(fenceId: UUID, vehicleId: UUID,
+                                   tripId: UUID, zoneType: String) async {
+        let isPickup = zoneType == "pickup"
+        let emoji    = isPickup ? "📍" : "🏁"
+        let label    = isPickup ? "Pickup" : "Drop-off"
+        let title    = "\(emoji) Driver Entered \(label) Zone"
+        let body     = "Driver is within \(Int(kGeofenceRadiusMeters/1000)) km of the \(label.lowercased()) location."
+        // Save event
+        try? await GeofenceService.createEvent(TripGeofenceEvent(
+            id: UUID(), geofenceId: fenceId, vehicleId: vehicleId,
+            driverId: currentUserId, eventType: "enter", occurredAt: Date()))
+        // Notify fleet managers
+        let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
+        for mgr in managers {
+            try? await NotificationService.createNotification(Fleet.Notification(
+                id: UUID(), userId: mgr.id,
+                title: title, message: body,
+                type: .info, isRead: false, createdAt: Date()))
+        }
+        print("[Geofence] \(emoji) Fired zone-enter (distance fallback) — \(label)")
+    }
+
+    /// Called when driver taps "Pickup Done".
+    /// Flips to Phase 2: activates dropoff zone monitoring.
+    func gf_pickupDone(tripId: UUID, vehicleId: UUID) {
+        gfDistState?.pickupPhaseDone = true
+        // Capture the valid pickup fence ID BEFORE the async Task starts.
+        // Using gfDistState avoids an extra DB round-trip and guarantees a
+        // valid FK (the fence was already inserted by gf_setupZones).
+        let capturedPickupFenceId = gfDistState?.pickupFenceId
+
+        Task {
+            // Resolve a valid pickup fence ID (required by trip_geofence_events FK)
+            let resolvedPickupId: UUID?
+            if let id = capturedPickupFenceId {
+                resolvedPickupId = id   // fast path: already known
+            } else {
+                // Fallback: look for the pickup fence or last enter event in DB
+                let fences = (try? await GeofenceService.fetchGeofences(forTrip: tripId)) ?? []
+                if let pf = fences.first(where: { $0.zoneType == "pickup" }) {
+                    resolvedPickupId = pf.id
+                } else {
+                    let recent = (try? await GeofenceService.fetchEvents(forVehicle: vehicleId, limit: 10)) ?? []
+                    resolvedPickupId = recent.first(where: { $0.eventType == "enter" })?.geofenceId
+                }
+            }
+
+            // Save pickup_done event only if we have a valid (non-random) FK
+            if let pId = resolvedPickupId {
+                try? await GeofenceService.createEvent(TripGeofenceEvent(
+                    id: UUID(), geofenceId: pId, vehicleId: vehicleId,
+                    driverId: currentUserId, eventType: "pickup_done", occurredAt: Date()))
+                print("[Geofence] ✅ pickup_done event saved")
+            } else {
+                print("[Geofence] ⚠️ No valid pickup fence ID — pickup_done event skipped")
+            }
+
+            // Transition CLCircularRegion from pickup → dropoff
+            let fences = (try? await GeofenceService.fetchGeofences(forTrip: tripId)) ?? []
+            if let df = fences.first(where: { $0.zoneType == "dropoff" }) {
+                TripGeofenceMonitor.shared.transitionToDropoff(fence: df,
+                    tripId: tripId, vehicleId: vehicleId, driverId: currentUserId)
+            }
+
+            // Notify fleet managers
+            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
+            for mgr in managers {
+                try? await NotificationService.createNotification(Fleet.Notification(
+                    id: UUID(), userId: mgr.id,
+                    title: "✅ Pickup Completed",
+                    message: "Driver completed pickup and is now heading to drop-off.",
+                    type: .info, isRead: false, createdAt: Date()))
+            }
+        }
+    }
+
+    /// Logs the `dropoff_done` event and notifies fleet managers when trip ends.
+    private func gf_logDropoffDone(fenceId: UUID, vehicleId: UUID, tripId: UUID) async {
+        try? await GeofenceService.createEvent(TripGeofenceEvent(
+            id: UUID(), geofenceId: fenceId, vehicleId: vehicleId,
+            driverId: currentUserId, eventType: "dropoff_done", occurredAt: Date()))
+        let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
+        for mgr in managers {
+            try? await NotificationService.createNotification(Fleet.Notification(
+                id: UUID(), userId: mgr.id,
+                title: "🏁 Drop-off Completed",
+                message: "Driver has completed the drop-off. Trip is now ending.",
+                type: .info, isRead: false, createdAt: Date()))
+        }
+        print("[Geofence] 🏁 Drop-off Done logged for trip \(tripId.uuidString.prefix(6))")
+    }
+
+    private func gf_geocode(_ address: String,
+                             near bias: CLLocationCoordinate2D? = nil) async -> CLLocationCoordinate2D? {
+        let req = MKLocalSearch.Request()
+        req.naturalLanguageQuery = address; req.resultTypes = .address
+        if let b = bias {
+            req.region = MKCoordinateRegion(center: b,
+                                            latitudinalMeters: 300_000, longitudinalMeters: 300_000)
+        }
+        return try? await MKLocalSearch(request: req).start().mapItems.first?.placemark.coordinate
     }
 
     // MARK: - Helpers

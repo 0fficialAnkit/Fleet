@@ -10,7 +10,6 @@ struct MaintenanceSchedulerView: View {
     @Namespace private var calendarNS
     @State private var selectedTask: ScheduledTask? = nil
     @State private var selectedWorkOrder: ScheduledWorkOrder? = nil
-    @State private var isShowingCreateTaskSheet = false
     @Environment(AuthViewModel.self) private var authViewModel
 
     init(viewModel: MaintenanceSchedulerViewModel) {
@@ -50,25 +49,6 @@ struct MaintenanceSchedulerView: View {
             }
             .navigationDestination(item: $selectedWorkOrder) { wo in
                 WorkOrderDetailSheet(workOrder: wo, viewModel: viewModel)
-            }
-            .toolbar {
-                if viewModel.selectedTab == .active {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            isShowingCreateTaskSheet = true
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundStyle(Color.brown)
-                                .frame(width: 32, height: 32)
-                                .background(Color.brown.opacity(0.12), in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-            .sheet(isPresented: $isShowingCreateTaskSheet) {
-                CreateTaskSheet(viewModel: viewModel, initialDate: viewModel.selectedDate, currentUserId: authViewModel.currentUser?.id)
             }
             .task {
                 viewModel.currentUserId = authViewModel.currentUser?.id
@@ -232,7 +212,7 @@ private struct TaskListSection: View {
 
     private var currentItems: [SchedulerUnifiedItem] {
         switch viewModel.selectedTab {
-        case .active:     return viewModel.activeItemsForSelectedDate
+        case .pending:    return viewModel.pendingItemsForSelectedDate
         case .inProgress: return viewModel.inProgressItemsForSelectedDate
         case .completed:  return viewModel.completedItemsForSelectedDate
         }
@@ -240,7 +220,7 @@ private struct TaskListSection: View {
 
     private var emptyTitle: String {
         switch viewModel.selectedTab {
-        case .active:     return "No Active Tasks"
+        case .pending:    return "No Pending Tasks"
         case .inProgress: return "Nothing In Progress"
         case .completed:  return "No Completed Tasks"
         }
@@ -248,7 +228,7 @@ private struct TaskListSection: View {
 
     private var emptyMessage: String {
         switch viewModel.selectedTab {
-        case .active:     return "No pending work assigned for this day."
+        case .pending:    return "No pending work assigned for this day."
         case .inProgress: return "No tasks are currently being worked on."
         case .completed:  return "No tasks were completed on this day."
         }
@@ -283,15 +263,45 @@ private struct TaskListSection: View {
                     ))
             } else {
                 ForEach(currentItems) { item in
-                    Group {
-                        switch item {
-                        case .task(let task):
-                            Button { selectedTask = task } label: { TaskCard(task: task) }
-                        case .workOrder(let wo):
-                            Button { selectedWorkOrder = wo } label: { WorkOrderCard(workOrder: wo) }
+                    VStack(spacing: 10) {
+                        Group {
+                            switch item {
+                            case .task(let task):
+                                Button { selectedTask = task } label: { TaskCard(task: task) }
+                            case .workOrder(let wo):
+                                Button { selectedWorkOrder = wo } label: { WorkOrderCard(workOrder: wo) }
+                            }
                         }
+                        .buttonStyle(ScaleButtonStyle())
+
+                        // MARK: Inline Action Buttons
+                        if viewModel.selectedTab == .pending {
+                            Button {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                                    switch item {
+                                    case .task(let task):
+                                        viewModel.updateTaskStatus(id: task.id, to: .inProgress)
+                                    case .workOrder(let wo):
+                                        viewModel.updateWorkOrderStatus(id: wo.id, to: .inProgress)
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 12, weight: .bold))
+                                    Text("Start")
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 42)
+                                .background(Color.brown, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            }
+                            .buttonStyle(ScaleButtonStyle())
+                        }
+
+
                     }
-                    .buttonStyle(ScaleButtonStyle())
                     .scrollTransition { content, phase in
                         content
                             .opacity(phase.isIdentity ? 1 : 0.7)
@@ -451,6 +461,7 @@ private struct WorkOrderCard: View {
 
     func statusLabel(_ status: WorkOrderStatus) -> String {
         switch status {
+        case .pending:    return "Pending"
         case .open:       return "Open"
         case .inProgress: return "In Progress"
         case .completed:  return "Completed"
@@ -460,8 +471,9 @@ private struct WorkOrderCard: View {
 
     func statusColor(_ status: WorkOrderStatus) -> Color {
         switch status {
+        case .pending:    return Color.gray
         case .open:       return Color.blue
-        case .inProgress: return Color.yellow
+        case .inProgress: return Color.orange
         case .completed:  return Color.green
         case .cancelled:  return Color.red
         }
@@ -471,7 +483,7 @@ private struct WorkOrderCard: View {
         switch priority {
         case .low:      return Color.green
         case .medium:   return Color.blue
-        case .high:     return Color.yellow
+        case .high:     return Color.orange
         case .critical: return Color.red
         }
     }
@@ -556,6 +568,22 @@ struct TaskDetailSheet: View {
     @State private var laborHours: String = ""
     @State private var laborCost: String = ""
     @State private var estimatedDuration: String = ""
+    @State private var extraCost: String = ""
+    @State private var inventoryItems: [Inventory] = []
+    @State private var partQuantities: [UUID: Int] = [:]
+    @State private var isCompleted = false
+    @Environment(\.dismiss) private var dismiss
+
+    private var partsCost: Double {
+        partQuantities.reduce(0) { total, entry in
+            let item = inventoryItems.first { $0.id == entry.key }
+            return total + (item?.unitCost ?? 0) * Double(entry.value)
+        }
+    }
+
+    private var totalCost: Double {
+        (Double(laborCost) ?? 0) + partsCost + (Double(extraCost) ?? 0)
+    }
 
     var body: some View {
         ZStack {
@@ -756,25 +784,232 @@ struct TaskDetailSheet: View {
                                     viewModel.updateTaskStatus(id: currentTask.id, to: .inProgress)
                                 }
                             }
-                            if currentTask.status == .inProgress || currentTask.status == .critical {
-                                SheetActionButton(title: "Mark as Completed", icon: "checkmark.circle.fill", color: Color.green) {
-                                    viewModel.updateTaskStatus(id: currentTask.id, to: .completed)
-                                }
-                            }
                             if currentTask.status != .completed && currentTask.status != .delayed {
                                 SheetActionButton(title: "Report Issue / Delay", icon: "exclamationmark.triangle.fill", color: Color.yellow) {
                                     viewModel.updateTaskStatus(id: currentTask.id, to: .delayed)
                                 }
                             }
+                        }
 
-                            HStack(spacing: 16) {
-                                SheetSecondaryButton(title: "Add Photos", icon: "camera")
-                                SheetSecondaryButton(title: "Voice Note", icon: "mic.circle")
+                        // MARK: Completion Form (only for in-progress)
+                        if currentTask.status == .inProgress || currentTask.status == .critical {
+
+                            // Extra Cost
+                            SheetSection(title: "Cost & Financials") {
+                                VStack(spacing: 16) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "indianrupeesign.circle.fill")
+                                            .foregroundStyle(Color.green)
+                                            .frame(width: 20)
+                                        Text("Labour Cost")
+                                            .font(.body.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                        Spacer()
+                                        TextField("e.g. 500", text: $laborCost)
+                                            .textFieldStyle(.plain)
+                                            .keyboardType(.numberPad)
+                                            .multilineTextAlignment(.trailing)
+                                            .font(.body)
+                                            .foregroundStyle(Color.secondary)
+                                    }
+
+                                    Divider().background(Color(.separator))
+
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "plus.circle.fill")
+                                            .foregroundStyle(Color.orange)
+                                            .frame(width: 20)
+                                        Text("Extra Cost")
+                                            .font(.body.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                        Spacer()
+                                        TextField("e.g. 200", text: $extraCost)
+                                            .textFieldStyle(.plain)
+                                            .keyboardType(.numberPad)
+                                            .multilineTextAlignment(.trailing)
+                                            .font(.body)
+                                            .foregroundStyle(Color.secondary)
+                                    }
+                                }
                             }
+
+                            // Inventory Parts Used
+                            SheetSection(title: "Inventory Parts Used") {
+                                if inventoryItems.isEmpty {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "shippingbox")
+                                            .foregroundStyle(Color(.tertiaryLabel))
+                                        Text("No inventory items available")
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.secondary)
+                                    }
+                                } else {
+                                    VStack(spacing: 0) {
+                                        ForEach(inventoryItems) { item in
+                                            VStack(spacing: 8) {
+                                                HStack(spacing: 14) {
+                                                    Image(systemName: "gearshape.fill")
+                                                        .font(.system(size: 16))
+                                                        .foregroundStyle(Color.brown)
+
+                                                    VStack(alignment: .leading, spacing: 2) {
+                                                        Text(item.partName ?? "Unknown Part")
+                                                            .font(.subheadline.weight(.medium))
+                                                            .foregroundStyle(Color.primary)
+                                                        Text("Stock: \(item.stockQuantity ?? 0) · \u{20B9}\(String(format: "%.0f", item.unitCost ?? 0))/unit")
+                                                            .font(.caption)
+                                                            .foregroundStyle(Color.secondary)
+                                                    }
+
+                                                    Spacer()
+
+                                                    // Quantity stepper
+                                                    HStack(spacing: 10) {
+                                                        Button {
+                                                            let current = partQuantities[item.id] ?? 0
+                                                            if current > 0 {
+                                                                withAnimation(.spring(response: 0.25)) {
+                                                                    partQuantities[item.id] = current - 1
+                                                                    if partQuantities[item.id] == 0 {
+                                                                        partQuantities.removeValue(forKey: item.id)
+                                                                    }
+                                                                }
+                                                            }
+                                                        } label: {
+                                                            Image(systemName: "minus.circle.fill")
+                                                                .font(.system(size: 22))
+                                                                .foregroundStyle((partQuantities[item.id] ?? 0) > 0 ? Color.brown : Color(.tertiaryLabel))
+                                                        }
+
+                                                        Text("\(partQuantities[item.id] ?? 0)")
+                                                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                                                            .frame(width: 28)
+                                                            .foregroundStyle(Color.primary)
+
+                                                        Button {
+                                                            let current = partQuantities[item.id] ?? 0
+                                                            let maxQty = item.stockQuantity ?? 0
+                                                            if current < maxQty {
+                                                                withAnimation(.spring(response: 0.25)) {
+                                                                    partQuantities[item.id] = current + 1
+                                                                }
+                                                            }
+                                                        } label: {
+                                                            Image(systemName: "plus.circle.fill")
+                                                                .font(.system(size: 22))
+                                                                .foregroundStyle((partQuantities[item.id] ?? 0) < (item.stockQuantity ?? 0) ? Color.brown : Color(.tertiaryLabel))
+                                                        }
+                                                    }
+                                                }
+
+                                                // Show subtotal if qty > 0
+                                                if let qty = partQuantities[item.id], qty > 0 {
+                                                    HStack {
+                                                        Spacer()
+                                                        Text("\(qty) × \u{20B9}\(String(format: "%.0f", item.unitCost ?? 0)) = \u{20B9}\(String(format: "%.0f", Double(qty) * (item.unitCost ?? 0)))")
+                                                            .font(.caption.weight(.medium))
+                                                            .foregroundStyle(Color.brown)
+                                                    }
+                                                }
+                                            }
+                                            .padding(.vertical, 10)
+
+                                            if item.id != inventoryItems.last?.id {
+                                                Divider().background(Color(.separator))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // MARK: Total Cost Summary
+                            SheetSection(title: "Total Cost") {
+                                VStack(spacing: 10) {
+                                    HStack {
+                                        Text("Labour Cost")
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.secondary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", Double(laborCost) ?? 0))")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                    }
+                                    HStack {
+                                        Text("Parts Cost")
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.secondary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", partsCost))")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                    }
+                                    HStack {
+                                        Text("Extra Cost")
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.secondary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", Double(extraCost) ?? 0))")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                    }
+                                    Divider()
+                                    HStack {
+                                        Text("Total")
+                                            .font(.headline)
+                                            .foregroundStyle(Color.primary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", totalCost))")
+                                            .font(.headline)
+                                            .foregroundStyle(Color.brown)
+                                    }
+                                }
+                            }
+
+                            // Mark as Complete
+                            Button {
+                                viewModel.updateTaskStatus(id: currentTask.id, to: .completed)
+                                withAnimation { isCompleted = true }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                    dismiss()
+                                }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                    Text("Mark as Complete")
+                                }
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 52)
+                                .background(Color.green, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            }
+                        }
+
+                        HStack(spacing: 16) {
+                            SheetSecondaryButton(title: "Add Photos", icon: "camera")
+                            SheetSecondaryButton(title: "Voice Note", icon: "mic.circle")
                         }
                         .padding(.bottom, 24)
                     }
                     .padding(16)
+            }
+
+            // Completed confirmation overlay
+            if isCompleted {
+                VStack(spacing: 16) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 56))
+                        .foregroundStyle(.green)
+                        .symbolEffect(.bounce, value: isCompleted)
+                    Text("Completed!")
+                        .font(.title2.bold())
+                    Text("Task marked as done")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.ultraThinMaterial)
+                .transition(.opacity)
             }
         }
         .navigationTitle(task.vehicleName)
@@ -784,6 +1019,12 @@ struct TaskDetailSheet: View {
             laborHours = task.laborHours ?? ""
             laborCost = task.laborCost ?? ""
             estimatedDuration = task.estimatedDuration
+        }
+        .task {
+            let currentTask = viewModel.allTasks.first(where: { $0.id == task.id }) ?? task
+            if currentTask.status == .inProgress || currentTask.status == .critical {
+                inventoryItems = (try? await InventoryService.fetchAllInventory()) ?? []
+            }
         }
         .onChange(of: laborHours) { _, newValue in
             viewModel.updateTaskLabor(id: task.id, hours: newValue, cost: laborCost)
@@ -804,6 +1045,27 @@ struct TaskDetailSheet: View {
 struct WorkOrderDetailSheet: View {
     let workOrder: ScheduledWorkOrder
     let viewModel: MaintenanceSchedulerViewModel
+
+    @State private var scheduledDate = Date()
+    @State private var isScheduled = false
+    @State private var isCompleted = false
+    @State private var laborCostInput = ""
+    @State private var extraCostInput = ""
+    @State private var serviceNotes = ""
+    @State private var inventoryItems: [Inventory] = []
+    @State private var partQuantities: [UUID: Int] = [:]
+    @Environment(\.dismiss) private var dismiss
+
+    private var partsCost: Double {
+        partQuantities.reduce(0) { total, entry in
+            let item = inventoryItems.first { $0.id == entry.key }
+            return total + (item?.unitCost ?? 0) * Double(entry.value)
+        }
+    }
+
+    private var totalCost: Double {
+        (Double(laborCostInput) ?? 0) + partsCost + (Double(extraCostInput) ?? 0)
+    }
 
     private var currentWO: ScheduledWorkOrder {
         viewModel.allWorkOrders.first(where: { $0.id == workOrder.id }) ?? workOrder
@@ -865,8 +1127,282 @@ struct WorkOrderDetailSheet: View {
                             }
                         }
 
-                        // MARK: Spare Parts Consumed (Read-Only)
-                        if !currentWO.partsUsed.isEmpty {
+                        // MARK: Schedule Work Order (only if open/pending)
+                        if currentWO.status == .open {
+                            SheetSection(title: "Schedule Work Order") {
+                                VStack(spacing: 16) {
+                                    HStack(spacing: 14) {
+                                        Image(systemName: "calendar.badge.clock")
+                                            .font(.system(size: 20, weight: .semibold))
+                                            .foregroundStyle(Color.brown)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Pick a Date & Time")
+                                                .font(.subheadline.weight(.semibold))
+                                                .foregroundStyle(.primary)
+                                            Text("The work order will appear in Pending on the chosen date")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                                    DatePicker(
+                                        "Scheduled For",
+                                        selection: $scheduledDate,
+                                        in: Date()...,
+                                        displayedComponents: [.date, .hourAndMinute]
+                                    )
+                                    .datePickerStyle(.graphical)
+                                    .tint(Color.brown)
+
+                                    Button {
+                                        viewModel.scheduleWorkOrder(id: currentWO.id, date: scheduledDate)
+                                        withAnimation {
+                                            isScheduled = true
+                                        }
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                            dismiss()
+                                        }
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "calendar.badge.checkmark")
+                                            Text("Schedule")
+                                        }
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 48)
+                                        .background(Color.brown, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    }
+                                }
+                            }
+                        }
+
+                        // MARK: Scheduled confirmation (if already scheduled)
+                        if let scheduled = currentWO.scheduledDate {
+                            SheetSection(title: "Scheduled") {
+                                HStack(spacing: 14) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 22))
+                                        .foregroundStyle(.green)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Scheduled for")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(.secondary)
+                                        Text(scheduled.formatted(date: .long, time: .shortened))
+                                            .font(.headline)
+                                            .foregroundStyle(.primary)
+                                    }
+                                    Spacer()
+                                }
+                            }
+                        }
+
+                        // MARK: Completion Form (only for in-progress)
+                        if currentWO.status == .inProgress {
+
+                            // Labour & Extra Cost
+                            SheetSection(title: "Cost & Financials") {
+                                VStack(spacing: 16) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "indianrupeesign.circle.fill")
+                                            .foregroundStyle(Color.green)
+                                            .frame(width: 20)
+                                        Text("Labour Cost")
+                                            .font(.body.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                        Spacer()
+                                        TextField("e.g. 500", text: $laborCostInput)
+                                            .textFieldStyle(.plain)
+                                            .keyboardType(.numberPad)
+                                            .multilineTextAlignment(.trailing)
+                                            .font(.body)
+                                            .foregroundStyle(Color.secondary)
+                                    }
+
+                                    Divider().background(Color(.separator))
+
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "plus.circle.fill")
+                                            .foregroundStyle(Color.orange)
+                                            .frame(width: 20)
+                                        Text("Extra Cost")
+                                            .font(.body.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                        Spacer()
+                                        TextField("e.g. 200", text: $extraCostInput)
+                                            .textFieldStyle(.plain)
+                                            .keyboardType(.numberPad)
+                                            .multilineTextAlignment(.trailing)
+                                            .font(.body)
+                                            .foregroundStyle(Color.secondary)
+                                    }
+                                }
+                            }
+
+                            // Inventory Parts Used
+                            SheetSection(title: "Inventory Parts Used") {
+                                if inventoryItems.isEmpty {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "shippingbox")
+                                            .foregroundStyle(Color(.tertiaryLabel))
+                                        Text("No inventory items available")
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.secondary)
+                                    }
+                                } else {
+                                    VStack(spacing: 0) {
+                                        ForEach(inventoryItems) { item in
+                                            VStack(spacing: 8) {
+                                                HStack(spacing: 14) {
+                                                    Image(systemName: "gearshape.fill")
+                                                        .font(.system(size: 16))
+                                                        .foregroundStyle(Color.brown)
+
+                                                    VStack(alignment: .leading, spacing: 2) {
+                                                        Text(item.partName ?? "Unknown Part")
+                                                            .font(.subheadline.weight(.medium))
+                                                            .foregroundStyle(Color.primary)
+                                                        Text("Stock: \(item.stockQuantity ?? 0) · \u{20B9}\(String(format: "%.0f", item.unitCost ?? 0))/unit")
+                                                            .font(.caption)
+                                                            .foregroundStyle(Color.secondary)
+                                                    }
+
+                                                    Spacer()
+
+                                                    // Quantity stepper
+                                                    HStack(spacing: 10) {
+                                                        Button {
+                                                            let current = partQuantities[item.id] ?? 0
+                                                            if current > 0 {
+                                                                withAnimation(.spring(response: 0.25)) {
+                                                                    partQuantities[item.id] = current - 1
+                                                                    if partQuantities[item.id] == 0 {
+                                                                        partQuantities.removeValue(forKey: item.id)
+                                                                    }
+                                                                }
+                                                            }
+                                                        } label: {
+                                                            Image(systemName: "minus.circle.fill")
+                                                                .font(.system(size: 22))
+                                                                .foregroundStyle((partQuantities[item.id] ?? 0) > 0 ? Color.brown : Color(.tertiaryLabel))
+                                                        }
+
+                                                        Text("\(partQuantities[item.id] ?? 0)")
+                                                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                                                            .frame(width: 28)
+                                                            .foregroundStyle(Color.primary)
+
+                                                        Button {
+                                                            let current = partQuantities[item.id] ?? 0
+                                                            let maxQty = item.stockQuantity ?? 0
+                                                            if current < maxQty {
+                                                                withAnimation(.spring(response: 0.25)) {
+                                                                    partQuantities[item.id] = current + 1
+                                                                }
+                                                            }
+                                                        } label: {
+                                                            Image(systemName: "plus.circle.fill")
+                                                                .font(.system(size: 22))
+                                                                .foregroundStyle((partQuantities[item.id] ?? 0) < (item.stockQuantity ?? 0) ? Color.brown : Color(.tertiaryLabel))
+                                                        }
+                                                    }
+                                                }
+
+                                                // Show subtotal if qty > 0
+                                                if let qty = partQuantities[item.id], qty > 0 {
+                                                    HStack {
+                                                        Spacer()
+                                                        Text("\(qty) × \u{20B9}\(String(format: "%.0f", item.unitCost ?? 0)) = \u{20B9}\(String(format: "%.0f", Double(qty) * (item.unitCost ?? 0)))")
+                                                            .font(.caption.weight(.medium))
+                                                            .foregroundStyle(Color.brown)
+                                                    }
+                                                }
+                                            }
+                                            .padding(.vertical, 10)
+
+                                            if item.id != inventoryItems.last?.id {
+                                                Divider().background(Color(.separator))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Service Notes
+                            SheetSection(title: "Service Notes") {
+                                TextField("Add notes about the repair…", text: $serviceNotes, axis: .vertical)
+                                    .lineLimit(3...6)
+                                    .font(.body)
+                                    .foregroundStyle(Color.primary)
+                            }
+
+                            // MARK: Total Cost Summary
+                            SheetSection(title: "Total Cost") {
+                                VStack(spacing: 10) {
+                                    HStack {
+                                        Text("Labour Cost")
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.secondary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", Double(laborCostInput) ?? 0))")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                    }
+                                    HStack {
+                                        Text("Parts Cost")
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.secondary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", partsCost))")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                    }
+                                    HStack {
+                                        Text("Extra Cost")
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.secondary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", Double(extraCostInput) ?? 0))")
+                                            .font(.subheadline.weight(.medium))
+                                            .foregroundStyle(Color.primary)
+                                    }
+                                    Divider()
+                                    HStack {
+                                        Text("Total")
+                                            .font(.headline)
+                                            .foregroundStyle(Color.primary)
+                                        Spacer()
+                                        Text("\u{20B9}\(String(format: "%.0f", totalCost))")
+                                            .font(.headline)
+                                            .foregroundStyle(Color.brown)
+                                    }
+                                }
+                            }
+
+                            // Mark as Complete Button
+                            Button {
+                                viewModel.updateWorkOrderStatus(id: currentWO.id, to: .completed)
+                                withAnimation { isCompleted = true }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                    dismiss()
+                                }
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                    Text("Mark as Complete")
+                                }
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 52)
+                                .background(Color.green, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            }
+                            .padding(.bottom, 8)
+                        }
+
+                        // MARK: Spare Parts Consumed (Read-Only, for completed)
+                        if currentWO.status == .completed && !currentWO.partsUsed.isEmpty {
                             SheetSection(title: "Parts Consumed") {
                                 ForEach(Array(currentWO.partsUsed.enumerated()), id: \.offset) { idx, part in
                                     HStack(spacing: 16) {
@@ -885,8 +1421,8 @@ struct WorkOrderDetailSheet: View {
                             }
                         }
 
-                        // MARK: Notes Section (Read-Only)
-                        if !currentWO.notes.isEmpty {
+                        // MARK: Notes Section (Read-Only, for completed)
+                        if currentWO.status == .completed && !currentWO.notes.isEmpty {
                             SheetSection(title: "Service Notes") {
                                 Text(currentWO.notes)
                                     .font(.body)
@@ -897,13 +1433,55 @@ struct WorkOrderDetailSheet: View {
                     }
                     .padding(16)
             }
+
+            // Scheduled confirmation overlay
+            if isScheduled {
+                VStack(spacing: 16) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 56))
+                        .foregroundStyle(.green)
+                        .symbolEffect(.bounce, value: isScheduled)
+                    Text("Scheduled!")
+                        .font(.title2.bold())
+                    Text(scheduledDate.formatted(date: .long, time: .shortened))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.ultraThinMaterial)
+                .transition(.opacity)
+            }
+
+            // Completed confirmation overlay
+            if isCompleted {
+                VStack(spacing: 16) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 56))
+                        .foregroundStyle(.green)
+                        .symbolEffect(.bounce, value: isCompleted)
+                    Text("Completed!")
+                        .font(.title2.bold())
+                    Text("Work order marked as done")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(.ultraThinMaterial)
+                .transition(.opacity)
+            }
         }
         .navigationTitle("Work Order Details")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            if currentWO.status == .inProgress {
+                inventoryItems = (try? await InventoryService.fetchAllInventory()) ?? []
+            }
+        }
     }
 
     func statusIcon(_ status: WorkOrderStatus) -> String {
         switch status {
+        case .pending:    return "hourglass"
         case .open:       return "tray.circle"
         case .inProgress: return "wrench.adjustable"
         case .completed:  return "checkmark.circle.fill"
@@ -913,6 +1491,7 @@ struct WorkOrderDetailSheet: View {
 
     func statusLabel(_ status: WorkOrderStatus) -> String {
         switch status {
+        case .pending:    return "Pending"
         case .open:       return "Open"
         case .inProgress: return "In Progress"
         case .completed:  return "Completed"
@@ -922,8 +1501,9 @@ struct WorkOrderDetailSheet: View {
 
     func statusColor(_ status: WorkOrderStatus) -> Color {
         switch status {
+        case .pending:    return Color.gray
         case .open:       return Color.blue
-        case .inProgress: return Color.yellow
+        case .inProgress: return Color.orange
         case .completed:  return Color.green
         case .cancelled:  return Color.red
         }
@@ -942,7 +1522,7 @@ struct WorkOrderDetailSheet: View {
         switch priority {
         case .low:      return Color.green
         case .medium:   return Color.blue
-        case .high:     return Color.yellow
+        case .high:     return Color.orange
         case .critical: return Color.red
         }
     }
@@ -1096,7 +1676,7 @@ private struct LaborStatBox: View {
 func statusColor(_ status: TaskDisplayStatus) -> Color {
     switch status {
     case .pending:    return Color.blue
-    case .inProgress: return Color.yellow
+    case .inProgress: return Color.orange
     case .completed:  return Color.green
     case .delayed:    return Color.red
     case .critical:   return Color.red
@@ -1117,7 +1697,7 @@ func priorityColor(_ priority: TaskPriority) -> Color {
     switch priority {
     case .low:       return Color.green
     case .medium:    return Color.blue
-    case .high:      return Color.yellow
+    case .high:      return Color.orange
     case .emergency: return Color.red
     }
 }

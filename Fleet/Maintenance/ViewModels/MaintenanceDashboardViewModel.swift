@@ -32,7 +32,8 @@ final class MaintenanceDashboardViewModel {
     var upcomingItems: [UpcomingDisplayItem] {
         var items: [UpcomingDisplayItem] = []
 
-        let tItems = tasks.filter { $0.status != .completed }.map { task -> UpcomingDisplayItem in
+        // Tasks — show anything not completed
+        let tItems = tasks.filter { $0.status != .completed && $0.status != .cancelled }.map { task -> UpcomingDisplayItem in
             return UpcomingDisplayItem(
                 id: task.id,
                 priorityLabel: nil,
@@ -45,13 +46,16 @@ final class MaintenanceDashboardViewModel {
                 location: "Bay 01",
                 actionButtonTitle: "Start Task",
                 actionButtonIcon: "play.fill",
-                destination: nil,
+                destination: .scheduledWorkOrderDetail(buildScheduledWOFromTask(task)),
                 isTask: true
             )
         }
         items.append(contentsOf: tItems)
 
-        let woItems = workOrders.filter { $0.status != .completed && $0.status != .cancelled }.map { wo -> UpcomingDisplayItem in
+        // Work orders — treat nil status as active (not yet set by DB)
+        let woItems = workOrders.filter {
+            $0.status != .completed && $0.status != .cancelled
+        }.map { wo -> UpcomingDisplayItem in
             return UpcomingDisplayItem(
                 id: wo.id,
                 priorityLabel: woPriorityLabel(wo.priority),
@@ -64,7 +68,7 @@ final class MaintenanceDashboardViewModel {
                 location: "Bay 04",
                 actionButtonTitle: "Start Work",
                 actionButtonIcon: "play.fill",
-                destination: .workOrderDetail(wo),
+                destination: .scheduledWorkOrderDetail(buildScheduledWO(wo)),
                 isTask: false
             )
         }
@@ -74,7 +78,7 @@ final class MaintenanceDashboardViewModel {
             return UpcomingDisplayItem(
                 id: ir.id,
                 priorityLabel: ir.severity.uppercased(),
-                priorityColor: irStatusColor(ir.severity), // We use severity color
+                priorityColor: irStatusColor(ir.severity),
                 referenceId: "REP-\(ir.id.uuidString.prefix(4).uppercased())",
                 assignmentTag: "ASSIGNED TO YOU",
                 vehicleName: vehiclePlate(for: ir.vehicleId),
@@ -83,7 +87,7 @@ final class MaintenanceDashboardViewModel {
                 location: "Bay 02",
                 actionButtonTitle: "Start Repair",
                 actionButtonIcon: "play.fill",
-                destination: .issueReportDetail(ir),
+                destination: .scheduledWorkOrderDetail(buildScheduledWOFromIR(ir)),
                 isTask: false
             )
         }
@@ -99,8 +103,14 @@ final class MaintenanceDashboardViewModel {
     }
 
     var priorityQueueItems: [UnifiedMaintenanceItem] {
+        // Include items that are open, in-progress, OR have nil status (newly created, DB default not decoded yet)
         unifiedItems
-            .filter { $0.unifiedStatus == .open || $0.unifiedStatus == .inProgress }
+            .filter {
+                $0.unifiedStatus == .open ||
+                $0.unifiedStatus == .inProgress ||
+                $0.unifiedStatus == .pending ||
+                $0.unifiedStatus == nil
+            }
             .sorted { (a, b) -> Bool in
                 let priorityScore: [WorkOrderPriority: Int] = [.critical: 4, .high: 3, .medium: 2, .low: 1]
                 let scoreA = priorityScore[a.unifiedPriority ?? .low] ?? 0
@@ -127,24 +137,39 @@ final class MaintenanceDashboardViewModel {
         return Int((Double(available) / Double(total)) * 100)
     }
 
+    var estimatedValue: Double {
+        inventory.reduce(0) { $0 + (($1.unitCost ?? 0) * Double($1.stockQuantity ?? 0)) }
+    }
+
+    var estimatedValueFormatted: String {
+        let value = estimatedValue
+        if value >= 100_000 {
+            return "₹\(String(format: "%.1fL", value / 100_000))"
+        } else if value >= 1_000 {
+            return "₹\(String(format: "%.1fK", value / 1_000))"
+        } else {
+            return "₹\(String(format: "%.0f", value))"
+        }
+    }
+
     func loadData() async {
         guard let userId = currentUserId else { return }
         isLoading = true
         errorMessage = nil
-        do {
-            async let t = MaintenanceTaskService.fetchTasksForUser(assignedTo: userId)
-            async let w = WorkOrderService.fetchWorkOrdersForUser(assignedTo: userId)
-            async let ir = IssueReportService.fetchIssueReportsAssignedTo(userId: userId)
-            async let i = InventoryService.fetchAllInventory()
-            async let v = VehicleService.fetchAllVehicles()
-            tasks = try await t
-            workOrders = try await w
-            issueReports = try await ir
-            inventory = try await i
-            vehicles = try await v
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+
+        // Each fetch is independent — one DB failure won't block the others.
+        async let t  = MaintenanceTaskService.fetchTasksForUser(assignedTo: userId)
+        async let w  = WorkOrderService.fetchWorkOrdersForUser(assignedTo: userId)
+        async let ir = IssueReportService.fetchIssueReportsAssignedTo(userId: userId)
+        async let i  = InventoryService.fetchAllInventory()
+        async let v  = VehicleService.fetchAllVehicles()
+
+        if let result = try? await t  { tasks        = result }
+        if let result = try? await w  { workOrders   = result }
+        if let result = try? await ir { issueReports = result }
+        if let result = try? await i  { inventory    = result }
+        if let result = try? await v  { vehicles     = result }
+
         isLoading = false
     }
 
@@ -152,6 +177,7 @@ final class MaintenanceDashboardViewModel {
         let rt = RealtimeManager.shared
         rt.addMaintenanceTasksChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addWorkOrdersChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addIssueReportsChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addInventoryChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData() } }
     }
@@ -177,7 +203,7 @@ final class MaintenanceDashboardViewModel {
 
     func taskStatusColor(_ status: MaintenanceTaskStatus?) -> Color {
         switch status {
-        case .pending: return Color.yellow
+        case .pending: return Color.orange
         case .inProgress: return Color.blue
         case .completed: return Color.green
         case .cancelled: return Color.red
@@ -187,8 +213,9 @@ final class MaintenanceDashboardViewModel {
 
     func woStatusColor(_ status: WorkOrderStatus?) -> Color {
         switch status {
+        case .pending: return Color.gray
         case .open: return Color.blue
-        case .inProgress: return Color.yellow
+        case .inProgress: return Color.orange
         case .completed: return Color.green
         case .cancelled: return Color.red
         case .none: return Color(.tertiaryLabel)
@@ -198,7 +225,7 @@ final class MaintenanceDashboardViewModel {
     func irStatusColor(_ status: String) -> Color {
         switch status.lowercased() {
         case "open", "assigned": return Color.blue
-        case "in_progress": return Color.yellow
+        case "in_progress": return Color.orange
         case "resolved", "closed": return Color.green
         default: return Color(.tertiaryLabel)
         }
@@ -207,7 +234,7 @@ final class MaintenanceDashboardViewModel {
     func irSeverityColor(_ severity: String) -> Color {
         switch severity.lowercased() {
         case "critical": return Color.red
-        case "high": return Color.yellow
+        case "high": return Color.orange
         case "medium": return Color.blue
         case "low": return Color.green
         default: return Color(.tertiaryLabel)
@@ -227,7 +254,7 @@ final class MaintenanceDashboardViewModel {
     func woPriorityColor(_ priority: WorkOrderPriority?) -> Color? {
         switch priority {
         case .critical: return Color.red
-        case .high: return Color.yellow
+        case .high: return Color.orange
         case .medium: return Color.blue
         case .low: return Color.green
         case nil: return nil
@@ -241,10 +268,96 @@ final class MaintenanceDashboardViewModel {
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
+
+    // MARK: - ScheduledWorkOrder Builders (for dashboard → detail navigation)
+
+    func buildScheduledWO(_ wo: WorkOrder) -> ScheduledWorkOrder {
+        let vehicle = vehicles.first { $0.id == wo.vehicleId }
+        return ScheduledWorkOrder(
+            id: wo.id,
+            vehicleNumber: vehicle?.licensePlate ?? "Unknown",
+            vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
+            priority: wo.priority ?? .medium,
+            status: wo.status ?? .open,
+            createdAt: wo.createdAt ?? Date(),
+            assignedBy: "Fleet Manager",
+            laborHours: "—",
+            laborCost: "—",
+            notes: "",
+            partsUsed: [],
+            sourceWorkOrderId: wo.id,
+            vehicleIssue: "Scheduled maintenance / Service required."
+        )
+    }
+
+    func buildScheduledWOFromTask(_ task: MaintenanceTask) -> ScheduledWorkOrder {
+        let vehicle = vehicles.first { $0.id == task.vehicleId }
+        let status: WorkOrderStatus = {
+            switch task.status {
+            case .pending:    return .open
+            case .inProgress: return .inProgress
+            case .completed:  return .completed
+            case .cancelled:  return .cancelled
+            case .none:       return .open
+            }
+        }()
+        return ScheduledWorkOrder(
+            id: task.id,
+            vehicleNumber: vehicle?.licensePlate ?? "Unknown",
+            vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
+            priority: .medium,
+            status: status,
+            createdAt: task.scheduledDate ?? Date(),
+            assignedBy: "Fleet Manager",
+            laborHours: "—",
+            laborCost: "—",
+            notes: task.description ?? "",
+            partsUsed: [],
+            sourceWorkOrderId: task.workOrderId,
+            vehicleIssue: task.description ?? "Scheduled task."
+        )
+    }
+
+    func buildScheduledWOFromIR(_ ir: IssueReportRecord) -> ScheduledWorkOrder {
+        let vehicle = vehicles.first { $0.id == ir.vehicleId }
+        let priority: WorkOrderPriority = {
+            switch ir.severity.lowercased() {
+            case "critical": return .critical
+            case "high":     return .high
+            case "medium":   return .medium
+            case "low":      return .low
+            default:         return .medium
+            }
+        }()
+        let status: WorkOrderStatus = {
+            switch ir.status.lowercased() {
+            case "open", "assigned": return .open
+            case "in_progress":      return .inProgress
+            case "resolved", "closed": return .completed
+            default:                 return .open
+            }
+        }()
+        return ScheduledWorkOrder(
+            id: ir.id,
+            vehicleNumber: vehicle?.licensePlate ?? "Unknown",
+            vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
+            priority: priority,
+            status: status,
+            createdAt: ir.createdAt ?? Date(),
+            assignedBy: "Driver Report",
+            laborHours: "—",
+            laborCost: "—",
+            notes: ir.description ?? "",
+            partsUsed: [],
+            sourceWorkOrderId: nil,
+            sourceIssueReportId: ir.id,
+            vehicleIssue: ir.description ?? "Issue reported by driver."
+        )
+    }
 }
 
 enum MaintenanceDestination: Hashable {
-    case workOrderDetail(WorkOrder)
+    case scheduledWorkOrderDetail(ScheduledWorkOrder)
     case issueReportDetail(IssueReportRecord)
     case workOrderList(filter: WorkOrderStatus?, assignedTo: UUID?, priority: WorkOrderPriority?)
 }

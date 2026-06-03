@@ -1,14 +1,45 @@
 import SwiftUI
 
-// MARK: - Reports View (main list)
-struct ReportsView: View {
-    @State private var viewModel = ReportsViewModel()
-    @State private var selectedReport: IssueReport?
-    @State private var filterStatus: IssueReportStatus? = nil
+enum ReportSectionTab: String, CaseIterable {
+    case vehicles    = "Vehicles"
+    case maintenance = "Maintenance"
+    case fuel        = "Fuel"
+}
 
-    var filteredReports: [IssueReport] {
-        guard let f = filterStatus else { return viewModel.reports }
-        return viewModel.reports.filter { $0.status == f }
+// MARK: - Reports View
+
+struct ReportsView: View {
+
+    @State private var viewModel    = ReportsViewModel()
+    @State private var selectedReport: IssueReport?
+    @State private var selectedTab: ReportSectionTab = .vehicles
+
+    // Per-tab severity filter (Vehicles tab)
+    @State private var vehicleSeverityFilter: DefectSeverity? = nil
+    // Per-tab status filter (Maintenance tab)
+    @State private var maintenanceStatusFilter: IssueReportStatus? = nil
+
+    // ── Vehicle reports: open, not yet assigned ──────────────────
+    var vehicleReports: [IssueReport] {
+        let base = viewModel.reports.filter { $0.status == .open }
+        let filtered = vehicleSeverityFilter == nil
+            ? base
+            : base.filter { $0.severity == vehicleSeverityFilter }
+        return filtered.sorted { $0.submittedAt < $1.submittedAt }
+    }
+
+    // ── Maintenance reports: assigned / in-progress / resolved ───
+    var maintenanceReports: [IssueReport] {
+        let base = viewModel.reports.filter {
+            $0.status == .assigned || $0.status == .inProgress || $0.status == .resolved
+        }
+        let filtered = maintenanceStatusFilter == nil
+            ? base
+            : base.filter { $0.status == maintenanceStatusFilter }
+        // Most recently assigned first — use assignedAt; fall back to submittedAt if not set
+        return filtered.sorted {
+            ($0.assignedAt ?? $0.submittedAt) > ($1.assignedAt ?? $1.submittedAt)
+        }
     }
 
     var body: some View {
@@ -16,23 +47,49 @@ struct ReportsView: View {
             ZStack {
                 Color(.systemGroupedBackground).ignoresSafeArea()
 
-                List {
-                    Section {
-                        VStack(spacing: 16) {
-                            summaryCards
-                            filterChips
+                VStack(spacing: 0) {
+                    // Tab picker
+                    Picker("Section", selection: $selectedTab) {
+                        ForEach(ReportSectionTab.allCases, id: \.self) { tab in
+                            Text(tab.rawValue).tag(tab)
                         }
                     }
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
 
-                    Section {
-                        reportsListContent
+                    switch selectedTab {
+
+                    case .vehicles:
+                        List(viewModel.allVehicles) { vehicle in
+                            NavigationLink {
+                                VehicleReportView(vehicle: vehicle)
+                            } label: {
+                                VehicleRowView(
+                                    vehicle: vehicle,
+                                    statusText: vehicle.status?.rawValue.capitalized ?? "Unknown",
+                                    statusColor: (vehicle.status == .active || vehicle.status?.rawValue == "available") ? .green : ((vehicle.status == .maintenance) ? .orange : .blue)
+                                )
+                            }
+                        }
+                        .listStyle(.insetGrouped)
+                        .scrollContentBackground(.hidden)
+
+                    case .maintenance:
+                        reportList(
+                            reports: maintenanceReports,
+                            filterChips: maintenanceFilterChips,
+                            emptyIcon: "wrench.and.screwdriver",
+                            emptyTitle: "No maintenance reports",
+                            emptySubtitle: "Assign a vehicle report to maintenance to see it here."
+                        )
+
+                    case .fuel:
+                        FleetFuelAnalyticsView()
                     }
                 }
-                .listStyle(.insetGrouped)
             }
-            .navigationTitle("Issue Reports")
+            .navigationTitle("Reports")
             .sheet(item: $selectedReport) { report in
                 ReportDetailView(report: report, viewModel: viewModel)
             }
@@ -40,163 +97,205 @@ struct ReportsView: View {
                 await viewModel.loadData()
                 viewModel.setupRealtime()
             }
+            .refreshable { await viewModel.loadData() }
         }
     }
 
-    // MARK: - Summary Cards
-    private var summaryCards: some View {
-        HStack(spacing: 16) {
-            summaryCard(label: "Open",     count: viewModel.openCount,     color: Color.red,  icon: "exclamationmark.circle.fill")
-            summaryCard(label: "Active",   count: viewModel.assignedCount, color: Color.yellow, icon: "wrench.and.screwdriver.fill")
-            summaryCard(label: "Resolved", count: viewModel.resolvedCount, color: Color.green, icon: "checkmark.circle.fill")
+    // MARK: - Shared List Builder
+
+    private func reportList(
+        reports: [IssueReport],
+        filterChips: some View,
+        emptyIcon: String,
+        emptyTitle: String,
+        emptySubtitle: String
+    ) -> some View {
+        List {
+            Section {
+                filterChips
+            }
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
+            .listSectionSeparator(.hidden)
+
+            Section {
+                if viewModel.isLoading && viewModel.reports.isEmpty {
+                    HStack { Spacer(); ProgressView(); Spacer() }
+                        .listRowBackground(Color.clear)
+                        .padding(.vertical, 40)
+                } else if reports.isEmpty {
+                    emptyState(icon: emptyIcon, title: emptyTitle, subtitle: emptySubtitle)
+                } else {
+                    ForEach(reports) { report in
+                        Button { selectedReport = report } label: {
+                            ReportRowView(report: report, viewModel: viewModel, context: selectedTab)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .listSectionSeparator(.hidden)
         }
-        .padding(.horizontal, 16)
-    }
-
-    private func summaryCard(label: String, count: Int, color: Color, icon: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(color)
-                .frame(width: 32, height: 32)
-                .background(color.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-
-            Text("\(count)")
-                .font(.title3.bold())
-                .foregroundStyle(Color.primary)
-
-            Text(label)
-                .font(.footnote)
-                .foregroundStyle(Color(.tertiaryLabel))
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
     }
 
     // MARK: - Filter Chips
-    private var filterChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                FilterButton(title: "All", isSelected: filterStatus == nil) {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        filterStatus = nil
-                    }
+
+    /// Maintenance tab — filter by workflow status
+    private var maintenanceFilterChips: some View {
+        let statuses: [IssueReportStatus] = [.assigned, .inProgress, .resolved]
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                FilterButton(title: "All", isSelected: maintenanceStatusFilter == nil) {
+                    withAnimation { maintenanceStatusFilter = nil }
                 }
-                ForEach(IssueReportStatus.allCases) { status in
-                    FilterButton(
-                        title: status.rawValue,
-                        isSelected: filterStatus == status
-                    ) {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            filterStatus = status
-                        }
+                ForEach(statuses) { status in
+                    FilterButton(title: status.rawValue, isSelected: maintenanceStatusFilter == status) {
+                        withAnimation { maintenanceStatusFilter = status }
                     }
                 }
             }
             .padding(.horizontal, 16)
+            .padding(.vertical, 8)
         }
-        .padding(.vertical, 8)
     }
 
-    @ViewBuilder
-    private var reportsListContent: some View {
-        if filteredReports.isEmpty {
-            VStack(spacing: 16) {
-                Image(systemName: "tray.fill")
-                    .font(.system(size: 40))
-                    .foregroundStyle(Color(.quaternaryLabel))
-                Text("No reports found")
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(Color.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 40)
-            .listRowBackground(Color.clear)
-        } else {
-            ForEach(filteredReports) { report in
-                Button(action: { selectedReport = report }) {
-                    ReportRowView(report: report, viewModel: viewModel)
-                }
-                .buttonStyle(.plain)
-            }
+    // MARK: - Empty State
+
+    private func emptyState(icon: String, title: String, subtitle: String) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 36))
+                .foregroundStyle(Color(.tertiaryLabel))
+            Text(title)
+                .font(.body.weight(.medium))
+                .foregroundStyle(Color.secondary)
+            Text(subtitle)
+                .font(.caption)
+                .foregroundStyle(Color(.tertiaryLabel))
+                .multilineTextAlignment(.center)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 48)
+        .listRowBackground(Color.clear)
     }
 }
 
-// MARK: - Report Row
+// MARK: - Report Row Card
+
 struct ReportRowView: View {
     let report: IssueReport
     let viewModel: ReportsViewModel
+    var context: ReportSectionTab = .vehicles
 
-    private var timeAgo: String {
-        let diff = Date().timeIntervalSince(report.submittedAt)
-        if diff < 3600 { return "\(Int(diff / 60))m ago" }
-        if diff < 86400 { return "\(Int(diff / 3600))h ago" }
-        return "\(Int(diff / 86400))d ago"
+    // Vehicles tab: time since report was submitted
+    private var reportedTimeAgo: String {
+        timeAgo(from: report.submittedAt)
+    }
+
+    // Name of the maintenance staff this is assigned to (nil if unassigned)
+    private var assignedStaffName: String? {
+        guard let id = report.assignedTo else { return nil }
+        return viewModel.maintenanceStaff.first(where: { $0.id == id })?.fullName
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Top row
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .center, spacing: 10) {
+            VStack(alignment: .leading, spacing: 10) {
+
+                // Vehicle + badge
+                // Open → show severity (Critical/High/Medium/Low)
+                // Assigned / In Progress / Resolved → show workflow status
+                HStack(alignment: .top) {
                     Text(report.vehicleName)
                         .font(.headline)
                         .foregroundStyle(Color.primary)
-                    Text(report.licensePlate)
-                        .font(.footnote)
-                        .foregroundStyle(Color.teal)
+                    Spacer()
+                    if report.status == .open {
+                        StatusBadge(
+                            text: report.severity.rawValue.capitalized,
+                            color: viewModel.severityColor(report.severity)
+                        )
+                    } else {
+                        StatusBadge(
+                            text: report.status.rawValue,
+                            color: report.status.color,
+                            icon: report.status.icon
+                        )
+                    }
                 }
-                Spacer()
-                StatusBadge(
-                    text: report.status.rawValue,
-                    color: report.status.color,
-                    icon: report.status.icon
-                )
-            }
 
-            // Category + severity
-            HStack(spacing: 8) {
-                StatusBadge(text: report.issueCategory, color: Color.blue)
-                StatusBadge(
-                    text: report.severity.rawValue.capitalized,
-                    color: viewModel.severityColor(report.severity)
-                )
-            }
+                // Licence plate (monospaced)
+                Text(report.licensePlate)
+                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(Color.secondary)
 
-            // Description preview
-            Text(report.description)
-                .font(.body)
-                .foregroundStyle(Color.secondary)
-                .lineLimit(2)
-
-            // Footer
-            HStack {
-                Label(report.driverName, systemImage: "steeringwheel")
-                    .font(.footnote)
-                    .foregroundStyle(Color(.tertiaryLabel))
-                Spacer()
-                if let assignedId = report.assignedTo {
-                    Label(viewModel.staffName(assignedId), systemImage: "wrench.fill")
-                        .font(.footnote)
-                        .foregroundStyle(Color.yellow)
-                } else {
-                    Text("Unassigned")
-                        .font(.footnote)
-                        .foregroundStyle(Color(.quaternaryLabel))
+                // Category always shown.
+                // Severity shown here only when top-right badge is showing status (not severity).
+                HStack(spacing: 6) {
+                    StatusBadge(text: report.issueCategory, color: Color.blue)
+                    if report.status != .open {
+                        StatusBadge(
+                            text: report.severity.rawValue.capitalized,
+                            color: viewModel.severityColor(report.severity)
+                        )
+                    }
                 }
-                Text("·")
-                    .foregroundStyle(Color(.quaternaryLabel))
-                Text(timeAgo)
-                    .font(.footnote)
-                    .foregroundStyle(Color(.quaternaryLabel))
+
+                // Bottom row — changes by context
+                HStack(alignment: .bottom) {
+                    if context == .maintenance, let staffName = assignedStaffName {
+                        // Maintenance: show who it's assigned to + actual assignment time
+                        HStack(spacing: 4) {
+                            Image(systemName: "wrench.and.screwdriver.fill")
+                                .font(.caption2)
+                                .foregroundStyle(Color(.tertiaryLabel))
+                            Text(staffName)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.secondary)
+                        }
+                        Spacer()
+                        if let assignedAt = report.assignedAt {
+                            Text("Assigned \(timeAgo(from: assignedAt))")
+                                .font(.caption)
+                                .foregroundStyle(Color(.quaternaryLabel))
+                        } else {
+                            Text("Assigned")
+                                .font(.caption)
+                                .foregroundStyle(Color(.quaternaryLabel))
+                        }
+                    } else {
+                        // Vehicles: show who reported it
+                        HStack(spacing: 4) {
+                            Image(systemName: "person.fill")
+                                .font(.caption2)
+                                .foregroundStyle(Color(.tertiaryLabel))
+                            Text(report.driverName)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.secondary)
+                        }
+                        Spacer()
+                        Text(reportedTimeAgo)
+                            .font(.caption)
+                            .foregroundStyle(Color(.quaternaryLabel))
+                    }
+                }
             }
+
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color(.tertiaryLabel))
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
+    }
+
+    private func timeAgo(from date: Date) -> String {
+        let diff = Date().timeIntervalSince(date)
+        if diff < 60    { return "Just now" }
+        if diff < 3600  { return "\(Int(diff / 60))m ago" }
+        if diff < 86400 { return "\(Int(diff / 3600))h ago" }
+        return "\(Int(diff / 86400))d ago"
     }
 }
 

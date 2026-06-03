@@ -3,14 +3,13 @@ import SwiftUI
 struct MaintenanceProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var profileVM = ProfileViewModel()
+    @State private var showingChangePassword = false
 
     // Profile menu items
     private let menuItems: [(title: String, icon: String, isDestructive: Bool)] = [
         ("Certifications", "rosette", false),
-        ("Shift Schedule", "calendar", false),
-        ("Assigned Depot", "building.2.fill", false),
-        ("Notifications", "bell", false),
-        ("Performance Report", "chart.bar.xaxis", false)
+        ("Performance Report", "chart.bar.xaxis", false),
+        ("Notifications", "bell", false)
     ]
 
     var body: some View {
@@ -30,13 +29,6 @@ struct MaintenanceProfileView: View {
                         )
                         .padding(.top, 16)
 
-                        // MARK: - Stats Strip
-                        HStack(spacing: 16) {
-                            StatPill(value: "—", label: "Orders Done", color: Color.brown)
-                            StatPill(value: "—", label: "Accuracy", color: Color.green)
-                            StatPill(value: "—", label: "Rating", color: Color.yellow)
-                        }
-                        .padding(.horizontal, 16)
 
                         // MARK: - Personal Information
                         VStack(alignment: .leading, spacing: 16) {
@@ -98,15 +90,43 @@ struct MaintenanceProfileView: View {
                         // MARK: - Menu
                         VStack(spacing: 0) {
                             ForEach(menuItems, id: \.title) { item in
-                                Button(action: {}) {
-                                    ActionRow(
-                                        icon: item.icon,
-                                        title: item.title,
-                                        iconColor: Color.brown,
-                                        isDestructive: item.isDestructive
-                                    )
+                                Group {
+                                    if item.title == "Certifications" {
+                                        NavigationLink {
+                                            CertificationsView()
+                                        } label: {
+                                            ActionRow(
+                                                icon: item.icon,
+                                                title: item.title,
+                                                iconColor: Color.brown,
+                                                isDestructive: item.isDestructive
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+                                    } else if item.title == "Performance Report" {
+                                        NavigationLink {
+                                            PerformanceReportView()
+                                        } label: {
+                                            ActionRow(
+                                                icon: item.icon,
+                                                title: item.title,
+                                                iconColor: Color.brown,
+                                                isDestructive: item.isDestructive
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+                                    } else {
+                                        Button(action: {}) {
+                                            ActionRow(
+                                                icon: item.icon,
+                                                title: item.title,
+                                                iconColor: Color.brown,
+                                                isDestructive: item.isDestructive
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
                                 }
-                                .buttonStyle(.plain)
 
                                 if item.title != menuItems.last?.title {
                                     Divider()
@@ -125,8 +145,28 @@ struct MaintenanceProfileView: View {
 
                         .padding(.horizontal, 16)
 
-                        // MARK: - Logout
-                        Button(action: {
+                        // MARK: - Logout & Change Password
+                        VStack(spacing: 16) {
+                            Button(action: {
+                                showingChangePassword = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "key.fill")
+                                    Text("Change Password")
+                                }
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(Color.brown)
+                                .frame(maxWidth: .infinity)
+                                .padding(16)
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                        .stroke(Color.brown.opacity(0.25), lineWidth: 0.8)
+                                )
+                            }
+                            .padding(.horizontal, 16)
+                            
+                            Button(action: {
                             Task { await authViewModel.signOut() }
                         }) {
                             HStack {
@@ -142,10 +182,10 @@ struct MaintenanceProfileView: View {
                                 RoundedRectangle(cornerRadius: 20, style: .continuous)
                                     .stroke(Color.red.opacity(0.25), lineWidth: 0.8)
                             )
-
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 24)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 24)
                     }
                 }
             }
@@ -153,6 +193,9 @@ struct MaintenanceProfileView: View {
         }
         .task {
             await profileVM.loadProfile()
+        }
+        .sheet(isPresented: $showingChangePassword) {
+            ChangePasswordSheetView()
         }
     }
 }

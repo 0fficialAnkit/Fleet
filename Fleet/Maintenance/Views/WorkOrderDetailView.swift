@@ -45,6 +45,35 @@ struct WorkOrderDetailView: View {
         _localParts = State(initialValue: [])
     }
 
+    // Init from MaintenanceTask (used by Dashboard task cards)
+    init(task: MaintenanceTask) {
+        let taskStatus: WorkOrderStatus? = {
+            switch task.status {
+            case .pending:    return .open
+            case .inProgress: return .inProgress
+            case .completed:  return .completed
+            case .cancelled:  return .cancelled
+            case .none:       return .open
+            }
+        }()
+        let d = WorkOrderDisplayData(
+            id: task.id,
+            vehicleDisplay: "VH-\(task.vehicleId.uuidString.prefix(8).uppercased())",
+            priority: nil,
+            status: taskStatus,
+            createdAt: task.scheduledDate.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "N/A",
+            assignedBy: "N/A",
+            laborHours: "N/A",
+            laborCost: "N/A",
+            notes: task.description ?? "",
+            partsUsed: []
+        )
+        self.data = d
+        _currentStatus = State(initialValue: taskStatus)
+        _notes = State(initialValue: task.description ?? "")
+        _localParts = State(initialValue: [])
+    }
+
     // Init from ScheduledWorkOrder (used by MaintenanceSchedulerView cards)
     init(scheduledWorkOrder wo: ScheduledWorkOrder) {
         let d = WorkOrderDisplayData(
@@ -156,6 +185,11 @@ struct WorkOrderDetailView: View {
 
                     // MARK: - Action Buttons
                     VStack(spacing: 16) {
+                        if currentStatus == .pending {
+                            ActionButton(title: "Open Work Order", icon: "play.circle.fill", color: Color.brown) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .open }
+                            }
+                        }
                         if currentStatus == .open {
                             ActionButton(title: "Start Work Order", icon: "play.circle.fill", color: Color.brown) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) { currentStatus = .inProgress }
@@ -228,15 +262,17 @@ struct WorkOrderDetailView: View {
     // MARK: - Helpers
     func statusIcon(_ s: WorkOrderStatus?) -> String {
         switch s {
+        case .pending:    return "hourglass"
         case .open:       return "tray.circle"
         case .inProgress: return "wrench.adjustable"
         case .completed:  return "checkmark.circle.fill"
         case .cancelled:  return "xmark.circle.fill"
-        case .none:       return "tray.circle"
+        case .none:       return "hourglass"
         }
     }
     func statusLabel(_ s: WorkOrderStatus?) -> String {
         switch s {
+        case .pending:    return "Pending"
         case .open:       return "Open"
         case .inProgress: return "In Progress"
         case .completed:  return "Completed"
@@ -246,8 +282,9 @@ struct WorkOrderDetailView: View {
     }
     func statusColor(_ s: WorkOrderStatus?) -> Color {
         switch s {
+        case .pending:    return Color.gray
         case .open:       return Color.blue
-        case .inProgress: return Color.yellow
+        case .inProgress: return Color.orange
         case .completed:  return Color.green
         case .cancelled:  return Color.red
         case .none:       return Color.secondary
@@ -274,7 +311,7 @@ struct WorkOrderDetailView: View {
     func priorityColor(_ p: WorkOrderPriority?) -> Color {
         switch p {
         case .critical: return Color.red
-        case .high:     return Color.yellow
+        case .high:     return Color.orange
         case .medium:   return Color.blue
         case .low:      return Color.green
         case .none:     return Color.secondary

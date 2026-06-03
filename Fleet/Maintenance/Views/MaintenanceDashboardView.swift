@@ -46,19 +46,19 @@ struct MaintenanceDashboardView: View {
                                     .padding(.vertical, 12)
                                 HStack(spacing: 8) {
                                     MaintenanceStatPill(
-                                        value: viewModel.availablePartsPercentage,
-                                        label: "Available %",
-                                        color: Color.green
+                                        value: viewModel.inventory.count,
+                                        label: "Total Parts",
+                                        color: Color.brown
                                     )
                                     MaintenanceStatPill(
                                         value: viewModel.lowStockItemsCount,
                                         label: "Low Stock",
                                         color: Color.red
                                     )
-                                    MaintenanceStatPill(
-                                        value: viewModel.inventory.count,
-                                        label: "Total Parts",
-                                        color: Color.brown
+                                    MaintenanceStatPillText(
+                                        value: viewModel.estimatedValueFormatted,
+                                        label: "Est. Value",
+                                        color: Color.green
                                     )
                                 }
                             }
@@ -92,7 +92,14 @@ struct MaintenanceDashboardView: View {
                             } else {
                                 VStack(spacing: 16) {
                                     ForEach(viewModel.upcomingItems) { item in
-                                        UpcomingMaintenanceCard(item: item)
+                                        if let destination = item.destination {
+                                            NavigationLink(value: destination) {
+                                                UpcomingMaintenanceCard(item: item)
+                                            }
+                                            .buttonStyle(.plain)
+                                        } else {
+                                            UpcomingMaintenanceCard(item: item)
+                                        }
                                     }
                                 }
                                 .padding(.horizontal, 16)
@@ -147,8 +154,8 @@ struct MaintenanceDashboardView: View {
             }
             .navigationDestination(for: MaintenanceDestination.self) { destination in
                 switch destination {
-                case .workOrderDetail(let order):
-                    WorkOrderDetailView(workOrder: order)
+                case .scheduledWorkOrderDetail(let scheduledWO):
+                    WorkOrderDetailSheet(workOrder: scheduledWO, viewModel: MaintenanceSchedulerViewModel())
                 case .issueReportDetail(let report):
                     IssueReportDetailView(report: report)
                 case .workOrderList(let filter, let assignedTo, let priority):
@@ -246,38 +253,17 @@ struct UpcomingMaintenanceCard: View {
                 .foregroundStyle(Color.secondary)
                 .padding(.vertical, 4)
 
-                // Action Buttons
-                VStack(spacing: 10) {
-                    Button {
-                        // Handle Start Action
-                    } label: {
-                        HStack {
-                            Image(systemName: item.actionButtonIcon)
-                            Text(item.actionButtonTitle)
-                        }
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.brown)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-
-                    if let destination = item.destination {
-                        NavigationLink(value: destination) {
-                            Text("View Details")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(Color.primary)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 14)
-                                .background(Color.clear)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .stroke(Color(.opaqueSeparator), lineWidth: 1)
-                                )
-                        }
-                    }
+                // Action Button
+                HStack {
+                    Image(systemName: "doc.text.magnifyingglass")
+                    Text("View Details")
                 }
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Color.brown)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
                 .padding(.top, 4)
             }
             .padding(16)
@@ -368,6 +354,32 @@ struct MaintenanceStatPill: View {
     var body: some View {
         VStack(spacing: 5) {
             Text("\(value)")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(Color.primary)
+            Text(label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(color.opacity(0.08))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(color.opacity(0.25), lineWidth: 0.5)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+// MARK: - Maintenance Stat Pill (Text variant for string values)
+struct MaintenanceStatPillText: View {
+    let value: String
+    let label: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 5) {
+            Text(value)
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(Color.primary)
             Text(label)

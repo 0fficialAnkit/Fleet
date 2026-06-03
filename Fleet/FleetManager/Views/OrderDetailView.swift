@@ -4,6 +4,7 @@ struct OrderDetailView: View {
     let trip: Trip
     let viewModel: OrdersViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var voiceLogs: [VoiceTripLog] = []
 
     var route: Route? {
         viewModel.route(for: trip.routeId)
@@ -58,13 +59,13 @@ struct OrderDetailView: View {
 
                             Image(systemName: orderIcon)
                                 .font(.system(size: 44))
-                                .foregroundColor(orderColor)
+                                .foregroundStyle(orderColor)
                         }
                         .padding(.bottom, 8)
 
                         Text(route?.routeName ?? "Unknown Route")
                             .font(.title3.bold())
-                            .foregroundColor(Color.primary)
+                            .foregroundStyle(Color.primary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 16)
 
@@ -93,12 +94,81 @@ struct OrderDetailView: View {
                     }
 //                    .padding(16)
 //                    .background(Color(.systemBackground))
-//                    .cornerRadius(20)
+//                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 //                    .padding(.horizontal, 16)
                     .padding(16)
                     .background(Color(.secondarySystemGroupedBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .padding(.horizontal, 16)
+
+                    if !voiceLogs.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Driver Voice Logs")
+                                    .font(.headline)
+                                    .foregroundStyle(Color.primary)
+                                Spacer()
+                                Text("\(voiceLogs.count) updates")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.secondary)
+                            }
+                            .padding(.horizontal, 4)
+
+                            ForEach(voiceLogs) { log in
+                                VStack(alignment: .leading, spacing: 12) {
+                                    HStack {
+                                        Image(systemName: "mic.fill")
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(.purple)
+                                        Text("Voice Update")
+                                            .font(.subheadline.bold())
+                                            .foregroundStyle(Color.primary)
+                                        Spacer()
+                                        if let date = log.createdAt {
+                                            Text(date.formatted(date: .omitted, time: .shortened))
+                                                .font(.caption)
+                                                .foregroundStyle(Color.secondary)
+                                        }
+                                    }
+
+                                    // Extracted facts row
+                                    let status = log.voiceLogStatus
+                                    let location = log.extractedLocation
+                                    let mileage = log.extractedMileage
+                                    let eta = log.extractedETA
+
+                                    if status != nil || location != nil || mileage != nil || eta != nil {
+                                        ScrollView(.horizontal, showsIndicators: false) {
+                                            HStack(spacing: 8) {
+                                                if let status = status {
+                                                    FactChip(icon: status.icon, text: status.displayName, color: statusColor(for: status))
+                                                }
+                                                if let location = location {
+                                                    FactChip(icon: "mappin.and.ellipse", text: location, color: .blue)
+                                                }
+                                                if let mileage = mileage {
+                                                    FactChip(icon: "road.lanes", text: "\(String(format: "%.1f", mileage)) km", color: .green)
+                                                }
+                                                if let eta = eta {
+                                                    FactChip(icon: "clock", text: eta, color: .orange)
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Text("\"\(log.transcription)\"")
+                                        .font(.body)
+                                        .italic()
+                                        .foregroundStyle(Color.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .padding(16)
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                    }
                 }
             }
         }
@@ -122,11 +192,35 @@ struct OrderDetailView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.primary)
-                        .padding(8)
                 }
             }
+        }
+        .task {
+            await loadVoiceLogs()
+            RealtimeManager.shared.addVoiceTripLogsChangeHandler {
+                Task {
+                    await loadVoiceLogs()
+                }
+            }
+        }
+    }
+
+    private func loadVoiceLogs() async {
+        do {
+            voiceLogs = try await VoiceTripLogService.fetchLogs(forTripId: trip.id)
+        } catch {
+            print("Failed to fetch voice logs: \(error)")
+        }
+    }
+
+    private func statusColor(for status: VoiceLogStatus) -> Color {
+        switch status {
+        case .enRoute:   return .green
+        case .delayed:   return .orange
+        case .arrived:   return .teal
+        case .pickedUp:  return .blue
+        case .breakdown: return .red
+        case .other:     return .gray
         }
     }
 }
@@ -141,20 +235,42 @@ struct OrderDetailInfoRow: View {
         HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 18))
-                .foregroundColor(Color(.tertiaryLabel))
+                .foregroundStyle(Color(.tertiaryLabel))
                 .frame(width: 24)
 
             Text(title)
                 .font(.body.weight(.medium))
-                .foregroundColor(Color.secondary)
+                .foregroundStyle(Color.secondary)
 
             Spacer()
 
             Text(value)
                 .font(.body)
-                .foregroundColor(valueColor)
+                .foregroundStyle(valueColor)
         }
         .padding(.vertical, 8)
+    }
+}
+
+// MARK: - FactChip
+
+struct FactChip: View {
+    let icon: String
+    let text: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .bold))
+            Text(text)
+                .font(.system(size: 12, weight: .bold))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(color.opacity(0.1))
+        .foregroundStyle(color)
+        .clipShape(Capsule())
     }
 }
 

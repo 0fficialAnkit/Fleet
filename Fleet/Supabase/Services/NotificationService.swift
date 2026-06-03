@@ -10,6 +10,7 @@ private struct NotificationInsert: Encodable {
     let message: String?
     let type: NotificationType?
     let is_read: Bool
+    let reference_id: UUID?
 }
 
 enum NotificationService {
@@ -39,7 +40,8 @@ enum NotificationService {
             title: notification.title,
             message: notification.message,
             type: notification.type,
-            is_read: notification.isRead
+            is_read: notification.isRead,
+            reference_id: notification.referenceId
         )
         do {
             try await supabase

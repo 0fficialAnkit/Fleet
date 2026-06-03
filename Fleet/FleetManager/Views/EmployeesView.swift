@@ -1,67 +1,124 @@
 import SwiftUI
 
+// MARK: - Sort Options
+enum EmployeeSortOption {
+    case dateAddedLatest
+    case dateAddedOldest
+    case nameAZ
+    case nameZA
+}
+
+// MARK: - Employees List
+
 struct EmployeesView: View {
     var viewModel: EmployeesViewModel
-    let roleFilter: String
+    /// `nil` = show all; `"driver"` or `"maintenance"` = filter by role.
+    let roleFilter: String?
+    let sortOption: EmployeeSortOption
 
-    var filteredEmployees: [Profile] {
-        viewModel.employees.filter { profile in
-            profile.role.lowercased() == roleFilter.lowercased()
+    private var employees: [Profile] {
+        var result = viewModel.employees
+        if let filter = roleFilter {
+            result = result.filter { $0.role.lowercased() == filter.lowercased() }
         }
+        
+        result.sort { p1, p2 in
+            switch sortOption {
+            case .dateAddedLatest:
+                return (p1.createdAt ?? .distantPast) > (p2.createdAt ?? .distantPast)
+            case .dateAddedOldest:
+                return (p1.createdAt ?? .distantPast) < (p2.createdAt ?? .distantPast)
+            case .nameAZ:
+                return p1.fullName.localizedStandardCompare(p2.fullName) == .orderedAscending
+            case .nameZA:
+                return p1.fullName.localizedStandardCompare(p2.fullName) == .orderedDescending
+            }
+        }
+        
+        return result
     }
 
     var body: some View {
-        List(filteredEmployees) { profile in
-            let roleName = viewModel.getRole(for: profile)
+        Group {
+            if viewModel.isLoading && viewModel.employees.isEmpty {
+                ProgressView("Loading…")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if employees.isEmpty {
+                ContentUnavailableView(
+                    "No Employees",
+                    systemImage: "person.2.slash",
+                    description: Text("No employees found matching the selected filter.")
+                )
+            } else {
+                employeeList
+            }
+        }
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+    }
 
-            NavigationLink(destination: EmployeeDetailView(profile: profile, viewModel: viewModel)) {
+    private var employeeList: some View {
+        List(employees) { profile in
+            NavigationLink(value: profile) {
                 EmployeeRowView(
                     profile: profile,
-                    roleName: roleName,
-                    icon: viewModel.getIcon(for: roleName),
-                    iconColor: viewModel.getColor(for: roleName)
+                    roleIcon: viewModel.getRoleIcon(for: profile),
+                    roleIconColor: viewModel.getColor(for: profile.role),
+                    statusText: viewModel.getOperationalStatusText(for: profile),
+                    statusColor: viewModel.getOperationalStatusColor(for: profile)
                 )
             }
         }
         .listStyle(.insetGrouped)
-        // If you need to match exactly the parent ZStack background:
-        .scrollContentBackground(.hidden)
+        .navigationDestination(for: Profile.self) { profile in
+            EmployeeDetailView(profile: profile, viewModel: viewModel)
+        }
     }
 }
 
+// MARK: - Employee Row
+
 struct EmployeeRowView: View {
     let profile: Profile
-    let roleName: String
-    let icon: String
-    let iconColor: Color
+    let roleIcon: String
+    let roleIconColor: Color
+    let statusText: String
+    let statusColor: Color
 
     var body: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(profile.fullName)
-                    .font(.headline)
-                    .foregroundColor(Color.primary)
+        HStack(spacing: 14) {
+            // Role avatar
+            Image(systemName: roleIcon)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(roleIconColor)
+                .frame(width: 44, height: 44)
+                .background(roleIconColor.opacity(0.12), in: Circle())
 
-                Text(roleName)
-                    .font(.subheadline)
-                    .foregroundColor(Color.secondary)
+            // Name label (removed role subtitle)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(profile.fullName)
+                    .font(.body.weight(.semibold))
             }
 
-            Spacer()
+            Spacer(minLength: 0)
 
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundColor(iconColor)
-                .padding(10)
-                .background(iconColor.opacity(0.15))
-                .clipShape(Circle())
+            StatusBadge(text: statusText, color: statusColor)
         }
         .padding(.vertical, 4)
     }
 }
 
-#Preview {
+// MARK: - Previews
+
+#Preview("All employees") {
     NavigationStack {
-        EmployeesView(viewModel: EmployeesViewModel(), roleFilter: "driver")
+        EmployeesView(viewModel: EmployeesViewModel(), roleFilter: nil, sortOption: .dateAddedLatest)
+            .navigationTitle("Fleet")
+    }
+}
+
+#Preview("Drivers only") {
+    NavigationStack {
+        EmployeesView(viewModel: EmployeesViewModel(), roleFilter: "driver", sortOption: .nameAZ)
+            .navigationTitle("Drivers")
     }
 }

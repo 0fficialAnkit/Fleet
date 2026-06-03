@@ -1,5 +1,5 @@
 import SwiftUI
-import CoreLocation
+import UserNotifications
 
 @MainActor
 @Observable
@@ -12,12 +12,13 @@ final class DriverTripsViewModel {
     var errorMessage: String?
     var currentUserId: UUID?
 
-    // MARK: - Live location tracking
-    private var locationManager = LocationManager()
-    private var trackingTask: Task<Void, Never>?
-
     var sortedTrips: [Trip] {
-        trips.sorted(by: { ($0.startTime ?? Date.distantFuture) < ($1.startTime ?? Date.distantFuture) })
+        trips.sorted(by: {
+            let lDate = $0.createdAt ?? Date.distantPast
+            let rDate = $1.createdAt ?? Date.distantPast
+            if lDate != rDate { return lDate > rDate }
+            return ($0.startTime ?? Date.distantPast) > ($1.startTime ?? Date.distantPast)
+        })
     }
 
     func loadData() async {
@@ -81,18 +82,33 @@ final class DriverTripsViewModel {
                     try? await InspectionService.createInspectionPhoto(photo)
                 }
                 await loadData()
-                startLocationTracking(vehicleId: vehicleId)
+                // Location tracking is handled by DriverDashboardViewModel via realtime
             } catch {
                 errorMessage = error.localizedDescription
             }
         }
     }
 
-    func endTrip(id: UUID, vehicleId: UUID, notes: String, imageUrls: [String]) {
+    func endTrip(id: UUID, vehicleId: UUID, distance: Double?, notes: String, imageUrls: [String]) {
+        print("[DriverTripsViewModel] endTrip called with distance: \(String(describing: distance))")
         Task {
             do {
-                try await TripService.endTrip(id: id)
-                stopLocationTracking()
+                // Log dropoff_done before ending trip (geofences are still active)
+                let fences = (try? await GeofenceService.fetchGeofences(forTrip: id)) ?? []
+                if let df = fences.first(where: { $0.zoneType == "dropoff" }) {
+                    try? await GeofenceService.createEvent(TripGeofenceEvent(
+                        id: UUID(), geofenceId: df.id, vehicleId: vehicleId,
+                        driverId: currentUserId, eventType: "dropoff_done", occurredAt: Date()))
+                    let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
+                    for mgr in managers {
+                        try? await NotificationService.createNotification(Fleet.Notification(
+                            id: UUID(), userId: mgr.id,
+                            title: "🏁 Drop-off Completed",
+                            message: "Driver has completed the drop-off. Trip is now ending.",
+                            type: .info, isRead: false, createdAt: Date()))
+                    }
+                }
+                try await TripService.endTrip(id: id, distance: distance)
                 let inspectionId = UUID()
                 let inspection = VehicleInspection(id: inspectionId, vehicleId: vehicleId, driverId: currentUserId, tripId: id, inspectionType: .postTrip, notes: notes, createdAt: Date())
                 try? await InspectionService.createInspection(inspection)
@@ -107,47 +123,42 @@ final class DriverTripsViewModel {
         }
     }
 
-    // MARK: - Location tracking
-
-    private func startLocationTracking(vehicleId: UUID) {
-        stopLocationTracking()
-        locationManager.requestPermission()
-        print("[LocationTracking] 🚛 Started tracking for vehicle \(vehicleId)")
-
-        trackingTask = Task { [weak self] in
-            // Wait up to 20 s for first GPS fix before entering the main loop.
-            var waited = 0
-            while !Task.isCancelled, waited < 20 {
-                if self?.locationManager.coordinate != nil { break }
-                print("[LocationTracking] ⏳ Waiting for GPS fix… (\(waited)s)")
-                try? await Task.sleep(for: .seconds(1))
-                waited += 1
+    func gf_pickupDone(tripId: UUID, vehicleId: UUID) {
+        Task {
+            // Resolve a valid FK for geofence_id — never use UUID() fallback
+            // as it would violate the trip_geofence_events FK constraint.
+            let resolvedId: UUID?
+            let fences = (try? await GeofenceService.fetchGeofences(forTrip: tripId)) ?? []
+            if let pf = fences.first(where: { $0.zoneType == "pickup" }) {
+                resolvedId = pf.id                  // preferred: pickup fence in DB
+            } else {
+                // Fallback: reuse the geofenceId from the last enter event (always valid FK)
+                let recent = (try? await GeofenceService.fetchEvents(forVehicle: vehicleId, limit: 10)) ?? []
+                resolvedId = recent.first(where: { $0.eventType == "enter" })?.geofenceId
             }
 
-            // Push immediately on trip start, then every 15 seconds.
-            while !Task.isCancelled {
-                if let coord = self?.locationManager.coordinate {
-                    print("[LocationTracking] 📍 Pushing location — lat:\(String(format: "%.5f", coord.latitude)) lon:\(String(format: "%.5f", coord.longitude))")
-                    await VehicleLocationService.insertLocation(
-                        vehicleId: vehicleId,
-                        latitude: coord.latitude,
-                        longitude: coord.longitude,
-                        speed: self?.locationManager.speed
-                    )
-                } else {
-                    print("[LocationTracking] ⚠️ No GPS fix yet — retrying in 5 s")
-                    try? await Task.sleep(for: .seconds(5))
-                    continue
-                }
-                try? await Task.sleep(for: .seconds(15))
+            if let pId = resolvedId {
+                try? await GeofenceService.createEvent(TripGeofenceEvent(
+                    id: UUID(), geofenceId: pId, vehicleId: vehicleId,
+                    driverId: currentUserId, eventType: "pickup_done", occurredAt: Date()))
+                print("[Geofence] ✅ pickup_done event saved")
             }
-            print("[LocationTracking] 🛑 Tracking stopped for vehicle \(vehicleId)")
+
+            // Transition CLCircularRegion from pickup → dropoff
+            if let df = fences.first(where: { $0.zoneType == "dropoff" }) {
+                TripGeofenceMonitor.shared.transitionToDropoff(fence: df,
+                    tripId: tripId, vehicleId: vehicleId, driverId: currentUserId)
+            }
+
+            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
+            for mgr in managers {
+                try? await NotificationService.createNotification(Fleet.Notification(
+                    id: UUID(), userId: mgr.id,
+                    title: "✅ Pickup Completed",
+                    message: "Driver completed pickup and is heading to drop-off.",
+                    type: .info, isRead: false, createdAt: Date()))
+            }
         }
-    }
-
-    private func stopLocationTracking() {
-        trackingTask?.cancel()
-        trackingTask = nil
     }
 
     // MARK: - Helpers

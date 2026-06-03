@@ -1,5 +1,5 @@
 import SwiftUI
-internal import Auth
+internal import Auth   // needed for user.id from Supabase Auth module
 
 struct ScheduleMaintenanceSheetView: View {
     let vehicle: Vehicle
@@ -98,7 +98,7 @@ struct ScheduleMaintenanceSheetView: View {
                             VStack(spacing: 12) {
                                 HStack {
                                     Text("Task Type")
-                                        .foregroundColor(Color.primary)
+                                        .foregroundStyle(Color.primary)
                                     Spacer()
                                     Picker("", selection: $selectedTaskType) {
                                         ForEach(MaintenanceTaskType.allCases, id: \.self) { type in
@@ -228,7 +228,7 @@ struct ScheduleMaintenanceSheetView: View {
                     ZStack {
                         Color.black.opacity(0.4).ignoresSafeArea()
                         ProgressView("Saving…")
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .tint(.white)
                             .foregroundStyle(.white)
                             .padding(32)
                             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -248,6 +248,14 @@ struct ScheduleMaintenanceSheetView: View {
         saveError = nil
         Task {
             do {
+                let workOrderId = try await WorkOrderService.createWorkOrder(
+                    vehicleId: vehicle.id,
+                    createdBy: authViewModel.currentUser?.id,
+                    assignedTo: selectedStaffId,
+                    priority: .medium,
+                    status: .open
+                )
+                
                 try await viewModel.addTask(
                     vehicleId: vehicle.id,
                     taskType: selectedTaskType,
@@ -258,7 +266,7 @@ struct ScheduleMaintenanceSheetView: View {
                     scheduleType: .date,
                     assignedTo: selectedStaffId,
                     scheduledBy: authViewModel.currentUser?.id,
-                    workOrderId: nil
+                    workOrderId: workOrderId
                 )
                 dismiss()
             } catch {

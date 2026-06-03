@@ -2,7 +2,7 @@
 //  DataModel.swift
 //  Fleet
 //
-//  Created by Ankit Kumar on 19/05/26.
+//  Created by Vaibhav Singh on 19/05/26.
 //
 
 import Foundation
@@ -27,6 +27,7 @@ enum MaintenanceTaskStatus: String, Codable, CaseIterable, Sendable {
 }
 
 enum WorkOrderStatus: String, Codable, CaseIterable, Sendable {
+  case pending = "pending" // Add this case
   case open = "open"
   case inProgress = "in_progress"
   case completed = "completed"
@@ -121,6 +122,7 @@ enum TripUpdateType: String, Codable, CaseIterable, Sendable {
   case delayed = "delayed"
   case completed = "completed"
   case cancelled = "cancelled"
+  case voiceLog = "voice_log"
 }
 
 enum MaintenanceTaskType: String, Codable, CaseIterable, Sendable {
@@ -169,6 +171,7 @@ struct User: Codable, Identifiable, Hashable, Sendable {
 
 enum VehicleType: String, Codable, CaseIterable, Sendable, Identifiable {
   case twoWheeler = "two_wheeler"
+  case threeWheeler = "three_wheeler"
   case car = "car"
   case truck = "truck"
   
@@ -177,6 +180,7 @@ enum VehicleType: String, Codable, CaseIterable, Sendable, Identifiable {
   var maintenanceThresholdKM: Double {
       switch self {
       case .twoWheeler: return 3000
+      case .threeWheeler: return 5000
       case .car: return 10000
       case .truck: return 20000
       }
@@ -185,7 +189,8 @@ enum VehicleType: String, Codable, CaseIterable, Sendable, Identifiable {
   var displayName: String {
       switch self {
       case .twoWheeler: return "Two Wheeler"
-      case .car: return "Car"
+      case .threeWheeler: return "Three Wheeler"
+      case .car: return "Four Wheeler"
       case .truck: return "Truck"
       }
   }
@@ -255,9 +260,9 @@ struct VehicleLocation: Codable, Identifiable, Hashable, Sendable {
 }
 //  MARK: - MaintenanceTask
 enum MaintenanceScheduleType: String, Codable, CaseIterable, Sendable, Identifiable {
-    case date = "Date"
-    case mileage = "Mileage"
-    case interval = "Interval"
+    case date = "date"
+    case mileage = "mileage"
+    case interval = "interval"
     
     var id: String { rawValue }
 }
@@ -275,6 +280,7 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
   var serviceIntervalMonths: Int?
   var scheduleType: MaintenanceScheduleType?
   var status: MaintenanceTaskStatus?
+  var completedAt: Date?
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -286,9 +292,10 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
       case description
       case scheduledDate = "scheduled_date"
       case targetMileage = "target_mileage"
-      case serviceIntervalMonths = "service_interval_months"
+      case serviceIntervalMonths = "service_internal"
       case scheduleType = "schedule_type"
       case status
+      case completedAt = "completed_at"
   }
 }
 
@@ -301,14 +308,17 @@ struct WorkOrder: Codable, Identifiable, Hashable, Sendable {
   var priority: WorkOrderPriority?
   var status: WorkOrderStatus?
   var createdAt: Date?
+  var completedAt: Date?
 
   enum CodingKeys: String, CodingKey {
       case id
       case vehicleId = "vehicle_id"
       case createdBy = "created_by"
       case assignedTo = "assigned_to"
-      case priority, status
+      case priority
+      case status = "lifecycle_status"
       case createdAt = "created_at"
+      case completedAt = "completed_at"
   }
 }
 
@@ -423,6 +433,149 @@ struct TripUpdate: Codable, Identifiable, Hashable, Sendable {
   }
 }
 
+//  MARK: - TripIncident
+enum TripIncidentType: String, Codable, CaseIterable, Sendable {
+    case traffic = "Traffic"
+    case accident = "Accident"
+    case breakdown = "Breakdown"
+    case weather = "Weather"
+    case other = "Other"
+    
+    var icon: String {
+        switch self {
+        case .traffic: return "car.2.fill"
+        case .accident: return "car.burst.fill"
+        case .breakdown: return "wrench.and.screwdriver.fill"
+        case .weather: return "cloud.heavyrain.fill"
+        case .other: return "exclamationmark.triangle.fill"
+        }
+    }
+}
+
+struct TripIncident: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var tripId: UUID
+    var driverId: UUID?
+    var incidentType: String
+    var description: String
+    var location: String
+    var photoUrl: String?
+    var source: String?         // "voice" | "manual"
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tripId       = "trip_id"
+        case driverId     = "driver_id"
+        case incidentType = "incident_type"
+        case description
+        case location
+        case photoUrl     = "photo_url"
+        case source
+        case createdAt    = "created_at"
+    }
+
+    /// True when this incident was reported via voice (not the manual form).
+    var isVoiceReported: Bool { source == "voice" }
+}
+
+// MARK: - VoiceLogStatus
+
+/// Structured trip status extracted from a driver's voice recording.
+enum VoiceLogStatus: String, Codable, CaseIterable, Sendable {
+    case enRoute   = "en_route"
+    case delayed   = "delayed"
+    case arrived   = "arrived"
+    case pickedUp  = "picked_up"
+    case breakdown = "breakdown"
+    case other     = "other"
+
+    var displayName: String {
+        switch self {
+        case .enRoute:   return "En Route"
+        case .delayed:   return "Delayed"
+        case .arrived:   return "Arrived"
+        case .pickedUp:  return "Picked Up"
+        case .breakdown: return "Breakdown"
+        case .other:     return "Update"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .enRoute:   return "arrow.triangle.turn.up.right.road.fill"
+        case .delayed:   return "clock.badge.exclamationmark.fill"
+        case .arrived:   return "checkmark.circle.fill"
+        case .pickedUp:  return "shippingbox.fill"
+        case .breakdown: return "wrench.and.screwdriver.fill"
+        case .other:     return "mic.fill"
+        }
+    }
+
+    /// Maps voice status to the closest TripIncidentType for saving to trip_incidents.
+    var incidentType: TripIncidentType? {
+        switch self {
+        case .delayed:   return .traffic
+        case .breakdown: return .breakdown
+        case .other:     return .other
+        case .enRoute, .arrived, .pickedUp: return nil   // factual updates, not incidents
+        }
+    }
+
+    /// True when this status represents an alert-worthy incident.
+    var isIncident: Bool { incidentType != nil }
+}
+
+// MARK: - VoiceExtractedData
+
+/// In-memory structured result from VoiceExtractorService.
+/// Not persisted — only lives during the driver review flow.
+struct VoiceExtractedData {
+    var location: String?
+    var mileageKM: Double?
+    var etaText: String?
+    var status: VoiceLogStatus?
+    var rawTranscription: String
+
+    /// True when NLP found no structured facts in the transcript.
+    var isEmpty: Bool {
+        location == nil && mileageKM == nil && etaText == nil && status == nil
+    }
+}
+
+// MARK: - VoiceTripLog
+
+/// Persisted record in the `voice_trip_logs` Supabase table.
+struct VoiceTripLog: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var tripId: UUID
+    var driverId: UUID?
+    var transcription: String
+    var extractedLocation: String?
+    var extractedMileage: Double?
+    var extractedETA: String?
+    var extractedStatus: String?
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tripId           = "trip_id"
+        case driverId         = "driver_id"
+        case transcription
+        case extractedLocation = "extracted_location"
+        case extractedMileage  = "extracted_mileage"
+        case extractedETA      = "extracted_eta"
+        case extractedStatus   = "extracted_status"
+        case createdAt         = "created_at"
+    }
+
+    /// Typed status parsed from the stored raw string.
+    var voiceLogStatus: VoiceLogStatus? {
+        guard let raw = extractedStatus else { return nil }
+        return VoiceLogStatus(rawValue: raw)
+    }
+}
+
 //  MARK: - VehicleInspection
 struct VehicleInspection: Codable, Identifiable, Hashable, Sendable {
   let id: UUID
@@ -460,9 +613,9 @@ struct InspectionPhoto: Codable, Identifiable, Hashable, Sendable {
 //  MARK: - DefectReport
 struct DefectReport: Codable, Identifiable, Hashable, Sendable {
   let id: UUID
-  var inspectionId: UUID? // FK — optional, defects can be reported without a linked inspection
+  var inspectionId: UUID // FK - required
   var reportedBy: UUID? // FK
-  var description: String?
+  var description: String // required
   var severity: DefectSeverity?
   var status: DefectStatus?
   var createdAt: Date?
@@ -516,6 +669,7 @@ struct Notification: Codable, Identifiable, Hashable, Sendable {
   var message: String?
   var type: NotificationType?
   var isRead: Bool
+  var referenceId: UUID?
   var createdAt: Date?
 
   enum CodingKeys: String, CodingKey {
@@ -523,6 +677,7 @@ struct Notification: Codable, Identifiable, Hashable, Sendable {
       case userId = "user_id"
       case title, message, type
       case isRead = "is_read"
+      case referenceId = "reference_id"
       case createdAt = "created_at"
   }
 }
@@ -621,17 +776,19 @@ struct IssueReportRecord: Codable, Identifiable, Hashable, Sendable {
     var status: String
     var assignedTo: UUID?
     var createdAt: Date?
+    var issuePhoto: String?   // comma-separated public URLs
 
     enum CodingKeys: String, CodingKey {
         case id
-        case vehicleId = "vehicle_id"
+        case vehicleId  = "vehicle_id"
         case reportedBy = "reported_by"
         case category
         case severity
         case description
         case status
         case assignedTo = "assigned_to"
-        case createdAt = "created_at"
+        case createdAt  = "created_at"
+        case issuePhoto = "issue_photo"
     }
 }
 
@@ -662,5 +819,55 @@ struct MaintenanceStaffRecord: Codable, Identifiable, Hashable, Sendable {
         case profileId = "profile_id"
         case specialization
         case createdAt = "created_at"
+    }
+}
+
+// MARK: - Geofence models
+
+/// A circular zone around a pickup or dropoff location.
+/// Radius is stored so it can be changed per-trip in future.
+struct TripGeofence: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var tripId: UUID
+    var vehicleId: UUID
+    var driverId: UUID?
+    var name: String            // human-readable address
+    var latitude: Double
+    var longitude: Double
+    var radiusMeters: Double    // default 5000 = 5 km
+    var zoneType: String        // "pickup" | "dropoff"
+    var isActive: Bool
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, latitude, longitude
+        case tripId       = "trip_id"
+        case vehicleId    = "vehicle_id"
+        case driverId     = "driver_id"
+        case radiusMeters = "radius_meters"
+        case zoneType     = "zone_type"
+        case isActive     = "is_active"
+        case createdAt    = "created_at"
+    }
+}
+
+/// Logged when the driver crosses a zone boundary or completes a stage.
+struct TripGeofenceEvent: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var geofenceId: UUID
+    var vehicleId: UUID
+    var driverId: UUID?
+    var eventType: String       // "enter" | "exit" | "pickup_done"
+    var occurredAt: Date?
+    var latitude: Double?       // driver's location when event fired
+    var longitude: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case id, latitude, longitude
+        case geofenceId = "geofence_id"
+        case vehicleId  = "vehicle_id"
+        case driverId   = "driver_id"
+        case eventType  = "event_type"
+        case occurredAt = "occurred_at"
     }
 }
