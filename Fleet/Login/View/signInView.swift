@@ -10,10 +10,13 @@ import SwiftUI
 struct SignInView: View {
 
     // MARK: - Variables
+    var roleId: Int = 1 // 1 = Fleet Manager, 2 = Driver, 3 = Maintenance
+    
     @State private var emailOrPhone = ""
     @State private var password = ""
 
     @State private var isPasswordVisible = false
+    @State private var showingResetPassword = false
 
     @Environment(AuthViewModel.self) private var authViewModel
 
@@ -58,10 +61,10 @@ struct SignInView: View {
     // MARK: - Title
     var titleSection: some View {
         VStack(spacing: 8) {
-            Text("GoFleet")
+            Text("Kafila")
                 .font(.system(size: 34, weight: .bold))
                 .foregroundStyle(Color.primary)
-            Text("Sign in to GoFleet")
+            Text("Sign in to Kafila")
             .font(.system(size: 16))
             .foregroundStyle(Color.secondary)
         }
@@ -126,6 +129,21 @@ struct SignInView: View {
                 RoundedRectangle(cornerRadius: 14)
                     .stroke(Color(.separator), lineWidth: 1)
             )
+            
+            // Forgot Password Link
+            if roleId != 1 {
+                HStack {
+                    Spacer()
+                    Button {
+                        showingResetPassword = true
+                    } label: {
+                        Text("Forgot Password?")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.teal)
+                    }
+                    .padding(.top, 4)
+                }
+            }
         }
     }
     // MARK: - Main Button
@@ -154,13 +172,16 @@ struct SignInView: View {
             }
         }
         .disabled(authViewModel.isLoading || isButtonDisabled)
+        .sheet(isPresented: $showingResetPassword) {
+            ResetPasswordView(email: emailOrPhone)
+        }
     }
 
 }
 // MARK: - Preview
 #Preview {
     NavigationStack {
-        SignInView()
+        SignInView(roleId: 2)
             .environment(AuthViewModel())
     }
 }

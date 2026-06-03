@@ -1,5 +1,5 @@
 import SwiftUI
-internal import Auth
+internal import Auth   // needed for user.id from Supabase Auth module
 
 struct ScheduleMaintenanceSheetView: View {
     let vehicle: Vehicle

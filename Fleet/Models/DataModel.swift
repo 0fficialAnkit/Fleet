@@ -821,3 +821,53 @@ struct MaintenanceStaffRecord: Codable, Identifiable, Hashable, Sendable {
         case createdAt = "created_at"
     }
 }
+
+// MARK: - Geofence models
+
+/// A circular zone around a pickup or dropoff location.
+/// Radius is stored so it can be changed per-trip in future.
+struct TripGeofence: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var tripId: UUID
+    var vehicleId: UUID
+    var driverId: UUID?
+    var name: String            // human-readable address
+    var latitude: Double
+    var longitude: Double
+    var radiusMeters: Double    // default 5000 = 5 km
+    var zoneType: String        // "pickup" | "dropoff"
+    var isActive: Bool
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, latitude, longitude
+        case tripId       = "trip_id"
+        case vehicleId    = "vehicle_id"
+        case driverId     = "driver_id"
+        case radiusMeters = "radius_meters"
+        case zoneType     = "zone_type"
+        case isActive     = "is_active"
+        case createdAt    = "created_at"
+    }
+}
+
+/// Logged when the driver crosses a zone boundary or completes a stage.
+struct TripGeofenceEvent: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var geofenceId: UUID
+    var vehicleId: UUID
+    var driverId: UUID?
+    var eventType: String       // "enter" | "exit" | "pickup_done"
+    var occurredAt: Date?
+    var latitude: Double?       // driver's location when event fired
+    var longitude: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case id, latitude, longitude
+        case geofenceId = "geofence_id"
+        case vehicleId  = "vehicle_id"
+        case driverId   = "driver_id"
+        case eventType  = "event_type"
+        case occurredAt = "occurred_at"
+    }
+}

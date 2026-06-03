@@ -76,7 +76,7 @@ struct EditEmployeeView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundStyle(Color.teal)
+                    .foregroundStyle(Color.primary)
                     .disabled(isLoading)
                 }
 
@@ -108,10 +108,9 @@ struct EditEmployeeView: View {
                             ProgressView()
                         } else {
                             Text("Save")
-                                .bold()
                         }
                     }
-                    .foregroundStyle(Color.teal)
+                    .foregroundStyle(Color.primary)
                     .disabled(fullName.isEmpty || isLoading)
                 }
             }

@@ -29,7 +29,8 @@ final class VehiclesViewModel {
             trips = try await t
             
             if let adminId = adminId {
-                vehicles = allVehicles.filter { $0.adminId == adminId }
+                // Show vehicles assigned to this admin OR vehicles with no admin assigned (test data)
+                vehicles = allVehicles.filter { $0.adminId == adminId || $0.adminId == nil }
             } else {
                 vehicles = allVehicles
             }
