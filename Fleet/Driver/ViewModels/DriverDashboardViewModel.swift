@@ -368,6 +368,16 @@ final class DriverDashboardViewModel {
         TripGeofenceMonitor.shared.register(tripId: tripId, vehicleId: vehicleId,
                                              driverId: currentUserId, fences: [pFence])
 
+        // Register route-boundary circle (breach detection)
+        // Radius = 2 km + half the straight-line distance between pickup and dropoff
+        TripGeofenceMonitor.shared.registerRouteBoundary(
+            tripId:       tripId,
+            vehicleId:    vehicleId,
+            driverId:     currentUserId,
+            pickupCoord:  pickupCoord,
+            dropoffCoord: dropCoord
+        )
+
         // Also set up distance state for the fallback check in the GPS loop
         gfDistState = GFDistState(
             pickupCoord:    pickupCoord,

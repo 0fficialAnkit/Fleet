@@ -33,7 +33,7 @@ struct FleetManagerMainView: View {
             // MARK: Reports
             ReportsView()
                 .tabItem {
-                    Image(systemName: "chart.bar.fill")
+                    Image(systemName: "externaldrive.fill.trianglebadge.exclamationmark")
                     Text("Reports")
                 }
                 .tag(3)

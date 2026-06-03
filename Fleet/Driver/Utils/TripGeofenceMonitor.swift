@@ -31,6 +31,14 @@ final class TripGeofenceMonitor: NSObject {
     private var vehicleId: UUID?
     private var driverId:  UUID?
 
+    // Route boundary (breach detection)
+    private struct RouteBoundaryMeta {
+        let tripId: UUID; let vehicleId: UUID; let driverId: UUID?
+        let center: CLLocationCoordinate2D; let radius: Double
+    }
+    private var routeBoundaryMeta: [String: RouteBoundaryMeta] = [:]
+    private static let routeBoundaryPrefix = "route_boundary_"
+
     /// iOS fires a catch-up `didEnterRegion` within ~1-2 s of `startMonitoring`
     /// if the device is already inside the region. We ignore any entry event that
     /// fires within this window to prevent false "zone entered" notifications.
@@ -102,10 +110,45 @@ final class TripGeofenceMonitor: NSObject {
         print("[GeofenceMonitor] 🏁 Transitioned to dropoff zone (\(Int(fence.radiusMeters/1000)) km)")
     }
 
+    /// Registers a route-boundary circle around the midpoint of pickup ↔ drop-off.
+    /// Radius = 2 000 m + (pickup-to-dropoff distance / 2).
+    /// Fires `didExitRegion` when driver goes outside → breach alert.
+    func registerRouteBoundary(
+        tripId:        UUID,
+        vehicleId:     UUID,
+        driverId:      UUID?,
+        pickupCoord:   CLLocationCoordinate2D,
+        dropoffCoord:  CLLocationCoordinate2D
+    ) {
+        let centerLat = (pickupCoord.latitude  + dropoffCoord.latitude)  / 2
+        let centerLon = (pickupCoord.longitude + dropoffCoord.longitude) / 2
+        let center    = CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon)
+
+        let pickupLoc  = CLLocation(latitude: pickupCoord.latitude,  longitude: pickupCoord.longitude)
+        let dropoffLoc = CLLocation(latitude: dropoffCoord.latitude, longitude: dropoffCoord.longitude)
+        let routeDistance = pickupLoc.distance(from: dropoffLoc)   // metres
+
+        // Formula: 2 km + half the route distance
+        let radius = 2_000 + routeDistance / 2
+
+        let regionId = "\(TripGeofenceMonitor.routeBoundaryPrefix)\(tripId.uuidString)"
+        let region   = CLCircularRegion(center: center, radius: radius, identifier: regionId)
+        region.notifyOnEntry = false  // driver starts inside — suppress catch-up enter
+        region.notifyOnExit  = true   // breach = crossing outward
+
+        manager.startMonitoring(for: region)
+        routeBoundaryMeta[regionId] = RouteBoundaryMeta(
+            tripId: tripId, vehicleId: vehicleId, driverId: driverId,
+            center: center, radius: radius
+        )
+        print("[GeofenceMonitor] 🔵 Route boundary: centre (\(String(format:"%.4f",centerLat)),\(String(format:"%.4f",centerLon))) radius \(String(format:"%.1f",radius/1000)) km")
+    }
+
     func stopAll() {
         manager.monitoredRegions.forEach { manager.stopMonitoring(for: $0) }
         fenceMap.removeAll()
         registrationTime.removeAll()
+        routeBoundaryMeta.removeAll()
         tripId = nil; vehicleId = nil; driverId = nil
     }
 
@@ -139,11 +182,13 @@ final class TripGeofenceMonitor: NSObject {
         let title    = "\(emoji) Driver Entered \(label) Zone"
         let body     = "Driver is within \(Int(kGeofenceRadiusMeters/1000)) km of the \(label.lowercased()): \(fence.name)"
         let dId      = driverId
-        let pickupIds = Set(fenceMap.values.filter { $0.zoneType == "pickup" }.map { $0.id })
 
         Task {
             // Strict ordering: dropoff entry only fires AFTER pickup_done is confirmed in DB.
             if fence.zoneType == "dropoff" {
+                let tripFences = (try? await GeofenceService.fetchAllGeofences(forTrip: fence.tripId)) ?? []
+                let pickupIds = Set(tripFences.filter { $0.zoneType == "pickup" }.map { $0.id })
+                
                 let recent    = (try? await GeofenceService.fetchEvents(forVehicle: vId, limit: 30)) ?? []
                 let pickupDone = recent.contains { pickupIds.contains($0.geofenceId) && $0.eventType == "pickup_done" }
                 guard pickupDone else {
@@ -191,6 +236,15 @@ extension TripGeofenceMonitor: CLLocationManagerDelegate {
         Task { @MainActor in self.didEnter(regionId: region.identifier) }
     }
 
+    nonisolated func locationManager(_ manager: CLLocationManager,
+                                     didExitRegion region: CLRegion) {
+        // Route boundary exit = driver deviated from route
+        if region.identifier.hasPrefix(TripGeofenceMonitor.routeBoundaryPrefix) {
+            let currentLoc = manager.location
+            Task { @MainActor in self.handleRouteBreach(regionId: region.identifier, location: currentLoc) }
+        }
+    }
+
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         // No action needed — region monitoring works without allowsBackgroundLocationUpdates
     }
@@ -199,5 +253,67 @@ extension TripGeofenceMonitor: CLLocationManagerDelegate {
                                      monitoringDidFailFor region: CLRegion?,
                                      withError error: Error) {
         print("[GeofenceMonitor] ⚠️ \(error.localizedDescription)")
+    }
+}
+
+// MARK: - Route breach handler
+
+extension TripGeofenceMonitor {
+
+    private func handleRouteBreach(regionId: String, location: CLLocation?) {
+        guard let meta = routeBoundaryMeta[regionId] else { return }
+
+        let lat = location?.coordinate.latitude  ?? 0
+        let lon = location?.coordinate.longitude ?? 0
+
+        // Distance from centre
+        let driverLoc  = CLLocation(latitude: lat, longitude: lon)
+        let centerLoc  = CLLocation(latitude: meta.center.latitude, longitude: meta.center.longitude)
+        let distOutside = max(0, driverLoc.distance(from: centerLoc) - meta.radius)
+
+        print("[GeofenceMonitor] 🚨 Route breach! Driver is \(Int(distOutside))m outside the boundary.")
+
+        // Notify driver immediately on-device
+        NotificationCenter.default.post(
+            name: .routeBoundaryBreached,
+            object: nil,
+            userInfo: ["distanceOutside": distOutside]
+        )
+
+        Task {
+            // 1. Log to Supabase
+            let breach = RouteBreach(
+                id: UUID(),
+                tripId:             meta.tripId,
+                vehicleId:          meta.vehicleId,
+                driverId:           meta.driverId,
+                latitude:           lat,
+                longitude:          lon,
+                distanceFromCenter: driverLoc.distance(from: centerLoc),
+                fenceRadius:        meta.radius,
+                occurredAt:         Date()
+            )
+            try? await RouteBreachService.logBreach(breach)
+
+            // 2. Notify fleet managers
+            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
+            for mgr in managers {
+                try? await NotificationService.createNotification(Fleet.Notification(
+                    id: UUID(), userId: mgr.id,
+                    title: "🚨 Route Deviation Alert",
+                    message: "Driver has left the route boundary. Currently \(Int(distOutside / 1000 * 10) / 10) km outside the permitted area.",
+                    type: .alert, isRead: false, createdAt: Date()))
+            }
+
+            // 3. Local push to driver
+            let content = UNMutableNotificationContent()
+            content.title = "⚠️ Route Deviation"
+            content.body  = "You have left the assigned route boundary. Please return to the route."
+            content.sound = .defaultCritical
+            try? await UNUserNotificationCenter.current().add(
+                UNNotificationRequest(
+                    identifier: "breach_\(meta.tripId)",
+                    content: content, trigger: nil))
+        }
     }
 }

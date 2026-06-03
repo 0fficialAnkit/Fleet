@@ -875,3 +875,31 @@ struct TripGeofenceEvent: Codable, Identifiable, Hashable, Sendable {
         case occurredAt = "occurred_at"
     }
 }
+
+// MARK: - RouteBreach
+/// Logged when a driver exits the route-boundary circle during an active trip.
+/// The boundary circle has:
+///   centre = midpoint of pickup and drop-off
+///   radius = 2 000 m + (pickup-to-dropoff distance / 2)
+struct RouteBreach: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var tripId: UUID
+    var vehicleId: UUID
+    var driverId: UUID?
+    var latitude: Double
+    var longitude: Double
+    var distanceFromCenter: Double    // metres outside the boundary
+    var fenceRadius: Double           // the boundary radius that was breached
+    var occurredAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tripId              = "trip_id"
+        case vehicleId           = "vehicle_id"
+        case driverId            = "driver_id"
+        case latitude, longitude
+        case distanceFromCenter  = "distance_from_center"
+        case fenceRadius         = "fence_radius"
+        case occurredAt          = "occurred_at"
+    }
+}
