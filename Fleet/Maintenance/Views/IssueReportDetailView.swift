@@ -115,7 +115,7 @@ struct IssueReportDetailView: View {
     func statusColor(_ s: String) -> Color {
         switch s.lowercased() {
         case "open", "assigned": return Color.blue
-        case "in_progress": return Color.yellow
+        case "in_progress": return Color.orange
         case "resolved", "closed": return Color.green
         default: return Color.secondary
         }
@@ -144,7 +144,7 @@ struct IssueReportDetailView: View {
     func severityColor(_ p: String) -> Color {
         switch p.lowercased() {
         case "critical": return Color.red
-        case "high": return Color.yellow
+        case "high": return Color.orange
         case "medium": return Color.blue
         case "low": return Color.green
         default: return Color.secondary
@@ -198,5 +198,23 @@ private struct ActionButton: View {
             )
 
         }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        IssueReportDetailView(
+            report: IssueReportRecord(
+                id: UUID(uuidString: "d1111111-2222-3333-4444-555555555555") ?? UUID(),
+                vehicleId: UUID(uuidString: "e2222222-3333-4444-5555-666666666666") ?? UUID(),
+                reportedBy: UUID(uuidString: "f3333333-4444-5555-6666-777777777777") ?? UUID(),
+                category: "Engine",
+                severity: "high",
+                description: "Check engine light is flashing and the engine is making a loud knocking sound from the cylinder block.",
+                status: "open",
+                assignedTo: nil,
+                createdAt: Date()
+            )
+        )
     }
 }

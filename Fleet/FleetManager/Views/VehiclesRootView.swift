@@ -1,13 +1,23 @@
 import SwiftUI
+internal import Auth   // needed for user.id from Supabase Auth module
 
 struct VehiclesRootView: View {
     @State private var vehiclesViewModel = VehiclesViewModel()
     @State private var isShowingAddVehicle = false
+    @Environment(AuthViewModel.self) private var authViewModel
 
     var body: some View {
         ZStack {
             Color(.systemGroupedBackground).ignoresSafeArea()
-            VehiclesView(viewModel: vehiclesViewModel)
+            if let error = vehiclesViewModel.errorMessage {
+                ContentUnavailableView(
+                    "Error Loading Data",
+                    systemImage: "exclamationmark.triangle",
+                    description: Text(error)
+                )
+            } else {
+                VehiclesView(viewModel: vehiclesViewModel)
+            }
         }
         .navigationTitle("Vehicles")
         .toolbar {
@@ -17,7 +27,6 @@ struct VehiclesRootView: View {
                         .font(.system(size: 17, weight: .medium))
                         .foregroundStyle(Color.primary)
                         .frame(width: 38, height: 38)
-//                        .background(.ultraThinMaterial, in: Circle())
                 }
                 .buttonStyle(.plain)
             }
@@ -29,8 +38,9 @@ struct VehiclesRootView: View {
             AddVehicleView(viewModel: vehiclesViewModel)
         }
         .task {
-            await vehiclesViewModel.loadData()
-            vehiclesViewModel.setupRealtime()
+            let adminId = authViewModel.currentUser?.id
+            await vehiclesViewModel.loadData(adminId: adminId)
+            vehiclesViewModel.setupRealtime(adminId: adminId)
         }
     }
 }

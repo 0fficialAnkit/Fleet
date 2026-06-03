@@ -5,7 +5,7 @@ struct VehicleDetailView: View {
     let viewModel: VehiclesViewModel
 
     @State private var isShowingEdit = false
-    @State private var isExporting = false
+    @State private var deleteError: String?
     @Environment(\.dismiss) private var dismiss
 
     var driverName: String {
@@ -26,12 +26,12 @@ struct VehicleDetailView: View {
                     VStack(spacing: 8) {
                         Image(systemName: "truck.box.fill")
                             .font(.system(size: 60))
-                            .foregroundColor(Color.teal)
+                            .foregroundStyle(Color.teal)
                             .padding(.bottom, 8)
 
                         Text("\(vehicle.make ?? "Unknown") \(vehicle.model ?? "")")
                             .font(.title.bold())
-                            .foregroundColor(Color.primary)
+                            .foregroundStyle(Color.primary)
 
                         StatusBadge(text: vehicle.licensePlate ?? "No License Plate", color: Color.teal)
                     }
@@ -43,6 +43,8 @@ struct VehicleDetailView: View {
                             InfoRow(icon: "building.2", label: "Manufacturer", value: vehicle.make ?? "N/A")
                             Divider().background(Color(.separator))
                             InfoRow(icon: "tag", label: "Model", value: vehicle.model ?? "N/A")
+                            Divider().background(Color(.separator))
+                            InfoRow(icon: "number", label: "License Plate", value: vehicle.licensePlate ?? "N/A")
                             Divider().background(Color(.separator))
                             InfoRow(icon: "calendar", label: "Year", value: vehicle.year != nil ? String(vehicle.year!) : "N/A")
                             Divider().background(Color(.separator))
@@ -57,6 +59,50 @@ struct VehicleDetailView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .padding(.horizontal, 16)
 
+                    // Compliance & Reminders
+                    VStack(alignment: .leading, spacing: 8) {
+                        SectionHeader(title: "Compliance & Reminders")
+                            .padding(.horizontal, 16)
+                        VehicleComplianceSection(vehicle: vehicle, editable: true)
+                            .padding(.horizontal, 16)
+                    }
+
+                    // Usage Report
+                    VStack(alignment: .leading, spacing: 8) {
+                        SectionHeader(title: "Usage Report")
+                            .padding(.horizontal, 16)
+                        
+                        NavigationLink(destination: UsageReportView(vehicle: vehicle, viewModel: viewModel)) {
+                            HStack(spacing: 16) {
+                                Circle()
+                                    .fill(Color.teal.opacity(0.1))
+                                    .frame(width: 44, height: 44)
+                                    .overlay(
+                                        Image(systemName: "chart.pie.fill")
+                                            .foregroundStyle(Color.teal)
+                                            .font(.system(size: 20))
+                                    )
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("View Analytics")
+                                        .font(.headline)
+                                        .foregroundStyle(Color.primary)
+                                    Text("Distance, trips, and insights")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Color(.tertiaryLabel))
+                            }
+                            .padding(16)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        }
+                        .padding(.horizontal, 16)
+                    }
+
                     // Assigned Driver Card
                     VStack(alignment: .leading, spacing: 8) {
                         SectionHeader(title: "Current Driver")
@@ -68,13 +114,13 @@ struct VehicleDetailView: View {
                                     .frame(width: 40, height: 40)
                                     .overlay(
                                         Image(systemName: "person.crop.circle.fill")
-                                            .foregroundColor(Color.teal)
+                                            .foregroundStyle(Color.teal)
                                             .font(.system(size: 20))
                                     )
 
                                 Text(driverName)
                                     .font(.body)
-                                    .foregroundColor(Color.primary)
+                                    .foregroundStyle(Color.primary)
 
                                 Spacer()
                             }
@@ -92,7 +138,7 @@ struct VehicleDetailView: View {
                         if pastTrips.isEmpty {
                             Text("No past trips recorded.")
                                 .font(.subheadline.weight(.medium))
-                                .foregroundColor(Color.secondary)
+                                .foregroundStyle(Color.secondary)
                                 .padding(.horizontal, 16)
                         } else {
                             ForEach(pastTrips) { trip in
@@ -103,28 +149,6 @@ struct VehicleDetailView: View {
                     }
                 }
                 .padding(.bottom, 40)
-            }
-            .overlay {
-                if isExporting {
-                    ZStack {
-                        Color.black.opacity(0.15)
-                            .ignoresSafeArea()
-                        
-                        VStack(spacing: 12) {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .scaleEffect(1.2)
-                            Text("Generating Document...")
-                                .font(.subheadline)
-                                .foregroundStyle(.white)
-                                .fontWeight(.medium)
-                        }
-                        .padding(24)
-                        .background(.ultraThinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .shadow(color: Color.black.opacity(0.15), radius: 10, y: 5)
-                    }
-                }
             }
         }
         .navigationTitle("Details")
@@ -137,20 +161,6 @@ struct VehicleDetailView: View {
                     }) {
                         Label("Edit", systemImage: "pencil")
                     }
-                    
-                    Button(action: {
-                        exportCSV()
-                    }) {
-                        Label("Export CSV", systemImage: "tablecells.fill")
-                    }
-
-                    Button(action: {
-                        Task {
-                            await exportPDF()
-                        }
-                    }) {
-                        Label("Export PDF", systemImage: "doc.text.fill")
-                    }
 
                     Button(role: .destructive, action: {
                         Task {
@@ -158,7 +168,7 @@ struct VehicleDetailView: View {
                                 try await viewModel.deleteVehicle(vehicle)
                                 dismiss()
                             } catch {
-                                viewModel.errorMessage = error.localizedDescription
+                                deleteError = error.localizedDescription
                             }
                         }
                     }) {
@@ -166,7 +176,6 @@ struct VehicleDetailView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 17, weight: .medium))
                         .foregroundStyle(Color.primary)
                 }
             }
@@ -174,43 +183,16 @@ struct VehicleDetailView: View {
         .sheet(isPresented: $isShowingEdit) {
             EditVehicleView(viewModel: viewModel, vehicle: vehicle)
         }
-    }
-    
-    private func exportCSV() {
-        isExporting = true
-        Task {
-            let driver = viewModel.getDriver(for: vehicle.assignedDriverId)
-            let name = driver?.fullName ?? "Unassigned"
-            let history = (try? await MaintenanceHistoryService.fetchHistory(vehicleId: vehicle.id)) ?? []
-            
-            if let url = CSVGenerator.generateVehicleCSV(
-                vehicle: vehicle,
-                driverName: name,
-                pastTrips: pastTrips,
-                maintenanceHistory: history,
-                profiles: viewModel.profiles
-            ) {
-                ShareSheet.share(items: [url])
+        .alert("Unable to Delete Vehicle", isPresented: Binding(
+            get: { deleteError != nil },
+            set: { if !$0 { deleteError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            if let msg = deleteError {
+                Text(msg)
             }
-            isExporting = false
         }
-    }
-    
-    private func exportPDF() async {
-        isExporting = true
-        let driver = viewModel.getDriver(for: vehicle.assignedDriverId)
-        let history = (try? await MaintenanceHistoryService.fetchHistory(vehicleId: vehicle.id)) ?? []
-        
-        if let url = await PDFGenerator.generateVehicleReportPDF(
-            vehicle: vehicle,
-            driver: driver,
-            pastTrips: pastTrips,
-            maintenanceHistory: history,
-            profiles: viewModel.profiles
-        ) {
-            ShareSheet.share(items: [url])
-        }
-        isExporting = false
     }
 }
 
@@ -227,23 +209,23 @@ struct TripHistoryRow: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Image(systemName: "map.fill")
-                        .foregroundColor(Color.blue)
+                        .foregroundStyle(Color.blue)
                     Text("Distance: \(String(format: "%.1f", trip.distance ?? 0)) km")
                         .font(.body.bold())
-                        .foregroundColor(Color.primary)
+                        .foregroundStyle(Color.primary)
                     Spacer()
                     Text(trip.endTime?.formatted(date: .abbreviated, time: .shortened) ?? "")
                         .font(.caption)
-                        .foregroundColor(Color(.tertiaryLabel))
+                        .foregroundStyle(Color(.tertiaryLabel))
                 }
 
                 HStack {
                     Image(systemName: "person.fill")
-                        .foregroundColor(Color.secondary)
+                        .foregroundStyle(Color.secondary)
                         .font(.system(size: 14))
                     Text("Driver: \(driverName)")
                         .font(.subheadline)
-                        .foregroundColor(Color.secondary)
+                        .foregroundStyle(Color.secondary)
                 }
             }
             .padding(16)

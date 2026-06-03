@@ -3,284 +3,344 @@ import MapKit
 
 struct TripDetailView: View {
 
-    let trip: Trip
-    let onStart: (UUID, UUID, String, [String]) -> Void
-    let onEnd: (UUID, UUID, String, [String]) -> Void
+    let trip:          Trip
+    let onStart:       (UUID, UUID, String, [String]) -> Void
+    let onEnd:         (UUID, UUID, Double?, String, [String]) -> Void
+    var onPickupDone:  ((UUID, UUID) -> Void)? = nil
+    var onDropoffDone: ((UUID, UUID, UUID?) -> Void)? = nil   // tripId, vehicleId, dropoffGeofenceId
 
-    // Local status so UI reacts immediately after start/end
-    @State private var currentStatus: TripStatus?
+    @State private var currentStatus:    TripStatus?
     @State private var showingChecklist: InspectionType? = nil
+    @State private var pickupCompleted  = false
+    @State private var dropoffCompleted = false
 
-    // Route loaded from Supabase
-    @State private var route: Route?
-    @State private var vehicle: Vehicle?
-    @State private var mapView: TripRouteMapView?
+    // Zone entry — gated by geofence "enter" events from Supabase
+    @State private var inPickupZone      = false
+    @State private var inDropoffZone     = false
+    @State private var dropoffGeofenceId: UUID? = nil   // cached when dropoff zone fires
+    @State private var zoneTask: Task<Void, Never>? = nil
 
-    init(trip: Trip, onStart: @escaping (UUID, UUID, String, [String]) -> Void, onEnd: @escaping (UUID, UUID, String, [String]) -> Void) {
-        self.trip = trip
-        self.onStart = onStart
-        self.onEnd = onEnd
+    // Brief confirmation banners
+    @State private var showPickupBanner  = false
+    @State private var showDropoffBanner = false
+
+    @State private var route:             Route?
+    @State private var vehicle:           Vehicle?
+    @State private var estimatedDistance: Double?
+    @State private var incidents:         [TripIncident] = []
+
+    init(trip: Trip,
+         onStart:       @escaping (UUID, UUID, String, [String]) -> Void,
+         onEnd:         @escaping (UUID, UUID, Double?, String, [String]) -> Void,
+         onPickupDone:  ((UUID, UUID) -> Void)? = nil,
+         onDropoffDone: ((UUID, UUID, UUID?) -> Void)? = nil) {
+        self.trip          = trip
+        self.onStart       = onStart
+        self.onEnd         = onEnd
+        self.onPickupDone  = onPickupDone
+        self.onDropoffDone = onDropoffDone
         self._currentStatus = State(initialValue: trip.status)
     }
 
-    // MARK: - Computed helpers
+    // MARK: - Computed
 
-    var statusColor: Color {
-        switch currentStatus {
-        case .scheduled: return Color.yellow
-        case .active:    return Color.green
-        case .completed: return Color.green
-        case .cancelled: return Color.red
-        default:         return Color(UIColor.quaternaryLabel)
-        }
-    }
+    var isScheduled: Bool { currentStatus == .scheduled }
+    var isActive:    Bool { currentStatus == .active    }
+    var isCompleted: Bool { currentStatus == .completed }
 
-    var statusText: String {
-        switch currentStatus {
-        case .scheduled: return "Pending"
-        case .active:    return "In Progress"
-        case .completed: return "Completed"
-        case .cancelled: return "Cancelled"
-        default:         return "Unknown"
-        }
+    var distanceText: String {
+        if let d = trip.distance     { return String(format: "%.1f km", d) }
+        if let d = estimatedDistance { return String(format: "%.1f km", d) }
+        return "Calculating…"
     }
 
     // MARK: - Body
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 24) {
+        List {
 
-                // ── Header ─────────────────────────────────────────
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Route #\(trip.id.uuidString.prefix(6).uppercased())")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color.primary)
-                        StatusBadge(text: statusText, color: statusColor)
-                    }
-                    Spacer()
-                    ZStack {
-                        Circle()
-                            .fill(Color.green.opacity(0.12))
-                            .frame(width: 56, height: 56)
-                        Image(systemName: "truck.box.fill")
-                            .font(.system(size: 26))
-                            .foregroundStyle(Color.green)
-                    }
-                }
-
-                Divider()
-                    .overlay(Color(UIColor.separator))
-
-                // ── Date & Time ────────────────────────────────────
-                sectionTitle("Schedule")
-
-                HStack(spacing: 12) {
-                    infoTile(
-                        icon: "calendar",
-                        label: "Date",
-                        value: trip.startTime?.formatted(date: .abbreviated, time: .omitted) ?? "Today",
-                        color: Color.purple
-                    )
-                    infoTile(
-                        icon: "clock.fill",
-                        label: "Start Time",
-                        value: trip.startTime?.formatted(date: .omitted, time: .shortened) ?? "09:00 AM",
-                        color: Color.green
-                    )
-                    infoTile(
-                        icon: "clock.badge.checkmark.fill",
-                        label: "Est. End",
-                        value: trip.endTime?.formatted(date: .omitted, time: .shortened) ?? "N/A",
-                        color: Color.green
-                    )
-                }
-
-                // ── Route ──────────────────────────────────────────
-                sectionTitle("Route Details")
-
-                VStack(alignment: .leading, spacing: 0) {
-                    // Origin
-                    HStack(spacing: 14) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.green.opacity(0.15))
-                                .frame(width: 40, height: 40)
-                            Image(systemName: "circle.fill")
-                                .font(.system(size: 12))
-                                .foregroundStyle(Color.green)
-                        }
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Pickup / Origin")
-                                .font(.system(size: 16, weight: .regular, design: .rounded))
-                                .foregroundStyle(Color.secondary)
-                            Text(route?.startLocation ?? "No start location")
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
-                                .foregroundStyle(Color.primary)
-                        }
-                        Spacer()
-                    }
-
-                    // Connector line
-                    Rectangle()
-                        .fill(Color(UIColor.separator))
-                        .frame(width: 2, height: 32)
-                        .padding(.leading, 19)
-
-                    // Destination
-                    HStack(spacing: 14) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.red.opacity(0.15))
-                                .frame(width: 40, height: 40)
-                            Image(systemName: "mappin.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundStyle(Color.red)
-                        }
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Drop-off / Destination")
-                                .font(.system(size: 16, weight: .regular, design: .rounded))
-                                .foregroundStyle(Color.secondary)
-                            Text(route?.endLocation ?? "No destination")
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
-                                .foregroundStyle(Color.primary)
-                        }
-                        Spacer()
-                    }
-                }
-                .padding(16)
-                .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                )
-                .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
-
-                // ── Distance Info ──────────────────────────────────
-                HStack(spacing: 12) {
-                    infoTile(
-                        icon: "road.lanes",
-                        label: "Distance",
-                        value: trip.distance != nil ? String(format: "%.1f km", trip.distance!) : "N/A",
-                        color: Color.yellow
-                    )
-                    infoTile(
-                        icon: "timer",
-                        label: "Est. Duration",
-                        value: "N/A",
-                        color: Color.purple
-                    )
-                }
-
-                // ── Assigned Vehicle ───────────────────────────────
-                sectionTitle("Assigned Vehicle")
-
-                if let vehicle {
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack(spacing: 16) {
-                            Image(systemName: "truck.box.fill")
-                                .font(.system(size: 24))
-                                .foregroundStyle(Color.green)
-                                .frame(width: 44, height: 44)
-                                .background(Color.green.opacity(0.12))
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("\(vehicle.make ?? "Vehicle") \(vehicle.model ?? "")")
-                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(Color.primary)
-                                Text(vehicle.licensePlate ?? "—")
-                                    .font(.system(size: 16, weight: .regular, design: .rounded))
-                                    .foregroundStyle(Color.secondary)
-                            }
-                            Spacer()
-                        }
-
-                        Divider().background(Color(UIColor.separator))
-
-                        HStack(spacing: 16) {
-                            NavigationLink(value: DriverDestination.vehicleDetail(vehicle)) {
-                                Label("View Details", systemImage: "info.circle")
-                                    .font(.system(size: 16, weight: .regular, design: .rounded))
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(Color.green)
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 12)
-                                    .background(Color.green.opacity(0.08))
-                                    .clipShape(Capsule())
-                            }
-                            .buttonStyle(.plain)
-
-                            NavigationLink(value: DriverDestination.reportIssue(vehicle)) {
-                                Label("Report Issue", systemImage: "exclamationmark.triangle")
-                                    .font(.system(size: 16, weight: .regular, design: .rounded))
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(Color.red)
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 12)
-                                    .background(Color.red.opacity(0.08))
-                                    .clipShape(Capsule())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(16)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                    )
-                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
-                } else {
-                    HStack {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                        Text("Loading vehicle info...")
-                            .font(.system(size: 16, weight: .regular, design: .rounded))
-                            .foregroundStyle(Color.secondary)
-                    }
-                    .padding(16)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                    )
-                }
-
-                // ── Route Map ─────────────────────────────────────
-                sectionTitle("Route Map")
-
+            // ── 1. Map ────────────────────────────────────────────────────
+            Section {
                 TripRouteMapView(
                     startAddress: route?.startLocation,
                     endAddress:   route?.endLocation
                 )
-
-                // ── Action Buttons ─────────────────────────────────
-                actionSection
+                .frame(height: 200)
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
             }
-            .padding()
+
+
+            // ── 4. Route ─────────────────────────────────────────────────
+            Section("Route") {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Pickup").font(.caption).foregroundStyle(.secondary)
+                        Text(route?.startLocation ?? "Loading…")
+                    }
+                } icon: {
+                    Image(systemName: "circle.fill")
+                        .font(.system(size: 10)).foregroundStyle(.green)
+                        .frame(width: 28, height: 28)
+                        .background(Color.green.opacity(0.12), in: Circle())
+                }
+
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Drop-off").font(.caption).foregroundStyle(.secondary)
+                        Text(route?.endLocation ?? "Loading…")
+                    }
+                } icon: {
+                    Image(systemName: "mappin")
+                        .font(.system(size: 13, weight: .semibold)).foregroundStyle(.red)
+                        .frame(width: 28, height: 28)
+                        .background(Color.red.opacity(0.12), in: Circle())
+                }
+            }
+
+            // ── 5. Details ───────────────────────────────────────────────
+            Section("Details") {
+                if let start = trip.startTime {
+                    LabeledContent { Text(start.formatted(date: .abbreviated, time: .omitted)) }
+                    label: { Label("Date",       systemImage: "calendar") }
+
+                    LabeledContent { Text(start.formatted(date: .omitted, time: .shortened)) }
+                    label: { Label("Start Time", systemImage: "clock") }
+                }
+
+                LabeledContent { Text(distanceText) }
+                label: { Label("Distance",   systemImage: "road.lanes") }
+
+                if let t = trip.orderType {
+                    LabeledContent { Text(t.displayName) }
+                    label: { Label("Order Type", systemImage: "shippingbox") }
+                }
+            }
+
+            // ── 6. Vehicle ───────────────────────────────────────────────
+            Section("Vehicle") {
+                if let v = vehicle {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(v.make ?? "") \(v.model ?? "")").font(.body)
+                            Text(v.licensePlate ?? "—").font(.caption).foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "truck.box.fill")
+                            .foregroundStyle(.green).font(.title3).frame(width: 28)
+                    }
+
+                    NavigationLink(destination: DriverVehicleDetailView(vehicle: v)) {
+                        Label("Vehicle Details", systemImage: "info.circle")
+                    }
+
+                    if !isActive {
+                        NavigationLink(destination: DriverReportIssueView(vehicle: v)) {
+                            Label("Report Vehicle Issue",
+                                  systemImage: "exclamationmark.triangle")
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                } else {
+                    Label("Loading vehicle info…", systemImage: "truck.box")
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            // ── 7. Pre-trip checklist button — below vehicle, scheduled only ─
+            if isScheduled {
+                Section {
+                    Button {
+                        showingChecklist = .preTrip
+                    } label: {
+                        Label("Start Pre-Trip Checklist", systemImage: "checklist")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                    .controlSize(.large)
+                    .buttonBorderShape(.capsule)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+            }
+
+            // ── 8. In-trip actions ────────────────────────────────────────
+            if isActive {
+
+                Section {
+                    // ── Pickup toggle ─────────────────────────────────────
+                    TripZoneToggleRow(
+                        label:    "Pickup",
+                        locked:   !inPickupZone,
+                        done:     pickupCompleted,
+                        tint:     .green,
+                        lockHint: "Enter the pickup zone to enable",
+                        doneHint: "Pickup confirmed"
+                    ) {
+                        withAnimation(.spring(response: 0.3)) { pickupCompleted = true }
+                        onPickupDone?(trip.id, trip.vehicleId)
+                        withAnimation(.spring(response: 0.4)) { showPickupBanner = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+                            withAnimation(.easeOut) { showPickupBanner = false }
+                        }
+                    }
+
+                    // ── Drop-off toggle (only after pickup confirmed) ──────
+                    if pickupCompleted {
+                        TripZoneToggleRow(
+                            label:    "Drop-off",
+                            locked:   !inDropoffZone,
+                            done:     dropoffCompleted,
+                            tint:     .indigo,
+                            lockHint: "Enter the drop-off zone to enable",
+                            doneHint: "Drop-off confirmed — tap End Trip to finish"
+                        ) {
+                            withAnimation(.spring(response: 0.3)) { dropoffCompleted = true }
+                            onDropoffDone?(trip.id, trip.vehicleId, dropoffGeofenceId)
+                        }
+                    }
+                }
+
+                // End Trip — appears after drop-off toggle is confirmed
+                if dropoffCompleted {
+                    Section {
+                        Button {
+                            showingChecklist = .postTrip
+                        } label: {
+                            Label("End Trip", systemImage: "checkmark.seal.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.red)
+                        .controlSize(.large)
+                        .buttonBorderShape(.capsule)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .transition(.asymmetric(
+                            insertion: .push(from: .bottom).combined(with: .opacity),
+                            removal: .opacity))
+                    }
+                }
+
+                // Report Incident — bordered capsule, always visible
+                Section {
+                    NavigationLink(destination: DriverReportIncidentView(trip: trip)) {
+                        Label("Report Incident",
+                              systemImage: "exclamationmark.triangle.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.orange)
+                    .controlSize(.large)
+                    .buttonBorderShape(.capsule)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
+            }
+
+            // ── 8. Incidents ─────────────────────────────────────────────
+            if !incidents.isEmpty {
+                Section("Incident History") {
+                    ForEach(incidents) { incident in
+                        Label {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(incident.incidentType)
+                                    .font(.subheadline.weight(.medium))
+                                Text(incident.description)
+                                    .font(.caption).foregroundStyle(.secondary)
+                                if let d = incident.createdAt {
+                                    Text(d.formatted(date: .abbreviated, time: .shortened))
+                                        .font(.caption2).foregroundStyle(.tertiary)
+                                }
+                            }
+                        } icon: {
+                            Image(systemName: TripIncidentType(rawValue: incident.incidentType)?.icon
+                                             ?? "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                }
+            }
+
+            // ── 9. Completed ─────────────────────────────────────────────
+            if isCompleted {
+                Section {
+                    Label("Trip completed successfully",
+                          systemImage: "checkmark.seal.fill")
+                        .foregroundStyle(.green)
+                        .listRowBackground(Color.green.opacity(0.08))
+                }
+            }
         }
-        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+        .listStyle(.insetGrouped)
         .navigationTitle("Trip Details")
+        // ── Pickup confirmation banner ─────────────────────────────────
+        .overlay(alignment: .top) {
+            if showPickupBanner {
+                HStack(spacing: 10) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title3)
+                    Text("Pickup Done")
+                        .font(.headline)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 14)
+                .background(.green, in: Capsule())
+                .padding(.top, 12)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(1)
+            }
+        }
+        .animation(.spring(response: 0.4), value: showPickupBanner)
         .navigationBarTitleDisplayMode(.large)
         .task {
-            // Load route and vehicle details
-            async let fetchedRoute = trip.routeId != nil ? RouteService.fetchRoute(id: trip.routeId!) : nil
-            async let fetchedVehicle = VehicleService.fetchVehicle(id: trip.vehicleId)
-
-            route = try? await fetchedRoute
-            vehicle = try? await fetchedVehicle
+            async let r = trip.routeId != nil ? RouteService.fetchRoute(id: trip.routeId!) : nil
+            async let v = VehicleService.fetchVehicle(id: trip.vehicleId)
+            route   = try? await r
+            vehicle = try? await v
+            if let s = route?.startLocation, let e = route?.endLocation {
+                await calculateDistance(from: s, to: e)
+            }
+            // Restore state from Supabase
+            await refreshZoneStatus()
+            // Subscribe to geofence events for live zone entry detection
+            if trip.status == .active {
+                startZonePolling()
+                RealtimeManager.shared.addGeofenceEventsChangeHandler {
+                    Task { await self.refreshZoneStatus() }
+                }
+            }
+        }
+        .onAppear {
+            Task { incidents = (try? await TripIncidentService.fetchIncidents(forTripId: trip.id)) ?? [] }
+        }
+        // Instant unlock when zone is entered — cache fenceId for direct use in toggle
+        .onReceive(NotificationCenter.default.publisher(for: .gfZoneEntered)) { note in
+            guard let type = note.userInfo?["zoneType"] as? String else { return }
+            let fenceIdStr = note.userInfo?["geofenceId"] as? String
+            withAnimation(.spring(response: 0.35)) {
+                if type == "pickup"  { inPickupZone  = true }
+                if type == "dropoff" {
+                    inDropoffZone    = true
+                    // Cache the exact geofenceId — avoids any DB lookup when toggle is flipped
+                    if let s = fenceIdStr { dropoffGeofenceId = UUID(uuidString: s) }
+                }
+            }
+        }
+        .onDisappear {
+            zoneTask?.cancel()
+            zoneTask = nil
         }
         .sheet(item: $showingChecklist) { type in
-            DriverChecklistView(checklistType: type) { notes, urls in
+            DriverChecklistView(checklistType: type, vehicle: vehicle) { notes, urls in
                 if type == .preTrip {
                     onStart(trip.id, trip.vehicleId, notes, urls)
                     withAnimation { currentStatus = .active }
-                    // Open Apple Maps with turn-by-turn navigation to destination
                     openMapsNavigation()
                 } else {
-                    onEnd(trip.id, trip.vehicleId, notes, urls)
+                    onEnd(trip.id, trip.vehicleId, estimatedDistance, notes, urls)
                     withAnimation { currentStatus = .completed }
                 }
                 showingChecklist = nil
@@ -288,171 +348,106 @@ struct TripDetailView: View {
         }
     }
 
-    // MARK: - Action Section
+    // MARK: - Zone status (gates button visibility)
 
-    @ViewBuilder
-    var actionSection: some View {
-        switch currentStatus {
-        case .scheduled:
-            Button {
-                showingChecklist = .preTrip
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "play.fill")
-                    Text("Start Trip")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                }
-                .frame(maxWidth: .infinity)
-                .padding(16)
-                .background(Color.green)
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+    /// Reads geofence events from Supabase and updates inPickupZone / inDropoffZone.
+    /// Also restores pickupCompleted so the correct phase shows after app restart.
+    private func refreshZoneStatus() async {
+        let fences = (try? await GeofenceService.fetchAllGeofences(forTrip: trip.id)) ?? []
+        guard !fences.isEmpty else { return }
+
+        let pFence = fences.first(where: { $0.zoneType == "pickup"  })
+        let dFence = fences.first(where: { $0.zoneType == "dropoff" })
+        let fenceIds = Set(fences.map { $0.id })
+
+        let all    = (try? await GeofenceService.fetchEvents(forVehicle: trip.vehicleId, limit: 30)) ?? []
+        let events = all.filter { fenceIds.contains($0.geofenceId) }
+
+        withAnimation(.spring(response: 0.35)) {
+            // Driver entered pickup zone?
+            inPickupZone = events.contains {
+                $0.geofenceId == pFence?.id && $0.eventType == "enter"
             }
-            .shadow(color: Color.green.opacity(0.35), radius: 10, y: 4)
-
-        case .active:
-            VStack(spacing: 12) {
-                // In-progress banner
-                HStack(spacing: 10) {
-                    Image(systemName: "bolt.fill")
-                        .foregroundStyle(Color.green)
-                    Text("Trip is currently in progress")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundStyle(Color.green)
-                    Spacer()
-                }
-                .padding(16)
-                .background(Color.green.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                // End Trip button
-                Button {
-                    showingChecklist = .postTrip
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "stop.fill")
-                        Text("End Trip")
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(16)
-                    .background(Color.red)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .shadow(color: Color.red.opacity(0.35), radius: 10, y: 4)
+            // Driver entered dropoff zone?
+            inDropoffZone = events.contains {
+                $0.geofenceId == dFence?.id && $0.eventType == "enter"
             }
-
-        case .completed:
-            HStack(spacing: 10) {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(Color.green)
-                Text("Trip completed successfully")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.green)
-                Spacer()
+            // Pickup already completed?
+            if !pickupCompleted {
+                pickupCompleted = events.contains {
+                    $0.geofenceId == pFence?.id && $0.eventType == "pickup_done"
+                }
             }
-            .padding(16)
-            .background(Color.green.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-
-        default:
-            EmptyView()
+            // Drop-off already completed?
+            if !dropoffCompleted {
+                dropoffCompleted = events.contains {
+                    $0.geofenceId == dFence?.id && $0.eventType == "dropoff_done"
+                }
+            }
         }
     }
 
-    // MARK: - Subviews
-
-    @ViewBuilder
-    func sectionTitle(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 18, weight: .semibold, design: .rounded))
-            .foregroundStyle(Color.primary)
+    private func startZonePolling() {
+        zoneTask?.cancel()
+        zoneTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { break }
+                await refreshZoneStatus()
+            }
+        }
     }
 
-    // MARK: - Apple Maps Navigation
+    // MARK: - Helpers
 
-    /// Geocodes both the fleet-manager-specified start and end locations,
-    /// then opens Apple Maps with the exact route the fleet manager defined.
     private func openMapsNavigation() {
-        guard let startAddr = route?.startLocation, !startAddr.isEmpty,
-              let endAddr   = route?.endLocation,   !endAddr.isEmpty
-        else { return }
-
+        guard let s = route?.startLocation, !s.isEmpty,
+              let e = route?.endLocation,   !e.isEmpty else { return }
         Task {
-            async let sourceResult = geocodeAddress(startAddr)
-            async let destResult   = geocodeAddress(endAddr)
-
-            guard let sourceItem = await sourceResult,
-                  let destItem   = await destResult
-            else { return }
-
-            sourceItem.name = startAddr
-            destItem.name   = endAddr
-
-            MKMapItem.openMaps(
-                with: [sourceItem, destItem],
-                launchOptions: [
-                    MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving,
-                    MKLaunchOptionsShowsTrafficKey: true
-                ]
-            )
+            async let si = geocodeAddress(s); async let di = geocodeAddress(e)
+            guard let src = await si, let dst = await di else { return }
+            src.name = s; dst.name = e
+            MKMapItem.openMaps(with: [src, dst], launchOptions: [
+                MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving,
+                MKLaunchOptionsShowsTrafficKey: true
+            ])
         }
     }
 
     private func geocodeAddress(_ address: String) async -> MKMapItem? {
-        let req = MKLocalSearch.Request()
-        req.naturalLanguageQuery = address
-        req.resultTypes = .address
+        if let range = address.range(of: "@latlng:") {
+            let parts = address[range.upperBound...].components(separatedBy: ",")
+            if parts.count == 2,
+               let lat = Double(parts[0].trimmingCharacters(in: .whitespacesAndNewlines)),
+               let lon = Double(parts[1].trimmingCharacters(in: .whitespacesAndNewlines)) {
+                let item = MKMapItem(placemark: MKPlacemark(coordinate: .init(latitude: lat, longitude: lon)))
+                item.name = address[..<range.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
+                return item
+            }
+        }
+        let req = MKLocalSearch.Request(); req.naturalLanguageQuery = address
         return try? await MKLocalSearch(request: req).start().mapItems.first
     }
 
-    @ViewBuilder
-    func infoTile(icon: String, label: String, value: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 16))
-                .foregroundStyle(color)
-            Text(label)
-                .font(.system(size: 16, weight: .regular, design: .rounded))
-                .foregroundStyle(Color.secondary)
-            Text(value)
-                .font(.system(size: 16, weight: .medium, design: .rounded))
-                .foregroundStyle(Color.primary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+    private func calculateDistance(from s: String, to e: String) async {
+        guard let si = await geocodeAddress(s), let ei = await geocodeAddress(e) else { return }
+        let req = MKDirections.Request()
+        req.source = si; req.destination = ei; req.transportType = .automobile
+        if let r = try? await MKDirections(request: req).calculate().routes.first {
+            await MainActor.run { estimatedDistance = r.distance / 1000.0 }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(color.opacity(0.2), lineWidth: 1)
-        )
     }
 }
-
-// MARK: - Preview
 
 #Preview {
     NavigationStack {
         TripDetailView(
-            trip: Trip(
-                id: UUID(),
-                vehicleId: UUID(),
-                driverId: UUID(),
-                routeId: UUID(),
-                startTime: Date(),
-                endTime: nil,
-                distance: nil,
-                status: .scheduled,
-                orderType: .pickUpAndDrop
-            ),
+            trip: Trip(id: UUID(), vehicleId: UUID(), driverId: UUID(), routeId: UUID(),
+                       startTime: Date(), endTime: nil, distance: nil,
+                       status: .scheduled, orderType: .pickUpAndDrop),
             onStart: { _, _, _, _ in },
-            onEnd:   { _, _, _, _ in }
+            onEnd:   { _, _, _, _, _ in }
         )
     }
     .environment(AuthViewModel())
 }
-
-

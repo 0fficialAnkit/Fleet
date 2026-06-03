@@ -45,7 +45,7 @@ final class OrdersViewModel {
     func getStatusColor(for status: TripStatus?) -> Color {
         switch status {
         case .scheduled: return Color.blue
-        case .active: return Color.yellow
+        case .active: return Color.green
         case .completed: return Color.green
         case .cancelled: return Color.red
         case .none: return Color(.quaternaryLabel)
@@ -69,13 +69,56 @@ final class OrdersViewModel {
         return "\(v.make ?? "") \(v.model ?? "")"
     }
 
-    /// Returns all profiles with role == "driver"
+    // MARK: - Legacy helpers (used by old multi-step flow views)
+
+    /// Returns all driver profiles with no date-based conflict filtering.
     func driversWithRole() -> [Profile] {
         profiles.filter { $0.role == "driver" }
     }
 
+    /// Returns all active vehicles with no date conflict filtering.
     func availableVehicles(for orderType: OrderType) -> [Vehicle] {
         vehicles.filter { $0.status == .active }
+    }
+
+    // MARK: - Conflict-aware availability
+
+    /// Vehicles that are active status AND not already on a trip on the given date.
+    /// - Active trips block the vehicle regardless of date (they're in use right now).
+    /// - Scheduled trips block only when the selected date falls on the same calendar day.
+    func availableVehicles(for orderType: OrderType, at date: Date) -> [Vehicle] {
+        let busyIds = busyVehicleIds(at: date)
+        return vehicles.filter { $0.status == .active && !busyIds.contains($0.id) }
+    }
+
+    /// Drivers that are not already assigned to a trip on the given date.
+    func availableDrivers(at date: Date) -> [Profile] {
+        let busyIds = busyDriverIds(at: date)
+        return profiles.filter { $0.role == "driver" && !busyIds.contains($0.id) }
+    }
+
+    private func busyVehicleIds(at date: Date) -> Set<UUID> {
+        Set(trips.filter { isConflicting($0, with: date) }.map { $0.vehicleId })
+    }
+
+    private func busyDriverIds(at date: Date) -> Set<UUID> {
+        Set(trips.filter { isConflicting($0, with: date) }.compactMap { $0.driverId })
+    }
+
+    /// Returns true if a trip blocks usage on the given date.
+    private func isConflicting(_ trip: Trip, with date: Date) -> Bool {
+        switch trip.status {
+        case .active:
+            // Currently running — always blocks, regardless of selected date
+            return true
+        case .scheduled:
+            // Only blocks if the scheduled day matches the selected day
+            guard let tripDate = trip.startTime else { return false }
+            return Calendar.current.isDate(tripDate, inSameDayAs: date)
+        default:
+            // Completed / cancelled / nil — not a conflict
+            return false
+        }
     }
 
     func addTrip(vehicleId: UUID, driverId: UUID, routeId: UUID?, startTime: Date, orderType: OrderType) async throws {
@@ -99,6 +142,7 @@ final class OrdersViewModel {
             message: "A new \(orderType.displayName) trip has been assigned to you.",
             type: .info,
             isRead: false,
+            referenceId: newTrip.id,
             createdAt: Date()
         )
         try? await NotificationService.createNotification(notification)

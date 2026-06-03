@@ -105,7 +105,7 @@ struct LocationSearchView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundStyle(Color.teal)
+                        .foregroundStyle(Color.primary)
                 }
             }
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search address or place")
@@ -121,7 +121,7 @@ struct LocationSearchView: View {
         VStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 38))
-                .foregroundStyle(Color.teal.opacity(0.5))
+                .foregroundStyle(Color.primary.opacity(0.5))
             Text("Start typing to search for an address or place")
                 .font(.body)
                 .foregroundStyle(Color.secondary)
@@ -150,11 +150,11 @@ struct LocationSearchView: View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(Color.teal.opacity(0.12))
+                    .fill(Color.primary.opacity(0.08))
                     .frame(width: 36, height: 36)
                 Image(systemName: "mappin")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.teal)
+                    .foregroundStyle(Color.primary)
             }
 
             VStack(alignment: .leading, spacing: 2) {

@@ -3,6 +3,7 @@ import SwiftUI
 struct DriverProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var profileVM = ProfileViewModel()
+    @State private var showingChangePassword = false
 
     var body: some View {
         ScrollView {
@@ -72,12 +73,8 @@ struct DriverProfileView: View {
                         )
                     }
                     .padding(16)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                    )
-                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     // Preferences & Support Card
                     VStack(alignment: .leading, spacing: 16) {
@@ -108,33 +105,39 @@ struct DriverProfileView: View {
                         )
                     }
                     .padding(16)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                    )
-                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                    // Logout Button
-                    Button(action: {
-                        Task {
-                            await authViewModel.signOut()
+                    // Account Actions
+                    VStack(alignment: .leading, spacing: 16) {
+                        Button(action: {
+                            showingChangePassword = true
+                        }) {
+                            ActionRow(
+                                icon: "key.fill",
+                                title: "Change Password",
+                                iconColor: Color.green
+                            )
                         }
-                    }) {
-                        ActionRow(
-                            icon: "door.left.hand.open",
-                            title: "Logout",
-                            iconColor: Color.green,
-                            isDestructive: true
-                        )
+                        
+                        Divider().background(Color(UIColor.separator))
+                        
+                        Button(action: {
+                            Task {
+                                await authViewModel.signOut()
+                            }
+                        }) {
+                            ActionRow(
+                                icon: "door.left.hand.open",
+                                title: "Logout",
+                                iconColor: Color.green,
+                                isDestructive: true
+                            )
+                        }
                     }
                     .padding(16)
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                    )
-                    .shadow(color: Color.black.opacity(0.1), radius: 8, y: 4)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
             .padding()
@@ -143,6 +146,9 @@ struct DriverProfileView: View {
         .navigationTitle("Profile")
         .task {
             await profileVM.loadProfile()
+        }
+        .sheet(isPresented: $showingChangePassword) {
+            ChangePasswordSheetView()
         }
     }
 }

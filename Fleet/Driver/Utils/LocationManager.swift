@@ -14,6 +14,10 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
     /// Speed in m/s from the last location fix, or nil if unavailable.
     var speed: Double?
 
+    /// Total distance traveled during current tracking session in meters.
+    var totalDistanceTraveled: Double = 0.0
+    private var previousCoordinate: CLLocationCoordinate2D?
+
     /// Current authorization status.
     var authorizationStatus: CLAuthorizationStatus = .notDetermined
 
@@ -54,8 +58,21 @@ final class LocationManager: NSObject, CLLocationManagerDelegate {
                          didUpdateLocations locations: [CLLocation]) {
         guard let loc = locations.last else { return }
         coordinate = loc.coordinate
+        
+        if let prev = previousCoordinate {
+            let prevLoc = CLLocation(latitude: prev.latitude, longitude: prev.longitude)
+            let distance = loc.distance(from: prevLoc)
+            totalDistanceTraveled += distance
+        }
+        previousCoordinate = loc.coordinate
+        
         // speed is negative when invalid (e.g. no fix) — store nil in that case
         speed = loc.speed >= 0 ? loc.speed : nil
+    }
+
+    func resetDistance() {
+        totalDistanceTraveled = 0.0
+        previousCoordinate = nil
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {

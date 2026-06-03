@@ -1,74 +1,47 @@
 import SwiftUI
 
-enum FleetTab: String, CaseIterable {
-    case drivers = "Drivers"
-    case maintenance = "Maintenance Staff"
-}
-
 struct FleetView: View {
-    @State private var selectedTab: FleetTab = .drivers
-
-    @State private var employeesViewModel = EmployeesViewModel()
-
-    @State private var isShowingAddEmployee = false
-    @State private var navigationPath = NavigationPath()
-
-    init() {
-        UISegmentedControl.appearance().selectedSegmentTintColor = UIColor(Color.blue)
-        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
-        UISegmentedControl.appearance().setTitleTextAttributes([.foregroundColor: UIColor(Color.secondary)], for: .normal)
-    }
+    @State private var viewModel = EmployeesViewModel()
+    @State private var isAddingEmployee = false
+    
+    // Filter and Sort state
+    @State private var selectedRole: String = "driver"
+    @State private var sortOption: EmployeeSortOption = .dateAddedLatest
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
-
-                VStack(spacing: 0) {
-                    Picker("Fleet Section", selection: $selectedTab) {
-                        ForEach(FleetTab.allCases, id: \.self) { tab in
-                            Text(tab.rawValue).tag(tab)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 16)
-
-                    switch selectedTab {
-                    case .drivers:
-                        EmployeesView(viewModel: employeesViewModel, roleFilter: "driver")
-                    case .maintenance:
-                        EmployeesView(viewModel: employeesViewModel, roleFilter: "maintenance")
-                    }
-
-                    Spacer(minLength: 0)
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Native segmented control
+                Picker("Role", selection: $selectedRole) {
+                    Text("Drivers").tag("driver")
+                    Text("Maintenance Staff").tag("maintenance")
                 }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color(.systemGroupedBackground))
+
+                EmployeesView(viewModel: viewModel, roleFilter: selectedRole, sortOption: sortOption)
             }
-            .navigationTitle(selectedTab.rawValue)
+            .navigationTitle("Fleet")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
-                        isShowingAddEmployee = true
+                        isAddingEmployee = true
                     }) {
                         Image(systemName: "plus")
-                            .font(.system(size: 17, weight: .medium))
+                            .font(.body.weight(.semibold))
                             .foregroundStyle(Color.primary)
-                            .frame(width: 38, height: 38)
-//                            .background(.ultraThinMaterial, in: Circle())
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .sheet(isPresented: $isShowingAddEmployee) {
-                AddEmployeeView(
-                    viewModel: employeesViewModel,
-                    roleName: selectedTab == .drivers ? "driver" : "maintenance"
-                )
+            .sheet(isPresented: $isAddingEmployee) {
+                AddEmployeeView(viewModel: viewModel, initialRole: selectedRole)
             }
-
             .task {
-                await employeesViewModel.loadData()
-                employeesViewModel.setupRealtime()
+                await viewModel.loadData()
+                viewModel.setupRealtime()
             }
         }
     }

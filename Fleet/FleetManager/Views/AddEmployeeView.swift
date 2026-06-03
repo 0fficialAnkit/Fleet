@@ -4,7 +4,8 @@ import Supabase
 struct AddEmployeeView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: EmployeesViewModel
-    let roleName: String
+    
+    @State private var selectedRole: String
 
     @State private var fullName = ""
     @State private var email = ""
@@ -13,8 +14,13 @@ struct AddEmployeeView: View {
     @State private var licenseNumber = ""
     @State private var isPasswordVisible = false
 
+    init(viewModel: EmployeesViewModel, initialRole: String = "driver") {
+        self.viewModel = viewModel
+        self._selectedRole = State(initialValue: initialRole)
+    }
+
     var isDriverSelected: Bool {
-        return roleName.lowercased() == "driver"
+        return selectedRole == "driver"
     }
 
     /// Map display role to database role string
@@ -24,81 +30,51 @@ struct AddEmployeeView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
+                Form {
 
-                ScrollView {
-                    VStack(spacing: 24) {
 
-                        // Error message
-                        if let error = viewModel.errorMessage {
+                    if let error = viewModel.errorMessage {
+                        Section {
                             Text(error)
-                                .font(.subheadline)
-                                .foregroundColor(Color.red)
-                                .padding(.horizontal, 16)
-                        }
-
-                        VStack(alignment: .leading, spacing: 8) {
-                            SectionHeader(title: "Personal Details")
-                                .padding(.horizontal, 16)
-
-                                VStack(spacing: 0) {
-                                    TextField("Full Name", text: $fullName)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(Color.primary)
-
-                                    Divider().background(Color(.separator))
-
-                                    TextField("Email", text: $email)
-                                        .keyboardType(.emailAddress)
-                                        .autocapitalization(.none)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(Color.primary)
-
-                                    Divider().background(Color(.separator))
-
-                                    HStack {
-                                        if isPasswordVisible {
-                                            TextField("Password", text: $password)
-                                                .foregroundColor(Color.primary)
-                                        } else {
-                                            SecureField("Password", text: $password)
-                                                .foregroundColor(Color.primary)
-                                        }
-
-                                        Button(action: {
-                                            isPasswordVisible.toggle()
-                                        }) {
-                                            Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
-                                                .foregroundColor(Color.secondary)
-                                        }
-                                    }
-                                    .padding(.vertical, 12)
-
-                                    Divider().background(Color(.separator))
-
-                                    TextField("Phone", text: $phone)
-                                        .keyboardType(.phonePad)
-                                        .padding(.vertical, 12)
-                                        .foregroundColor(Color.primary)
-
-                                    if isDriverSelected {
-                                        Divider().background(Color(.separator))
-
-                                        TextField("Driver License Number", text: $licenseNumber)
-                                            .padding(.vertical, 12)
-                                            .foregroundColor(Color.primary)
-                                    }
-                                }
-                                .padding(16)
-                                .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .padding(.horizontal, 16)
+                                .foregroundStyle(.red)
                         }
                     }
-                    .padding(.vertical, 16)
+
+                    Section(header: Text("Personal Details")) {
+                        TextField("Full Name", text: $fullName)
+                            .textContentType(.name)
+
+                        TextField("Email", text: $email)
+                            .keyboardType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .textContentType(.emailAddress)
+
+                        HStack {
+                            if isPasswordVisible {
+                                TextField("Password", text: $password)
+                                    .textContentType(.newPassword)
+                            } else {
+                                SecureField("Password", text: $password)
+                                    .textContentType(.newPassword)
+                            }
+
+                            Button(action: {
+                                isPasswordVisible.toggle()
+                            }) {
+                                Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        TextField("Phone", text: $phone)
+                            .keyboardType(.phonePad)
+                            .textContentType(.telephoneNumber)
+
+                        if isDriverSelected {
+                            TextField("Driver License Number", text: $licenseNumber)
+                        }
+                    }
                 }
-            }
             .navigationTitle(isDriverSelected ? "Add Driver" : "Add Maintenance Staff")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -106,7 +82,7 @@ struct AddEmployeeView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(Color.teal)
+                    .foregroundStyle(Color.primary)
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
@@ -145,8 +121,7 @@ struct AddEmployeeView: View {
                             }
                         }
                     }
-                    .foregroundColor(Color.teal)
-                    .bold()
+                    .foregroundStyle(Color.primary)
                     .disabled(fullName.isEmpty || email.isEmpty || password.isEmpty || viewModel.isCreatingUser)
                 }
             }
@@ -156,11 +131,11 @@ struct AddEmployeeView: View {
                         Color.black.opacity(0.4).ignoresSafeArea()
                         VStack(spacing: 16) {
                             ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .tint(.white)
                                 .scaleEffect(1.2)
                             Text("Creating user...")
                                 .font(.body.weight(.medium))
-                                .foregroundColor(.white)
+                                .foregroundStyle(.white)
                         }
                         .padding(32)
                         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
@@ -172,5 +147,5 @@ struct AddEmployeeView: View {
 }
 
 #Preview {
-    AddEmployeeView(viewModel: EmployeesViewModel(), roleName: "driver")
+    AddEmployeeView(viewModel: EmployeesViewModel())
 }

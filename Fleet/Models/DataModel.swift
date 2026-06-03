@@ -2,7 +2,7 @@
 //  DataModel.swift
 //  Fleet
 //
-//  Created by Ankit Kumar on 19/05/26.
+//  Created by Vaibhav Singh on 19/05/26.
 //
 
 import Foundation
@@ -27,6 +27,7 @@ enum MaintenanceTaskStatus: String, Codable, CaseIterable, Sendable {
 }
 
 enum WorkOrderStatus: String, Codable, CaseIterable, Sendable {
+  case pending = "pending" // Add this case
   case open = "open"
   case inProgress = "in_progress"
   case completed = "completed"
@@ -167,6 +168,33 @@ struct User: Codable, Identifiable, Hashable, Sendable {
   }
 }
 
+enum VehicleType: String, Codable, CaseIterable, Sendable, Identifiable {
+  case twoWheeler = "two_wheeler"
+  case threeWheeler = "three_wheeler"
+  case car = "car"
+  case truck = "truck"
+  
+  var id: String { rawValue }
+  
+  var maintenanceThresholdKM: Double {
+      switch self {
+      case .twoWheeler: return 3000
+      case .threeWheeler: return 5000
+      case .car: return 10000
+      case .truck: return 20000
+      }
+  }
+  
+  var displayName: String {
+      switch self {
+      case .twoWheeler: return "Two Wheeler"
+      case .threeWheeler: return "Three Wheeler"
+      case .car: return "Four Wheeler"
+      case .truck: return "Truck"
+      }
+  }
+}
+
 // MARK: - Vehicle
 struct Vehicle: Codable, Identifiable, Hashable, Sendable {
   let id: UUID
@@ -181,6 +209,7 @@ struct Vehicle: Codable, Identifiable, Hashable, Sendable {
   var assignedDriverId: UUID? //FK
   var adminId: UUID? //FK
   var status: VehicleStatus?
+  var vehicleType: VehicleType?
 
   enum CodingKeys: String, CodingKey {
       case id, make, model, year, vin
@@ -191,6 +220,7 @@ struct Vehicle: Codable, Identifiable, Hashable, Sendable {
       case assignedDriverId = "assigned_driver_id"
       case adminId = "admin_id"
       case status
+      case vehicleType = "vehicle_type"
   }
 }
 
@@ -228,6 +258,14 @@ struct VehicleLocation: Codable, Identifiable, Hashable, Sendable {
   }
 }
 //  MARK: - MaintenanceTask
+enum MaintenanceScheduleType: String, Codable, CaseIterable, Sendable, Identifiable {
+    case date = "date"
+    case mileage = "mileage"
+    case interval = "interval"
+    
+    var id: String { rawValue }
+}
+
 struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
   let id: UUID
   var workOrderId: UUID? // FK — optional, tasks can exist without a work order
@@ -237,7 +275,11 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
   var taskType: MaintenanceTaskType?
   var description: String?
   var scheduledDate: Date?
+  var targetMileage: Double?
+  var serviceIntervalMonths: Int?
+  var scheduleType: MaintenanceScheduleType?
   var status: MaintenanceTaskStatus?
+  var completedAt: Date?
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -248,7 +290,11 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
       case taskType = "task_type"
       case description
       case scheduledDate = "scheduled_date"
+      case targetMileage = "target_mileage"
+      case serviceIntervalMonths = "service_internal"
+      case scheduleType = "schedule_type"
       case status
+      case completedAt = "completed_at"
   }
 }
 
@@ -261,14 +307,17 @@ struct WorkOrder: Codable, Identifiable, Hashable, Sendable {
   var priority: WorkOrderPriority?
   var status: WorkOrderStatus?
   var createdAt: Date?
+  var completedAt: Date?
 
   enum CodingKeys: String, CodingKey {
       case id
       case vehicleId = "vehicle_id"
       case createdBy = "created_by"
       case assignedTo = "assigned_to"
-      case priority, status
+      case priority
+      case status = "lifecycle_status"
       case createdAt = "created_at"
+      case completedAt = "completed_at"
   }
 }
 
@@ -383,6 +432,47 @@ struct TripUpdate: Codable, Identifiable, Hashable, Sendable {
   }
 }
 
+//  MARK: - TripIncident
+enum TripIncidentType: String, Codable, CaseIterable, Sendable {
+    case traffic = "Traffic"
+    case accident = "Accident"
+    case breakdown = "Breakdown"
+    case weather = "Weather"
+    case other = "Other"
+    
+    var icon: String {
+        switch self {
+        case .traffic: return "car.2.fill"
+        case .accident: return "car.burst.fill"
+        case .breakdown: return "wrench.and.screwdriver.fill"
+        case .weather: return "cloud.heavyrain.fill"
+        case .other: return "exclamationmark.triangle.fill"
+        }
+    }
+}
+
+struct TripIncident: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var tripId: UUID
+    var driverId: UUID?
+    var incidentType: String
+    var description: String
+    var location: String
+    var photoUrl: String?
+    var createdAt: Date?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tripId = "trip_id"
+        case driverId = "driver_id"
+        case incidentType = "incident_type"
+        case description
+        case location
+        case photoUrl = "photo_url"
+        case createdAt = "created_at"
+    }
+}
+
 //  MARK: - VehicleInspection
 struct VehicleInspection: Codable, Identifiable, Hashable, Sendable {
   let id: UUID
@@ -420,9 +510,9 @@ struct InspectionPhoto: Codable, Identifiable, Hashable, Sendable {
 //  MARK: - DefectReport
 struct DefectReport: Codable, Identifiable, Hashable, Sendable {
   let id: UUID
-  var inspectionId: UUID? // FK — optional, defects can be reported without a linked inspection
+  var inspectionId: UUID // FK - required
   var reportedBy: UUID? // FK
-  var description: String?
+  var description: String // required
   var severity: DefectSeverity?
   var status: DefectStatus?
   var createdAt: Date?
@@ -476,6 +566,7 @@ struct Notification: Codable, Identifiable, Hashable, Sendable {
   var message: String?
   var type: NotificationType?
   var isRead: Bool
+  var referenceId: UUID?
   var createdAt: Date?
 
   enum CodingKeys: String, CodingKey {
@@ -483,6 +574,7 @@ struct Notification: Codable, Identifiable, Hashable, Sendable {
       case userId = "user_id"
       case title, message, type
       case isRead = "is_read"
+      case referenceId = "reference_id"
       case createdAt = "created_at"
   }
 }
@@ -581,17 +673,19 @@ struct IssueReportRecord: Codable, Identifiable, Hashable, Sendable {
     var status: String
     var assignedTo: UUID?
     var createdAt: Date?
+    var issuePhoto: String?   // comma-separated public URLs
 
     enum CodingKeys: String, CodingKey {
         case id
-        case vehicleId = "vehicle_id"
+        case vehicleId  = "vehicle_id"
         case reportedBy = "reported_by"
         case category
         case severity
         case description
         case status
         case assignedTo = "assigned_to"
-        case createdAt = "created_at"
+        case createdAt  = "created_at"
+        case issuePhoto = "issue_photo"
     }
 }
 
@@ -622,5 +716,55 @@ struct MaintenanceStaffRecord: Codable, Identifiable, Hashable, Sendable {
         case profileId = "profile_id"
         case specialization
         case createdAt = "created_at"
+    }
+}
+
+// MARK: - Geofence models
+
+/// A circular zone around a pickup or dropoff location.
+/// Radius is stored so it can be changed per-trip in future.
+struct TripGeofence: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var tripId: UUID
+    var vehicleId: UUID
+    var driverId: UUID?
+    var name: String            // human-readable address
+    var latitude: Double
+    var longitude: Double
+    var radiusMeters: Double    // default 5000 = 5 km
+    var zoneType: String        // "pickup" | "dropoff"
+    var isActive: Bool
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, latitude, longitude
+        case tripId       = "trip_id"
+        case vehicleId    = "vehicle_id"
+        case driverId     = "driver_id"
+        case radiusMeters = "radius_meters"
+        case zoneType     = "zone_type"
+        case isActive     = "is_active"
+        case createdAt    = "created_at"
+    }
+}
+
+/// Logged when the driver crosses a zone boundary or completes a stage.
+struct TripGeofenceEvent: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var geofenceId: UUID
+    var vehicleId: UUID
+    var driverId: UUID?
+    var eventType: String       // "enter" | "exit" | "pickup_done"
+    var occurredAt: Date?
+    var latitude: Double?       // driver's location when event fired
+    var longitude: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case id, latitude, longitude
+        case geofenceId = "geofence_id"
+        case vehicleId  = "vehicle_id"
+        case driverId   = "driver_id"
+        case eventType  = "event_type"
+        case occurredAt = "occurred_at"
     }
 }

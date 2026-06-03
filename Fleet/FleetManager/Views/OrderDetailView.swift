@@ -1,177 +1,369 @@
 import SwiftUI
+import MapKit
 
 struct OrderDetailView: View {
-    let trip: Trip
+    let trip:      Trip
     let viewModel: OrdersViewModel
     @Environment(\.dismiss) private var dismiss
 
-    var route: Route? {
-        viewModel.route(for: trip.routeId)
-    }
+    // Live tracking state
+    @State private var liveLocations:  [VehicleLocation]  = []
+    @State private var driverProfile:  Profile?            = nil
+    @State private var geofences:      [TripGeofence]      = []
+    @State private var gfEvents:       [TripGeofenceEvent] = []
+    @State private var pollingTask:    Task<Void, Never>?  = nil
 
-    var driverName: String {
-        viewModel.driverName(for: trip.driverId)
-    }
-
-    var vehicleInfo: String {
-        viewModel.vehicleName(for: trip.vehicleId)
-    }
+    var route:       Route? { viewModel.route(for: trip.routeId) }
+    var driverName:  String { viewModel.driverName(for: trip.driverId) }
+    var vehicleInfo: String { viewModel.vehicleName(for: trip.vehicleId) }
+    var isActive:    Bool   { trip.status == .active }
 
     var formattedDate: String {
-        guard let date = trip.startTime else { return "Not Scheduled" }
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+        guard let d = trip.startTime else { return "Not Scheduled" }
+        let f = DateFormatter(); f.dateStyle = .medium; f.timeStyle = .short
+        return f.string(from: d)
     }
 
-    var orderIcon: String {
-        switch trip.orderType {
-        case .bulkOrderShip: return "shippingbox.fill"
-        case .pickUpAndDrop: return "arrow.left.arrow.right"
-        case .travel: return "car.fill"
-        case .none: return "shippingbox"
+    // Events for this trip in strict milestone order: pickup-enter → pickup-done → dropoff-enter → dropoff-done.
+    // Logical priority overrides timestamp so same-second events always display in the correct order.
+    var tripEvents: [TripGeofenceEvent] {
+        guard !geofences.isEmpty else { return [] }
+        let ids    = Set(geofences.map { $0.id })
+        let sorted = gfEvents
+            .filter { ids.contains($0.geofenceId) }
+            .sorted { a, b in
+                let pa = logicalPriority(a)
+                let pb = logicalPriority(b)
+                if pa != pb { return pa < pb }
+                return (a.occurredAt ?? .distantPast) < (b.occurredAt ?? .distantPast)
+            }
+
+        // Keep only the first occurrence of each logical milestone (dedup)
+        var seen    = Set<String>()
+        var unique  = [TripGeofenceEvent]()
+        for event in sorted {
+            let fence    = geofences.first(where: { $0.id == event.geofenceId })
+            let isPickup = fence?.zoneType == "pickup"
+            let key: String
+            switch event.eventType {
+            case "enter":       key = isPickup ? "pickup_enter"  : "dropoff_enter"
+            case "pickup_done": key = "pickup_done"
+            case "dropoff_done":key = "dropoff_done"
+            default:            key = event.eventType
+            }
+            if !seen.contains(key) { seen.insert(key); unique.append(event) }
         }
+        return unique
     }
 
-    var orderColor: Color {
-        switch trip.orderType {
-        case .bulkOrderShip: return Color.brown
-        case .pickUpAndDrop: return Color.teal
-        case .travel: return Color.green
-        case .none: return Color(.tertiaryLabel)
-        }
-    }
+    // MARK: - Body
 
     var body: some View {
-        ZStack {
-            Color(.systemGroupedBackground).ignoresSafeArea()
+        List {
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 24) {
-                    // Header Section
-                    VStack(spacing: 8) {
-                        ZStack {
-                            Circle()
-                                .fill(orderColor.opacity(0.15))
-                                .frame(width: 110, height: 110)
+            // ── Live map ────────────────────────────────────────────────────
+            if isActive, let route {
+                Section {
+                    ZStack(alignment: .topTrailing) {
+                        DashboardMapView(
+                            activeTrips: [trip],
+                            routes: [route],
+                            profiles: driverProfile.map { [$0] } ?? [],
+                            vehicleLocations: liveLocations
+                        )
+                        .frame(height: 260)
 
-                            Image(systemName: orderIcon)
-                                .font(.system(size: 44))
-                                .foregroundColor(orderColor)
+                        // Live pill badge
+                        Label(
+                            liveLocations.isEmpty ? "Locating…" : "Live",
+                            systemImage: "dot.radiowaves.left.and.right"
+                        )
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8).padding(.vertical, 5)
+                        .background(
+                            liveLocations.isEmpty ? Color.orange : Color.green,
+                            in: Capsule()
+                        )
+                        .padding(10)
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                }
+            }
+
+            // ── Driver Status — shown for active trips AND completed trips with history ──
+            if !tripEvents.isEmpty || isActive {
+                Section {
+                    if tripEvents.isEmpty {
+                        Label("Waiting for driver to enter a zone…",
+                              systemImage: "location.magnifyingglass")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .padding(.vertical, 4)
+                    } else {
+                        ForEach(tripEvents) { event in
+                            eventRow(event)
                         }
-                        .padding(.bottom, 8)
-
-                        Text(route?.routeName ?? "Unknown Route")
-                            .font(.title3.bold())
-                            .foregroundColor(Color.primary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 16)
-
-                        StatusBadge(text: trip.status?.rawValue.capitalized ?? "Unknown", color: viewModel.getStatusColor(for: trip.status))
                     }
-                    .padding(.top, 32)
-
-                    // Information Cards
-                    VStack(spacing: 16) {
-                        OrderDetailInfoRow(icon: "number", title: "Order ID", value: "#\(trip.id.uuidString.prefix(8).uppercased())")
-
-                        Divider().background(Color(.separator))
-                        OrderDetailInfoRow(icon: "shippingbox.fill", title: "Order Type", value: trip.orderType?.displayName ?? "N/A")
-
-                        Divider().background(Color(.separator))
-                        OrderDetailInfoRow(icon: "mappin.and.ellipse", title: "Destination", value: route?.endLocation ?? "N/A")
-
-                        Divider().background(Color(.separator))
-                        OrderDetailInfoRow(icon: "calendar", title: "Start Date", value: formattedDate)
-
-                        Divider().background(Color(.separator))
-                        OrderDetailInfoRow(icon: "person.crop.circle.fill", title: "Driver", value: driverName)
-
-                        Divider().background(Color(.separator))
-                        OrderDetailInfoRow(icon: "car.fill", title: "Vehicle", value: vehicleInfo)
+                } header: {
+                    HStack {
+                        Text("Driver Status")
+                        Spacer()
+                        if isActive {
+                            Text("Real-time")
+                                .font(.caption)
+                                .foregroundStyle(.teal)
+                                .textCase(nil)
+                        }
                     }
-//                    .padding(16)
-//                    .background(Color(.systemBackground))
-//                    .cornerRadius(20)
-//                    .padding(.horizontal, 16)
-                    .padding(16)
-                    .background(Color(.secondarySystemGroupedBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .padding(.horizontal, 16)
+                }
+            }
+
+            // ── Order details ────────────────────────────────────────────────
+            Section("Order Details") {
+                LabeledContent("Order ID") {
+                    Text("#\(trip.id.uuidString.prefix(8).uppercased())")
+                        .font(.body.monospaced())
+                        .foregroundStyle(.secondary)
+                }
+                LabeledContent("Type") {
+                    Text(trip.orderType?.displayName ?? "—")
+                }
+                LabeledContent("Status") {
+                    StatusBadge(
+                        text: trip.status?.rawValue.capitalized ?? "—",
+                        color: viewModel.getStatusColor(for: trip.status))
+                }
+                if let d = trip.startTime {
+                    LabeledContent("Started") {
+                        Text(d.formatted(date: .abbreviated, time: .shortened))
+                    }
+                }
+            }
+
+            // ── Route ────────────────────────────────────────────────────────
+            Section("Route") {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Pickup").font(.caption).foregroundStyle(.secondary)
+                        Text(route?.startLocation ?? "Not set")
+                    }
+                } icon: {
+                    Image(systemName: "circle.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.green)
+                }
+
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Drop-off").font(.caption).foregroundStyle(.secondary)
+                        Text(route?.endLocation ?? "Not set")
+                    }
+                } icon: {
+                    Image(systemName: "mappin")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.red)
+                }
+            }
+
+            // ── Assignment ───────────────────────────────────────────────────
+            Section("Assignment") {
+                LabeledContent("Driver")  { Text(driverName) }
+                LabeledContent("Vehicle") { Text(vehicleInfo) }
+            }
+
+            // ── Delete ───────────────────────────────────────────────────────
+            Section {
+                Button(role: .destructive) {
+                    Task {
+                        do {
+                            try await viewModel.deleteTrip(trip)
+                            await MainActor.run { dismiss() }
+                        } catch { print("Delete failed: \(error)") }
+                    }
+                } label: {
+                    Label("Delete Order", systemImage: "trash")
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
         }
-        .navigationTitle("Order Details")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button(role: .destructive, action: {
-                        Task {
-                            do {
-                                try await viewModel.deleteTrip(trip)
-                                await MainActor.run { dismiss() }
-                            } catch {
-                                // You may want to surface this error to the user in the future
-                                print("Failed to delete trip: \(error)")
-                            }
-                        }
-                    }) {
-                        Label("Delete Order", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.primary)
-                        .padding(8)
+        .listStyle(.insetGrouped)
+        .navigationTitle("Trip Details")
+        .navigationBarTitleDisplayMode(.large)
+        .refreshable { await refreshAll() }
+        .task {
+            await loadAll()
+
+            // Always subscribe to Realtime and poll — the trip may be scheduled
+            // when the fleet manager opens this view and become active later.
+            // Without this, zone-entry events are missed entirely.
+            startPolling()
+            RealtimeManager.shared.addGeofenceEventsChangeHandler {
+                Task { await self.refreshGeofenceData() }
+            }
+            RealtimeManager.shared.addVehicleLocationsChangeHandler {
+                Task { await self.refreshLocations() }
+            }
+        }
+        .onDisappear { pollingTask?.cancel(); pollingTask = nil }
+    }
+
+    // MARK: - Event row (Apple native style)
+
+    private func eventRow(_ event: TripGeofenceEvent) -> some View {
+        let fence    = geofences.first(where: { $0.id == event.geofenceId })
+        let isPickup = fence?.zoneType == "pickup"
+
+        // Map event type → display properties
+        let icon:  String
+        let tint:  Color
+        let title: String
+        let sub:   String
+
+        switch event.eventType {
+        case "enter" where isPickup:
+            icon = "mappin.circle.fill";         tint = .blue
+            title = "Driver Entered Pickup Zone"
+            sub   = fence?.name ?? ""
+        case "pickup_done":
+            icon = "checkmark.circle.fill";      tint = .green
+            title = "Pickup Done"
+            sub   = "Driver is heading to drop-off"
+        case "enter":   // dropoff
+            icon = "flag.circle.fill";           tint = .orange
+            title = "Driver Entered Drop-off Zone"
+            sub   = fence?.name ?? ""
+        case "dropoff_done":
+            icon = "flag.checkered.circle.fill"; tint = .teal
+            title = "Drop-off Done"
+            sub   = "Driver completing trip"
+        case "trip_ended":
+            icon = "checkmark.seal.fill";        tint = .green
+            title = "Trip Ended"
+            sub   = "Trip completed successfully"
+        default:
+            icon = "circle.fill";                tint = .secondary
+            title = event.eventType;             sub = ""
+        }
+
+        return HStack(alignment: .top, spacing: 14) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(tint)
+                .frame(width: 30)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                if !sub.isEmpty {
+                    Text(sub)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
+            }
+
+            Spacer()
+
+            if let t = event.occurredAt {
+                Text(t.formatted(date: .omitted, time: .shortened))
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
+    // MARK: - Helpers
+
+    /// Priority 0-3 enforces 1→2→3→4 display order regardless of same-second timestamps.
+    private func logicalPriority(_ event: TripGeofenceEvent) -> Int {
+        let fence    = geofences.first(where: { $0.id == event.geofenceId })
+        let isPickup = fence?.zoneType == "pickup"
+        switch event.eventType {
+        case "enter"         where isPickup: return 0  // 1. pickup zone entered
+        case "pickup_done":                  return 1  // 2. pickup confirmed
+        case "enter":                        return 2  // 3. dropoff zone entered
+        case "dropoff_done":                 return 3  // 4. dropoff confirmed
+        case "trip_ended":                   return 4  // 5. trip ended
+        default:                             return 5
+        }
+    }
+
+    // MARK: - Data helpers
+
+    private func loadAll() async {
+        async let profile = ProfileService.fetchProfile(id: trip.driverId ?? UUID())
+        async let locs    = VehicleLocationService.fetchLatestLocations(for: [trip.vehicleId])
+        driverProfile  = try? await profile
+        liveLocations  = (try? await locs) ?? []
+        await refreshGeofenceData()
+    }
+
+    private func refreshLocations() async {
+        liveLocations = (try? await VehicleLocationService.fetchLatestLocations(for: [trip.vehicleId])) ?? []
+    }
+
+    private func refreshGeofenceData() async {
+        // Fetch all fences for THIS trip (active + inactive = survives trip end)
+        geofences = (try? await GeofenceService.fetchAllGeofences(forTrip: trip.id)) ?? []
+
+        // ONLY fetch events if this trip has its own geofences.
+        // Without this guard, when geofences is empty we'd show events from the
+        // vehicle's previous trips — the cause of "Drop-off Done before trip starts".
+        guard !geofences.isEmpty else {
+            gfEvents = []
+            return
+        }
+
+        let all  = (try? await GeofenceService.fetchEvents(forVehicle: trip.vehicleId, limit: 30)) ?? []
+        let ids  = Set(geofences.map { $0.id })
+        gfEvents = all.filter { ids.contains($0.geofenceId) }
+    }
+
+    private func refreshAll() async {
+        await refreshLocations()
+        await refreshGeofenceData()
+    }
+
+    private func startPolling() {
+        pollingTask?.cancel()
+        pollingTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { break }
+                await refreshAll()
+                // Stop polling once trip is completed — Realtime handles late stragglers
+                if trip.status == .completed { break }
             }
         }
     }
 }
 
-struct OrderDetailInfoRow: View {
-    let icon: String
-    let title: String
-    let value: String
-    var valueColor: Color = Color.primary
+// MARK: - Info row (kept for compatibility)
 
+struct OrderDetailInfoRow: View {
+    let icon: String; let title: String; let value: String
+    var valueColor: Color = .primary
     var body: some View {
         HStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundColor(Color(.tertiaryLabel))
-                .frame(width: 24)
-
-            Text(title)
-                .font(.body.weight(.medium))
-                .foregroundColor(Color.secondary)
-
+            Image(systemName: icon).font(.system(size: 18))
+                .foregroundStyle(Color(.tertiaryLabel)).frame(width: 24)
+            Text(title).font(.body.weight(.medium)).foregroundStyle(.secondary)
             Spacer()
-
-            Text(value)
-                .font(.body)
-                .foregroundColor(valueColor)
-        }
-        .padding(.vertical, 8)
+            Text(value).font(.body).foregroundStyle(valueColor)
+        }.padding(.vertical, 8)
     }
 }
 
 #Preview {
     NavigationStack {
         OrderDetailView(
-            trip: Trip(
-                id: UUID(),
-                vehicleId: UUID(),
-                driverId: UUID(),
-                routeId: UUID(),
-                startTime: Date(),
-                endTime: Date().addingTimeInterval(3600),
-                distance: 42.5,
-                status: .active,
-                orderType: .bulkOrderShip
-            ),
+            trip: Trip(id: UUID(), vehicleId: UUID(), driverId: UUID(), routeId: UUID(),
+                       startTime: Date(), endTime: nil, distance: nil,
+                       status: .active, orderType: .pickUpAndDrop),
             viewModel: OrdersViewModel()
         )
     }

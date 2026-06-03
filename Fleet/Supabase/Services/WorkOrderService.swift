@@ -85,17 +85,36 @@ enum WorkOrderService {
 
     static func updateWorkOrderStatus(id: UUID, status: WorkOrderStatus) async throws {
         struct StatusUpdate: Encodable {
-            let status: WorkOrderStatus
+            let lifecycle_status: WorkOrderStatus
         }
         do {
             try await supabase
                 .from("work_orders")
-                .update(StatusUpdate(status: status))
+                .update(StatusUpdate(lifecycle_status: status))
                 .eq("id", value: id)
                 .execute()
             print("[WorkOrderService] updateWorkOrderStatus(\(id)) → \(status.rawValue): OK")
         } catch {
             print("[WorkOrderService] updateWorkOrderStatus(\(id)) ERROR: \(error)")
+            throw error
+        }
+    }
+
+    /// Updates work order status and sets completed_at timestamp in a single DB call.
+    static func updateWorkOrderStatusWithCompletion(id: UUID, status: WorkOrderStatus, completedAt: Date?) async throws {
+        struct StatusCompletionUpdate: Encodable {
+            let status: WorkOrderStatus
+            let completed_at: Date?
+        }
+        do {
+            try await supabase
+                .from("work_orders")
+                .update(StatusCompletionUpdate(status: status, completed_at: completedAt))
+                .eq("id", value: id)
+                .execute()
+            print("[WorkOrderService] updateWorkOrderStatusWithCompletion(\(id)) → \(status.rawValue), completedAt=\(String(describing: completedAt)): OK")
+        } catch {
+            print("[WorkOrderService] updateWorkOrderStatusWithCompletion(\(id)) ERROR: \(error)")
             throw error
         }
     }

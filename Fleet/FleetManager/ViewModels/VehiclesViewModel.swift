@@ -10,26 +10,34 @@ final class VehiclesViewModel {
     var isLoading = false
     var errorMessage: String?
 
-    func setupRealtime() {
+    func setupRealtime(adminId: UUID? = nil) {
         let rt = RealtimeManager.shared
-        rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData() } }
-        rt.addProfilesChangeHandler { [weak self] in Task { await self?.loadData() } }
-        rt.addTripsChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData(adminId: adminId) } }
+        rt.addProfilesChangeHandler { [weak self] in Task { await self?.loadData(adminId: adminId) } }
+        rt.addTripsChangeHandler { [weak self] in Task { await self?.loadData(adminId: adminId) } }
     }
 
-    func loadData() async {
+    func loadData(adminId: UUID? = nil) async {
         isLoading = true
         errorMessage = nil
         do {
             async let v = VehicleService.fetchAllVehicles()
             async let p = ProfileService.fetchAllProfiles()
             async let t = TripService.fetchAllTrips()
-            vehicles = try await v
+            let allVehicles = try await v
             profiles = try await p
             trips = try await t
+            
+            if let adminId = adminId {
+                // Show vehicles assigned to this admin OR vehicles with no admin assigned (test data)
+                vehicles = allVehicles.filter { $0.adminId == adminId || $0.adminId == nil }
+            } else {
+                vehicles = allVehicles
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
+        
         isLoading = false
     }
 
@@ -42,18 +50,79 @@ final class VehiclesViewModel {
         return trips.filter { $0.vehicleId == vehicleId && $0.status == .completed }
             .sorted(by: { ($0.endTime ?? Date()) > ($1.endTime ?? Date()) })
     }
+    
+    func getTotalDistance(for vehicleId: UUID) -> Double {
+        let vehicleTrips = trips.filter { $0.vehicleId == vehicleId && $0.status == .completed }
+        return vehicleTrips.reduce(0) { $0 + ($1.distance ?? 0) }
+    }
 
-    func getStatusColor(_ status: VehicleStatus?) -> Color {
-        switch status {
-        case .active: return Color.green
-        case .maintenance: return Color.yellow
-        case .inactive: return Color(.tertiaryLabel)
-        case nil: return Color(.tertiaryLabel)
+    // MARK: - Usage Report Helpers
+    
+    func getTripsForUsage(vehicleId: UUID, startDate: Date, endDate: Date) -> [Trip] {
+        return trips.filter { trip in
+            guard trip.vehicleId == vehicleId, trip.status == .completed, let end = trip.endTime else { return false }
+            return end >= startDate && end <= endDate
+        }
+    }
+    
+    func calculateTotalDistance(trips: [Trip]) -> Double {
+        return trips.reduce(0) { $0 + ($1.distance ?? 0) }
+    }
+    
+    func calculateIdleTimeHours(trips: [Trip], startDate: Date, endDate: Date) -> Double {
+        let totalTimeInterval = endDate.timeIntervalSince(startDate)
+        let totalHours = max(0, totalTimeInterval / 3600.0)
+        
+        let activeSeconds = trips.reduce(0.0) { sum, trip in
+            if let start = trip.startTime, let end = trip.endTime {
+                return sum + max(0, end.timeIntervalSince(start))
+            }
+            return sum
+        }
+        let activeHours = activeSeconds / 3600.0
+        
+        return max(0, totalHours - activeHours)
+    }
+    
+    func generateUsageInsight(distance: Double, tripsCount: Int, idleHours: Double, periodDays: Double) -> (status: String, description: String, color: Color) {
+        let distancePerDay = periodDays > 0 ? distance / periodDays : distance
+        let tripsPerDay = periodDays > 0 ? Double(tripsCount) / periodDays : Double(tripsCount)
+        
+        if distancePerDay < 10 && tripsPerDay < 0.5 {
+            return ("Underused", "This vehicle has very low activity and high idle time. Consider reallocating it.", .orange)
+        } else if distancePerDay > 300 || tripsPerDay > 10 {
+            return ("Overused", "This vehicle is seeing heavy usage. It may require more frequent maintenance.", .red)
+        } else {
+            return ("Normal", "Vehicle usage is within expected parameters.", .green)
         }
     }
 
-    func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, licensePlate: String) async throws {
-        print("[VehiclesViewModel] addVehicle: make=\(make) model=\(model) plate=\(licensePlate)")
+    func getVehicleStatusText(for vehicle: Vehicle) -> String {
+        if vehicle.status == .maintenance {
+            return "In Service"
+        } else if trips.contains(where: { $0.vehicleId == vehicle.id && $0.status == .active }) {
+            return "On Trip"
+        } else if vehicle.status == .active {
+            return "Available"
+        } else {
+            return vehicle.status?.rawValue.capitalized ?? "Unknown"
+        }
+    }
+    
+    func getVehicleStatusColor(for vehicle: Vehicle) -> Color {
+        if vehicle.status == .maintenance {
+            return Color.red // Undergoing service / maintenance
+        } else if trips.contains(where: { $0.vehicleId == vehicle.id && $0.status == .active }) {
+            return Color.green // On an active trip
+        } else if vehicle.status == .active {
+            return Color.orange // Available / Idle
+        } else {
+            return Color(.tertiaryLabel)
+        }
+    }
+
+    func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, licensePlate: String, vehicleType: VehicleType, adminId: UUID? = nil) async throws {
+        print("[VehiclesViewModel] addVehicle: make=\(make) model=\(model) plate=\(licensePlate) type=\(vehicleType)")
         do {
             try await VehicleService.createVehicle(
                 make: make,
@@ -64,7 +133,9 @@ final class VehiclesViewModel {
                 tankCapacity: tankCapacity,
                 mileage: mileage,
                 assignedDriverId: nil,   // Always nil on creation — assign via driver selection
-                status: .active
+                adminId: adminId,
+                status: .active,
+                vehicleType: vehicleType
             )
             print("[VehiclesViewModel] addVehicle: success, reloading...")
             await loadData()

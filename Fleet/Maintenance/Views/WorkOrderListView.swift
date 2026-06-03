@@ -4,6 +4,7 @@ struct WorkOrderListView: View {
     @State private var selectedFilter: WorkOrderStatus? = nil
     @State private var showNewOrderSheet = false
     @State private var workOrders: [UnifiedMaintenanceItem] = []
+    @State private var vehicles: [Vehicle] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
 
@@ -56,6 +57,7 @@ struct WorkOrderListView: View {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
                                     FilterChip(label: "All",        isSelected: selectedFilter == nil,              color: Color.brown) { selectedFilter = nil }
+                                    FilterChip(label: "Pending",    isSelected: selectedFilter == .pending,         color: Color.gray)    { selectedFilter = .pending }
                                     FilterChip(label: "Open",       isSelected: selectedFilter == .open,            color: Color.blue)     { selectedFilter = .open }
                                     FilterChip(label: "In Progress",isSelected: selectedFilter == .inProgress,      color: Color.yellow)  { selectedFilter = .inProgress }
                                     FilterChip(label: "Completed",  isSelected: selectedFilter == .completed,       color: Color.green)  { selectedFilter = .completed }
@@ -90,6 +92,7 @@ struct WorkOrderListView: View {
                         }
                         .padding(.vertical, 16)
                     }
+                    .refreshable { await loadWorkOrders() }
                 }
             }
             .navigationTitle("Work Orders")
@@ -109,8 +112,60 @@ struct WorkOrderListView: View {
 
     private func getDestination(for item: UnifiedMaintenanceItem) -> MaintenanceDestination {
         switch item {
-        case .workOrder(let wo): return .workOrderDetail(wo)
-        case .issueReport(let ir): return .issueReportDetail(ir)
+        case .workOrder(let wo):
+            let vehicle = vehicles.first { $0.id == wo.vehicleId }
+            let swo = ScheduledWorkOrder(
+                id: wo.id,
+                vehicleNumber: vehicle?.licensePlate ?? "Unknown",
+                vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
+                priority: wo.priority ?? .medium,
+                status: wo.status ?? .open,
+                createdAt: wo.createdAt ?? Date(),
+                assignedBy: "Fleet Manager",
+                laborHours: "—",
+                laborCost: "—",
+                notes: "",
+                partsUsed: [],
+                sourceWorkOrderId: wo.id,
+                vehicleIssue: "Scheduled maintenance / Service required."
+            )
+            return .scheduledWorkOrderDetail(swo)
+        case .issueReport(let ir):
+            let vehicle = vehicles.first { $0.id == ir.vehicleId }
+            let priority: WorkOrderPriority = {
+                switch ir.severity.lowercased() {
+                case "critical": return .critical
+                case "high":     return .high
+                case "medium":   return .medium
+                case "low":      return .low
+                default:         return .medium
+                }
+            }()
+            let status: WorkOrderStatus = {
+                switch ir.status.lowercased() {
+                case "open", "assigned": return .open
+                case "in_progress":      return .inProgress
+                case "resolved", "closed": return .completed
+                default:                 return .open
+                }
+            }()
+            let swo = ScheduledWorkOrder(
+                id: ir.id,
+                vehicleNumber: vehicle?.licensePlate ?? "Unknown",
+                vehicleName: "\(vehicle?.make ?? "") \(vehicle?.model ?? "")",
+                priority: priority,
+                status: status,
+                createdAt: ir.createdAt ?? Date(),
+                assignedBy: "Driver Report",
+                laborHours: "—",
+                laborCost: "—",
+                notes: ir.description ?? "",
+                partsUsed: [],
+                sourceWorkOrderId: nil,
+                sourceIssueReportId: ir.id,
+                vehicleIssue: ir.description ?? "Issue reported by driver."
+            )
+            return .scheduledWorkOrderDetail(swo)
         }
     }
 
@@ -125,8 +180,9 @@ struct WorkOrderListView: View {
                 rawIRs = try await IssueReportService.fetchIssueReportsAssignedTo(userId: assignedTo)
             } else {
                 rawWOs = try await WorkOrderService.fetchAllWorkOrders()
-                // If no user ID, fetch all reports? Or just leave empty for now
             }
+
+            vehicles = (try? await VehicleService.fetchAllVehicles()) ?? []
 
             var unified = rawWOs.map { UnifiedMaintenanceItem.workOrder($0) } +
                           rawIRs.map { UnifiedMaintenanceItem.issueReport($0) }
@@ -251,6 +307,7 @@ struct UnifiedWorkItemRow: View {
 
     func statusLabel(_ status: WorkOrderStatus?) -> String {
         switch status {
+        case .pending:    return "Pending"
         case .open:       return "Open"
         case .inProgress: return "In Progress"
         case .completed:  return "Completed"
@@ -261,8 +318,9 @@ struct UnifiedWorkItemRow: View {
 
     func statusColor(_ status: WorkOrderStatus?) -> Color {
         switch status {
+        case .pending:    return Color.gray
         case .open:       return Color.blue
-        case .inProgress: return Color.yellow
+        case .inProgress: return Color.orange
         case .completed:  return Color.green
         case .cancelled:  return Color.red
         case .none:       return Color.secondary
@@ -292,7 +350,7 @@ struct UnifiedWorkItemRow: View {
     func priorityColor(_ priority: WorkOrderPriority?) -> Color {
         switch priority {
         case .critical: return Color.red
-        case .high:     return Color.yellow
+        case .high:     return Color.orange
         case .medium:   return Color.blue
         case .low:      return Color.green
         case .none:     return Color.secondary

@@ -14,21 +14,21 @@ struct FleetManagerMainView: View {
                 }
                 .tag(0)
 
+            OrdersView()
+                .tabItem {
+                    Image(systemName: "shippingbox.fill")
+                    Text("Orders")
+                }
+                .tag(1)
+
             // MARK: Fleet — Drivers + Maintenance
             FleetView()
                 .tabItem {
                     Image(systemName: "person.2.fill")
                     Text("Fleet")
                 }
-                .tag(1)
-
-            // MARK: Orders
-            OrdersView()
-                .tabItem {
-                    Image(systemName: "shippingbox.fill")
-                    Text("Orders")
-                }
                 .tag(2)
+
 
             // MARK: Reports
             ReportsView()
