@@ -24,6 +24,7 @@ final class RealtimeManager {
     private var profilesHandlers: [() -> Void] = []
     private var usersHandlers: [() -> Void] = []
     private var fuelLogsHandlers: [() -> Void] = []
+    private var geofenceEventsHandlers: [() -> Void] = []
 
     private var channels: [RealtimeChannelV2] = []
 
@@ -83,6 +84,10 @@ final class RealtimeManager {
         fuelLogsHandlers.append(handler)
     }
 
+    func addGeofenceEventsChangeHandler(_ handler: @escaping () -> Void) {
+        geofenceEventsHandlers.append(handler)
+    }
+
     // MARK: - Subscribe All
 
     func subscribeAll() async {
@@ -99,6 +104,7 @@ final class RealtimeManager {
         await subscribe(table: "profiles") { [weak self] in self?.profilesHandlers.forEach { $0() } }
         await subscribe(table: "users") { [weak self] in self?.usersHandlers.forEach { $0() } }
         await subscribe(table: "fuel_logs") { [weak self] in self?.fuelLogsHandlers.forEach { $0() } }
+        await subscribe(table: "trip_geofence_events") { [weak self] in self?.geofenceEventsHandlers.forEach { $0() } }
     }
 
     // MARK: - Subscribe to a single table

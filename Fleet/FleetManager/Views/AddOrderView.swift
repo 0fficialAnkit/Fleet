@@ -278,9 +278,22 @@ struct AddOrderView: View {
     }
 
     private func geocodeForMaps(_ address: String) async -> MKMapItem? {
+        if let range = address.range(of: "@latlng:") {
+            let coordsString = address[range.upperBound...]
+            let components = coordsString.components(separatedBy: ",")
+            if components.count == 2,
+               let lat = Double(components[0].trimmingCharacters(in: .whitespacesAndNewlines)),
+               let lon = Double(components[1].trimmingCharacters(in: .whitespacesAndNewlines)) {
+                let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                let placemark = MKPlacemark(coordinate: coordinate)
+                let mapItem = MKMapItem(placemark: placemark)
+                let name = address[..<range.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
+                mapItem.name = name.isEmpty ? "Location" : name
+                return mapItem
+            }
+        }
         let req = MKLocalSearch.Request()
         req.naturalLanguageQuery = address
-        req.resultTypes = .address
         return try? await MKLocalSearch(request: req).start().mapItems.first
     }
 

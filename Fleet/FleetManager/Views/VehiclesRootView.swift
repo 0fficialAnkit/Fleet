@@ -1,5 +1,5 @@
 import SwiftUI
-internal import Auth
+internal import Auth   // needed for user.id from Supabase Auth module
 
 struct VehiclesRootView: View {
     @State private var vehiclesViewModel = VehiclesViewModel()
@@ -27,7 +27,6 @@ struct VehiclesRootView: View {
                         .font(.system(size: 17, weight: .medium))
                         .foregroundStyle(Color.primary)
                         .frame(width: 38, height: 38)
-//                        .background(.ultraThinMaterial, in: Circle())
                 }
                 .buttonStyle(.plain)
             }
