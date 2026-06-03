@@ -42,6 +42,10 @@ final class VehicleReportViewModel {
             self.trips = fetchedTrips.sorted { ($0.startTime ?? .distantPast) > ($1.startTime ?? .distantPast) }
             self.profiles = fetchedProfiles
             
+        } catch is CancellationError {
+            // Task was cancelled, ignore.
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            // URLSession request was cancelled, ignore.
         } catch {
             errorMessage = error.localizedDescription
             print("[VehicleReportViewModel] Error loading data for vehicle \(vehicle.id): \(error)")

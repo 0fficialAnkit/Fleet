@@ -2,7 +2,7 @@ import SwiftUI
 
 struct OrdersView: View {
     @State private var viewModel = OrdersViewModel()
-    @State private var selectedFilter: TripStatus? = nil
+    @State private var selectedFilter: TripStatus? = .scheduled
     @State private var isAddingOrder = false
     @State private var navigationPath = [Trip]()
 
@@ -16,13 +16,16 @@ struct OrdersView: View {
         return trips.sorted { lhs, rhs in
             switch (lhs.startTime, rhs.startTime) {
             case let (lDate?, rDate?):
-                return lDate < rDate
+                if lDate == rDate {
+                    return (lhs.createdAt ?? Date.distantPast) > (rhs.createdAt ?? Date.distantPast)
+                }
+                return lDate > rDate
             case (_?, nil):
                 return true
             case (nil, _?):
                 return false
             case (nil, nil):
-                return (lhs.createdAt ?? Date.distantPast) < (rhs.createdAt ?? Date.distantPast)
+                return (lhs.createdAt ?? Date.distantPast) > (rhs.createdAt ?? Date.distantPast)
             }
         }
     }
