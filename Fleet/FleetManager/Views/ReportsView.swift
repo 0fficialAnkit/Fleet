@@ -61,13 +61,19 @@ struct ReportsView: View {
                     switch selectedTab {
 
                     case .vehicles:
-                        reportList(
-                            reports: vehicleReports,
-                            filterChips: vehicleFilterChips,
-                            emptyIcon: "checkmark.circle",
-                            emptyTitle: "No open reports",
-                            emptySubtitle: "All driver-reported issues have been assigned."
-                        )
+                        List(viewModel.allVehicles) { vehicle in
+                            NavigationLink {
+                                VehicleReportView(vehicle: vehicle)
+                            } label: {
+                                VehicleRowView(
+                                    vehicle: vehicle,
+                                    statusText: vehicle.status?.rawValue.capitalized ?? "Unknown",
+                                    statusColor: (vehicle.status == .active || vehicle.status?.rawValue == "available") ? .green : ((vehicle.status == .maintenance) ? .orange : .blue)
+                                )
+                            }
+                        }
+                        .listStyle(.insetGrouped)
+                        .scrollContentBackground(.hidden)
 
                     case .maintenance:
                         reportList(
@@ -135,24 +141,6 @@ struct ReportsView: View {
     }
 
     // MARK: - Filter Chips
-
-    /// Vehicles tab — filter by severity (all reports are open here)
-    private var vehicleFilterChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                FilterButton(title: "All", isSelected: vehicleSeverityFilter == nil) {
-                    withAnimation { vehicleSeverityFilter = nil }
-                }
-                ForEach(DefectSeverity.allCases, id: \.self) { sev in
-                    FilterButton(title: sev.rawValue.capitalized, isSelected: vehicleSeverityFilter == sev) {
-                        withAnimation { vehicleSeverityFilter = sev }
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-        }
-    }
 
     /// Maintenance tab — filter by workflow status
     private var maintenanceFilterChips: some View {
