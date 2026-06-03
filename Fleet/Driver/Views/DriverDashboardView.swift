@@ -148,6 +148,9 @@ struct DriverDashboardView: View {
                         },
                         onEnd: { id, vId, distance, notes, urls in
                             viewModel.endTrip(id: id, vehicleId: vId, distance: distance, notes: notes, imageUrls: urls)
+                        },
+                        onPickupDone: { id, vId in
+                            viewModel.gf_pickupDone(tripId: id, vehicleId: vId)
                         }
                     )) {
                         DriverTripRow(
