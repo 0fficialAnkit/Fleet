@@ -192,6 +192,23 @@ enum TripService {
         }
     }
 
+    /// Updates the recorded distance of a trip.
+    /// Called by the voice logging flow when a driver speaks their current mileage.
+    static func updateTripDistance(id: UUID, distance: Double) async throws {
+        struct DistanceUpdate: Encodable { let distance: Double }
+        do {
+            try await supabase
+                .from("trips")
+                .update(DistanceUpdate(distance: distance))
+                .eq("id", value: id)
+                .execute()
+            print("[TripService] updateTripDistance(\(id)) → \(distance) km: OK")
+        } catch {
+            print("[TripService] updateTripDistance(\(id)) ERROR: \(error)")
+            throw error
+        }
+    }
+
     static func deleteTrip(id: UUID) async throws {
         do {
             try await supabase

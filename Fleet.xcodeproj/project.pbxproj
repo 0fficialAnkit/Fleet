@@ -290,6 +290,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "need camera access";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet uses your location to show your position on the route map and guide you to your destination.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Fleet needs microphone access to record your voice for hands-free trip logging while driving.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Fleet uses speech recognition to convert your voice into trip update records, so you can log updates without taking your hands off the wheel.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -324,6 +326,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCameraUsageDescription = "need camera access";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet uses your location to show your position on the route map and guide you to your destination.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Fleet needs microphone access to record your voice for hands-free trip logging while driving.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Fleet uses speech recognition to convert your voice into trip update records, so you can log updates without taking your hands off the wheel.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

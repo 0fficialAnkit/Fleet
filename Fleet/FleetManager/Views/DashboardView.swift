@@ -21,6 +21,10 @@ struct DashboardView: View {
 
                         liveFleetSection
 
+                        liveDriverAlertsSection
+
+                        recentDriverUpdatesSection
+
                         maintenanceSection
                     }
                     .refreshable { await viewModel.loadData() }
@@ -248,6 +252,189 @@ struct DashboardView: View {
                         .foregroundStyle(Color.secondary)
                 }
             }
+        }
+    }
+    // MARK: - Live Driver Alerts Section
+
+    private var liveDriverAlertsSection: some View {
+        let incidents = viewModel.recentVoiceIncidents
+        return Section {
+            if incidents.isEmpty {
+                Label("No driver alerts", systemImage: "checkmark.shield.fill")
+                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
+            } else {
+                ForEach(incidents) { incident in
+                    Group {
+                        if let trip = viewModel.trips.first(where: { $0.id == incident.tripId }) {
+                            NavigationLink(value: DashboardDestination.orderDetail(trip)) {
+                                incidentRow(incident)
+                            }
+                        } else {
+                            incidentRow(incident)
+                        }
+                    }
+                }
+            }
+        } header: {
+            HStack {
+                Text("Live Driver Alerts")
+                if !incidents.isEmpty {
+                    Text("\(incidents.count)")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.orange)
+                        .clipShape(Capsule())
+                }
+            }
+        }
+    }
+
+    private func incidentRow(_ incident: TripIncident) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: incidentIcon(incident.incidentType))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(incidentColor(incident.incidentType))
+                .frame(width: 32, height: 32)
+                .background(incidentColor(incident.incidentType).opacity(0.12))
+                .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    Text(incident.incidentType)
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    if let date = incident.createdAt {
+                        Text(date.formatted(date: .omitted, time: .shortened))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Text(incident.description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                if !incident.location.isEmpty && incident.location != "Unknown Location" {
+                    Label(incident.location, systemImage: "mappin")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func incidentIcon(_ type: String) -> String {
+        switch type {
+        case "Breakdown": return "wrench.and.screwdriver.fill"
+        case "Traffic":   return "car.2.fill"
+        case "Accident":  return "car.burst.fill"
+        case "Weather":   return "cloud.heavyrain.fill"
+        default:          return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private func incidentColor(_ type: String) -> Color {
+        switch type {
+        case "Breakdown": return .red
+        case "Traffic":   return .orange
+        case "Accident":  return .red
+        case "Weather":   return .blue
+        default:          return .orange
+        }
+    }
+
+    private var recentDriverUpdatesSection: some View {
+        let topLogs = Array(viewModel.recentVoiceLogs.prefix(3))
+        return Section(header: Text("Recent Driver Updates")) {
+            if topLogs.isEmpty {
+                HStack(spacing: 12) {
+                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(Color.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("No updates yet")
+                            .font(.body.bold())
+                            .foregroundStyle(Color.primary)
+                        Text("Driver voice logs will appear here")
+                            .font(.caption)
+                            .foregroundStyle(Color.secondary)
+                    }
+                }
+                .padding(.vertical, 6)
+            } else {
+                ForEach(topLogs) { log in
+                    if let trip = viewModel.trips.first(where: { $0.id == log.tripId }) {
+                        NavigationLink(value: DashboardDestination.orderDetail(trip)) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack {
+                                    Text(viewModel.driverName(for: log.driverId))
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(Color.primary)
+                                    
+                                    Spacer()
+                                    
+                                    if let createdAt = log.createdAt {
+                                        Text(createdAt.formatted(date: .omitted, time: .shortened))
+                                            .font(.caption)
+                                            .foregroundStyle(Color.secondary)
+                                    }
+                                }
+                                
+                                let rName = viewModel.routeName(for: trip.routeId)
+                                Text(rName)
+                                    .font(.caption.bold())
+                                    .foregroundStyle(Color.teal)
+                                
+                                // Fact chips row
+                                let status = log.voiceLogStatus
+                                let location = log.extractedLocation
+                                let mileage = log.extractedMileage
+                                let eta = log.extractedETA
+                                
+                                if status != nil || location != nil || mileage != nil || eta != nil {
+                                    HStack(spacing: 6) {
+                                        if let status = status {
+                                            MiniFactChip(icon: status.icon, text: status.displayName, color: statusColor(for: status))
+                                        }
+                                        if let location = location {
+                                            MiniFactChip(icon: "mappin.and.ellipse", text: location, color: .blue)
+                                        }
+                                        if let mileage = mileage {
+                                            MiniFactChip(icon: "road.lanes", text: "\(String(format: "%.1f", mileage)) km", color: .green)
+                                        }
+                                        if let eta = eta {
+                                            MiniFactChip(icon: "clock", text: eta, color: .orange)
+                                        }
+                                    }
+                                    .padding(.top, 2)
+                                }
+                                
+                                Text("\"\(log.transcription)\"")
+                                    .font(.caption)
+                                    .italic()
+                                    .foregroundStyle(Color.secondary)
+                                    .lineLimit(2)
+                                    .padding(.top, 2)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func statusColor(for status: VoiceLogStatus) -> Color {
+        switch status {
+        case .enRoute:   return .green
+        case .delayed:   return .orange
+        case .arrived:   return .teal
+        case .pickedUp:  return .blue
+        case .breakdown: return .red
+        case .other:     return .gray
         }
     }
 }
@@ -527,6 +714,28 @@ struct AllMaintenanceAlertsView: View {
         .listStyle(.insetGrouped)
         .navigationTitle("All Maintenance Alerts")
         .navigationBarTitleDisplayMode(.large)
+    }
+}
+
+// MARK: - MiniFactChip
+
+struct MiniFactChip: View {
+    let icon: String
+    let text: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.system(size: 8, weight: .bold))
+            Text(text)
+                .font(.system(size: 9, weight: .bold))
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(color.opacity(0.1))
+        .foregroundStyle(color)
+        .clipShape(Capsule())
     }
 }
 
