@@ -155,18 +155,16 @@ struct SignInView: View {
                 )
                 
                 // Forgot Password Link
-                if roleId != 1 {
-                    HStack {
-                        Spacer()
-                        Button {
-                            showingResetPassword = true
-                        } label: {
-                            Text("Forgot Password?")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(.teal)
-                        }
-                        .padding(.top, 4)
+                HStack {
+                    Spacer()
+                    Button {
+                        showingResetPassword = true
+                    } label: {
+                        Text("Forgot Password?")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.teal)
                     }
+                    .padding(.top, 4)
                 }
             }
         }
