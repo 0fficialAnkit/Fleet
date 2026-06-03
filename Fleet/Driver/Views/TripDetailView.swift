@@ -7,6 +7,7 @@ struct TripDetailView: View {
     let onStart:      (UUID, UUID, String, [String]) -> Void
     let onEnd:        (UUID, UUID, Double?, String, [String]) -> Void
     var onPickupDone: ((UUID, UUID) -> Void)? = nil
+    var onDropoffDone: ((UUID, UUID, UUID?) -> Void)? = nil
 
     @State private var currentStatus:    TripStatus?
     @State private var showingChecklist: InspectionType? = nil
@@ -32,11 +33,13 @@ struct TripDetailView: View {
     init(trip: Trip,
          onStart:      @escaping (UUID, UUID, String, [String]) -> Void,
          onEnd:        @escaping (UUID, UUID, Double?, String, [String]) -> Void,
-         onPickupDone: ((UUID, UUID) -> Void)? = nil) {
+         onPickupDone: ((UUID, UUID) -> Void)? = nil,
+         onDropoffDone: ((UUID, UUID, UUID?) -> Void)? = nil) {
         self.trip         = trip
         self.onStart      = onStart
         self.onEnd        = onEnd
         self.onPickupDone = onPickupDone
+        self.onDropoffDone = onDropoffDone
         self._currentStatus = State(initialValue: trip.status)
     }
 
@@ -195,6 +198,7 @@ struct TripDetailView: View {
                             doneHint: "Drop-off confirmed"
                         ) {
                             withAnimation(.spring(response: 0.3)) { dropoffCompleted = true }
+                            onDropoffDone?(trip.id, trip.vehicleId, nil)
                             showingChecklist = .postTrip
                         }
                     }
