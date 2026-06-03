@@ -207,6 +207,9 @@ enum TripService {
             let distance: Double?
         }
         do {
+            // Delete incidents associated with this trip to clear alerts from the admin dashboard
+            try? await TripIncidentService.deleteIncidents(forTripId: id)
+
             try await supabase
                 .from("trips")
                 .update(EndUpdate(status: .completed, end_time: Date(), distance: distance))

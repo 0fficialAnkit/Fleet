@@ -301,121 +301,62 @@ struct InventoryRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            if isLowStock {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(Color.red)
-                    .frame(width: 4)
-                    .padding(.vertical, 10)
-                    .padding(.leading, 4)
+        HStack(spacing: 16) {
+            // MARK: Part Icon
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(isLowStock ? Color.red.opacity(0.15) : Color.brown.opacity(0.15))
+                    .frame(width: 54, height: 54)
+                
+                Image(systemName: partIcon)
+                    .font(.system(size: 24, weight: .regular))
+                    .foregroundStyle(isLowStock ? Color.red : Color.brown)
             }
-
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 14) {
-                    // Part Icon Badge
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(isLowStock ? Color.red.opacity(0.1) : Color.brown.opacity(0.08))
-                            .frame(width: 48, height: 48)
-                        Image(systemName: partIcon)
-                            .font(.system(size: 20, weight: .medium))
-                            .foregroundStyle(isLowStock ? Color.red : Color.brown)
-                    }
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 8) {
-                            Text(item.partName ?? "Unknown Part")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Color.primary)
-                                .lineLimit(1)
-                            if isLowStock {
-                                HStack(spacing: 3) {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .font(.system(size: 8))
-                                    Text("LOW")
-                                        .font(.system(size: 9, weight: .bold, design: .rounded))
-                                }
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(Color.red, in: Capsule())
-                            }
-                        }
-
-                        HStack(spacing: 8) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "indianrupeesign")
-                                    .font(.system(size: 9, weight: .semibold))
-                                Text("\(String(format: "%.0f", item.unitCost ?? 0.0))")
-                                    .font(.caption.weight(.medium))
-                            }
-                            .foregroundStyle(Color.secondary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color(.tertiarySystemFill))
-                            .clipShape(Capsule())
-
-                            HStack(spacing: 4) {
-                                Image(systemName: "arrow.down.to.line")
-                                    .font(.system(size: 9, weight: .semibold))
-                                Text("Reorder: \(item.reorderLevel ?? 0)")
-                                    .font(.caption.weight(.medium))
-                            }
-                            .foregroundStyle(Color.secondary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color(.tertiarySystemFill))
-                            .clipShape(Capsule())
-                        }
-                    }
-
-                    Spacer(minLength: 0)
-
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("\(item.stockQuantity ?? 0)")
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
-                            .foregroundStyle(stockStatusColor)
-                        Text("in stock")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(Color(.tertiaryLabel))
-                    }
+            
+            // MARK: Part Details
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.partName ?? "Unknown Part")
+                    .font(.headline)
+                    .foregroundStyle(Color.primary)
+                    .lineLimit(1)
+                
+                HStack(spacing: 6) {
+                    Text("₹\(String(format: "%.0f", item.unitCost ?? 0.0))")
+                    Text("•")
+                    Text("Reorder: \(item.reorderLevel ?? 0)")
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 12)
-
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(Color(.tertiarySystemFill))
-                            .frame(height: 5)
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(stockBarGradient)
-                            .frame(width: max(geo.size.width * stockFraction, 4), height: 5)
-                            .animation(.spring(response: 0.6, dampingFraction: 0.7), value: stockFraction)
-                        Rectangle()
-                            .fill(Color(.tertiaryLabel).opacity(0.4))
-                            .frame(width: 1.5, height: 11)
-                            .offset(x: geo.size.width * 0.2 - 0.75)
-                    }
+                .font(.subheadline)
+                .foregroundStyle(Color.secondary)
+                .lineLimit(1)
+            }
+            
+            Spacer(minLength: 8)
+            
+            // MARK: Stock Status
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("\(item.stockQuantity ?? 0)")
+                    .font(.title3.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(isLowStock ? Color.red : Color.primary)
+                
+                if isLowStock {
+                    Text("LOW")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.red)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.red.opacity(0.15), in: Capsule())
+                } else {
+                    Text("in stock")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Color(.tertiaryLabel))
                 }
-                .frame(height: 11)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
             }
         }
+        .padding(16)
         .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color(.secondarySystemGroupedBackground))
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(
-                    isLowStock ? Color.red.opacity(0.25) : Color(.separator).opacity(0.2),
-                    lineWidth: isLowStock ? 1.0 : 0.5
-                )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
@@ -429,15 +370,9 @@ struct AIForecastBannerView: View {
     let forecasts: [SparePartForecast]
     @Binding var isExpanded: Bool
 
-    private var topUrgency: ForecastUrgency? { forecasts.first?.urgency }
-
     private var headerColor: Color {
-        switch topUrgency {
-        case .restock: return Color.red
-        case .high:    return Color.orange
-        case .monitor: return Color.blue
-        case .none:    return Color.green
-        }
+        // High intelligence Indigo/Purple theme for ML forecasts
+        return Color.indigo
     }
 
     private var summaryLabel: String {
@@ -528,12 +463,12 @@ struct AIForecastBannerView: View {
                 }
             }
         }
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke((forecasts.isEmpty ? Color.green : headerColor).opacity(0.22), lineWidth: 0.8)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color(.separator).opacity(0.3), lineWidth: 0.5)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -544,8 +479,8 @@ private struct ForecastItemRow: View {
 
     private var urgencyColor: Color {
         switch forecast.urgency {
-        case .restock: return Color.red
-        case .high:    return Color.orange
+        case .restock: return Color.orange // Minimal warm amber/orange warning
+        case .high:    return Color.orange.opacity(0.8)
         case .monitor: return Color.blue
         }
     }
@@ -601,7 +536,7 @@ private struct ForecastItemRow: View {
                 } else if forecast.urgency == .restock {
                     Label("Restock now", systemImage: "exclamationmark.circle")
                         .font(.caption2)
-                        .foregroundStyle(Color.red)
+                        .foregroundStyle(Color.orange)
                 }
             }
         }
@@ -617,8 +552,8 @@ struct ForecastUrgencyBadge: View {
 
     private var color: Color {
         switch urgency {
-        case .restock: return Color.red
-        case .high:    return Color.orange
+        case .restock: return Color.orange
+        case .high:    return Color.orange.opacity(0.8)
         case .monitor: return Color.blue
         }
     }
@@ -662,167 +597,101 @@ struct InventoryItemSheet: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
-
-                ScrollView {
-                    VStack(spacing: 20) {
-
-                        if let errorMessage {
-                            HStack(spacing: 10) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(Color.red)
-                                Text(errorMessage)
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(Color.red)
-                            }
-                            .padding()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.red.opacity(0.1))
-                            .cornerRadius(12)
-                            .padding(.horizontal, 24)
+            Form {
+                if let errorMessage {
+                    Section {
+                        HStack(spacing: 10) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(Color.red)
+                            Text(errorMessage)
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.red)
                         }
-
-                        VStack(alignment: .leading, spacing: 16) {
-                            // Part Name
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("PART NAME")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(Color.secondary)
-                                    .kerning(1.2)
-
-                                TextField("", text: $partName, prompt: Text("e.g. Brake Pads").foregroundColor(Color(.placeholderText)))
-                                    .foregroundColor(Color.primary)
-                                    .padding(.horizontal, 18)
-                                    .frame(height: 56)
-                                    .background(Color(.secondarySystemBackground))
-                                    .cornerRadius(14)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 14)
-                                            .stroke(Color(.separator), lineWidth: 1)
-                                    )
-                            }
-
-                            // Stock Quantity & Reorder Level (Side by Side)
-                            HStack(spacing: 16) {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text("STOCK QUANTITY")
-                                        .font(.system(size: 12, weight: .bold))
-                                        .foregroundColor(Color.secondary)
-                                        .kerning(1.2)
-
-                                    TextField("", text: $stockQuantity, prompt: Text("0").foregroundColor(Color(.placeholderText)))
-                                        .keyboardType(.numberPad)
-                                        .foregroundColor(Color.primary)
-                                        .padding(.horizontal, 18)
-                                        .frame(height: 56)
-                                        .background(Color(.secondarySystemBackground))
-                                        .cornerRadius(14)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 14)
-                                                .stroke(Color(.separator), lineWidth: 1)
-                                        )
-                                }
-
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text("REORDER LEVEL")
-                                        .font(.system(size: 12, weight: .bold))
-                                        .foregroundColor(Color.secondary)
-                                        .kerning(1.2)
-
-                                    TextField("", text: $reorderLevel, prompt: Text("0").foregroundColor(Color(.placeholderText)))
-                                        .keyboardType(.numberPad)
-                                        .foregroundColor(Color.primary)
-                                        .padding(.horizontal, 18)
-                                        .frame(height: 56)
-                                        .background(Color(.secondarySystemBackground))
-                                        .cornerRadius(14)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 14)
-                                                .stroke(Color(.separator), lineWidth: 1)
-                                        )
-                                }
-                            }
-
-                            // Unit Cost
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("UNIT COST (₹)")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(Color.secondary)
-                                    .kerning(1.2)
-
-                                TextField("", text: $unitCost, prompt: Text("0").foregroundColor(Color(.placeholderText)))
-                                    .keyboardType(.numberPad)
-                                    .foregroundColor(Color.primary)
-                                    .padding(.horizontal, 18)
-                                    .frame(height: 56)
-                                    .background(Color(.secondarySystemBackground))
-                                    .cornerRadius(14)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 14)
-                                            .stroke(Color(.separator), lineWidth: 1)
-                                    )
-                            }
-                        }
-                        .padding(.horizontal, 24)
-
-                        Spacer().frame(height: 20)
-
-                        // Action Buttons
-                        VStack(spacing: 14) {
-                            let isButtonDisabled = !isFormValid || isSaving
-
-                            Button(action: saveAction) {
-                                HStack {
-                                    if isSaving {
-                                        ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    } else {
-                                        Text(editingItem == nil ? "Add Item" : "Update Item")
-                                            .font(.system(size: 18, weight: .semibold))
-                                    }
-                                }
-                                .foregroundColor(isButtonDisabled ? Color(.tertiaryLabel) : .white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 56)
-                                .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.brown)
-                                .cornerRadius(16)
-                            }
-                            .disabled(isButtonDisabled)
-
-                            if editingItem != nil {
-                                Button(action: { showingDeleteAlert = true }) {
-                                    HStack {
-                                        if isDeleting {
-                                            ProgressView()
-                                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                        } else {
-                                            Text("Delete Item")
-                                                .font(.system(size: 18, weight: .semibold))
-                                        }
-                                    }
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 56)
-                                    .background(Color.red)
-                                    .cornerRadius(16)
-                                }
-                                .disabled(isDeleting)
-                            }
-                        }
-                        .padding(.horizontal, 24)
                     }
-                    .padding(.vertical, 24)
+                }
+
+                Section(header: Text("Part Details")) {
+                    TextField("Part Name", text: $partName)
+                    HStack {
+                        Text("Unit Cost (₹)")
+                        Spacer()
+                        TextField("0", text: $unitCost)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(Color.secondary)
+                    }
+                }
+
+                Section(header: Text("Stock Management")) {
+                    Stepper {
+                        HStack {
+                            Text("Stock Quantity")
+                            Spacer()
+                            TextField("0", text: $stockQuantity)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 50)
+                                .foregroundStyle(Color.secondary)
+                        }
+                    } onIncrement: {
+                        let current = Int(stockQuantity) ?? 0
+                        stockQuantity = "\(current + 1)"
+                    } onDecrement: {
+                        let current = Int(stockQuantity) ?? 0
+                        if current > 0 {
+                            stockQuantity = "\(current - 1)"
+                        }
+                    }
+
+                    Stepper {
+                        HStack {
+                            Text("Reorder Level")
+                            Spacer()
+                            TextField("0", text: $reorderLevel)
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 50)
+                                .foregroundStyle(Color.secondary)
+                        }
+                    } onIncrement: {
+                        let current = Int(reorderLevel) ?? 0
+                        reorderLevel = "\(current + 1)"
+                    } onDecrement: {
+                        let current = Int(reorderLevel) ?? 0
+                        if current > 0 {
+                            reorderLevel = "\(current - 1)"
+                        }
+                    }
+                }
+
+                if editingItem != nil {
+                    Section {
+                        Button(role: .destructive, action: { showingDeleteAlert = true }) {
+                            HStack {
+                                Spacer()
+                                if isDeleting {
+                                    ProgressView()
+                                } else {
+                                    Text("Delete Item")
+                                }
+                                Spacer()
+                            }
+                        }
+                        .disabled(isDeleting)
+                    }
                 }
             }
-            .navigationTitle(editingItem == nil ? "New Inventory Item" : "Edit Inventory Item")
+            .navigationTitle(editingItem == nil ? "New Item" : "Edit Item")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(editingItem == nil ? "Add" : "Save") {
+                        saveAction()
                     }
-                    .foregroundStyle(Color.secondary)
+                    .disabled(!isFormValid || isSaving)
                 }
             }
             .alert("Delete Item?", isPresented: $showingDeleteAlert) {

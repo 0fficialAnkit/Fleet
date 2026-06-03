@@ -53,5 +53,20 @@ enum TripIncidentService {
             throw error
         }
     }
+
+    /// Delete all incidents for a specific trip
+    static func deleteIncidents(forTripId tripId: UUID) async throws {
+        do {
+            try await supabase
+                .from("trip_incidents")
+                .delete()
+                .eq("trip_id", value: tripId)
+                .execute()
+            print("[TripIncidentService] deleteIncidents for trip \(tripId): OK")
+        } catch {
+            print("[TripIncidentService] deleteIncidents ERROR: \(error)")
+            throw error
+        }
+    }
 }
 

@@ -404,7 +404,7 @@ struct DriverFuelView: View {
                 // Dispatch notifications to managers in the background to prevent UI blocking
                 Task {
                     do {
-                        if let userId = authViewModel.currentUser?.id {
+                        if authViewModel.currentUser?.id != nil {
                             let managers = try await ProfileService.fetchProfilesByRole(role: "fleet_manager")
                             for manager in managers {
                                 let notification = Notification(

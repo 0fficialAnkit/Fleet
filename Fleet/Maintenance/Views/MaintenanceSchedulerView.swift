@@ -273,34 +273,7 @@ private struct TaskListSection: View {
                             }
                         }
                         .buttonStyle(ScaleButtonStyle())
-
-                        // MARK: Inline Action Buttons
-                        if viewModel.selectedTab == .pending {
-                            Button {
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                                    switch item {
-                                    case .task(let task):
-                                        viewModel.updateTaskStatus(id: task.id, to: .inProgress)
-                                    case .workOrder(let wo):
-                                        viewModel.updateWorkOrderStatus(id: wo.id, to: .inProgress)
-                                    }
-                                }
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "play.fill")
-                                        .font(.system(size: 12, weight: .bold))
-                                    Text("Start")
-                                        .font(.subheadline.weight(.semibold))
-                                }
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 42)
-                                .background(Color.brown, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            }
-                            .buttonStyle(ScaleButtonStyle())
-                        }
-
-
+                        
                     }
                     .scrollTransition { content, phase in
                         content
@@ -391,11 +364,8 @@ private struct TaskCard: View {
                 .padding(.leading, 16)
             }
         }
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(statusColor(task.status).opacity(0.5), lineWidth: 1.0)
-        )
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -452,11 +422,8 @@ private struct WorkOrderCard: View {
                 .padding(.leading, 16)
             }
         }
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(statusColor(workOrder.status).opacity(0.5), lineWidth: 1.0)
-        )
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     func statusLabel(_ status: WorkOrderStatus) -> String {
@@ -613,11 +580,7 @@ struct TaskDetailSheet: View {
                         }
                         .padding(16)
                         .background(statusColor(currentTask.status).opacity(0.09))
-                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .stroke(statusColor(currentTask.status).opacity(0.3), lineWidth: 1)
-                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                         // MARK: Vehicle Details
                         SheetSection(title: "Task Details") {
@@ -1097,11 +1060,7 @@ struct WorkOrderDetailSheet: View {
                         }
                         .padding(16)
                         .background(statusColor(currentWO.status).opacity(0.09))
-                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .stroke(statusColor(currentWO.status).opacity(0.3), lineWidth: 1)
-                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                         // MARK: Work Order Details
                         SheetSection(title: "Order Details") {
@@ -1116,14 +1075,17 @@ struct WorkOrderDetailSheet: View {
 
                         // MARK: Reported Problem
                         SheetSection(title: "Reported Problem") {
-                            HStack(alignment: .top, spacing: 16) {
-                                Image(systemName: "exclamationmark.bubble.fill")
+                            HStack(alignment: .top, spacing: 14) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 20))
                                     .foregroundStyle(Color.red)
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .padding(.top, 2)
+                                
                                 Text(currentWO.vehicleIssue)
-                                    .font(.body)
+                                    .font(.subheadline)
                                     .foregroundStyle(Color.primary)
-                                    .fixedSize(horizontal: false, vertical: true)
+                                    .lineSpacing(4)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
 
@@ -1173,6 +1135,23 @@ struct WorkOrderDetailSheet: View {
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 48)
                                         .background(Color.brown, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    }
+
+                                    Button {
+                                        viewModel.updateWorkOrderStatus(id: currentWO.id, to: .inProgress)
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                            dismiss()
+                                        }
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "play.fill")
+                                            Text("Start")
+                                        }
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(Color.brown)
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 48)
+                                        .background(Color.brown.opacity(0.15), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                     }
                                 }
                             }
@@ -1543,11 +1522,8 @@ private struct SheetSection<Content: View>: View {
                 content()
             }
             .padding(16)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-            )
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
         }
     }
@@ -1602,11 +1578,8 @@ private struct SheetActionButton: View {
             .foregroundStyle(color)
             .frame(maxWidth: .infinity)
             .padding(16)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(color.opacity(0.35), lineWidth: 1)
-            )
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
         }
     }
@@ -1630,11 +1603,8 @@ private struct SheetSecondaryButton: View {
             .foregroundStyle(Color.secondary)
             .frame(maxWidth: .infinity)
             .padding(16)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
-            )
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 }
