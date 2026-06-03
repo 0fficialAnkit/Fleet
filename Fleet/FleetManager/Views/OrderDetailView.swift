@@ -25,18 +25,13 @@ struct OrderDetailView: View {
     }
 
     // Events for this trip — oldest first, de-duplicated.
-    // Works for both active AND completed trips.
+    // Only events whose geofenceId matches this trip's fences are shown.
     var tripEvents: [TripGeofenceEvent] {
-        // If we have fence IDs, filter precisely; otherwise show all fetched events
-        let sorted: [TripGeofenceEvent]
-        if geofences.isEmpty {
-            sorted = gfEvents.sorted { ($0.occurredAt ?? .distantPast) < ($1.occurredAt ?? .distantPast) }
-        } else {
-            let ids = Set(geofences.map { $0.id })
-            sorted = gfEvents
-                .filter { ids.contains($0.geofenceId) }
-                .sorted { ($0.occurredAt ?? .distantPast) < ($1.occurredAt ?? .distantPast) }
-        }
+        guard !geofences.isEmpty else { return [] }   // no fences → nothing to show
+        let ids    = Set(geofences.map { $0.id })
+        let sorted = gfEvents
+            .filter { ids.contains($0.geofenceId) }
+            .sorted { ($0.occurredAt ?? .distantPast) < ($1.occurredAt ?? .distantPast) }
 
         // Keep only the first occurrence of each logical milestone (dedup)
         var seen    = Set<String>()
@@ -193,15 +188,17 @@ struct OrderDetailView: View {
         .navigationBarTitleDisplayMode(.large)
         .refreshable { await refreshAll() }
         .task {
-            await loadAll()          // loads geofences + events for all trip states
-            if isActive {
-                startPolling()
-                RealtimeManager.shared.addGeofenceEventsChangeHandler {
-                    Task { await self.refreshGeofenceData() }
-                }
-                RealtimeManager.shared.addVehicleLocationsChangeHandler {
-                    Task { await self.refreshLocations() }
-                }
+            await loadAll()
+
+            // Always subscribe to Realtime and poll — the trip may be scheduled
+            // when the fleet manager opens this view and become active later.
+            // Without this, zone-entry events are missed entirely.
+            startPolling()
+            RealtimeManager.shared.addGeofenceEventsChangeHandler {
+                Task { await self.refreshGeofenceData() }
+            }
+            RealtimeManager.shared.addVehicleLocationsChangeHandler {
+                Task { await self.refreshLocations() }
             }
         }
         .onDisappear { pollingTask?.cancel(); pollingTask = nil }
@@ -285,9 +282,20 @@ struct OrderDetailView: View {
     }
 
     private func refreshGeofenceData() async {
-        // fetchAllGeofences includes inactive fences — keeps history visible after trip ends
+        // Fetch all fences for THIS trip (active + inactive = survives trip end)
         geofences = (try? await GeofenceService.fetchAllGeofences(forTrip: trip.id)) ?? []
-        gfEvents  = (try? await GeofenceService.fetchEvents(forVehicle: trip.vehicleId, limit: 30)) ?? []
+
+        // ONLY fetch events if this trip has its own geofences.
+        // Without this guard, when geofences is empty we'd show events from the
+        // vehicle's previous trips — the cause of "Drop-off Done before trip starts".
+        guard !geofences.isEmpty else {
+            gfEvents = []
+            return
+        }
+
+        let all  = (try? await GeofenceService.fetchEvents(forVehicle: trip.vehicleId, limit: 30)) ?? []
+        let ids  = Set(geofences.map { $0.id })
+        gfEvents = all.filter { ids.contains($0.geofenceId) }
     }
 
     private func refreshAll() async {
@@ -302,6 +310,8 @@ struct OrderDetailView: View {
                 try? await Task.sleep(for: .seconds(15))
                 guard !Task.isCancelled else { break }
                 await refreshAll()
+                // Stop polling once trip is completed — Realtime handles late stragglers
+                if trip.status == .completed { break }
             }
         }
     }
