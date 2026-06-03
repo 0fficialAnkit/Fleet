@@ -13,6 +13,10 @@ class AuthViewModel {
     var isLoading = false
     var isSessionChecked = false
     
+    // OTP Variables
+    var isWaitingForOTP = false
+    var tempEmailForOTP: String?
+    
     var currentUserEmail: String? {
         currentUser?.email
     }
@@ -110,23 +114,66 @@ class AuthViewModel {
         isLoading = true
         errorMessage = nil
         do {
+            // 1. Verify Password First
             let response = try await supabase.auth.signIn(email: email, password: password)
-            self.currentUser = response.user
-            print("[AuthViewModel] signIn: auth OK userId=\(response.user.id)")
-            await fetchProfile()
-            if self.currentProfile != nil {
-                self.isAuthenticated = true
-                print("[AuthViewModel] signIn: complete, role=\(self.resolvedRoleName ?? "nil")")
-            } else {
-                try? await supabase.auth.signOut()
-                self.isAuthenticated = false
-                self.currentUser = nil
-            }
+            
+            // 2. Send OTP
+            try await supabase.auth.signInWithOTP(email: email)
+            
+            // 3. Update state to show OTP screen
+            self.tempEmailForOTP = email
+            self.isWaitingForOTP = true
+            
+            // Note: We don't set isAuthenticated = true here because they still need to verify the OTP.
+            // Sign out the temporary session created by signIn so they are fully required to enter OTP.
+            try? await supabase.auth.signOut()
+            
         } catch {
             print("[AuthViewModel] signIn ERROR: \(error)")
             self.errorMessage = error.localizedDescription
         }
         isLoading = false
+    }
+
+    func verifyOTP(token: String) async {
+        guard let email = tempEmailForOTP else { return }
+        
+        print("[AuthViewModel] verifyOTP: attempting for email=\(email)")
+        isLoading = true
+        errorMessage = nil
+        do {
+            // Verify the OTP
+            let response = try await supabase.auth.verifyOTP(
+                email: email,
+                token: token,
+                type: .email // Use .magiclink if .email gives an issue, but .email is standard for 6-digit OTP
+            )
+            
+            self.currentUser = response.user
+            print("[AuthViewModel] verifyOTP: auth OK userId=\(response.user.id)")
+            await fetchProfile()
+            
+            if self.currentProfile != nil {
+                self.isAuthenticated = true
+                self.isWaitingForOTP = false // Reset state
+                print("[AuthViewModel] verifyOTP: complete, role=\(self.resolvedRoleName ?? "nil")")
+            } else {
+                try? await supabase.auth.signOut()
+                self.isAuthenticated = false
+                self.currentUser = nil
+                self.errorMessage = "Profile not found."
+            }
+        } catch {
+            print("[AuthViewModel] verifyOTP ERROR: \(error)")
+            self.errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+    
+    func resetOTPState() {
+        self.isWaitingForOTP = false
+        self.tempEmailForOTP = nil
+        self.errorMessage = nil
     }
     
     func resetPassword(email: String) async {
