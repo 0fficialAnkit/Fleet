@@ -3,10 +3,11 @@ import MapKit
 
 struct TripDetailView: View {
 
-    let trip:         Trip
-    let onStart:      (UUID, UUID, String, [String]) -> Void
-    let onEnd:        (UUID, UUID, Double?, String, [String]) -> Void
-    var onPickupDone: ((UUID, UUID) -> Void)? = nil
+    let trip:          Trip
+    let onStart:       (UUID, UUID, String, [String]) -> Void
+    let onEnd:         (UUID, UUID, Double?, String, [String]) -> Void
+    var onPickupDone:  ((UUID, UUID) -> Void)? = nil
+    var onDropoffDone: ((UUID, UUID, UUID?) -> Void)? = nil   // tripId, vehicleId, dropoffGeofenceId
 
     @State private var currentStatus:    TripStatus?
     @State private var showingChecklist: InspectionType? = nil
@@ -14,8 +15,9 @@ struct TripDetailView: View {
     @State private var dropoffCompleted = false
 
     // Zone entry — gated by geofence "enter" events from Supabase
-    @State private var inPickupZone     = false
-    @State private var inDropoffZone    = false
+    @State private var inPickupZone      = false
+    @State private var inDropoffZone     = false
+    @State private var dropoffGeofenceId: UUID? = nil   // cached when dropoff zone fires
     @State private var zoneTask: Task<Void, Never>? = nil
 
     // Brief confirmation banners
@@ -28,13 +30,15 @@ struct TripDetailView: View {
     @State private var incidents:         [TripIncident] = []
 
     init(trip: Trip,
-         onStart:      @escaping (UUID, UUID, String, [String]) -> Void,
-         onEnd:        @escaping (UUID, UUID, Double?, String, [String]) -> Void,
-         onPickupDone: ((UUID, UUID) -> Void)? = nil) {
-        self.trip         = trip
-        self.onStart      = onStart
-        self.onEnd        = onEnd
-        self.onPickupDone = onPickupDone
+         onStart:       @escaping (UUID, UUID, String, [String]) -> Void,
+         onEnd:         @escaping (UUID, UUID, Double?, String, [String]) -> Void,
+         onPickupDone:  ((UUID, UUID) -> Void)? = nil,
+         onDropoffDone: ((UUID, UUID, UUID?) -> Void)? = nil) {
+        self.trip          = trip
+        self.onStart       = onStart
+        self.onEnd         = onEnd
+        self.onPickupDone  = onPickupDone
+        self.onDropoffDone = onDropoffDone
         self._currentStatus = State(initialValue: trip.status)
     }
 
@@ -190,15 +194,36 @@ struct TripDetailView: View {
                             done:     dropoffCompleted,
                             tint:     .indigo,
                             lockHint: "Enter the drop-off zone to enable",
-                            doneHint: "Drop-off confirmed"
+                            doneHint: "Drop-off confirmed — tap End Trip to finish"
                         ) {
                             withAnimation(.spring(response: 0.3)) { dropoffCompleted = true }
-                            showingChecklist = .postTrip
+                            onDropoffDone?(trip.id, trip.vehicleId, dropoffGeofenceId)
                         }
                     }
                 }
 
-                // Report Incident — bordered capsule
+                // End Trip — appears after drop-off toggle is confirmed
+                if dropoffCompleted {
+                    Section {
+                        Button {
+                            showingChecklist = .postTrip
+                        } label: {
+                            Label("End Trip", systemImage: "checkmark.seal.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.red)
+                        .controlSize(.large)
+                        .buttonBorderShape(.capsule)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .transition(.asymmetric(
+                            insertion: .push(from: .bottom).combined(with: .opacity),
+                            removal: .opacity))
+                    }
+                }
+
+                // Report Incident — bordered capsule, always visible
                 Section {
                     NavigationLink(destination: DriverReportIncidentView(trip: trip)) {
                         Label("Report Incident",
@@ -291,12 +316,17 @@ struct TripDetailView: View {
         .onAppear {
             Task { incidents = (try? await TripIncidentService.fetchIncidents(forTripId: trip.id)) ?? [] }
         }
-        // Instant unlock when zone is entered — no Supabase round-trip
+        // Instant unlock when zone is entered — cache fenceId for direct use in toggle
         .onReceive(NotificationCenter.default.publisher(for: .gfZoneEntered)) { note in
             guard let type = note.userInfo?["zoneType"] as? String else { return }
+            let fenceIdStr = note.userInfo?["geofenceId"] as? String
             withAnimation(.spring(response: 0.35)) {
                 if type == "pickup"  { inPickupZone  = true }
-                if type == "dropoff" { inDropoffZone = true }
+                if type == "dropoff" {
+                    inDropoffZone    = true
+                    // Cache the exact geofenceId — avoids any DB lookup when toggle is flipped
+                    if let s = fenceIdStr { dropoffGeofenceId = UUID(uuidString: s) }
+                }
             }
         }
         .onDisappear {
@@ -346,6 +376,12 @@ struct TripDetailView: View {
             if !pickupCompleted {
                 pickupCompleted = events.contains {
                     $0.geofenceId == pFence?.id && $0.eventType == "pickup_done"
+                }
+            }
+            // Drop-off already completed?
+            if !dropoffCompleted {
+                dropoffCompleted = events.contains {
+                    $0.geofenceId == dFence?.id && $0.eventType == "dropoff_done"
                 }
             }
         }

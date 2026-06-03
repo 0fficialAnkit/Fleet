@@ -151,6 +151,9 @@ struct DriverDashboardView: View {
                         },
                         onPickupDone: { id, vId in
                             viewModel.gf_pickupDone(tripId: id, vehicleId: vId)
+                        },
+                        onDropoffDone: { id, vId, fenceId in
+                            viewModel.gf_dropoffDone(tripId: id, vehicleId: vId, geofenceId: fenceId)
                         }
                     )) {
                         DriverTripRow(

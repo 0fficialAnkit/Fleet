@@ -221,13 +221,25 @@ final class DriverDashboardViewModel {
         print("[DriverDashboardViewModel] endTrip called with distance: \(String(describing: distance))")
         Task {
             do {
+                // Log trip_ended before ending trip (using the dropoff geofence ID)
+                let fences = (try? await GeofenceService.fetchGeofences(forTrip: id)) ?? []
+                if let df = fences.first(where: { $0.zoneType == "dropoff" }) {
+                    try? await GeofenceService.createEvent(TripGeofenceEvent(
+                        id: UUID(), geofenceId: df.id, vehicleId: vehicleId,
+                        driverId: currentUserId, eventType: "trip_ended", occurredAt: Date()))
+                    let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
+                    for mgr in managers {
+                        try? await NotificationService.createNotification(Fleet.Notification(
+                            id: UUID(), userId: mgr.id,
+                            title: "🏁 Trip Ended",
+                            message: "Driver has completed the trip. Trip is now ending.",
+                            type: .info, isRead: false, createdAt: Date()))
+                    }
+                }
+
                 try await TripService.endTrip(id: id, distance: distance)
                 stopLocationTracking()
                 TripGeofenceMonitor.shared.stopAll()
-                // Log dropoff_done before clearing state
-                if let state = gfDistState {
-                    await gf_logDropoffDone(fenceId: state.dropoffFenceId, vehicleId: vehicleId, tripId: id)
-                }
                 gfDistState = nil
                 try? await GeofenceService.deactivateGeofences(forTrip: id)
                 let inspectionId = UUID()
@@ -394,16 +406,26 @@ final class DriverDashboardViewModel {
 
     private func gf_fireZoneEvent(fenceId: UUID, vehicleId: UUID,
                                    tripId: UUID, zoneType: String) async {
+        // Strict ordering: dropoff entry only fires AFTER pickup_done is confirmed in DB.
+        if zoneType == "dropoff", let state = gfDistState {
+            let recent   = (try? await GeofenceService.fetchEvents(forVehicle: vehicleId, limit: 30)) ?? []
+            let pickupDone = recent.contains { $0.geofenceId == state.pickupFenceId && $0.eventType == "pickup_done" }
+            guard pickupDone else {
+                print("[Geofence] ⏭ Dropoff entry blocked — pickup_done not yet confirmed")
+                return
+            }
+        }
+
         let isPickup = zoneType == "pickup"
         let emoji    = isPickup ? "📍" : "🏁"
         let label    = isPickup ? "Pickup" : "Drop-off"
         let title    = "\(emoji) Driver Entered \(label) Zone"
         let body     = "Driver is within \(Int(kGeofenceRadiusMeters/1000)) km of the \(label.lowercased()) location."
-        // Notify TripDetailView instantly on the driver's device
+        // Notify TripDetailView instantly — include fenceId so toggle uses it directly
         NotificationCenter.default.post(
             name: .gfZoneEntered,
             object: nil,
-            userInfo: ["zoneType": zoneType])
+            userInfo: ["zoneType": zoneType, "geofenceId": fenceId.uuidString])
         // Save event
         try? await GeofenceService.createEvent(TripGeofenceEvent(
             id: UUID(), geofenceId: fenceId, vehicleId: vehicleId,
@@ -473,21 +495,42 @@ final class DriverDashboardViewModel {
         }
     }
 
-    /// Logs the `dropoff_done` event and notifies fleet managers when trip ends.
-    private func gf_logDropoffDone(fenceId: UUID, vehicleId: UUID, tripId: UUID) async {
-        try? await GeofenceService.createEvent(TripGeofenceEvent(
-            id: UUID(), geofenceId: fenceId, vehicleId: vehicleId,
-            driverId: currentUserId, eventType: "dropoff_done", occurredAt: Date()))
-        let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-        for mgr in managers {
-            try? await NotificationService.createNotification(Fleet.Notification(
-                id: UUID(), userId: mgr.id,
-                title: "🏁 Drop-off Completed",
-                message: "Driver has completed the drop-off. Trip is now ending.",
-                type: .info, isRead: false, createdAt: Date()))
+    /// Called when driver flips the Drop-off toggle ON.
+    func gf_dropoffDone(tripId: UUID, vehicleId: UUID, geofenceId: UUID?) {
+        Task {
+            var dropoffFenceId: UUID? = nil
+            let allFences = (try? await GeofenceService.fetchAllGeofences(forTrip: tripId)) ?? []
+            if let df = allFences.first(where: { $0.zoneType == "dropoff" }) {
+                dropoffFenceId = df.id
+            } else if let passed = geofenceId {
+                dropoffFenceId = passed
+            }
+
+            guard let gfId = dropoffFenceId else {
+                print("[Geofence] ❌ gf_dropoffDone: dropoff fence not found in trip_geofences — event not saved")
+                return
+            }
+
+            do {
+                try await GeofenceService.createEvent(TripGeofenceEvent(
+                    id: UUID(), geofenceId: gfId, vehicleId: vehicleId,
+                    driverId: currentUserId, eventType: "dropoff_done", occurredAt: Date()))
+                print("[Geofence] ✅ dropoff_done saved (fence: \(gfId.uuidString.prefix(6)))")
+            } catch {
+                print("[Geofence] ❌ dropoff_done save failed: \(error)")
+            }
+
+            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
+            for mgr in managers {
+                try? await NotificationService.createNotification(Fleet.Notification(
+                    id: UUID(), userId: mgr.id,
+                    title: "🏁 Drop-off Completed",
+                    message: "Driver has completed the drop-off.",
+                    type: .info, isRead: false, createdAt: Date()))
+            }
         }
-        print("[Geofence] 🏁 Drop-off Done logged for trip \(tripId.uuidString.prefix(6))")
     }
+
 
     private func gf_geocode(_ address: String,
                              near bias: CLLocationCoordinate2D? = nil) async -> CLLocationCoordinate2D? {
