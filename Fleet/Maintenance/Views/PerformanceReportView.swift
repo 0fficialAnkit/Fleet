@@ -305,7 +305,7 @@ private struct ReportStatCard: View {
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.headline)
                 .foregroundStyle(color)
             Text(value)
                 .font(.system(size: 22, weight: .bold, design: .rounded))

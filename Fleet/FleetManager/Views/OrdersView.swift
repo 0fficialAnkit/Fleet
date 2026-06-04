@@ -3,7 +3,7 @@ internal import Auth
 
 struct OrdersView: View {
     @State private var viewModel = OrdersViewModel()
-    @State private var selectedFilter: TripStatus? = .scheduled
+    @State private var selectedFilter: TripStatus? = nil
     @State private var isAddingOrder = false
     @State private var navigationPath = [Trip]()
     @Environment(AuthViewModel.self) private var authViewModel

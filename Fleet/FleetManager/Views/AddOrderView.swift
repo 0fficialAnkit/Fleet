@@ -4,15 +4,56 @@ import MapKit
 struct AddOrderView: View {
     @Environment(\.dismiss) private var dismiss
     var viewModel: OrdersViewModel
+    var tripToEdit: Trip? = nil
 
     // MARK: - Form State
-    @State private var startTime = Date()
-    @State private var orderType: OrderType = .pickUpAndDrop
-    @State private var selectedVehicleType: VehicleType = .car
+    @State private var startTime: Date
+    @State private var orderType: OrderType
+    @State private var selectedVehicleType: VehicleType
     @State private var pickupLocation: SelectedLocation?
     @State private var dropoffLocation: SelectedLocation?
     @State private var selectedVehicleId: UUID?
     @State private var selectedDriverId: UUID?
+
+    init(viewModel: OrdersViewModel, tripToEdit: Trip? = nil) {
+        self.viewModel = viewModel
+        self.tripToEdit = tripToEdit
+        
+        if let trip = tripToEdit {
+            _startTime = State(initialValue: trip.startTime ?? Date())
+            _orderType = State(initialValue: trip.orderType ?? .pickUpAndDrop)
+            _selectedVehicleId = State(initialValue: trip.vehicleId)
+            _selectedDriverId = State(initialValue: trip.driverId)
+            
+            var foundVehicleType: VehicleType = .car
+            let vId = trip.vehicleId
+            for v in viewModel.vehicles {
+                if v.id == vId {
+                    if let vt = v.vehicleType { foundVehicleType = vt }
+                    break
+                }
+            }
+            _selectedVehicleType = State(initialValue: foundVehicleType)
+            
+            if let rId = trip.routeId, let route = viewModel.route(for: rId) {
+                let pLoc = SelectedLocation(title: route.startLocation ?? "", subtitle: "")
+                let dLoc = SelectedLocation(title: route.endLocation ?? "", subtitle: "")
+                _pickupLocation = State(initialValue: pLoc)
+                _dropoffLocation = State(initialValue: dLoc)
+            } else {
+                _pickupLocation = State(initialValue: nil)
+                _dropoffLocation = State(initialValue: nil)
+            }
+        } else {
+            _startTime = State(initialValue: Date())
+            _orderType = State(initialValue: .pickUpAndDrop)
+            _selectedVehicleType = State(initialValue: .car)
+            _pickupLocation = State(initialValue: nil)
+            _dropoffLocation = State(initialValue: nil)
+            _selectedVehicleId = State(initialValue: nil)
+            _selectedDriverId = State(initialValue: nil)
+        }
+    }
 
     // MARK: - Sheet Control
     @State private var showingPickupSearch  = false
@@ -184,7 +225,7 @@ struct AddOrderView: View {
                     }
                 }
             }
-            .navigationTitle("New Order")
+            .navigationTitle(tripToEdit != nil ? "Edit Order" : "New Order")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -320,14 +361,25 @@ struct AddOrderView: View {
             )
             try await RouteService.createRoute(route, managerId: viewModel.adminId)
 
-            // 2. Create trip linked to new route
-            try await viewModel.addTrip(
-                vehicleId: vehicleId,
-                driverId: driverId,
-                routeId: route.id,
-                startTime: startTime,
-                orderType: orderType
-            )
+            if let trip = tripToEdit {
+                try await viewModel.updateTrip(
+                    id: trip.id,
+                    vehicleId: vehicleId,
+                    driverId: driverId,
+                    routeId: route.id,
+                    startTime: startTime,
+                    orderType: orderType,
+                    status: trip.status ?? .scheduled
+                )
+            } else {
+                try await viewModel.addTrip(
+                    vehicleId: vehicleId,
+                    driverId: driverId,
+                    routeId: route.id,
+                    startTime: startTime,
+                    orderType: orderType
+                )
+            }
 
             dismiss()
         } catch {

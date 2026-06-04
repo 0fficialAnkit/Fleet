@@ -108,11 +108,11 @@ final class ReportsViewModel {
         allTrips         = (await tr) ?? []
 
             // Build display reports from issue_reports table
-            self.reports = issueRecords.map { record in
-                let vehicle       = allVehicles.first { $0.id == record.vehicleId }
-                let make          = vehicle?.make  ?? "Vehicle"
-                let model         = vehicle?.model ?? ""
-                let plate         = vehicle?.licensePlate ?? "—"
+            self.reports = issueRecords.compactMap { record in
+                guard let vehicle = allVehicles.first(where: { $0.id == record.vehicleId }) else { return nil }
+                let make          = vehicle.make  ?? "Vehicle"
+                let model         = vehicle.model ?? ""
+                let plate         = vehicle.licensePlate ?? "—"
                 let driver        = profileName(record.reportedBy)
                 let driverLicense = profiles.first { $0.id == record.reportedBy }?.licenseNumber
 

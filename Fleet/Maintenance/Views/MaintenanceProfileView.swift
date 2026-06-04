@@ -4,163 +4,75 @@ struct MaintenanceProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var profileVM = ProfileViewModel()
 
-    // Profile menu items
-    private let menuItems: [(title: String, icon: String, isDestructive: Bool)] = [
-        ("Certifications", "rosette", false),
-        ("Performance Report", "chart.bar.xaxis", false),
-        ("Notifications", "bell", false)
-    ]
-
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
-
+            Group {
                 if let user = profileVM.currentUser {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 24) {
-
-                            // MARK: - Profile Header
-                            ProfileHeader(
-                                icon: "person.crop.circle.fill",
-                                name: user.fullName,
-                                role: "Senior Mechanic",
-                                accentColor: Color.brown
-                            )
-                            .padding(.top, 32)
-
-                            // MARK: - Personal Information
-                            VStack(spacing: 0) {
-                                InfoRow(
-                                    icon: "person.fill",
-                                    label: "Full Name",
-                                    value: user.fullName,
-                                    iconColor: Color.brown
+                    List {
+                        // Header
+                        Section {
+                            HStack {
+                                Spacer()
+                                ProfileHeader(
+                                    icon: "person.crop.circle.fill",
+                                    name: user.fullName,
+                                    role: "Maintenance Staff",
+                                    accentColor: .brown
                                 )
-
-                                Divider().background(Color(.separator))
-                                InfoRow(
-                                    icon: "envelope.fill",
-                                    label: "Email",
-                                    value: user.email,
-                                    iconColor: Color.brown
-                                )
-
-                                Divider().background(Color(.separator))
-                                InfoRow(
-                                    icon: "phone.fill",
-                                    label: "Phone",
-                                    value: user.phone ?? "Not Provided",
-                                    iconColor: Color.brown
-                                )
-
-                                Divider().background(Color(.separator))
-                                let status = user.userStatus ?? .active
-                                InfoRow(
-                                    icon: status == .active ? "checkmark.circle.fill" : "xmark.circle.fill",
-                                    label: "Status / State",
-                                    value: status.rawValue.capitalized,
-                                    iconColor: status == .active ? Color.green : Color.secondary,
-                                    valueColor: status == .active ? Color.green : Color.secondary
-                                )
-
-                                Divider().background(Color(.separator))
-                                InfoRow(
-                                    icon: "calendar",
-                                    label: "Joined",
-                                    value: user.createdAt?.formatted(date: .abbreviated, time: .omitted) ?? "—",
-                                    iconColor: Color.brown
-                                )
+                                Spacer()
                             }
-                            .padding(16)
-                            .background(Color(.secondarySystemGroupedBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .padding(.horizontal, 16)
-
-                            // MARK: - Menu
-                            VStack(spacing: 0) {
-                                ForEach(menuItems, id: \.title) { item in
-                                    Group {
-                                        if item.title == "Certifications" {
-                                            NavigationLink {
-                                                CertificationsView()
-                                            } label: {
-                                                ActionRow(
-                                                    icon: item.icon,
-                                                    title: item.title,
-                                                    iconColor: Color.brown,
-                                                    isDestructive: item.isDestructive
-                                                )
-                                            }
-                                            .buttonStyle(.plain)
-                                        } else if item.title == "Performance Report" {
-                                            NavigationLink {
-                                                PerformanceReportView()
-                                            } label: {
-                                                ActionRow(
-                                                    icon: item.icon,
-                                                    title: item.title,
-                                                    iconColor: Color.brown,
-                                                    isDestructive: item.isDestructive
-                                                )
-                                            }
-                                            .buttonStyle(.plain)
-                                        } else {
-                                            Button(action: {}) {
-                                                ActionRow(
-                                                    icon: item.icon,
-                                                    title: item.title,
-                                                    iconColor: Color.brown,
-                                                    isDestructive: item.isDestructive
-                                                )
-                                            }
-                                            .buttonStyle(.plain)
-                                        }
-                                    }
-
-                                    if item.title != menuItems.last?.title {
-                                        Divider()
-                                            .background(Color(.separator))
-                                            .padding(.leading, 42)
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, 16)
                             .padding(.vertical, 8)
-                            .background(Color(.secondarySystemGroupedBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .padding(.horizontal, 16)
-
-                            // MARK: - Logout
-                            Button(action: {
-                                Task { await authViewModel.signOut() }
-                            }) {
-                                HStack {
-                                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                                    Text("Sign Out")
-                                }
-                                .font(.body.weight(.medium))
-                                .foregroundStyle(Color.red)
-                                .frame(maxWidth: .infinity)
-                                .padding(16)
-                                .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 24)
+                            .listRowBackground(Color.clear)
                         }
-                        .padding(.vertical, 16)
+
+                        // Personal info
+                        Section("Personal Information") {
+                            InfoRow(icon: "person.fill",    label: "Full Name", value: user.fullName)
+                            InfoRow(icon: "envelope.fill",  label: "Email",     value: user.email)
+                            InfoRow(icon: "phone.fill",     label: "Phone",     value: user.phone ?? "Not Provided")
+                            let status = user.userStatus ?? .active
+                            InfoRow(
+                                icon: status == .active ? "checkmark.seal.fill" : "xmark.seal.fill",
+                                label: "Status",
+                                value: status.rawValue.capitalized,
+                                valueColor: status == .active ? .green : .secondary
+                            )
+                            if let date = user.createdAt {
+                                InfoRow(icon: "calendar", label: "Joined",
+                                        value: date.formatted(date: .abbreviated, time: .omitted))
+                            }
+                        }
+
+                        // Navigation links
+                        Section {
+                            NavigationLink(destination: CertificationsView()) {
+                                Label("Certifications", systemImage: "rosette")
+                            }
+                            NavigationLink(destination: PerformanceReportView()) {
+                                Label("Performance Report", systemImage: "chart.bar.xaxis")
+                            }
+                            Label("Notifications", systemImage: "bell")
+                        }
+
+                        // Sign out
+                        Section {
+                            Button(role: .destructive) {
+                                Task { await authViewModel.signOut() }
+                            } label: {
+                                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                            }
+                        }
                     }
+                    .listStyle(.insetGrouped)
                 } else {
-                    Text("Profile not found")
-                        .foregroundStyle(Color.secondary)
+                    ContentUnavailableView("Profile not found", systemImage: "person.slash")
                 }
             }
             .navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.inline)
         }
-        .task {
-            await profileVM.loadProfile()
-        }
+        .task { await profileVM.loadProfile() }
     }
 }
 

@@ -18,12 +18,16 @@ struct DashboardView: View {
                         Section {
                             fleetOverviewCard
                         }
+                        
+                        Section {
+                            MiniFuelDashboardCard(adminId: viewModel.adminId)
+                        }
 
                         liveFleetSection
 
                         liveDriverAlertsSection
 
-                        maintenanceSection
+                       // maintenanceSection
                     }
                     .refreshable { await viewModel.loadData() }
                     .listStyle(.insetGrouped)
@@ -34,8 +38,11 @@ struct DashboardView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button(action: { showingNotifications = true }) {
-                        Image(systemName: "bell")
+                        Image(systemName: viewModel.hasUnreadNotifications ? "bell.badge" : "bell")
+                            .font(.system(size: 17, weight: .medium))
+                            //.symbolRenderingMode(viewModel.hasUnreadNotifications ? .multicolor : .monochrome)
                             .foregroundStyle(.primary)
+                            .frame(width: 38, height: 38)
                     }
                     .buttonStyle(.plain)
 
@@ -72,6 +79,8 @@ struct DashboardView: View {
                         alerts: viewModel.predictiveAlerts,
                         maintenanceStaff: viewModel.profiles.filter { $0.role == "maintenance" }
                     )
+                case .fuelAnalytics:
+                    FleetFuelAnalyticsView(adminId: viewModel.adminId)
                 }
             }
         }
@@ -320,38 +329,93 @@ struct DashboardView: View {
         default:          return .orange
         }
     }
+}
 
-    // MARK: - Maintenance
+// MARK: - Fleet Stat Pill
 
-    private var maintenanceSection: some View {
-        let topAlerts = Array(viewModel.predictiveAlerts.prefix(3))
-        return Section {
-            if viewModel.predictiveAlerts.isEmpty {
-                Label("All vehicles operational", systemImage: "checkmark.shield")
-                    .foregroundStyle(.secondary)
-                    .font(.subheadline)
-            } else {
-                ForEach(topAlerts) { alert in
-                    PredictiveAlertCardView(
-                        alert: alert,
-                        maintenanceStaff: viewModel.profiles.filter { $0.role == "maintenance" }
-                    )
+struct FleetStatPill: View {
+    let value: Int
+    let label: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("\(value)")
+                .font(.title2.weight(.bold))
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+// MARK: - Trip Card
+
+struct TripCardView: View {
+    let trip: Trip
+    let viewModel: DashboardViewModel
+
+    var routeName: String {
+        viewModel.routeName(for: trip.routeId)
+    }
+
+    var displayTitle: String {
+        if let type = trip.orderType {
+            return type.displayName
+        }
+        return routeName
+    }
+
+    var driverName: String {
+        viewModel.driverName(for: trip.driverId)
+    }
+
+    var statusColor: Color {
+        switch trip.status {
+        case .scheduled: return Color.blue
+        case .active:    return Color.green
+        case .completed: return Color.green
+        case .cancelled: return Color.red
+        case .none:      return Color(.quaternaryLabel)
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text(displayTitle)
+                        .font(.body.bold())
+                        .foregroundStyle(Color.primary)
+                        .lineLimit(1)
+                    Spacer()
+                    StatusBadge(text: trip.status?.rawValue.capitalized ?? "Unknown", color: statusColor)
                 }
-            }
-        } header: {
-            HStack {
-                Text("Maintenance Needed")
-                Spacer()
-                if viewModel.predictiveAlerts.count > 3 {
-                    NavigationLink(value: DashboardDestination.allMaintenanceAlerts) {
-                        HStack(spacing: 3) {
-                            Text("See All (\(viewModel.predictiveAlerts.count))")
-                                .font(.footnote)
-                            Image(systemName: "chevron.right")
-                                .font(.caption2.weight(.semibold))
+
+                HStack {
+                    HStack(spacing: 6) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .foregroundStyle(Color.teal)
+                            .font(.system(size: 16))
+                        Text(driverName)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.secondary)
+                    }
+                    Spacer()
+                    if let distance = trip.distance {
+                        HStack(spacing: 6) {
+                            Image(systemName: "ruler.fill")
+                                .foregroundStyle(Color(.tertiaryLabel))
+                                .font(.system(size: 14))
+                            Text(String(format: "%.1f km", distance))
+                                .font(.subheadline)
+                                .foregroundStyle(Color.secondary)
                         }
-                        .foregroundStyle(.orange)
-                        .textCase(.none)
                     }
                 }
             }
@@ -473,72 +537,89 @@ struct AllMaintenanceAlertsView: View {
     }
 }
 
-// MARK: - Trip Card (kept for compatibility)
+// MARK: - Mini Fuel Dashboard Card
 
-struct TripCardView: View {
-    let trip: Trip
-    let viewModel: DashboardViewModel
-
-    var routeName: String { viewModel.routeName(for: trip.routeId) }
-    var displayTitle: String { trip.orderType?.displayName ?? routeName }
-    var driverName: String { viewModel.driverName(for: trip.driverId) }
-
-    var statusColor: Color {
-        switch trip.status {
-        case .scheduled: return .blue
-        case .active:    return .green
-        case .completed: return .green
-        case .cancelled: return .red
-        default:         return Color(.quaternaryLabel)
-        }
-    }
+struct MiniFuelDashboardCard: View {
+    let adminId: UUID?
+    @State private var viewModel = FleetFuelAnalyticsViewModel()
 
     var body: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(displayTitle)
-                        .font(.headline)
-                        .lineLimit(1)
-                    Spacer()
-                    StatusBadge(text: trip.status?.rawValue.capitalized ?? "Unknown", color: statusColor)
-                }
-                HStack {
-                    Label(driverName, systemImage: "person.fill")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    if let distance = trip.distance {
-                        Label(String(format: "%.1f km", distance), systemImage: "road.lanes")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+        ZStack {
+            NavigationLink(value: DashboardDestination.fuelAnalytics) {
+                EmptyView()
+            }
+            .opacity(0)
+
+            VStack(spacing: 0) {
+                // Header
+                HStack(alignment: .top, spacing: 16) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.orange.opacity(0.12))
+                            .frame(width: 48, height: 48)
+                        Image(systemName: "drop.fill")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(Color.orange)
                     }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Fuel Analytics")
+                            .font(.title2.bold())
+                            .foregroundStyle(Color.primary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color(.tertiaryLabel))
+                        .padding(.top, 4)
+                }
+
+                Divider()
+                    .background(Color(.separator))
+                    .padding(.vertical, 16)
+
+                // Stats breakdown row
+                HStack(spacing: 8) {
+                    FuelStatPill(
+                        value: String(format: "%.0f km", viewModel.totalDistance),
+                        label: "Total Distance",
+                        color: Color.blue
+                    )
+                    FuelStatPill(
+                        value: String(format: "%.1f L", viewModel.totalLiters),
+                        label: "Fuel Used",
+                        color: Color.orange
+                    )
                 }
             }
+            .padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
+        .task {
+            viewModel.adminId = adminId
+            await viewModel.loadData()
+        }
     }
 }
 
-// MARK: - Fleet Stat Pill (kept for compatibility)
-
-struct FleetStatPill: View {
-    let value: Int
+struct FuelStatPill: View {
+    let value: String
     let label: String
     let color: Color
 
     var body: some View {
         VStack(spacing: 4) {
-            Text("\(value)")
-                .font(.title2.bold())
+            Text(value)
+                .font(.headline.weight(.bold))
                 .foregroundStyle(color)
             Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .background(color.opacity(0.08))
+        .padding(.vertical, 12)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
