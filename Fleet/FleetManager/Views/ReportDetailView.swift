@@ -523,6 +523,14 @@ struct ReportDetailView: View {
         if let drv = meta["Driveable"]   { rows.append(("Vehicle Driveable", drv)) }
         if !cleanDescription.isEmpty     { rows.append(("Description", cleanDescription.replacingOccurrences(of: "\n", with: " "))) }
         rows.append(("",            ""))
+        if let vehicle = vehicle {
+            let store = ComplianceSettingsStore.shared
+            let key = vehicle.licensePlate ?? vehicle.id.uuidString
+            let settings = store.settings(for: key)
+            if let ins = settings.insuranceExpiry { rows.append(("Insurance Expiry", ins.formatted(date: .abbreviated, time: .omitted))) }
+            if let svc = settings.serviceExpiry { rows.append(("Next Service Due", svc.formatted(date: .abbreviated, time: .omitted))) }
+            rows.append(("",            ""))
+        }
         rows.append(("Driver",      report.driverName))
         if let lic = driverProfile?.licenseNumber ?? report.driverLicenseNumber { rows.append(("Driver Licence", lic)) }
         if let email = driverProfile?.email { rows.append(("Driver Email", email)) }
@@ -535,6 +543,13 @@ struct ReportDetailView: View {
             if let d = trip.distance       { rows.append(("Last Trip Distance", String(format: "%.1f km", d))) }
             if let p = lastTripRoute?.startLocation { rows.append(("Pickup",   p)) }
             if let d2 = lastTripRoute?.endLocation  { rows.append(("Drop-off", d2)) }
+        }
+        if let driver = lastDriver {
+            rows.append(("", ""))
+            rows.append(("Last Driver", driver.fullName))
+            if let lic = driver.licenseNumber, !lic.isEmpty { rows.append(("Last Driver Licence", lic)) }
+            rows.append(("Last Driver Email", driver.email))
+            if let phone = driver.phone { rows.append(("Last Driver Phone", phone)) }
         }
         if let staffId = selectedStaffId,
            let staff   = viewModel.maintenanceStaff.first(where: { $0.id == staffId }) {
@@ -559,7 +574,7 @@ struct ReportDetailView: View {
             ctx.beginPage()
             var y: CGFloat = margin
 
-            func drawText(_ text: String, x: CGFloat = margin, font: UIFont, color: UIColor = .label, maxWidth: CGFloat? = nil) -> CGFloat {
+            func drawText(_ text: String, x: CGFloat = margin, font: UIFont, color: UIColor = .black, maxWidth: CGFloat? = nil) -> CGFloat {
                 let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
                 let w    = maxWidth ?? (pageW - margin * 2)
                 let rect = CGRect(x: x, y: y, width: w, height: 2000)
@@ -570,13 +585,14 @@ struct ReportDetailView: View {
             }
 
             func section(_ title: String) {
+                if y > pageH - margin * 2 { ctx.beginPage(); y = margin }
                 y += 14
                 let sepPath = UIBezierPath()
                 sepPath.move(to: CGPoint(x: margin, y: y))
                 sepPath.addLine(to: CGPoint(x: pageW - margin, y: y))
-                UIColor.separator.setStroke(); sepPath.lineWidth = 0.5; sepPath.stroke()
+                UIColor.lightGray.setStroke(); sepPath.lineWidth = 0.5; sepPath.stroke()
                 y += 6
-                y += drawText(title.uppercased(), font: .systemFont(ofSize: 10, weight: .semibold), color: .secondaryLabel)
+                y += drawText(title.uppercased(), font: .systemFont(ofSize: 10, weight: .semibold), color: .darkGray)
                 y += 2
             }
 
@@ -585,16 +601,16 @@ struct ReportDetailView: View {
                 let labelFont = UIFont.systemFont(ofSize: 12, weight: .regular)
                 let valueFont = UIFont.systemFont(ofSize: 12, weight: .medium)
                 let lW: CGFloat = 180
-                let labelH = drawText(label, font: labelFont, color: .secondaryLabel, maxWidth: lW)
+                let labelH = drawText(label, font: labelFont, color: .darkGray, maxWidth: lW)
                 let valueX = margin + lW + 8
-                let valueH = drawText(value, x: valueX, font: valueFont, maxWidth: pageW - margin - valueX)
+                let valueH = drawText(value, x: valueX, font: valueFont, color: .black, maxWidth: pageW - margin - valueX)
                 y += max(labelH, valueH)
             }
 
             // Title
-            y += drawText("Issue Report", font: .systemFont(ofSize: 22, weight: .bold))
+            y += drawText("Issue Report", font: .systemFont(ofSize: 22, weight: .bold), color: .black)
             y += drawText("Generated \(Date().formatted(date: .long, time: .shortened))",
-                          font: .systemFont(ofSize: 11), color: .secondaryLabel)
+                          font: .systemFont(ofSize: 11), color: .darkGray)
             y += 4
 
             // Vehicle
@@ -621,6 +637,18 @@ struct ReportDetailView: View {
                 y += drawText(cleanDescription, font: .systemFont(ofSize: 12))
             }
 
+            // Compliance
+            if let vehicle = vehicle {
+                let store = ComplianceSettingsStore.shared
+                let key = vehicle.licensePlate ?? vehicle.id.uuidString
+                let settings = store.settings(for: key)
+                if settings.insuranceExpiry != nil || settings.serviceExpiry != nil {
+                    section("Compliance & Reminders")
+                    if let ins = settings.insuranceExpiry { row("Insurance Expiry", ins.formatted(date: .abbreviated, time: .omitted)) }
+                    if let svc = settings.serviceExpiry { row("Next Service Due", svc.formatted(date: .abbreviated, time: .omitted)) }
+                }
+            }
+
             // Reporter
             section("Reported By")
             row("Driver",  report.driverName)
@@ -637,6 +665,15 @@ struct ReportDetailView: View {
                 if let s = trip.startTime  { row("Started", s.formatted(date: .abbreviated, time: .shortened)) }
                 if let e = trip.endTime    { row("Ended",   e.formatted(date: .abbreviated, time: .shortened)) }
                 if let dist = trip.distance { row("Distance", String(format: "%.1f km", dist)) }
+            }
+
+            // Last Driver
+            if let driver = lastDriver {
+                section("Last Driver on This Vehicle")
+                row("Name", driver.fullName)
+                if let lic = driver.licenseNumber, !lic.isEmpty { row("Licence No.", lic) }
+                row("Email", driver.email)
+                if let phone = driver.phone { row("Phone", phone) }
             }
 
             // Assignment
