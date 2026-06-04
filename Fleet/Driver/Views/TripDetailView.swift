@@ -12,7 +12,6 @@ struct TripDetailView: View {
 
     @State private var currentStatus:    TripStatus?
     @State private var showingChecklist: InspectionType? = nil
-    @State private var showingReportIncident = false
     @AppStorage private var pickupCompleted:  Bool
     @AppStorage private var dropoffCompleted: Bool
     @AppStorage private var dropoffGeofenceIdStr: String
@@ -172,7 +171,7 @@ struct TripDetailView: View {
                         }
                     }
 
-                    if !isActive {
+                    if !isCompleted {
                         NavigationLink(destination: DriverReportIssueView(vehicle: v)) {
                             Label("Report Vehicle Issue",
                                   systemImage: "exclamationmark.triangle")
@@ -241,22 +240,7 @@ struct TripDetailView: View {
         .safeAreaInset(edge: .bottom) {
             if isActive {
                 VStack(spacing: 8) {
-                    // Recording transcript feedback
-                    if voiceViewModel.voiceService.isRecording && !voiceViewModel.voiceService.liveTranscript.isEmpty {
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(Color.red)
-                                .frame(width: 6, height: 6)
-                            Text(voiceViewModel.voiceService.liveTranscript)
-                                .font(.subheadline)
-                                .foregroundStyle(Color.primary)
-                                .multilineTextAlignment(.leading)
-                        }
-                        .padding(12)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.red.opacity(0.2), lineWidth: 1))
-                    }
+
                     
                     if voiceViewModel.isProcessing {
                         HStack(spacing: 8) {
@@ -278,60 +262,65 @@ struct TripDetailView: View {
                     }
 
                     VStack(spacing: 12) {
+                        // Voice Log section
                         HStack(spacing: 12) {
-                            // Manual Report Incident button
-                            Button {
-                                showingReportIncident = true
-                            } label: {
-                                Label("Report Incident", systemImage: "exclamationmark.triangle.fill")
-                                    .font(.headline)
-                                    .minimumScaleFactor(0.8)
-                                    .lineLimit(1)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 54)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(Color(red: 0.85, green: 0.65, blue: 0.0)) // dark yellow / gold
-                            .buttonBorderShape(.capsule)
-                            .disabled(isHoldingMic || voiceViewModel.isProcessing)
-                            
-                            // Hold to Voice Log button
-                            Label(isHoldingMic ? "Recording..." : "Voice Log", systemImage: isHoldingMic ? "waveform" : "mic.fill")
-                                .font(.headline)
-                                .minimumScaleFactor(0.8)
-                                .lineLimit(1)
+                            Image(systemName: isHoldingMic ? "waveform" : "mic.fill")
+                                .font(.title3.weight(.bold))
                                 .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 54)
+                                .frame(width: 54, height: 54)
                                 .background(isHoldingMic ? Color.red : Color(red: 0.85, green: 0.65, blue: 0.0))
-                                .clipShape(Capsule())
+                                .clipShape(Circle())
                                 .scaleEffect(isHoldingMic ? 0.95 : 1.0)
                                 .animation(.spring(response: 0.3), value: isHoldingMic)
-                                .simultaneousGesture(
-                                    DragGesture(minimumDistance: 0)
-                                        .onChanged { _ in
-                                            if !isHoldingMic {
-                                                isHoldingMic = true
-                                                let generator = UIImpactFeedbackGenerator(style: .medium)
-                                                generator.impactOccurred()
-                                                voiceViewModel.startVoiceCapture()
-                                                withAnimation(.spring(response: 0.4)) { showVoiceRecordingBanner = true }
-                                            }
-                                        }
-                                        .onEnded { _ in
-                                            isHoldingMic = false
-                                            let generator = UIImpactFeedbackGenerator(style: .rigid)
-                                            generator.impactOccurred()
-                                            voiceViewModel.stopAndExtract(
-                                                tripId: trip.id,
-                                                driverId: trip.driverId,
-                                                routeName: "\(route?.startLocation ?? "Origin") → \(route?.endLocation ?? "Destination")"
-                                            )
-                                            withAnimation(.easeOut) { showVoiceRecordingBanner = false }
-                                        }
-                                )
-                                .disabled(voiceViewModel.isProcessing)
+                            
+                            if isHoldingMic {
+                                if !voiceViewModel.voiceService.liveTranscript.isEmpty {
+                                    Text(voiceViewModel.voiceService.liveTranscript)
+                                        .font(.subheadline)
+                                        .foregroundStyle(Color.primary)
+                                        .multilineTextAlignment(.leading)
+                                        .lineLimit(2)
+                                        .minimumScaleFactor(0.8)
+                                } else {
+                                    Text("Recording...")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                }
+                            } else {
+                                Text("Tap voice to report incident")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                            
+                            Spacer()
                         }
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            guard !isHoldingMic else { return }
+                            isHoldingMic = true
+                            let generator = UIImpactFeedbackGenerator(style: .medium)
+                            generator.impactOccurred()
+                            voiceViewModel.startVoiceCapture()
+                            withAnimation(.spring(response: 0.4)) { showVoiceRecordingBanner = true }
+                            
+                            Task {
+                                try? await Task.sleep(for: .seconds(10))
+                                await MainActor.run {
+                                    guard isHoldingMic else { return }
+                                    isHoldingMic = false
+                                    let generator = UIImpactFeedbackGenerator(style: .rigid)
+                                    generator.impactOccurred()
+                                    voiceViewModel.stopAndExtract(
+                                        tripId: trip.id,
+                                        driverId: trip.driverId,
+                                        routeName: "\(route?.startLocation ?? "Origin") → \(route?.endLocation ?? "Destination")"
+                                    )
+                                    withAnimation(.easeOut) { showVoiceRecordingBanner = false }
+                                }
+                            }
+                        }
+                        .disabled(voiceViewModel.isProcessing)
                         
                         // Expanding Post-Trip Checklist button (always active)
                         Button {
@@ -340,7 +329,7 @@ struct TripDetailView: View {
                             Label("Post-Trip Checklist", systemImage: "checklist")
                                 .font(.headline)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 54)
+                                .frame(height: 44)
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.red)
@@ -475,9 +464,6 @@ struct TripDetailView: View {
         .onDisappear {
             zoneTask?.cancel()
             zoneTask = nil
-        }
-        .navigationDestination(isPresented: $showingReportIncident) {
-            DriverReportIncidentView(trip: trip)
         }
         .sheet(item: $showingChecklist) { type in
             DriverChecklistView(checklistType: type, vehicle: vehicle) { notes, urls in

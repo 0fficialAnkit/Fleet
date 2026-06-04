@@ -173,7 +173,7 @@ struct AddOrderView: View {
                         Picker(selection: $selectedVehicleId) {
                             Text("Select a vehicle").tag(nil as UUID?)
                             ForEach(availableVehicles, id: \.id) { (v: Vehicle) in
-                                Text("\(v.make ?? "Unknown") \(v.model ?? "") · \(v.licensePlate ?? "—")")
+                                Text("\(v.make ?? "Unknown") \(v.model ?? "")")
                                     .tag(v.id as UUID?)
                             }
                         } label: {
