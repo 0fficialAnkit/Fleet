@@ -3,14 +3,10 @@ import SwiftUI
 struct InventoryView: View {
     @State private var searchText = ""
     @State private var inventoryItems: [Inventory] = []
-    @State private var maintenanceTasks: [MaintenanceTask] = []
-    @State private var workOrders: [WorkOrder] = []
-    @State private var forecasts: [SparePartForecast] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var selectedItem: Inventory? = nil
     @State private var isShowingAddSheet = false
-    @State private var isForecastExpanded = false
     @State private var selectedFilter: InventoryFilter = .all
 
     enum InventoryFilter: String, CaseIterable {
@@ -32,30 +28,13 @@ struct InventoryView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
-
+            Group {
                 if isLoading && inventoryItems.isEmpty {
-                    VStack(spacing: 14) {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .brown))
-                            .scaleEffect(1.1)
-                        Text("Loading inventory…")
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(Color.secondary)
-                    }
+                    ProgressView()
                 } else {
-                    ScrollView {
-                        VStack(spacing: 20) {
-
-                            // MARK: - AI Forecast Banner
-                            AIForecastBannerView(
-                                forecasts: forecasts,
-                                isExpanded: $isForecastExpanded
-                            )
-                            .padding(.horizontal, 16)
-
-                            // MARK: - Filter Chips
+                    List {
+                        // Filter chips
+                        Section {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
                                     ForEach(InventoryFilter.allCases, id: \.self) { filter in
@@ -64,7 +43,7 @@ struct InventoryView: View {
                                             count: countFor(filter),
                                             isSelected: selectedFilter == filter
                                         ) {
-                                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
                                                 selectedFilter = filter
                                             }
                                         }
@@ -72,58 +51,42 @@ struct InventoryView: View {
                                 }
                                 .padding(.horizontal, 16)
                             }
+                            .padding(.vertical, 6)
+                        }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
 
-                            // MARK: - Section Header
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Parts")
-                                        .font(.headline)
-                                        .foregroundStyle(Color.primary)
-                                    Text("\(filteredItems.count) item\(filteredItems.count == 1 ? "" : "s")")
-                                        .font(.footnote)
-                                        .foregroundStyle(Color(.tertiaryLabel))
-                                }
-                                Spacer()
-                            }
-                            .padding(.horizontal, 16)
-
-                            // MARK: - Items List
-                            if filteredItems.isEmpty {
+                        // Items
+                        if filteredItems.isEmpty {
+                            Section {
                                 InventoryEmptyState(isFiltered: selectedFilter != .all || !searchText.isEmpty)
-                            } else {
-                                LazyVStack(spacing: 14) {
-                                    ForEach(filteredItems) { item in
-                                        Button(action: {
-                                            selectedItem = item
-                                        }) {
-                                            InventoryRow(item: item)
-                                        }
-                                        .buttonStyle(InventoryCardButtonStyle())
-                                        .scrollTransition { content, phase in
-                                            content
-                                                .opacity(phase.isIdentity ? 1 : 0.7)
-                                                .scaleEffect(phase.isIdentity ? 1 : 0.97)
-                                                .offset(y: phase.isIdentity ? 0 : 6)
-                                        }
+                                    .listRowBackground(Color.clear)
+                            }
+                        } else {
+                            Section {
+                                ForEach(filteredItems) { item in
+                                    Button(action: { selectedItem = item }) {
+                                        InventoryRow(item: item)
                                     }
+                                    .buttonStyle(.plain)
                                 }
-                                .padding(.horizontal, 16)
                             }
                         }
-                        .padding(.vertical, 16)
                     }
+                    .listStyle(.insetGrouped)
                     .refreshable { await loadInventory() }
                 }
             }
             .navigationTitle("Inventory")
-            .searchable(text: $searchText, prompt: "Search parts...")
+            .navigationBarTitleDisplayMode(.large)
+            .searchable(text: $searchText, prompt: "Search parts…")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        isShowingAddSheet = true
-                    }) {
-                        Image(systemName: "plus")
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { isShowingAddSheet = true }) {
+                        Image(systemName: "plus").foregroundStyle(.primary)
                     }
+                    .buttonStyle(.plain)
                 }
             }
             .sheet(isPresented: $isShowingAddSheet) {
@@ -153,17 +116,7 @@ struct InventoryView: View {
     private func loadInventory() async {
         isLoading = true
         do {
-            async let items = InventoryService.fetchAllInventory()
-            async let tasks = MaintenanceTaskService.fetchAllTasks()
-            async let orders = WorkOrderService.fetchAllWorkOrders()
-            inventoryItems = try await items
-            maintenanceTasks = try await tasks
-            workOrders = try await orders
-            forecasts = DemandForecastingService.forecast(
-                inventory: inventoryItems,
-                tasks: maintenanceTasks,
-                workOrders: workOrders
-            )
+            inventoryItems = try await InventoryService.fetchAllInventory()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -364,214 +317,7 @@ struct InventoryRow: View {
     InventoryView()
 }
 
-// MARK: - AI Forecast Banner View
 
-struct AIForecastBannerView: View {
-    let forecasts: [SparePartForecast]
-    @Binding var isExpanded: Bool
-
-    private var headerColor: Color {
-        // High intelligence Indigo/Purple theme for ML forecasts
-        return Color.indigo
-    }
-
-    private var summaryLabel: String {
-        guard !forecasts.isEmpty else { return "All parts healthy" }
-        let restockCount = forecasts.filter { $0.urgency == .restock }.count
-        let highCount    = forecasts.filter { $0.urgency == .high }.count
-        var parts: [String] = []
-        if restockCount > 0 { parts.append("\(restockCount) restock") }
-        if highCount    > 0 { parts.append("\(highCount) high demand") }
-        let monitorCount = forecasts.filter { $0.urgency == .monitor }.count
-        if monitorCount > 0 { parts.append("\(monitorCount) monitor") }
-        return parts.joined(separator: " · ")
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-
-            // ── Header (always visible, tappable) ──────────────────────────
-            Button {
-                withAnimation(.spring(response: 0.38, dampingFraction: 0.78)) {
-                    isExpanded.toggle()
-                }
-            } label: {
-                HStack(spacing: 12) {
-                    // Icon
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(headerColor)
-
-                    // Title + summary chip
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Demand Forecast")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(headerColor)
-
-                        Text(summaryLabel)
-                            .font(.caption)
-                            .foregroundStyle(Color.secondary)
-                    }
-
-                    Spacer(minLength: 0)
-
-                    // Count badge
-                    if !forecasts.isEmpty {
-                        Text("\(forecasts.count)")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(headerColor)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(headerColor.opacity(0.12))
-                            .clipShape(Capsule())
-                    }
-
-                    // Chevron
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color.secondary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-            }
-            .buttonStyle(.plain)
-
-            // ── Dropdown content ────────────────────────────────────────────
-            if isExpanded {
-                Divider()
-                    .padding(.horizontal, 16)
-
-                if forecasts.isEmpty {
-                    HStack(spacing: 10) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(Color.green)
-                        Text("All stock levels are healthy. No restocking needed.")
-                            .font(.footnote)
-                            .foregroundStyle(Color.secondary)
-                    }
-                    .padding(16)
-                } else {
-                    VStack(spacing: 0) {
-                        ForEach(forecasts) { forecast in
-                            ForecastItemRow(forecast: forecast)
-                            if forecast.id != forecasts.last?.id {
-                                Divider()
-                                    .padding(.horizontal, 16)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color(.separator).opacity(0.3), lineWidth: 0.5)
-        )
-    }
-}
-
-// MARK: - Forecast Item Row (inside dropdown)
-
-private struct ForecastItemRow: View {
-    let forecast: SparePartForecast
-
-    private var urgencyColor: Color {
-        switch forecast.urgency {
-        case .restock: return Color.orange // Minimal warm amber/orange warning
-        case .high:    return Color.orange.opacity(0.8)
-        case .monitor: return Color.blue
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-
-            // Part name + badge
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(forecast.partName)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.primary)
-
-                    Text(forecast.reason)
-                        .font(.caption)
-                        .foregroundStyle(Color.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 8)
-                ForecastUrgencyBadge(urgency: forecast.urgency)
-            }
-
-            // Stock progress bar
-            let maxVal = max(forecast.reorderLevel * 2, forecast.currentStock + 1)
-            let progress = Double(forecast.currentStock) / Double(maxVal)
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color.secondary.opacity(0.12))
-                        .frame(height: 4)
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(urgencyColor.gradient)
-                        .frame(width: max(4, geo.size.width * progress), height: 4)
-                }
-            }
-            .frame(height: 4)
-
-            // Metrics row
-            HStack(spacing: 14) {
-                Label("\(forecast.currentStock) in stock", systemImage: "shippingbox.fill")
-                    .font(.caption2)
-                    .foregroundStyle(Color.secondary)
-
-                Label("Reorder at \(forecast.reorderLevel)", systemImage: "arrow.counterclockwise")
-                    .font(.caption2)
-                    .foregroundStyle(Color.secondary)
-
-                if let days = forecast.daysUntilStockout, days > 0 {
-                    Label("~\(days)d left", systemImage: "clock")
-                        .font(.caption2)
-                        .foregroundStyle(urgencyColor)
-                } else if forecast.urgency == .restock {
-                    Label("Restock now", systemImage: "exclamationmark.circle")
-                        .font(.caption2)
-                        .foregroundStyle(Color.orange)
-                }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-    }
-}
-
-// MARK: - Forecast Urgency Badge
-
-struct ForecastUrgencyBadge: View {
-    let urgency: ForecastUrgency
-
-    private var color: Color {
-        switch urgency {
-        case .restock: return Color.orange
-        case .high:    return Color.orange.opacity(0.8)
-        case .monitor: return Color.blue
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: urgency.icon)
-                .font(.system(size: 9, weight: .semibold))
-            Text(urgency.description)
-                .font(.system(size: 10, weight: .semibold))
-        }
-        .foregroundStyle(color)
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3)
-        .background(color.opacity(0.12))
-        .clipShape(Capsule())
-    }
-}
 
 // MARK: - InventoryItemSheet
 struct InventoryItemSheet: View {

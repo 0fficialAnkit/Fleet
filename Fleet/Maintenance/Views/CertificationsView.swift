@@ -106,7 +106,7 @@ struct CertificationsView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { isShowingAddSheet = true }) {
                     Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.subheadline.weight(.semibold))
                 }
             }
         }
@@ -162,7 +162,7 @@ private struct CertificateCard: View {
                         .fill(statusColor.opacity(0.1))
                         .frame(width: 48, height: 48)
                     Image(systemName: "rosette")
-                        .font(.system(size: 22, weight: .medium))
+                        .font(.title2.weight(.medium))
                         .foregroundStyle(statusColor)
                 }
 

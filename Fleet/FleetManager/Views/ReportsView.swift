@@ -4,7 +4,6 @@ internal import Auth
 enum ReportSectionTab: String, CaseIterable {
     case vehicles    = "Vehicles"
     case maintenance = "Maintenance"
-    case fuel        = "Fuel"
 }
 
 // MARK: - Reports View
@@ -66,7 +65,7 @@ struct ReportsView: View {
                         reportList(
                             reports: vehicleReports,
                             emptyIcon: "tray",
-                            emptyTitle: "No open reports",
+                            emptyTitle: "No open alerts",
                             emptySubtitle: "All driver-submitted vehicle issues will appear here."
                         )
 
@@ -74,16 +73,13 @@ struct ReportsView: View {
                         reportList(
                             reports: maintenanceReports,
                             emptyIcon: "wrench.and.screwdriver",
-                            emptyTitle: "No maintenance reports",
+                            emptyTitle: "No maintenance alerts",
                             emptySubtitle: "Assign a vehicle report to maintenance to see it here."
                         )
-
-                    case .fuel:
-                        FleetFuelAnalyticsView()
                     }
                 }
             }
-            .navigationTitle("Reports")
+            .navigationTitle("Alerts")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     if selectedTab == .vehicles {
@@ -146,7 +142,16 @@ struct ReportsView: View {
                         .listRowBackground(Color.clear)
                         .padding(.vertical, 40)
                 } else if reports.isEmpty {
-                    emptyState(icon: emptyIcon, title: emptyTitle, subtitle: emptySubtitle)
+                    if #available(iOS 17.0, *) {
+                        ContentUnavailableView(
+                            emptyTitle,
+                            systemImage: emptyIcon,
+                            description: Text(emptySubtitle)
+                        )
+                        .listRowBackground(Color.clear)
+                    } else {
+                        emptyState(icon: emptyIcon, title: emptyTitle, subtitle: emptySubtitle)
+                    }
                 } else {
                     ForEach(reports) { report in
                         Button { selectedReport = report } label: {
@@ -248,7 +253,7 @@ struct ReportRowView: View {
                 // Bottom row — changes by context
                 HStack(alignment: .bottom) {
                     if context == .maintenance, let staffName = assignedStaffName {
-                        // Maintenance: show who it's assigned to + actual assignment time
+                        // Maintenance: show who it's assigned to
                         HStack(spacing: 4) {
                             Image(systemName: "wrench.and.screwdriver.fill")
                                 .font(.caption2)
@@ -256,16 +261,6 @@ struct ReportRowView: View {
                             Text(staffName)
                                 .font(.subheadline)
                                 .foregroundStyle(Color.secondary)
-                        }
-                        Spacer()
-                        if let assignedAt = report.assignedAt {
-                            Text("Assigned \(timeAgo(from: assignedAt))")
-                                .font(.caption)
-                                .foregroundStyle(Color(.quaternaryLabel))
-                        } else {
-                            Text("Assigned")
-                                .font(.caption)
-                                .foregroundStyle(Color(.quaternaryLabel))
                         }
                     } else {
                         // Vehicles: show who reported it

@@ -8,82 +8,64 @@ struct ProfileView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
-
+            Group {
                 if let user = viewModel.currentUser {
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 24) {
-                            // Header Profile Image
-                            ProfileHeader(
-                                icon: "shield.checkered",
-                                name: user.fullName,
-                                role: viewModel.roleName,
-                                accentColor: Color.blue
-                            )
-                            .padding(.top, 32)
-
-                            // Info Cards
-
-                                VStack(spacing: 0) {
-                                    InfoRow(icon: "envelope.fill", label: "Email", value: user.email)
-
-                                    Divider().background(Color(.separator))
-                                    InfoRow(icon: "phone.fill", label: "Phone", value: user.phone ?? "N/A")
-
-                                    if let status = user.userStatus {
-                                        Divider().background(Color(.separator))
-                                        InfoRow(
-                                            icon: status == .active ? "checkmark.seal.fill" : "xmark.seal.fill",
-                                            label: "Status",
-                                            value: status.rawValue.capitalized,
-                                            valueColor: status == .active ? Color.green : Color.secondary
-                                        )
-                                    }
-
-                                    if let date = user.createdAt {
-                                        Divider().background(Color(.separator))
-                                        InfoRow(icon: "calendar", label: "Joined", value: date.formatted(date: .abbreviated, time: .omitted))
-                                    }
+                    List {
+                        // Header
+                        Section {
+                            HStack {
+                                Spacer()
+                                VStack(spacing: 10) {
+                                    ProfileHeader(
+                                        icon: "shield.checkered",
+                                        name: user.fullName,
+                                        role: viewModel.roleName,
+                                        accentColor: .teal
+                                    )
                                 }
-                                .padding(16)
-                                .background(Color(.secondarySystemGroupedBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-                            .padding(.horizontal, 16)
-
-                            // Settings & Support Sections
-                            VStack(spacing: 0) {
-                                ActionRow(icon: "gearshape.fill", title: "Settings")
-                                Divider().background(Color(.separator))
-                                ActionRow(icon: "questionmark.circle.fill", title: "Help & Support")
+                                Spacer()
                             }
-                            .padding(16)
-                            .background(Color(.secondarySystemGroupedBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .padding(.horizontal, 16)
-
-                            // Logout Button
-                            VStack(spacing: 0) {
-                                Button(action: {
-                                    Task {
-                                        await authViewModel.signOut()
-                                    }
-                                }) {
-                                    ActionRow(icon: "door.left.hand.open", title: "Logout", isDestructive: true)
-                                }
-                            }
-                            .padding(16)
-                            .background(Color(.secondarySystemGroupedBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .padding(.horizontal, 16)
-                            .padding(.top, 16)
+                            .padding(.vertical, 8)
+                            .listRowBackground(Color.clear)
                         }
-                        .padding(.vertical, 16)
+
+                        // Info
+                        Section("Account") {
+                            InfoRow(icon: "envelope.fill", label: "Email", value: user.email)
+                            InfoRow(icon: "phone.fill",    label: "Phone", value: user.phone ?? "Not set")
+                            if let status = user.userStatus {
+                                InfoRow(
+                                    icon: status == .active ? "checkmark.seal.fill" : "xmark.seal.fill",
+                                    label: "Status",
+                                    value: status.rawValue.capitalized,
+                                    valueColor: status == .active ? .green : .secondary
+                                )
+                            }
+                            if let date = user.createdAt {
+                                InfoRow(icon: "calendar", label: "Joined",
+                                        value: date.formatted(date: .abbreviated, time: .omitted))
+                            }
+                        }
+
+                        // Support
+                        Section {
+                            Label("Settings", systemImage: "gearshape")
+                            Label("Help & Support", systemImage: "questionmark.circle")
+                        }
+
+                        // Sign out
+                        Section {
+                            Button(role: .destructive) {
+                                Task { await authViewModel.signOut() }
+                            } label: {
+                                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                            }
+                        }
                     }
+                    .listStyle(.insetGrouped)
                 } else {
-                    Text("Profile not found")
-                        .foregroundStyle(Color.secondary)
+                    ContentUnavailableView("Profile not found", systemImage: "person.slash")
                 }
             }
             .navigationTitle("Profile")
@@ -91,13 +73,11 @@ struct ProfileView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close") { dismiss() }
-                        .foregroundStyle(Color.primary)
+                        .foregroundStyle(.primary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Edit") {
-                        isEditing = true
-                    }
-                    .foregroundStyle(Color.primary)
+                    Button("Edit") { isEditing = true }
+                        .foregroundStyle(.primary)
                 }
             }
             .sheet(isPresented: $isEditing) {
@@ -143,29 +123,32 @@ struct EditProfileSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Personal Info")) {
+                Section("Personal Info") {
                     TextField("Full Name", text: $fullName)
                         .textContentType(.name)
-
                     TextField("Phone Number", text: $phone)
                         .keyboardType(.phonePad)
                         .textContentType(.telephoneNumber)
                 }
+
+                Section {
+                    Button("Save Changes") {
+                        onSave(fullName, phone)
+                        dismiss()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color(.label))
+                    .controlSize(.large)
+                    .frame(maxWidth: .infinity)
+                    .disabled(fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                .listRowBackground(Color.clear)
             }
             .navigationTitle("Edit Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundStyle(Color.primary)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        onSave(fullName, phone)
-                        dismiss()
-                    }
-                    .foregroundStyle(Color.primary)
-                    .disabled(fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }

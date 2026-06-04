@@ -39,8 +39,8 @@ struct DriverVehicleDetailView: View {
                 .padding(.bottom, 40)
             }
         }
-        .navigationTitle("Vehicle Details")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("\(vehicle.make ?? "") \(vehicle.model ?? "")")
+        .navigationBarTitleDisplayMode(.large)
         .navigationDestination(isPresented: $navigateToReport) {
             DriverReportIssueView(vehicle: vehicle)
         }
@@ -48,33 +48,20 @@ struct DriverVehicleDetailView: View {
 
     // MARK: - Hero Header
     private var vehicleHeroHeader: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(Color.green.opacity(0.12))
-                    .frame(width: 110, height: 110)
-                Circle()
-                    .fill(Color.green.opacity(0.06))
-                    .frame(width: 140, height: 140)
-                Image(systemName: "truck.box.fill")
-                    .font(.system(size: 52))
-                    .foregroundStyle(Color.green)
+                    .fill(Color.green.opacity(0.1))
+                    .frame(width: 72, height: 72)
+                Image(systemName: "truck.box")
+                    .font(.system(size: 30, weight: .medium))
+                    .foregroundStyle(.green)
             }
-            .padding(.top, 8)
+            .padding(.top, 4)
 
-            VStack(spacing: 6) {
-                Text("\(vehicle.make ?? "Unknown") \(vehicle.model ?? "")")
-                    .font(.title2.bold())
-                    .foregroundStyle(Color.primary)
-
-                Text(vehicle.licensePlate ?? "—")
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(Color.green)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 5)
-                    .background(Color.green.opacity(0.12))
-                    .clipShape(Capsule())
-            }
+            Text(vehicle.licensePlate ?? "—")
+                .font(.subheadline.monospaced())
+                .foregroundStyle(.secondary)
         }
     }
 

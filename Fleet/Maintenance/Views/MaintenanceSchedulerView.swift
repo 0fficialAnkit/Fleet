@@ -247,9 +247,6 @@ private struct TaskListSection: View {
                         .foregroundStyle(Color(.tertiaryLabel))
                 }
                 Spacer()
-                if !currentItems.isEmpty {
-                    StatusLegendChip()
-                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
@@ -296,20 +293,6 @@ private struct TaskListSection: View {
     }
 }
 
-// MARK: - Status Legend Chip
-private struct StatusLegendChip: View {
-    var body: some View {
-        HStack(spacing: 6) {
-            Circle().fill(Color.red).frame(width: 6, height: 6)
-            Circle().fill(Color.yellow).frame(width: 6, height: 6)
-            Circle().fill(Color.green).frame(width: 6, height: 6)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(Color(.tertiarySystemBackground).opacity(0.6))
-        .clipShape(Capsule())
-    }
-}
 
 // ═══════════════════════════════════════════════════════════════
 // MARK: - Task Card
@@ -377,51 +360,70 @@ private struct WorkOrderCard: View {
     let workOrder: ScheduledWorkOrder
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 16) {
-                    // Header row
-                    HStack {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("WO-\(workOrder.id.uuidString.prefix(6).uppercased())")
-                                .font(.headline)
-                                .foregroundStyle(Color.primary)
-                            Text("\(workOrder.vehicleName) · \(workOrder.vehicleNumber)")
-                                .font(.footnote)
-                                .foregroundStyle(Color(.tertiaryLabel))
-                        }
-                        Spacer()
-                        StatusBadge(
-                            text: statusLabel(workOrder.status),
-                            color: statusColor(workOrder.status)
-                        )
-                    }
-
-                    // Labor & Assigned Row
-                    HStack(spacing: 16) {
-                        InfoPill(icon: "person.fill", text: "By: \(workOrder.assignedBy)")
-                        InfoPill(icon: "clock.fill",  text: workOrder.laborHours)
-                        InfoPill(icon: "indianrupeesign.circle.fill", text: workOrder.laborCost, color: Color.green)
-                    }
-
-                    // Spare parts consumed (if any)
-                    if !workOrder.partsUsed.isEmpty {
-                        HStack(spacing: 6) {
-                            Image(systemName: "gearshape.fill")
-                                .font(.system(size: 11))
-                                .foregroundStyle(Color.brown)
-                            Text(workOrder.partsUsed.joined(separator: ", "))
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(Color.secondary)
-                                .lineLimit(1)
-                        }
-                    }
+        VStack(alignment: .leading, spacing: 12) {
+            // Header: vehicle name + plate + status badge
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(workOrder.vehicleName)
+                        .font(.headline)
+                        .foregroundStyle(Color.primary)
+                    Text(workOrder.vehicleNumber)
+                        .font(.footnote)
+                        .foregroundStyle(Color(.tertiaryLabel))
                 }
-                .padding(.vertical, 16)
-                .padding(.trailing, 16)
-                .padding(.leading, 16)
+                Spacer()
+                StatusBadge(
+                    text: statusLabel(workOrder.status),
+                    color: statusColor(workOrder.status)
+                )
+            }
+
+            // Issue / description
+            if !workOrder.vehicleIssue.isEmpty {
+                Text(workOrder.vehicleIssue)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            // Priority + source + date row
+            HStack(spacing: 10) {
+                // Priority badge
+                HStack(spacing: 4) {
+                    Image(systemName: priorityIcon(workOrder.priority))
+                        .font(.caption2.weight(.semibold))
+                    Text(priorityLabel(workOrder.priority))
+                        .font(.caption.weight(.semibold))
+                }
+                .foregroundStyle(priorityColor(workOrder.priority))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(priorityColor(workOrder.priority).opacity(0.1))
+                .clipShape(Capsule())
+
+                // Source: work order vs driver report
+                HStack(spacing: 4) {
+                    Image(systemName: workOrder.sourceIssueReportId != nil ? "person.fill.questionmark" : "wrench.and.screwdriver.fill")
+                        .font(.system(size: 10))
+                    Text(workOrder.sourceIssueReportId != nil ? "Driver Report" : "Work Order")
+                        .font(.caption)
+                }
+                .foregroundStyle(Color.secondary)
+
+                Spacer()
+
+                // Created / scheduled date
+                HStack(spacing: 4) {
+                    Image(systemName: "calendar")
+                        .font(.caption2)
+                    Text(workOrder.effectiveDate, style: .date)
+                        .font(.caption)
+                }
+                .foregroundStyle(Color(.tertiaryLabel))
             }
         }
+        .padding(16)
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
@@ -443,6 +445,24 @@ private struct WorkOrderCard: View {
         case .inProgress: return Color.orange
         case .completed:  return Color.green
         case .cancelled:  return Color.red
+        }
+    }
+
+    func priorityLabel(_ priority: WorkOrderPriority) -> String {
+        switch priority {
+        case .low:      return "Low"
+        case .medium:   return "Medium"
+        case .high:     return "High"
+        case .critical: return "Critical"
+        }
+    }
+
+    func priorityIcon(_ priority: WorkOrderPriority) -> String {
+        switch priority {
+        case .low:      return "arrow.down.circle"
+        case .medium:   return "minus.circle"
+        case .high:     return "arrow.up.circle"
+        case .critical: return "exclamationmark.2"
         }
     }
 
@@ -539,6 +559,7 @@ struct TaskDetailSheet: View {
     @State private var inventoryItems: [Inventory] = []
     @State private var partQuantities: [UUID: Int] = [:]
     @State private var isCompleted = false
+    @State private var isShowingPartSelector = false
     @Environment(\.dismiss) private var dismiss
 
     private var partsCost: Double {
@@ -732,7 +753,7 @@ struct TaskDetailSheet: View {
                             HStack(alignment: .top, spacing: 16) {
                                 Image(systemName: "sparkles")
                                     .foregroundStyle(Color.yellow)
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .font(.headline)
                                 Text(currentTask.aiRecommendation)
                                     .font(.body)
                                     .foregroundStyle(Color.primary)
@@ -753,7 +774,6 @@ struct TaskDetailSheet: View {
                                 }
                             }
                         }
-
                         // MARK: Completion Form (only for in-progress)
                         if currentTask.status == .inProgress || currentTask.status == .critical {
 
@@ -795,20 +815,40 @@ struct TaskDetailSheet: View {
                                     }
                                 }
                             }
-
-                            // Inventory Parts Used
+                                     // Inventory Parts Used
                             SheetSection(title: "Inventory Parts Used") {
-                                if inventoryItems.isEmpty {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: "shippingbox")
-                                            .foregroundStyle(Color(.tertiaryLabel))
-                                        Text("No inventory items available")
-                                            .font(.subheadline)
-                                            .foregroundStyle(Color.secondary)
+                                let selectedItemIds = Array(partQuantities.keys)
+                                let selectedItems = inventoryItems.filter { selectedItemIds.contains($0.id) }
+                                
+                                if selectedItems.isEmpty {
+                                    VStack(spacing: 12) {
+                                        HStack(spacing: 12) {
+                                            Image(systemName: "shippingbox")
+                                                .foregroundStyle(Color(.tertiaryLabel))
+                                            Text("No parts added yet")
+                                                .font(.subheadline)
+                                                .foregroundStyle(Color.secondary)
+                                            Spacer()
+                                        }
+                                        
+                                        Button {
+                                            isShowingPartSelector = true
+                                        } label: {
+                                            HStack {
+                                                Image(systemName: "plus.circle.fill")
+                                                Text("Add Parts")
+                                            }
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(.white)
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 40)
+                                            .background(Color.brown, in: RoundedRectangle(cornerRadius: 8))
+                                        }
+                                        .buttonStyle(.plain)
                                     }
                                 } else {
                                     VStack(spacing: 0) {
-                                        ForEach(inventoryItems) { item in
+                                        ForEach(selectedItems) { item in
                                             VStack(spacing: 8) {
                                                 HStack(spacing: 14) {
                                                     Image(systemName: "gearshape.fill")
@@ -840,9 +880,10 @@ struct TaskDetailSheet: View {
                                                             }
                                                         } label: {
                                                             Image(systemName: "minus.circle.fill")
-                                                                .font(.system(size: 22))
+                                                                .font(.title2)
                                                                 .foregroundStyle((partQuantities[item.id] ?? 0) > 0 ? Color.brown : Color(.tertiaryLabel))
                                                         }
+                                                        .buttonStyle(.plain)
 
                                                         Text("\(partQuantities[item.id] ?? 0)")
                                                             .font(.subheadline.weight(.semibold).monospacedDigit())
@@ -859,7 +900,7 @@ struct TaskDetailSheet: View {
                                                             }
                                                         } label: {
                                                             Image(systemName: "plus.circle.fill")
-                                                                .font(.system(size: 22))
+                                                                .font(.title2)
                                                                 .foregroundStyle((partQuantities[item.id] ?? 0) < (item.stockQuantity ?? 0) ? Color.brown : Color(.tertiaryLabel))
                                                         }
                                                     }
@@ -940,7 +981,7 @@ struct TaskDetailSheet: View {
                                     Image(systemName: "checkmark.circle.fill")
                                     Text("Mark as Complete")
                                 }
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 52)
@@ -977,6 +1018,9 @@ struct TaskDetailSheet: View {
         }
         .navigationTitle(task.vehicleName)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $isShowingPartSelector) {
+            PartSelectionSheet(inventoryItems: inventoryItems, partQuantities: $partQuantities)
+        }
         .onAppear {
             repairNotes = task.previousNote
             laborHours = task.laborHours ?? ""
@@ -1017,6 +1061,7 @@ struct WorkOrderDetailSheet: View {
     @State private var serviceNotes = ""
     @State private var inventoryItems: [Inventory] = []
     @State private var partQuantities: [UUID: Int] = [:]
+    @State private var isShowingPartSelector = false
     @Environment(\.dismiss) private var dismiss
 
     private var partsCost: Double {
@@ -1062,22 +1107,12 @@ struct WorkOrderDetailSheet: View {
                         .background(statusColor(currentWO.status).opacity(0.09))
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                        // MARK: Work Order Details
-                        SheetSection(title: "Order Details") {
-                            InfoRow(icon: "number",        label: "Order ID",    value: "WO-\(currentWO.id.uuidString.prefix(8).uppercased())")
-                            Divider().background(Color(.separator))
-                            InfoRow(icon: "car.fill",      label: "Vehicle",     value: "\(currentWO.vehicleName) · \(currentWO.vehicleNumber)")
-                            Divider().background(Color(.separator))
-                            InfoRow(icon: "flag.fill",     label: "Priority",    value: priorityLabel(currentWO.priority), valueColor: priorityColor(currentWO.priority))
-                            Divider().background(Color(.separator))
-                            InfoRow(icon: "calendar",      label: "Created At",   value: currentWO.createdAt.formatted(date: .abbreviated, time: .shortened))
-                        }
 
                         // MARK: Reported Problem
                         SheetSection(title: "Reported Problem") {
                             HStack(alignment: .top, spacing: 14) {
                                 Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.system(size: 20))
+                                    .font(.title3)
                                     .foregroundStyle(Color.red)
                                     .padding(.top, 2)
                                 
@@ -1130,7 +1165,7 @@ struct WorkOrderDetailSheet: View {
                                             Image(systemName: "calendar.badge.checkmark")
                                             Text("Schedule")
                                         }
-                                        .font(.system(size: 16, weight: .semibold))
+                                        .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(.white)
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 48)
@@ -1147,7 +1182,7 @@ struct WorkOrderDetailSheet: View {
                                             Image(systemName: "play.fill")
                                             Text("Start")
                                         }
-                                        .font(.system(size: 16, weight: .semibold))
+                                        .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(Color.brown)
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 48)
@@ -1162,7 +1197,7 @@ struct WorkOrderDetailSheet: View {
                             SheetSection(title: "Scheduled") {
                                 HStack(spacing: 14) {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 22))
+                                        .font(.title2)
                                         .foregroundStyle(.green)
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("Scheduled for")
@@ -1221,17 +1256,38 @@ struct WorkOrderDetailSheet: View {
 
                             // Inventory Parts Used
                             SheetSection(title: "Inventory Parts Used") {
-                                if inventoryItems.isEmpty {
-                                    HStack(spacing: 12) {
-                                        Image(systemName: "shippingbox")
-                                            .foregroundStyle(Color(.tertiaryLabel))
-                                        Text("No inventory items available")
-                                            .font(.subheadline)
-                                            .foregroundStyle(Color.secondary)
+                                let selectedItemIds = Array(partQuantities.keys)
+                                let selectedItems = inventoryItems.filter { selectedItemIds.contains($0.id) }
+                                
+                                if selectedItems.isEmpty {
+                                    VStack(spacing: 12) {
+                                        HStack(spacing: 12) {
+                                            Image(systemName: "shippingbox")
+                                                .foregroundStyle(Color(.tertiaryLabel))
+                                            Text("No parts added yet")
+                                                .font(.subheadline)
+                                                .foregroundStyle(Color.secondary)
+                                            Spacer()
+                                        }
+                                        
+                                        Button {
+                                            isShowingPartSelector = true
+                                        } label: {
+                                            HStack {
+                                                Image(systemName: "plus.circle.fill")
+                                                Text("Add Parts")
+                                            }
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(.white)
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 40)
+                                            .background(Color.brown, in: RoundedRectangle(cornerRadius: 8))
+                                        }
+                                        .buttonStyle(.plain)
                                     }
                                 } else {
                                     VStack(spacing: 0) {
-                                        ForEach(inventoryItems) { item in
+                                        ForEach(selectedItems) { item in
                                             VStack(spacing: 8) {
                                                 HStack(spacing: 14) {
                                                     Image(systemName: "gearshape.fill")
@@ -1263,9 +1319,10 @@ struct WorkOrderDetailSheet: View {
                                                             }
                                                         } label: {
                                                             Image(systemName: "minus.circle.fill")
-                                                                .font(.system(size: 22))
+                                                                .font(.title2)
                                                                 .foregroundStyle((partQuantities[item.id] ?? 0) > 0 ? Color.brown : Color(.tertiaryLabel))
                                                         }
+                                                        .buttonStyle(.plain)
 
                                                         Text("\(partQuantities[item.id] ?? 0)")
                                                             .font(.subheadline.weight(.semibold).monospacedDigit())
@@ -1282,9 +1339,10 @@ struct WorkOrderDetailSheet: View {
                                                             }
                                                         } label: {
                                                             Image(systemName: "plus.circle.fill")
-                                                                .font(.system(size: 22))
+                                                                .font(.title2)
                                                                 .foregroundStyle((partQuantities[item.id] ?? 0) < (item.stockQuantity ?? 0) ? Color.brown : Color(.tertiaryLabel))
                                                         }
+                                                        .buttonStyle(.plain)
                                                     }
                                                 }
 
@@ -1300,10 +1358,24 @@ struct WorkOrderDetailSheet: View {
                                             }
                                             .padding(.vertical, 10)
 
-                                            if item.id != inventoryItems.last?.id {
-                                                Divider().background(Color(.separator))
-                                            }
+                                            Divider().background(Color(.separator))
                                         }
+                                        
+                                        Button {
+                                            isShowingPartSelector = true
+                                        } label: {
+                                            HStack {
+                                                Image(systemName: "plus.circle.fill")
+                                                Text("Add / Edit Parts")
+                                            }
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(Color.brown)
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 40)
+                                            .background(Color.brown.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+                                        }
+                                        .buttonStyle(.plain)
+                                        .padding(.top, 12)
                                     }
                                 }
                             }
@@ -1371,7 +1443,7 @@ struct WorkOrderDetailSheet: View {
                                     Image(systemName: "checkmark.circle.fill")
                                     Text("Mark as Complete")
                                 }
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 52)
@@ -1451,6 +1523,9 @@ struct WorkOrderDetailSheet: View {
         }
         .navigationTitle("Work Order Details")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $isShowingPartSelector) {
+            PartSelectionSheet(inventoryItems: inventoryItems, partQuantities: $partQuantities)
+        }
         .task {
             if currentWO.status == .inProgress {
                 inventoryItems = (try? await InventoryService.fetchAllInventory()) ?? []
@@ -1542,7 +1617,7 @@ private struct ChecklistRow: View {
             HStack(spacing: 16) {
                 Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(item.isChecked ? Color.green : Color(.quaternaryLabel))
-                    .font(.system(size: 20))
+                    .font(.title3)
                     .symbolEffect(.bounce, value: item.isChecked)
 
                 Text(item.title)
@@ -1838,6 +1913,139 @@ struct CreateTaskSheet: View {
                 scheduledDate = initialDate
                 if let firstVehicle = viewModel.allVehicles.first {
                     selectedVehicleId = firstVehicle.id
+                }
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MARK: - Part Selection Sheet
+// ═══════════════════════════════════════════════════════════════
+
+struct PartSelectionSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let inventoryItems: [Inventory]
+    @Binding var partQuantities: [UUID: Int]
+    
+    @State private var searchText = ""
+    
+    var filteredItems: [Inventory] {
+        if searchText.isEmpty {
+            return inventoryItems
+        } else {
+            return inventoryItems.filter { item in
+                (item.partName ?? "").localizedCaseInsensitiveContains(searchText)
+            }
+        }
+    }
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Search Bar
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    TextField("Search parts...", text: $searchText)
+                        .textFieldStyle(.plain)
+                        .autocorrectionDisabled()
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(10)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                
+                Divider()
+                
+                if filteredItems.isEmpty {
+                    VStack(spacing: 12) {
+                        Spacer()
+                        Image(systemName: "shippingbox.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(Color.brown.opacity(0.4))
+                        Text("No matching parts found")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List {
+                        ForEach(filteredItems) { item in
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(item.partName ?? "Unknown Part")
+                                        .font(.body.weight(.medium))
+                                        .foregroundStyle(Color.primary)
+                                    Text("Stock: \(item.stockQuantity ?? 0) · \u{20B9}\(String(format: "%.0f", item.unitCost ?? 0))/unit")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                let qty = partQuantities[item.id] ?? 0
+                                
+                                HStack(spacing: 12) {
+                                    Button {
+                                        if qty > 0 {
+                                            partQuantities[item.id] = qty - 1
+                                            if partQuantities[item.id] == 0 {
+                                                partQuantities.removeValue(forKey: item.id)
+                                            }
+                                        }
+                                    } label: {
+                                        Image(systemName: "minus.circle.fill")
+                                            .font(.title3)
+                                            .foregroundStyle(qty > 0 ? Color.brown : Color(.quaternaryLabel))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(qty == 0)
+                                    
+                                    Text("\(qty)")
+                                        .font(.body.bold().monospacedDigit())
+                                        .frame(width: 24, alignment: .center)
+                                    
+                                    Button {
+                                        let maxStock = item.stockQuantity ?? 0
+                                        if qty < maxStock {
+                                            partQuantities[item.id] = qty + 1
+                                        }
+                                    } label: {
+                                        Image(systemName: "plus.circle.fill")
+                                            .font(.title3)
+                                            .foregroundStyle(qty < (item.stockQuantity ?? 0) ? Color.brown : Color(.quaternaryLabel))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(qty >= (item.stockQuantity ?? 0))
+                                }
+                                .padding(.vertical, 4)
+                            }
+                            .listRowBackground((partQuantities[item.id] ?? 0) > 0 ? Color.brown.opacity(0.05) : Color(.secondarySystemGroupedBackground))
+                        }
+                    }
+                    .listStyle(.insetGrouped)
+                }
+            }
+            .navigationTitle("Select Parts")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color.brown)
                 }
             }
         }

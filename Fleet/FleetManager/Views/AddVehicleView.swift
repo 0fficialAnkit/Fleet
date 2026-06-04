@@ -122,7 +122,7 @@ struct AddVehicleView: View {
                     if hasInsuranceExpiry {
                         DatePicker("Expiry Date", selection: $insuranceExpiry,
                                    in: Date()..., displayedComponents: .date)
-                            .tint(Color.teal)
+                            .tint(Color(.label))
 
                         Button {
                             showInsuranceScanner = true
@@ -146,7 +146,7 @@ struct AddVehicleView: View {
                     if hasServiceExpiry {
                         DatePicker("Service Date", selection: $serviceExpiry,
                                    in: Date()..., displayedComponents: .date)
-                            .tint(Color.teal)
+                            .tint(Color(.label))
 
                         Button {
                             showServiceScanner = true
