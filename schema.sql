@@ -25,8 +25,8 @@ CREATE TABLE public.users (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   license_number character varying UNIQUE,
-  is_on_duty boolean DEFAULT true,
   created_by_manager_id uuid,
+  is_on_duty boolean DEFAULT true,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_created_by_manager_id_fkey FOREIGN KEY (created_by_manager_id) REFERENCES public.users(id),
   CONSTRAINT users_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id),
@@ -163,7 +163,9 @@ CREATE TABLE public.inventory (
   unit_cost numeric,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT inventory_pkey PRIMARY KEY (id)
+  admin_id uuid,
+  CONSTRAINT inventory_pkey PRIMARY KEY (id),
+  CONSTRAINT inventory_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.work_orders (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -174,6 +176,7 @@ CREATE TABLE public.work_orders (
   status USER-DEFINED DEFAULT 'pending'::lifecycle_status,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone,
   CONSTRAINT work_orders_pkey PRIMARY KEY (id),
   CONSTRAINT work_orders_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id),
   CONSTRAINT work_orders_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES public.vehicles(id),
@@ -194,6 +197,7 @@ CREATE TABLE public.maintenance_tasks (
   target_mileage numeric,
   service_interval_months integer,
   schedule_type character varying,
+  completed_at timestamp with time zone,
   CONSTRAINT maintenance_tasks_pkey PRIMARY KEY (id),
   CONSTRAINT maintenance_tasks_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES public.vehicles(id),
   CONSTRAINT maintenance_tasks_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id),
@@ -338,27 +342,3 @@ CREATE TABLE public.route_breach_events (
   CONSTRAINT route_breach_events_pkey PRIMARY KEY (id),
   CONSTRAINT route_breach_events_trip_id_fkey FOREIGN KEY (trip_id) REFERENCES public.trips(id)
 );
-
--- ==========================================
--- ROW LEVEL SECURITY (RLS) POLICIES
--- ==========================================
-
--- Enable RLS on issue_reports
-ALTER TABLE public.issue_reports ENABLE ROW LEVEL SECURITY;
-
--- Admins manage issue reports
-CREATE POLICY "Admins manage issue reports" ON public.issue_reports FOR ALL TO authenticated USING (true);
-
--- Drivers can insert and view their own issue reports
-CREATE POLICY "Drivers can insert and view their own issue reports" ON public.issue_reports FOR ALL TO authenticated USING (auth.uid() = reported_by);
-
--- Maintenance staff can view and update their assigned issue reports
-CREATE POLICY "Maintenance staff can view and update their assigned issue reports" ON public.issue_reports FOR ALL TO authenticated USING (auth.uid() = assigned_to);
-
-
--- ==========================================
--- SCHEMA PATCHES (Columns missing in initial dumps)
--- ==========================================
-
-ALTER TABLE public.work_orders ADD COLUMN IF NOT EXISTS completed_at timestamp with time zone;
-ALTER TABLE public.maintenance_tasks ADD COLUMN IF NOT EXISTS completed_at timestamp with time zone;

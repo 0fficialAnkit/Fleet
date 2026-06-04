@@ -431,7 +431,7 @@ struct OrderDetailView: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
-                if !incident.location.isEmpty {
+                if !incident.location.isEmpty && !isVoice {
                     Label(incident.location, systemImage: "mappin")
                         .font(.caption2)
                         .foregroundStyle(Color(.tertiaryLabel))
@@ -547,7 +547,7 @@ struct OrderDetailView: View {
             }
 
             // Location (if present)
-            if !incident.location.isEmpty {
+            if !incident.location.isEmpty && !isVoice {
                 Label(incident.location, systemImage: "mappin.circle")
                     .font(.caption)
                     .foregroundStyle(.secondary)
