@@ -22,26 +22,33 @@ struct VehicleRowView: View {
     let statusText: String
     let statusColor: Color
 
+    var vehicleIcon: String {
+        guard let type = vehicle.vehicleType else { return "truck.box" }
+        switch type {
+        case .twoWheeler:   return "scooter"
+        case .threeWheeler: return "car.2"
+        case .car:          return "car"
+        case .truck:        return "truck.box"
+        }
+    }
+
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 14) {
             ZStack {
                 Circle()
                     .fill(Color.teal.opacity(0.1))
-                    .frame(width: 48, height: 48)
-
-                Image(systemName: "truck.box.fill")
-                    .font(.system(size: 20))
-                    .foregroundStyle(Color.teal)
+                    .frame(width: 46, height: 46)
+                Image(systemName: vehicleIcon)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(.teal)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text("\(vehicle.make ?? "Unknown") \(vehicle.model ?? "")")
                     .font(.headline)
-                    .foregroundStyle(Color.primary)
-
-                Text(vehicle.licensePlate ?? "No License Plate")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.secondary)
+                Text(vehicle.licensePlate ?? "No Plate")
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()

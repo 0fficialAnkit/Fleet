@@ -189,7 +189,7 @@ struct DriverReportIncidentView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .tint(.green)
+            .tint(Color(.label))
             .padding(.horizontal, 32)
             .padding(.bottom, 40)
         }

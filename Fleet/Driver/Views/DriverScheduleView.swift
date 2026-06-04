@@ -122,7 +122,7 @@ struct DriverScheduleView: View {
                                     .foregroundStyle(isSelected ? .white : Color.secondary)
                                 
                                 Text(day.formatted(.dateTime.day()))
-                                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                                    .font(.headline)
                                     .foregroundStyle(isSelected ? .white : (isToday ? Color.green : Color.primary))
                                     .frame(width: 38, height: 38)
                                     .background(
@@ -273,27 +273,27 @@ struct ScheduleTripRow: View {
                         .frame(width: 1.5, height: 22)
                     
                     Image(systemName: "mappin.circle.fill")
-                        .font(.system(size: 11))
+                        .font(.caption)
                         .foregroundStyle(Color.red)
                 }
                 
                 VStack(alignment: .leading, spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("PICKUP")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.caption2.weight(.semibold))
                             .foregroundStyle(Color.secondary)
                         Text(route?.startLocation ?? "Origin Location")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color.primary)
                             .lineLimit(1)
                     }
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text("DELIVERY")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.caption2.weight(.semibold))
                             .foregroundStyle(Color.secondary)
                         Text(route?.endLocation ?? "Destination Location")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Color.primary)
                             .lineLimit(1)
                     }

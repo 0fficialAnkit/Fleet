@@ -22,11 +22,10 @@ struct StatusBadge: View {
                 .lineLimit(1)
         }
         .foregroundStyle(color)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(color.opacity(0.15))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(color.opacity(0.12))
         .clipShape(Capsule())
-        .overlay(Capsule().strokeBorder(color.opacity(0.25), lineWidth: 0.5))
     }
 }
 
@@ -49,6 +48,7 @@ struct FilterButton: View {
                 .background(isSelected ? Color.teal : Color(.tertiarySystemBackground))
                 .foregroundStyle(isSelected ? .white : Color.secondary)
                 .clipShape(Capsule())
+                .animation(.easeInOut(duration: 0.15), value: isSelected)
         }
         .buttonStyle(.plain)
     }
