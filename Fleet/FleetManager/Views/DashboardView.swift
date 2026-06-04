@@ -28,8 +28,6 @@ struct DashboardView: View {
 
                         liveDriverAlertsSection
 
-                        resolvedMaintenanceCostSection
-
                         predictiveMaintenanceSection
                     }
                     .refreshable { await viewModel.loadData() }
@@ -360,53 +358,7 @@ struct DashboardView: View {
     }
 
 
-    // MARK: - Resolved Maintenance Cost Section
 
-    private var resolvedMaintenanceCostSection: some View {
-        // Show resolved records with a recorded cost, most recent first, last 30 days
-        let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
-        let resolved = viewModel.maintenanceHistory
-            .filter { ($0.cost ?? 0) > 0 && ($0.completedAt ?? .distantPast) >= cutoff }
-            .sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
-
-        return Section {
-            if resolved.isEmpty {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.teal)
-                    Text("No resolved work orders with costs in the last 30 days")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 4)
-            } else {
-                ForEach(resolved) { history in
-                    ResolvedMaintenanceCostCard(
-                        history: history,
-                        vehicle: viewModel.vehicles.first { $0.id == history.vehicleId }
-                    )
-                }
-            }
-        } header: {
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.teal)
-                Text("Resolved Work Orders – Cost")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if !resolved.isEmpty {
-                    let total = resolved.compactMap { $0.cost }.reduce(0, +)
-                    Text(String(format: "₹ %.0f total", total))
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.teal)
-                        .textCase(.none)
-                }
-            }
-        }
-    }
 
     private var predictiveMaintenanceSection: some View {
         let alerts = viewModel.predictiveAlerts
