@@ -563,10 +563,10 @@ struct MiniFuelDashboardCard: View {
                     }
 
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Fuel")
+                        Text("Fuel Analytics")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        Text("Analytics")
+                        Text("\(viewModel.totalTrips) Trips Completed")
                             .font(.headline)
                     }
 

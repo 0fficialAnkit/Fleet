@@ -106,17 +106,18 @@ private struct NotificationCard: View {
 
     var body: some View {
         Group {
-            if let referenceId = notification.referenceId {
-                NavigationLink {
-                    NotificationDetailDestination(notification: notification)
-                        .onAppear { onMarkRead() }
-                } label: {
+            if notification.referenceId != nil {
+                ZStack {
+                    NavigationLink {
+                        NotificationDetailDestination(notification: notification)
+                            .onAppear { onMarkRead() }
+                    } label: {
+                        EmptyView()
+                    }
+                    .opacity(0)
+                    
                     cardContent
                 }
-                .buttonStyle(.plain)
-
-                // Silence unused referenceId warning
-                .id(referenceId)
             } else {
                 cardContent
                     .contentShape(Rectangle())
@@ -173,8 +174,12 @@ private struct NotificationCard: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
             }
-            // Extra trailing space so text doesn't collide with the chevron overlay
-            .padding(.trailing, notification.referenceId != nil ? 16 : 0)
+            
+            if notification.referenceId != nil {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color(.tertiaryLabel))
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
