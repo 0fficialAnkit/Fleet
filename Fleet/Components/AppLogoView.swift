@@ -10,6 +10,7 @@ struct AppLogoView: View {
                 Image(uiImage: uiImage)
                     .resizable()
                     .scaledToFit()
+                    .frame(width: size, height: size)
             } else {
                 // Fallback
                 ZStack {
@@ -18,20 +19,58 @@ struct AppLogoView: View {
                         .font(.system(size: size * 0.45))
                         .foregroundStyle(Color(.systemBackground))
                 }
+                .frame(width: size, height: size)
+                .background(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(Color(.systemBackground))
+                )
+                // 3D Glass Sheen
+                .overlay(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.3),
+                            Color.white.opacity(0.05),
+                            Color.clear,
+                            Color.black.opacity(0.08)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                )
+                // Metallic Glass Border
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.7),
+                                    Color.white.opacity(0.2),
+                                    Color.clear,
+                                    Color.black.opacity(0.2)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.8
+                        )
+                )
+                // Layered 3D Shadows
+                .shadow(color: Color.black.opacity(0.06), radius: 1, x: 0, y: 1)
+                .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 8)
+                .shadow(color: Color.black.opacity(0.05), radius: 24, x: 0, y: 16)
             }
         }
-        .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
     
     private func getAppIcon() -> UIImage? {
-        if let icons = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
-           let primaryIcon = icons["CFBundlePrimaryIcon"] as? [String: Any],
-           let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String],
-           let lastIcon = iconFiles.last {
-            return UIImage(named: lastIcon)
+        if let image = UIImage(named: "AppIcon") {
+            return image
         }
-        return UIImage(named: "AppIcon")
+        if let image = UIImage(named: "appicon") {
+            return image
+        }
+        return nil
     }
 }
 
