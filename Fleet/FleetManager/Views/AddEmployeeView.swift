@@ -13,8 +13,6 @@ struct AddEmployeeView: View {
     @State private var phone = ""
     @State private var licenseNumber = ""
     @State private var isPasswordVisible = false
-    @State private var showError = false
-    @State private var alertMessage = ""
 
     init(viewModel: EmployeesViewModel, initialRole: String = "driver") {
         self.viewModel = viewModel
@@ -79,11 +77,6 @@ struct AddEmployeeView: View {
                 }
             .navigationTitle(isDriverSelected ? "Add Driver" : "Add Maintenance Staff")
             .navigationBarTitleDisplayMode(.inline)
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(alertMessage)
-            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -95,16 +88,6 @@ struct AddEmployeeView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         guard !fullName.isEmpty, !email.isEmpty, !password.isEmpty else { return }
-                        
-                        if !phone.isEmpty {
-                            let digitsOnly = phone.filter { $0.isNumber }
-                            guard digitsOnly.count == 10 else {
-                                alertMessage = "Phone number should be 10 digit"
-                                showError = true
-                                return
-                            }
-                        }
-                        
                         Task {
                             do {
                                 try await viewModel.addEmployee(
