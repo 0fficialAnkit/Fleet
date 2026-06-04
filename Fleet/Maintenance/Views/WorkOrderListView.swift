@@ -23,92 +23,91 @@ struct WorkOrderListView: View {
     }
 
     var body: some View {
-        ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
+        VStack(spacing: 0) {
+            // Metrics Summary Grid
+            HStack(spacing: 12) {
+                MetricCard(
+                    icon: "tray.fill",
+                    value: "\(workOrders.filter { $0.unifiedStatus == .open }.count)",
+                    label: "Open",
+                    color: Color.blue
+                )
+                MetricCard(
+                    icon: "wrench.adjustable.fill",
+                    value: "\(workOrders.filter { $0.unifiedStatus == .inProgress }.count)",
+                    label: "In Progress",
+                    color: Color.orange
+                )
+                MetricCard(
+                    icon: "checkmark.circle.fill",
+                    value: "\(workOrders.filter { $0.unifiedStatus == .completed }.count)",
+                    label: "Done",
+                    color: Color.green
+                )
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
 
-                if isLoading && workOrders.isEmpty {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                } else {
-                    ScrollView {
-                        VStack(spacing: 16) {
+            // Segmented Picker for status filtering
+            Picker("Filter", selection: $selectedFilter) {
+                Text("All").tag(nil as WorkOrderStatus?)
+                Text("Pending").tag(WorkOrderStatus.pending as WorkOrderStatus?)
+                Text("Open").tag(WorkOrderStatus.open as WorkOrderStatus?)
+                Text("In Progress").tag(WorkOrderStatus.inProgress as WorkOrderStatus?)
+                Text("Done").tag(WorkOrderStatus.completed as WorkOrderStatus?)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
 
-                            // MARK: - Summary Strip
-                            HStack(spacing: 16) {
-                                MiniStatBadge(
-                                    count: workOrders.filter { $0.unifiedStatus == .open }.count,
-                                    label: "Open",
-                                    color: Color.blue
-                                )
-                                MiniStatBadge(
-                                    count: workOrders.filter { $0.unifiedStatus == .inProgress }.count,
-                                    label: "In Progress",
-                                    color: Color.yellow
-                                )
-                                MiniStatBadge(
-                                    count: workOrders.filter { $0.unifiedStatus == .completed }.count,
-                                    label: "Done",
-                                    color: Color.green
-                                )
+            if isLoading && workOrders.isEmpty {
+                Spacer()
+                ProgressView()
+                    .tint(.brown)
+                Spacer()
+            } else {
+                List {
+                    if filteredOrders.isEmpty {
+                        Section {
+                            VStack(spacing: 12) {
+                                Image(systemName: "tray")
+                                    .font(.system(size: 40))
+                                    .foregroundStyle(Color(.tertiaryLabel))
+                                Text("No orders found")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.secondary)
                             }
-                            .padding(.horizontal, 16)
-
-                            // MARK: - Filter Picker
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    FilterChip(label: "All",        isSelected: selectedFilter == nil,              color: Color.brown) { selectedFilter = nil }
-                                    FilterChip(label: "Pending",    isSelected: selectedFilter == .pending,         color: Color.gray)    { selectedFilter = .pending }
-                                    FilterChip(label: "Open",       isSelected: selectedFilter == .open,            color: Color.blue)     { selectedFilter = .open }
-                                    FilterChip(label: "In Progress",isSelected: selectedFilter == .inProgress,      color: Color.yellow)  { selectedFilter = .inProgress }
-                                    FilterChip(label: "Completed",  isSelected: selectedFilter == .completed,       color: Color.green)  { selectedFilter = .completed }
-                                    FilterChip(label: "Cancelled",  isSelected: selectedFilter == .cancelled,       color: Color.red)   { selectedFilter = .cancelled }
-                                }
-                                .padding(.horizontal, 16)
-                            }
-
-                            // MARK: - Order List
-                            if filteredOrders.isEmpty {
-                                VStack(spacing: 16) {
-                                    Image(systemName: "tray")
-                                        .font(.system(size: 44))
-                                        .foregroundStyle(Color(.tertiaryLabel))
-                                    Text("No orders found")
-                                        .font(.body.weight(.medium))
-                                        .foregroundStyle(Color.secondary)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 40)
-                            } else {
-                                LazyVStack(spacing: 16) {
-                                    ForEach(filteredOrders) { item in
-                                        NavigationLink(value: getDestination(for: item)) {
-                                            UnifiedWorkItemRow(item: item)
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                }
-                                .padding(.horizontal, 16)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 32)
+                        }
+                    } else {
+                        ForEach(filteredOrders) { item in
+                            NavigationLink(value: getDestination(for: item)) {
+                                UnifiedWorkItemRow(item: item, vehicles: vehicles)
                             }
                         }
-                        .padding(.vertical, 16)
-                    }
-                    .refreshable { await loadWorkOrders() }
-                }
-            }
-            .navigationTitle("Work Orders")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showNewOrderSheet = true }) {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundStyle(Color.brown)
-                            .font(.system(size: 20))
                     }
                 }
-            }
-            .task {
-                await loadWorkOrders()
+                .listStyle(.insetGrouped)
+                .refreshable { await loadWorkOrders() }
             }
         }
+        .background(Color(.systemGroupedBackground))
+        .navigationTitle("Work Orders")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { showNewOrderSheet = true }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(Color.primary)
+                }
+            }
+        }
+        .task {
+            await loadWorkOrders()
+        }
+    }
 
     private func getDestination(for item: UnifiedMaintenanceItem) -> MaintenanceDestination {
         switch item {
@@ -180,6 +179,7 @@ struct WorkOrderListView: View {
                 rawIRs = try await IssueReportService.fetchIssueReportsAssignedTo(userId: assignedTo)
             } else {
                 rawWOs = try await WorkOrderService.fetchAllWorkOrders()
+                rawIRs = try await IssueReportService.fetchAllIssueReports()
             }
 
             vehicles = (try? await VehicleService.fetchAllVehicles()) ?? []
@@ -215,12 +215,13 @@ private struct MiniStatBadge: View {
                 .foregroundStyle(Color(.tertiaryLabel))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.vertical, 14)
+        .background(color.opacity(0.08))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(color.opacity(0.2), lineWidth: 0.8)
+                .stroke(color.opacity(0.2), lineWidth: 0.5)
         )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -252,111 +253,126 @@ private struct FilterChip: View {
 // MARK: - Unified Work Item Row
 struct UnifiedWorkItemRow: View {
     let item: UnifiedMaintenanceItem
+    let vehicles: [Vehicle]
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                // Priority Indicator
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(priorityColor(item.unifiedPriority))
-                        .frame(width: 8, height: 8)
-                    Text(item.title)
-                        .font(.headline)
-                        .foregroundStyle(Color.primary)
-                }
-                Spacer()
-                StatusBadge(
-                    text: statusLabel(item.unifiedStatus),
-                    color: statusColor(item.unifiedStatus)
-                )
-            }
-
-            HStack {
-                Label {
-                    Text(priorityLabel(item.unifiedPriority))
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color.secondary)
-                } icon: {
-                    Image(systemName: priorityIcon(item.unifiedPriority))
-                        .foregroundStyle(priorityColor(item.unifiedPriority))
-                }
-
-                Spacer()
-
-                if let date = item.createdAt {
-                    HStack(spacing: 4) {
-                        Image(systemName: "clock")
-                            .font(.caption2)
-                            .foregroundStyle(Color(.tertiaryLabel))
-                        Text(date, style: .relative)
-                            .font(.footnote)
-                            .foregroundStyle(Color(.tertiaryLabel))
-                    }
-                }
-            }
+    var vehiclePlate: String {
+        vehicles.first(where: { $0.id == item.vehicleId })?.licensePlate ?? "Unknown Vehicle"
+    }
+    
+    var vehicleModel: String {
+        if let v = vehicles.first(where: { $0.id == item.vehicleId }) {
+            let make = v.make ?? ""
+            let model = v.model ?? ""
+            return "\(make) \(model)".trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        .padding(16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-        )
-
+        return ""
     }
 
-    func statusLabel(_ status: WorkOrderStatus?) -> String {
+    var iconName: String {
+        switch item {
+        case .issueReport: return "exclamationmark.triangle.fill"
+        case .workOrder: return "wrench.and.screwdriver.fill"
+        }
+    }
+
+    var priorityColor: Color {
+        switch item.unifiedPriority {
+        case .critical, .high: return Color.red
+        case .medium: return Color.orange
+        case .low: return Color.blue
+        case nil: return Color.secondary
+        }
+    }
+
+    var priorityLabel: String {
+        switch item.unifiedPriority {
+        case .critical: return "Critical"
+        case .high: return "High"
+        case .medium: return "Medium"
+        case .low: return "Low"
+        case nil: return "Normal"
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Native-looking Left Icon
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(priorityColor.opacity(0.12))
+                    .frame(width: 40, height: 40)
+                Image(systemName: iconName)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(priorityColor)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                // Vehicle Plate
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(vehiclePlate)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.primary)
+                    
+                    if !vehicleModel.isEmpty {
+                        Text("· \(vehicleModel)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color(.secondaryLabel))
+                            .lineLimit(1)
+                    }
+                }
+                
+                // Issue / WO Type
+                Text(item.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(Color.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            // Status & Priority Badge
+            VStack(alignment: .trailing, spacing: 6) {
+                if let status = item.unifiedStatus {
+                    StatusBadge(text: statusLabel(status), color: statusColor(status))
+                }
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.system(size: 10, weight: .semibold))
+                    Text(priorityLabel)
+                        .font(.system(size: 11, weight: .bold))
+                }
+                .foregroundStyle(priorityColor)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2.5)
+                .background(priorityColor.opacity(0.12))
+                .clipShape(Capsule())
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    func statusLabel(_ status: WorkOrderStatus) -> String {
         switch status {
         case .pending:    return "Pending"
         case .open:       return "Open"
         case .inProgress: return "In Progress"
-        case .completed:  return "Completed"
+        case .completed:  return "Done"
         case .cancelled:  return "Cancelled"
-        case .none:       return "Unknown"
         }
     }
 
-    func statusColor(_ status: WorkOrderStatus?) -> Color {
+    func statusColor(_ status: WorkOrderStatus) -> Color {
         switch status {
         case .pending:    return Color.gray
         case .open:       return Color.blue
         case .inProgress: return Color.orange
         case .completed:  return Color.green
         case .cancelled:  return Color.red
-        case .none:       return Color.secondary
-        }
-    }
-
-    func priorityLabel(_ priority: WorkOrderPriority?) -> String {
-        switch priority {
-        case .low:      return "Low Priority"
-        case .medium:   return "Medium Priority"
-        case .high:     return "High Priority"
-        case .critical: return "Critical"
-        case .none:     return "Unknown"
-        }
-    }
-
-    func priorityIcon(_ priority: WorkOrderPriority?) -> String {
-        switch priority {
-        case .low:      return "arrow.down.circle"
-        case .medium:   return "minus.circle"
-        case .high:     return "arrow.up.circle"
-        case .critical: return "exclamationmark.2"
-        case .none:     return "minus.circle"
-        }
-    }
-
-    func priorityColor(_ priority: WorkOrderPriority?) -> Color {
-        switch priority {
-        case .critical: return Color.red
-        case .high:     return Color.orange
-        case .medium:   return Color.blue
-        case .low:      return Color.green
-        case .none:     return Color.secondary
         }
     }
 }
+
 
 #Preview {
     WorkOrderListView()

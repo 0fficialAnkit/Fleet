@@ -10,6 +10,8 @@ final class MaintenanceViewModel {
 
     var isLoading = false
     var errorMessage: String?
+    /// Set once on login from AuthViewModel.currentUserId
+    var adminId: UUID?
 
     func setupRealtime() {
         let rt = RealtimeManager.shared
@@ -24,8 +26,8 @@ final class MaintenanceViewModel {
         do {
             async let t = MaintenanceTaskService.fetchAllTasks()
             async let w = WorkOrderService.fetchAllWorkOrders()
-            async let v = VehicleService.fetchAllVehicles()
-            async let s = ProfileService.fetchProfilesByRole(role: "maintenance")
+            async let v = VehicleService.fetchAllVehicles(adminId: adminId)
+            async let s = ProfileService.fetchProfilesByRole(role: "maintenance", managerId: adminId)
             tasks = try await t
             workOrders = try await w
             vehicles = try await v

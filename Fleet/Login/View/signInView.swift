@@ -162,7 +162,7 @@ struct SignInView: View {
                     } label: {
                         Text("Forgot Password?")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.teal)
+                            .foregroundStyle(.teal)
                     }
                     .padding(.top, 4)
                 }

@@ -34,4 +34,39 @@ enum TripIncidentService {
             throw error
         }
     }
+
+    /// Fetch the most recent voice-reported incidents across all trips (fleet manager dashboard).
+    static func fetchRecentVoiceIncidents(limit: Int = 5) async throws -> [TripIncident] {
+        do {
+            let result: [TripIncident] = try await supabase
+                .from("trip_incidents")
+                .select()
+                .eq("source", value: "voice")
+                .order("created_at", ascending: false)
+                .limit(limit)
+                .execute()
+                .value
+            print("[TripIncidentService] fetchRecentVoiceIncidents: \(result.count) items")
+            return result
+        } catch {
+            print("[TripIncidentService] fetchRecentVoiceIncidents ERROR: \(error)")
+            throw error
+        }
+    }
+
+    /// Delete all incidents for a specific trip
+    static func deleteIncidents(forTripId tripId: UUID) async throws {
+        do {
+            try await supabase
+                .from("trip_incidents")
+                .delete()
+                .eq("trip_id", value: tripId)
+                .execute()
+            print("[TripIncidentService] deleteIncidents for trip \(tripId): OK")
+        } catch {
+            print("[TripIncidentService] deleteIncidents ERROR: \(error)")
+            throw error
+        }
+    }
 }
+

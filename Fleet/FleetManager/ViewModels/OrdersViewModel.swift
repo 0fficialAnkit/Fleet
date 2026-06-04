@@ -17,15 +17,17 @@ final class OrdersViewModel {
 
     var isLoading = false
     var errorMessage: String?
+    /// Set once on login from AuthViewModel.currentUserId
+    var adminId: UUID?
 
     func loadData() async {
         isLoading = true
         errorMessage = nil
         do {
-            async let t = TripService.fetchAllTrips()
-            async let r = RouteService.fetchAllRoutes()
-            async let p = ProfileService.fetchAllProfiles()
-            async let v = VehicleService.fetchAllVehicles()
+            async let t = TripService.fetchAllTrips(adminId: adminId)
+            async let r = RouteService.fetchAllRoutes(managerId: adminId)
+            async let p = ProfileService.fetchAllProfiles(managerId: adminId)
+            async let v = VehicleService.fetchAllVehicles(adminId: adminId)
             trips = try await t
             routes = try await r
             profiles = try await p

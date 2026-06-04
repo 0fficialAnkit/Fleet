@@ -206,11 +206,11 @@ struct DriverFuelView: View {
                     }
                     .font(.body.weight(.medium))
                     .frame(maxWidth: .infinity)
-                    .padding(16)
-                    .background(!isFormValid || isSubmitting ? Color(UIColor.tertiarySystemFill) : Color.green)
-                    .foregroundStyle(!isFormValid || isSubmitting ? Color(UIColor.tertiaryLabel) : Color(UIColor.systemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(Color(.label))
+                .controlSize(.large)
+                .buttonBorderShape(.capsule)
                 .disabled(!isFormValid || isSubmitting)
             }
             .disabled(assignedVehicleId == nil)
@@ -404,7 +404,7 @@ struct DriverFuelView: View {
                 // Dispatch notifications to managers in the background to prevent UI blocking
                 Task {
                     do {
-                        if let userId = authViewModel.currentUser?.id {
+                        if authViewModel.currentUser?.id != nil {
                             let managers = try await ProfileService.fetchProfilesByRole(role: "fleet_manager")
                             for manager in managers {
                                 let notification = Notification(

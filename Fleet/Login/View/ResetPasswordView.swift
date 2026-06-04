@@ -4,7 +4,11 @@ struct ResetPasswordView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AuthViewModel.self) private var authViewModel
     
-    @State var email: String = ""
+    @State private var email: String = ""
+
+    init(email: String = "") {
+        self._email = State(initialValue: email)
+    }
     // No longer need old/new password fields
     
     @State private var isSuccess = false
@@ -24,7 +28,7 @@ struct ResetPasswordView: View {
                                 .frame(width: 80, height: 80)
                             Image(systemName: "lock.fill")
                                 .font(.system(size: 32))
-                                .foregroundColor(.teal)
+                                .foregroundStyle(.teal)
                         }
                         .padding(.top, 32)
                         
@@ -32,11 +36,11 @@ struct ResetPasswordView: View {
                         VStack(spacing: 8) {
                             Text("Reset Password")
                                 .font(.title2.bold())
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             
                             Text("Enter your email address to receive a password reset link.")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 16)
                         }
@@ -46,12 +50,12 @@ struct ResetPasswordView: View {
                             VStack(spacing: 12) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 40))
-                                    .foregroundColor(.green)
+                                    .foregroundStyle(.green)
                                 Text("Success!")
                                     .font(.headline)
                                 Text("A password reset link has been sent to your email address. Please check your inbox.")
                                     .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                                     .multilineTextAlignment(.center)
                             }
                             .padding()
@@ -64,19 +68,19 @@ struct ResetPasswordView: View {
                             VStack(spacing: 16) {
                                 if let errorMessage = authViewModel.errorMessage {
                                     Text(errorMessage)
-                                        .foregroundColor(Color.red)
+                                        .foregroundStyle(Color.red)
                                         .font(.caption)
                                         .multilineTextAlignment(.center)
                                 }
                                 
                                 HStack {
                                     Image(systemName: "envelope")
-                                        .foregroundColor(Color(.placeholderText))
-                                    TextField("", text: $email, prompt: Text("Email Address").foregroundColor(Color(.placeholderText)))
+                                        .foregroundStyle(Color(.placeholderText))
+                                    TextField("", text: $email, prompt: Text("Email Address").foregroundStyle(Color(.placeholderText)))
                                         .keyboardType(.emailAddress)
                                         .textInputAutocapitalization(.never)
                                 }
-                                .foregroundColor(Color.primary)
+                                .foregroundStyle(Color.primary)
                                 .padding(.horizontal, 18)
                                 .frame(height: 56)
                                 .background(Color(.secondarySystemBackground))
@@ -97,7 +101,7 @@ struct ResetPasswordView: View {
                                     } else {
                                         Text("Reset Password")
                                             .font(.system(size: 18, weight: .semibold))
-                                            .foregroundColor(isButtonDisabled ? Color(.tertiaryLabel) : .white)
+                                            .foregroundStyle(isButtonDisabled ? Color(.tertiaryLabel) : .white)
                                             .frame(maxWidth: .infinity)
                                             .frame(height: 56)
                                             .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.teal)

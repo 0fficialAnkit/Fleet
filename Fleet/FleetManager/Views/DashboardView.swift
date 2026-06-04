@@ -1,4 +1,5 @@
 import SwiftUI
+internal import Auth
 
 struct DashboardView: View {
     @State private var viewModel = DashboardViewModel()
@@ -12,7 +13,6 @@ struct DashboardView: View {
             Group {
                 if viewModel.isLoading && viewModel.vehicles.isEmpty {
                     ProgressView()
-                        .tint(.white)
                 } else {
                     List {
                         Section {
@@ -21,6 +21,8 @@ struct DashboardView: View {
 
                         liveFleetSection
 
+                        liveDriverAlertsSection
+
                         maintenanceSection
                     }
                     .refreshable { await viewModel.loadData() }
@@ -28,20 +30,20 @@ struct DashboardView: View {
                 }
             }
             .navigationTitle("Dashboard")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button(action: { showingNotifications = true }) {
                         Image(systemName: "bell")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(Color.primary)
-                            .frame(width: 38, height: 38)
+                            .foregroundStyle(.primary)
                     }
+                    .buttonStyle(.plain)
 
                     Button(action: { isShowingProfile = true }) {
-                        Image(systemName: "person.crop.circle.fill")
-                            .font(.system(size: 22, weight: .medium))
-                            .foregroundStyle(Color.teal)
+                        Image(systemName: "person.crop.circle")
+                            .foregroundStyle(.primary)
                     }
+                    .buttonStyle(.plain)
                 }
             }
             .sheet(isPresented: $isShowingProfile) {
@@ -73,14 +75,18 @@ struct DashboardView: View {
                 }
             }
         }
-        .task {
-            await viewModel.loadData()
-            viewModel.setupRealtime()
+        .task { }
+        .onChange(of: authViewModel.currentUser?.id, initial: true) { _, _ in
+            guard let adminId = authViewModel.currentUserId else { return }
+            viewModel.adminId = adminId
+            Task {
+                await viewModel.loadData()
+                viewModel.setupRealtime()
+            }
         }
     }
 
-
-    // MARK: - Fleet Overview Card (Idea 3)
+    // MARK: - Fleet Overview Card
 
     private var fleetOverviewCard: some View {
         ZStack {
@@ -90,51 +96,51 @@ struct DashboardView: View {
             .opacity(0)
 
             VStack(spacing: 0) {
-                // Header: icon badge + count + chevron on top trailing
-                HStack(alignment: .top, spacing: 16) {
+                HStack(spacing: 14) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .fill(Color.teal.opacity(0.12))
-                            .frame(width: 48, height: 48)
-                        Image(systemName: "truck.box.fill")
-                            .font(.system(size: 22, weight: .medium))
-                            .foregroundStyle(Color.teal)
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "truck.box")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(.teal)
                     }
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Total Vehicle \(viewModel.totalVehicles)")
-                            .font(.title2.bold())
-                            .foregroundStyle(Color.primary)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Fleet")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Text("\(viewModel.totalVehicles) vehicles")
+                            .font(.headline)
                     }
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(Color(.tertiaryLabel))
-                        .padding(.top, 4)
                 }
 
                 Divider()
-                    .background(Color(.separator))
-                    .padding(.vertical, 16)
+                    .padding(.vertical, 14)
 
-                // Status breakdown row
-                HStack(spacing: 8) {
-                    FleetStatPill(
-                        value: viewModel.driversOnTrip,
+                HStack(spacing: 0) {
+                    kpiCell(
+                        value: "\(viewModel.driversOnTrip)",
                         label: "Active",
-                        color: Color.green
+                        color: .green
                     )
-                    FleetStatPill(
-                        value: max(0, viewModel.totalVehicles - viewModel.driversOnTrip - viewModel.inServiceVehicles),
+                    Divider().frame(height: 36)
+                    kpiCell(
+                        value: "\(max(0, viewModel.totalVehicles - viewModel.driversOnTrip - viewModel.inServiceVehicles))",
                         label: "Idle",
-                        color: Color.orange
+                        color: .orange
                     )
-                    FleetStatPill(
-                        value: viewModel.inServiceVehicles,
+                    Divider().frame(height: 36)
+                    kpiCell(
+                        value: "\(viewModel.inServiceVehicles)",
                         label: "Service",
-                        color: Color.red
+                        color: .red
                     )
                 }
             }
@@ -142,60 +148,176 @@ struct DashboardView: View {
         }
     }
 
+    private func kpiCell(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.title2.bold())
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
 
     // MARK: - Live Fleet Map
 
     private var liveFleetSection: some View {
         let activeTrips = viewModel.trips.filter { $0.status == .active }
-        return Section(header: HStack {
-            Text("Live Fleet")
-            Spacer()
-            if !activeTrips.isEmpty {
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(Color.green)
-                        .frame(width: 7, height: 7)
-                    Text("\(activeTrips.count) on route")
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(Color.secondary)
-                        .textCase(.none)
-                }
-            }
-        }) {
+        return Section {
             DashboardMapView(
                 activeTrips: activeTrips,
                 routes: viewModel.routes,
                 profiles: viewModel.profiles,
                 vehicleLocations: viewModel.vehicleLocations
             )
-            .frame(height: 250)
+            .frame(height: 240)
             .listRowInsets(EdgeInsets())
 
             if !activeTrips.isEmpty {
                 ForEach(activeTrips) { trip in
                     let route = viewModel.routes.first { $0.id == trip.routeId }
                     let driverName = viewModel.driverName(for: trip.driverId)
-                    HStack(spacing: 10) {
-                        Image(systemName: "person.crop.circle.fill")
-                            .foregroundStyle(Color.teal)
-                            .font(.system(size: 16))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(driverName)
-                                .font(.subheadline.bold())
-                                .foregroundStyle(Color.primary)
-                            if let start = route?.startLocation, let end = route?.endLocation {
-                                Text("\(start) → \(end)")
-                                    .font(.caption)
-                                    .foregroundStyle(Color.secondary)
-                                    .lineLimit(1)
+
+                    NavigationLink(value: DashboardDestination.orderDetail(trip)) {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.green.opacity(0.12))
+                                    .frame(width: 36, height: 36)
+                                Image(systemName: "person.fill")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.green)
                             }
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(driverName)
+                                    .font(.subheadline.weight(.medium))
+                                if let start = route?.startLocation, let end = route?.endLocation {
+                                    Text("\(start) → \(end)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                            }
+
+                            Spacer()
+                            StatusBadge(text: "Active", color: .green)
                         }
-                        Spacer()
-                        StatusBadge(text: "Active", color: .green)
+                        .padding(.vertical, 2)
                     }
-                    .padding(.vertical, 4)
                 }
             }
+        } header: {
+            HStack {
+                Text("Live Fleet")
+                Spacer()
+                if !activeTrips.isEmpty {
+                    HStack(spacing: 4) {
+                        Circle().fill(.green).frame(width: 6, height: 6)
+                        Text("\(activeTrips.count) on route")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .textCase(.none)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Driver Alerts
+
+    private var liveDriverAlertsSection: some View {
+        let incidents = viewModel.recentVoiceIncidents
+        return Section {
+            if incidents.isEmpty {
+                Label("No driver alerts", systemImage: "checkmark.shield")
+                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
+            } else {
+                ForEach(incidents) { incident in
+                    Group {
+                        if let trip = viewModel.trips.first(where: { $0.id == incident.tripId }) {
+                            NavigationLink(value: DashboardDestination.orderDetail(trip)) {
+                                incidentRow(incident)
+                            }
+                        } else {
+                            incidentRow(incident)
+                        }
+                    }
+                }
+            }
+        } header: {
+            HStack {
+                Text("Driver Alerts")
+                if !incidents.isEmpty {
+                    Text("\(incidents.count)")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(.orange)
+                        .clipShape(Capsule())
+                }
+            }
+        }
+    }
+
+    private func incidentRow(_ incident: TripIncident) -> some View {
+        let trip = viewModel.trips.first(where: { $0.id == incident.tripId })
+        let driverName = viewModel.driverName(for: incident.driverId ?? trip?.driverId)
+
+        return HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(incidentColor(incident.incidentType).opacity(0.12))
+                    .frame(width: 36, height: 36)
+                Image(systemName: incidentIcon(incident.incidentType))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(incidentColor(incident.incidentType))
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    Text(incident.incidentType)
+                        .font(.subheadline.weight(.medium))
+                    Spacer()
+                    if let date = incident.createdAt {
+                        Text(date.formatted(date: .omitted, time: .shortened))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Text(incident.description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                Label(driverName, systemImage: "person.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 1)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func incidentIcon(_ type: String) -> String {
+        switch type {
+        case "Breakdown": return "wrench.and.screwdriver.fill"
+        case "Traffic":   return "car.2.fill"
+        case "Accident":  return "car.burst.fill"
+        case "Weather":   return "cloud.heavyrain.fill"
+        default:          return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private func incidentColor(_ type: String) -> Color {
+        switch type {
+        case "Breakdown": return .red
+        case "Traffic":   return .orange
+        case "Accident":  return .red
+        case "Weather":   return .blue
+        default:          return .orange
         }
     }
 
@@ -205,20 +327,9 @@ struct DashboardView: View {
         let topAlerts = Array(viewModel.predictiveAlerts.prefix(3))
         return Section {
             if viewModel.predictiveAlerts.isEmpty {
-                HStack(spacing: 12) {
-                    Image(systemName: "checkmark.shield.fill")
-                        .font(.system(size: 28))
-                        .foregroundStyle(Color.green)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("All vehicles operational")
-                            .font(.body.bold())
-                            .foregroundStyle(Color.primary)
-                        Text("No maintenance alerts detected")
-                            .font(.caption)
-                            .foregroundStyle(Color.secondary)
-                    }
-                }
-                .padding(.vertical, 6)
+                Label("All vehicles operational", systemImage: "checkmark.shield")
+                    .foregroundStyle(.secondary)
+                    .font(.subheadline)
             } else {
                 ForEach(topAlerts) { alert in
                     PredictiveAlertCardView(
@@ -229,124 +340,22 @@ struct DashboardView: View {
             }
         } header: {
             HStack {
-                Text("Need Maintenance")
+                Text("Maintenance Needed")
                 Spacer()
                 if viewModel.predictiveAlerts.count > 3 {
                     NavigationLink(value: DashboardDestination.allMaintenanceAlerts) {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 3) {
                             Text("See All (\(viewModel.predictiveAlerts.count))")
-                                .font(.caption.weight(.medium))
+                                .font(.footnote)
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(.caption2.weight(.semibold))
                         }
-                        .foregroundStyle(Color.orange)
+                        .foregroundStyle(.orange)
                         .textCase(.none)
                     }
-                } else if !viewModel.predictiveAlerts.isEmpty {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color.secondary)
                 }
             }
         }
-    }
-}
-
-// MARK: - Fleet Stat Pill
-
-struct FleetStatPill: View {
-    let value: Int
-    let label: String
-    let color: Color
-
-    var body: some View {
-        VStack(spacing: 5) {
-            Text("\(value)")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(Color.primary)
-            Text(label)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Color.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(color.opacity(0.08))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(color.opacity(0.25), lineWidth: 0.5)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-}
-
-// MARK: - Trip Card
-
-struct TripCardView: View {
-    let trip: Trip
-    let viewModel: DashboardViewModel
-
-    var routeName: String {
-        viewModel.routeName(for: trip.routeId)
-    }
-
-    var displayTitle: String {
-        if let type = trip.orderType {
-            return type.displayName
-        }
-        return routeName
-    }
-
-    var driverName: String {
-        viewModel.driverName(for: trip.driverId)
-    }
-
-    var statusColor: Color {
-        switch trip.status {
-        case .scheduled: return Color.blue
-        case .active:    return Color.green
-        case .completed: return Color.green
-        case .cancelled: return Color.red
-        case .none:      return Color(.quaternaryLabel)
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Text(displayTitle)
-                        .font(.body.bold())
-                        .foregroundStyle(Color.primary)
-                        .lineLimit(1)
-                    Spacer()
-                    StatusBadge(text: trip.status?.rawValue.capitalized ?? "Unknown", color: statusColor)
-                }
-
-                HStack {
-                    HStack(spacing: 6) {
-                        Image(systemName: "person.crop.circle.fill")
-                            .foregroundStyle(Color.teal)
-                            .font(.system(size: 16))
-                        Text(driverName)
-                            .font(.subheadline)
-                            .foregroundStyle(Color.secondary)
-                    }
-                    Spacer()
-                    if let distance = trip.distance {
-                        HStack(spacing: 6) {
-                            Image(systemName: "ruler.fill")
-                                .foregroundStyle(Color(.tertiaryLabel))
-                                .font(.system(size: 14))
-                            Text(String(format: "%.1f km", distance))
-                                .font(.subheadline)
-                                .foregroundStyle(Color.secondary)
-                        }
-                    }
-                }
-            }
-
-        }
-        .padding(.vertical, 4)
     }
 }
 
@@ -358,7 +367,7 @@ struct PredictiveAlertCardView: View {
     @State private var showingAssignment = false
 
     private var accentColor: Color {
-        alert.severity == .critical ? Color.red : Color.orange
+        alert.severity == .critical ? .red : .orange
     }
 
     private var severityLabel: String {
@@ -371,96 +380,36 @@ struct PredictiveAlertCardView: View {
 
     var body: some View {
         Button(action: { showingAssignment = true }) {
-            VStack(alignment: .leading, spacing: 10) {
-                // Header row
-                HStack(spacing: 10) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(accentColor.opacity(0.12))
-                            .frame(width: 40, height: 40)
-                        Image(systemName: "wrench.and.screwdriver.fill")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundStyle(accentColor)
-                    }
-
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("\(alert.vehicle.make ?? "") \(alert.vehicle.model ?? "")")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color.primary)
-                        Text(alert.vehicle.licensePlate ?? "No Plate")
-                            .font(.caption)
-                            .foregroundStyle(Color.secondary)
-                    }
-
-                    Spacer()
-
-                    // Severity badge
-                    HStack(spacing: 4) {
-                        Image(systemName: severityIcon)
-                            .font(.system(size: 11, weight: .semibold))
-                        Text(severityLabel)
-                            .font(.system(size: 11, weight: .semibold))
-                    }
-                    .foregroundStyle(accentColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(accentColor.opacity(0.1))
-                    .clipShape(Capsule())
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(accentColor.opacity(0.12))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "wrench.and.screwdriver")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(accentColor)
                 }
 
-                Divider()
-
-                // Predicted issue
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color.secondary)
-                        .padding(.top, 1)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Predicted Issue")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(Color.secondary)
-                            .textCase(.uppercase)
-                        Text(alert.reason)
-                            .font(.subheadline)
-                            .foregroundStyle(Color.primary)
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("\(alert.vehicle.make ?? "") \(alert.vehicle.model ?? "")")
+                                .font(.subheadline.weight(.medium))
+                            Text(alert.vehicle.licensePlate ?? "")
+                                .font(.caption.monospaced())
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        StatusBadge(text: severityLabel, color: accentColor)
                     }
-                }
 
-                // Recommended action
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "lightbulb.fill")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Color.yellow)
-                        .padding(.top, 1)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Recommended Action")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(Color.secondary)
-                            .textCase(.uppercase)
-                        Text(alert.recommendation)
-                            .font(.subheadline)
-                            .foregroundStyle(Color.primary)
-                            .lineLimit(2)
-                    }
-                }
-
-                // Assign row
-                HStack {
-                    Image(systemName: "person.badge.plus")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color.teal)
-                    Text("Tap to assign to maintenance staff")
+                    Text(alert.reason)
                         .font(.caption)
-                        .foregroundStyle(Color.teal)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
                 }
-                .padding(.top, 2)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
         .sheet(isPresented: $showingAssignment) {
@@ -476,7 +425,6 @@ struct PredictiveAlertCardView: View {
                 recommendationDescription: alert.recommendation,
                 maintenanceStaff: maintenanceStaff
             ) { staffId, notes in
-                // Create Work Order
                 let workOrderId = try await WorkOrderService.createWorkOrder(
                     vehicleId: alert.vehicle.id,
                     createdBy: nil,
@@ -484,7 +432,6 @@ struct PredictiveAlertCardView: View {
                     priority: alert.severity == .critical ? .critical : .medium,
                     status: .open
                 )
-                
                 let task = MaintenanceTask(
                     id: UUID(),
                     workOrderId: workOrderId,
@@ -500,9 +447,6 @@ struct PredictiveAlertCardView: View {
                     status: .pending
                 )
                 try await MaintenanceTaskService.createTask(task)
-
-                // Mark the vehicle as "in service" so the Service stat pill
-                // updates immediately and the vehicle leaves the alert list.
                 var updatedVehicle = alert.vehicle
                 updatedVehicle.status = .maintenance
                 try? await VehicleService.updateVehicle(updatedVehicle)
@@ -511,7 +455,7 @@ struct PredictiveAlertCardView: View {
     }
 }
 
-// MARK: - All Maintenance Alerts View
+// MARK: - All Maintenance Alerts
 
 struct AllMaintenanceAlertsView: View {
     let alerts: [PredictiveMaintenanceAlert]
@@ -521,12 +465,81 @@ struct AllMaintenanceAlertsView: View {
         List {
             ForEach(alerts) { alert in
                 PredictiveAlertCardView(alert: alert, maintenanceStaff: maintenanceStaff)
-                    .listRowSeparator(.hidden)
             }
         }
         .listStyle(.insetGrouped)
-        .navigationTitle("All Maintenance Alerts")
+        .navigationTitle("All Alerts")
         .navigationBarTitleDisplayMode(.large)
+    }
+}
+
+// MARK: - Trip Card (kept for compatibility)
+
+struct TripCardView: View {
+    let trip: Trip
+    let viewModel: DashboardViewModel
+
+    var routeName: String { viewModel.routeName(for: trip.routeId) }
+    var displayTitle: String { trip.orderType?.displayName ?? routeName }
+    var driverName: String { viewModel.driverName(for: trip.driverId) }
+
+    var statusColor: Color {
+        switch trip.status {
+        case .scheduled: return .blue
+        case .active:    return .green
+        case .completed: return .green
+        case .cancelled: return .red
+        default:         return Color(.quaternaryLabel)
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(displayTitle)
+                        .font(.headline)
+                        .lineLimit(1)
+                    Spacer()
+                    StatusBadge(text: trip.status?.rawValue.capitalized ?? "Unknown", color: statusColor)
+                }
+                HStack {
+                    Label(driverName, systemImage: "person.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    if let distance = trip.distance {
+                        Label(String(format: "%.1f km", distance), systemImage: "road.lanes")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Fleet Stat Pill (kept for compatibility)
+
+struct FleetStatPill: View {
+    let value: Int
+    let label: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("\(value)")
+                .font(.title2.bold())
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(color.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -534,4 +547,3 @@ struct AllMaintenanceAlertsView: View {
     DashboardView()
         .environment(AuthViewModel())
 }
-

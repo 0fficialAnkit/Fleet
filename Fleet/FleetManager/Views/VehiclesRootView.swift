@@ -7,8 +7,7 @@ struct VehiclesRootView: View {
     @Environment(AuthViewModel.self) private var authViewModel
 
     var body: some View {
-        ZStack {
-            Color(.systemGroupedBackground).ignoresSafeArea()
+        Group {
             if let error = vehiclesViewModel.errorMessage {
                 ContentUnavailableView(
                     "Error Loading Data",
@@ -20,13 +19,12 @@ struct VehiclesRootView: View {
             }
         }
         .navigationTitle("Vehicles")
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button(action: { isShowingAddVehicle = true }) {
                     Image(systemName: "plus")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(Color.primary)
-                        .frame(width: 38, height: 38)
+                        .foregroundStyle(.primary)
                 }
                 .buttonStyle(.plain)
             }
@@ -37,10 +35,14 @@ struct VehiclesRootView: View {
         .sheet(isPresented: $isShowingAddVehicle) {
             AddVehicleView(viewModel: vehiclesViewModel)
         }
-        .task {
-            let adminId = authViewModel.currentUser?.id
-            await vehiclesViewModel.loadData(adminId: adminId)
-            vehiclesViewModel.setupRealtime(adminId: adminId)
+        .task { }
+        .onChange(of: authViewModel.currentUser?.id, initial: true) { _, _ in
+            guard let adminId = authViewModel.currentUserId else { return }
+            vehiclesViewModel.adminId = adminId
+            Task {
+                await vehiclesViewModel.loadData()
+                vehiclesViewModel.setupRealtime()
+            }
         }
     }
 }

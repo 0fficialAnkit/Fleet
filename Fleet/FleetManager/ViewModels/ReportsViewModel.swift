@@ -88,16 +88,18 @@ final class ReportsViewModel {
     var reports: [IssueReport] = []
     var isLoading = false
     var errorMessage: String?
+    /// Set once on login from AuthViewModel.currentUserId
+    var adminId: UUID?
 
     func loadData() async {
         isLoading = true
         errorMessage = nil
 
-        async let p  = try? ProfileService.fetchAllProfiles()
-        async let v  = try? VehicleService.fetchAllVehicles()
+        async let p  = try? ProfileService.fetchAllProfiles(managerId: adminId)
+        async let v  = try? VehicleService.fetchAllVehicles(adminId: adminId)
         async let ir = try? IssueReportService.fetchAllIssueReports()
         async let t  = try? MaintenanceTaskService.fetchAllTasks()
-        async let tr = try? TripService.fetchAllTrips()
+        async let tr = try? TripService.fetchAllTrips(adminId: adminId)
 
         profiles         = (await p) ?? []
         allVehicles      = (await v) ?? []

@@ -21,6 +21,12 @@ class AuthViewModel {
         currentUser?.email
     }
 
+    /// Convenience: the logged-in user's UUID (same as currentUser?.id).
+    /// All FleetManager ViewModels use this as their `adminId` to scope data.
+    var currentUserId: UUID? {
+        currentUser.map { UUID(uuidString: $0.id.uuidString) } ?? nil
+    }
+
     /// Role name derived from the users + roles tables ("fleet_manager", "driver", "maintenance")
     var resolvedRoleName: String? {
         currentProfile?.role
@@ -210,7 +216,7 @@ class AuthViewModel {
         errorMessage = nil
         do {
             // Temporarily sign in
-            let response = try await supabase.auth.signIn(email: email, password: oldPassword)
+            _ = try await supabase.auth.signIn(email: email, password: oldPassword)
             // Update password
             try await supabase.auth.update(user: UserAttributes(password: newPassword))
             // Sign out to force them to log in with new password

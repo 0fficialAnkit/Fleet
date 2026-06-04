@@ -33,16 +33,42 @@ enum TripService {
         }
     }
 
-    static func fetchAllTrips() async throws -> [Trip] {
+    /// Fetches all trips. When `adminId` is provided, only trips for vehicles
+    /// owned by that fleet manager are returned.
+    static func fetchAllTrips(adminId: UUID? = nil) async throws -> [Trip] {
         do {
-            let result: [Trip] = try await supabase
-                .from("trips")
-                .select()
-                .order("created_at", ascending: false)
-                .execute()
-                .value
-            print("[TripService] fetchAllTrips: \(result.count) trips")
-            return result
+            if let adminId {
+                // Resolve vehicle IDs for this manager first, then filter trips
+                let vehicles: [Vehicle] = try await supabase
+                    .from("vehicles")
+                    .select("id")
+                    .eq("admin_id", value: adminId)
+                    .execute()
+                    .value
+                let vehicleIds = vehicles.map { $0.id.uuidString }
+                guard !vehicleIds.isEmpty else {
+                    print("[TripService] fetchAllTrips(adminId): no vehicles for this manager")
+                    return []
+                }
+                let result: [Trip] = try await supabase
+                    .from("trips")
+                    .select()
+                    .in("vehicle_id", values: vehicleIds)
+                    .order("created_at", ascending: false)
+                    .execute()
+                    .value
+                print("[TripService] fetchAllTrips(adminId:\(adminId.uuidString.prefix(6))): \(result.count) trips")
+                return result
+            } else {
+                let result: [Trip] = try await supabase
+                    .from("trips")
+                    .select()
+                    .order("created_at", ascending: false)
+                    .execute()
+                    .value
+                print("[TripService] fetchAllTrips: \(result.count) trips")
+                return result
+            }
         } catch {
             print("[TripService] fetchAllTrips ERROR: \(error)")
             throw error
@@ -181,6 +207,9 @@ enum TripService {
             let distance: Double?
         }
         do {
+            // Delete incidents associated with this trip to clear alerts from the admin dashboard
+            try? await TripIncidentService.deleteIncidents(forTripId: id)
+
             try await supabase
                 .from("trips")
                 .update(EndUpdate(status: .completed, end_time: Date(), distance: distance))
@@ -189,6 +218,23 @@ enum TripService {
             print("[TripService] endTrip(\(id)) with distance \(String(describing: distance)): OK")
         } catch {
             print("[TripService] endTrip(\(id)) ERROR: \(error)")
+            throw error
+        }
+    }
+
+    static func updateTripDistance(id: UUID, distance: Double) async throws {
+        struct DistanceUpdate: Encodable {
+            let distance: Double
+        }
+        do {
+            try await supabase
+                .from("trips")
+                .update(DistanceUpdate(distance: distance))
+                .eq("id", value: id)
+                .execute()
+            print("[TripService] updateTripDistance(\(id)) to \(distance): OK")
+        } catch {
+            print("[TripService] updateTripDistance(\(id)) ERROR: \(error)")
             throw error
         }
     }

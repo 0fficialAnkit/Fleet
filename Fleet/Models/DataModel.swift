@@ -122,6 +122,7 @@ enum TripUpdateType: String, Codable, CaseIterable, Sendable {
   case delayed = "delayed"
   case completed = "completed"
   case cancelled = "cancelled"
+  case voiceLog = "voice_log"
 }
 
 enum MaintenanceTaskType: String, Codable, CaseIterable, Sendable {
@@ -154,6 +155,7 @@ struct User: Codable, Identifiable, Hashable, Sendable {
   var roleId: UUID //FK
   var status: UserStatus?
   var createdAt: Date?
+  var createdByManagerId: UUID? // FK — which fleet manager created this user
 
   enum CodingKeys: String, CodingKey {
       case id
@@ -165,6 +167,7 @@ struct User: Codable, Identifiable, Hashable, Sendable {
       case roleId = "role_id"
       case status
       case createdAt = "created_at"
+      case createdByManagerId = "created_by_manager_id"
   }
 }
 
@@ -380,12 +383,14 @@ struct Route: Codable, Identifiable, Hashable, Sendable {
   var routeName: String?
   var startLocation: String?
   var endLocation: String?
+  var createdByManagerId: UUID? // FK — which fleet manager created this route
 
   enum CodingKeys: String, CodingKey {
       case id
       case routeName = "route_name"
       case startLocation = "start_location"
       case endLocation = "end_location"
+      case createdByManagerId = "created_by_manager_id"
   }
 }
 
@@ -459,17 +464,119 @@ struct TripIncident: Codable, Identifiable, Hashable, Sendable {
     var description: String
     var location: String
     var photoUrl: String?
+    var source: String?         // "voice" | "manual"
     var createdAt: Date?
-    
+
     enum CodingKeys: String, CodingKey {
         case id
-        case tripId = "trip_id"
-        case driverId = "driver_id"
+        case tripId       = "trip_id"
+        case driverId     = "driver_id"
         case incidentType = "incident_type"
         case description
         case location
-        case photoUrl = "photo_url"
-        case createdAt = "created_at"
+        case photoUrl     = "photo_url"
+        case source
+        case createdAt    = "created_at"
+    }
+
+    /// True when this incident was reported via voice (not the manual form).
+    var isVoiceReported: Bool { source == "voice" }
+}
+
+// MARK: - VoiceLogStatus
+
+/// Structured trip status extracted from a driver's voice recording.
+enum VoiceLogStatus: String, Codable, CaseIterable, Sendable {
+    case enRoute   = "en_route"
+    case delayed   = "delayed"
+    case arrived   = "arrived"
+    case pickedUp  = "picked_up"
+    case breakdown = "breakdown"
+    case other     = "other"
+
+    var displayName: String {
+        switch self {
+        case .enRoute:   return "En Route"
+        case .delayed:   return "Delayed"
+        case .arrived:   return "Arrived"
+        case .pickedUp:  return "Picked Up"
+        case .breakdown: return "Breakdown"
+        case .other:     return "Update"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .enRoute:   return "arrow.triangle.turn.up.right.road.fill"
+        case .delayed:   return "clock.badge.exclamationmark.fill"
+        case .arrived:   return "checkmark.circle.fill"
+        case .pickedUp:  return "shippingbox.fill"
+        case .breakdown: return "wrench.and.screwdriver.fill"
+        case .other:     return "mic.fill"
+        }
+    }
+
+    /// Maps voice status to the closest TripIncidentType for saving to trip_incidents.
+    var incidentType: TripIncidentType? {
+        switch self {
+        case .delayed:   return .traffic
+        case .breakdown: return .breakdown
+        case .other:     return .other
+        case .enRoute, .arrived, .pickedUp: return nil   // factual updates, not incidents
+        }
+    }
+
+    /// True when this status represents an alert-worthy incident.
+    var isIncident: Bool { incidentType != nil }
+}
+
+// MARK: - VoiceExtractedData
+
+/// In-memory structured result from VoiceExtractorService.
+/// Not persisted — only lives during the driver review flow.
+struct VoiceExtractedData {
+    var location: String?
+    var mileageKM: Double?
+    var etaText: String?
+    var status: VoiceLogStatus?
+    var rawTranscription: String
+
+    /// True when NLP found no structured facts in the transcript.
+    var isEmpty: Bool {
+        location == nil && mileageKM == nil && etaText == nil && status == nil
+    }
+}
+
+// MARK: - VoiceTripLog
+
+/// Persisted record in the `voice_trip_logs` Supabase table.
+struct VoiceTripLog: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var tripId: UUID
+    var driverId: UUID?
+    var transcription: String
+    var extractedLocation: String?
+    var extractedMileage: Double?
+    var extractedETA: String?
+    var extractedStatus: String?
+    var createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tripId           = "trip_id"
+        case driverId         = "driver_id"
+        case transcription
+        case extractedLocation = "extracted_location"
+        case extractedMileage  = "extracted_mileage"
+        case extractedETA      = "extracted_eta"
+        case extractedStatus   = "extracted_status"
+        case createdAt         = "created_at"
+    }
+
+    /// Typed status parsed from the stored raw string.
+    var voiceLogStatus: VoiceLogStatus? {
+        guard let raw = extractedStatus else { return nil }
+        return VoiceLogStatus(rawValue: raw)
     }
 }
 
@@ -766,5 +873,33 @@ struct TripGeofenceEvent: Codable, Identifiable, Hashable, Sendable {
         case driverId   = "driver_id"
         case eventType  = "event_type"
         case occurredAt = "occurred_at"
+    }
+}
+
+// MARK: - RouteBreach
+/// Logged when a driver exits the route-boundary circle during an active trip.
+/// The boundary circle has:
+///   centre = midpoint of pickup and drop-off
+///   radius = 2 000 m + (pickup-to-dropoff distance / 2)
+struct RouteBreach: Codable, Identifiable, Hashable, Sendable {
+    let id: UUID
+    var tripId: UUID
+    var vehicleId: UUID
+    var driverId: UUID?
+    var latitude: Double
+    var longitude: Double
+    var distanceFromCenter: Double    // metres outside the boundary
+    var fenceRadius: Double           // the boundary radius that was breached
+    var occurredAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case tripId              = "trip_id"
+        case vehicleId           = "vehicle_id"
+        case driverId            = "driver_id"
+        case latitude, longitude
+        case distanceFromCenter  = "distance_from_center"
+        case fenceRadius         = "fence_radius"
+        case occurredAt          = "occurred_at"
     }
 }

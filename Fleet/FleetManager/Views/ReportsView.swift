@@ -1,4 +1,5 @@
 import SwiftUI
+internal import Auth
 
 enum ReportSectionTab: String, CaseIterable {
     case vehicles    = "Vehicles"
@@ -13,6 +14,7 @@ struct ReportsView: View {
     @State private var viewModel    = ReportsViewModel()
     @State private var selectedReport: IssueReport?
     @State private var selectedTab: ReportSectionTab = .vehicles
+    @Environment(AuthViewModel.self) private var authViewModel
 
     // Per-tab severity filter (Vehicles tab)
     @State private var vehicleSeverityFilter: DefectSeverity? = nil
@@ -61,24 +63,16 @@ struct ReportsView: View {
                     switch selectedTab {
 
                     case .vehicles:
-                        List(viewModel.allVehicles) { vehicle in
-                            NavigationLink {
-                                VehicleReportView(vehicle: vehicle)
-                            } label: {
-                                VehicleRowView(
-                                    vehicle: vehicle,
-                                    statusText: vehicle.status?.rawValue.capitalized ?? "Unknown",
-                                    statusColor: (vehicle.status == .active || vehicle.status?.rawValue == "available") ? .green : ((vehicle.status == .maintenance) ? .orange : .blue)
-                                )
-                            }
-                        }
-                        .listStyle(.insetGrouped)
-                        .scrollContentBackground(.hidden)
+                        reportList(
+                            reports: vehicleReports,
+                            emptyIcon: "tray",
+                            emptyTitle: "No open reports",
+                            emptySubtitle: "All driver-submitted vehicle issues will appear here."
+                        )
 
                     case .maintenance:
                         reportList(
                             reports: maintenanceReports,
-                            filterChips: maintenanceFilterChips,
                             emptyIcon: "wrench.and.screwdriver",
                             emptyTitle: "No maintenance reports",
                             emptySubtitle: "Assign a vehicle report to maintenance to see it here."
@@ -90,12 +84,47 @@ struct ReportsView: View {
                 }
             }
             .navigationTitle("Reports")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    if selectedTab == .vehicles {
+                        Menu {
+                            Picker("Severity", selection: $vehicleSeverityFilter) {
+                                Text("All").tag(nil as DefectSeverity?)
+                                ForEach([DefectSeverity.low, .medium, .high, .critical], id: \.self) { severity in
+                                    Text(severity.rawValue.capitalized).tag(severity as DefectSeverity?)
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "line.3.horizontal.decrease")
+                        }
+                    } else if selectedTab == .maintenance {
+                        Menu {
+                            Picker("Status", selection: $maintenanceStatusFilter) {
+                                Text("All").tag(nil as IssueReportStatus?)
+                                ForEach([IssueReportStatus.assigned, .inProgress, .resolved], id: \.self) { status in
+                                    Text(status.rawValue).tag(status as IssueReportStatus?)
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "line.3.horizontal.decrease")
+                        }
+                    }
+                }
+            }
             .sheet(item: $selectedReport) { report in
                 ReportDetailView(report: report, viewModel: viewModel)
             }
             .task {
-                await viewModel.loadData()
-                viewModel.setupRealtime()
+                // adminId is set via onChange below
+            }
+            .onChange(of: authViewModel.currentUser?.id, initial: true) { _, _ in
+                guard let adminId = authViewModel.currentUserId else { return }
+                viewModel.adminId = adminId
+                Task {
+                    await viewModel.loadData()
+                    viewModel.setupRealtime()
+                }
             }
             .refreshable { await viewModel.loadData() }
         }
@@ -105,18 +134,12 @@ struct ReportsView: View {
 
     private func reportList(
         reports: [IssueReport],
-        filterChips: some View,
         emptyIcon: String,
         emptyTitle: String,
         emptySubtitle: String
     ) -> some View {
         List {
-            Section {
-                filterChips
-            }
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets())
-            .listSectionSeparator(.hidden)
+
 
             Section {
                 if viewModel.isLoading && viewModel.reports.isEmpty {
@@ -140,26 +163,6 @@ struct ReportsView: View {
         .scrollContentBackground(.hidden)
     }
 
-    // MARK: - Filter Chips
-
-    /// Maintenance tab — filter by workflow status
-    private var maintenanceFilterChips: some View {
-        let statuses: [IssueReportStatus] = [.assigned, .inProgress, .resolved]
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                FilterButton(title: "All", isSelected: maintenanceStatusFilter == nil) {
-                    withAnimation { maintenanceStatusFilter = nil }
-                }
-                ForEach(statuses) { status in
-                    FilterButton(title: status.rawValue, isSelected: maintenanceStatusFilter == status) {
-                        withAnimation { maintenanceStatusFilter = status }
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-        }
-    }
 
     // MARK: - Empty State
 

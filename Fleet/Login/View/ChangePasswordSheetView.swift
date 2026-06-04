@@ -29,7 +29,7 @@ struct ChangePasswordSheetView: View {
                                 .frame(width: 80, height: 80)
                             Image(systemName: "key.fill")
                                 .font(.system(size: 32))
-                                .foregroundColor(.teal)
+                                .foregroundStyle(.teal)
                         }
                         .padding(.top, 32)
                         
@@ -37,11 +37,11 @@ struct ChangePasswordSheetView: View {
                         VStack(spacing: 8) {
                             Text("Change Password")
                                 .font(.title2.bold())
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             
                             Text("Enter your old password and your new password to change it.")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 16)
                         }
@@ -51,12 +51,12 @@ struct ChangePasswordSheetView: View {
                             VStack(spacing: 12) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 40))
-                                    .foregroundColor(.green)
+                                    .foregroundStyle(.green)
                                 Text("Success!")
                                     .font(.headline)
                                 Text("Your password has been changed successfully. You will be signed out.")
                                     .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                                     .multilineTextAlignment(.center)
                             }
                             .padding()
@@ -69,29 +69,29 @@ struct ChangePasswordSheetView: View {
                             VStack(spacing: 16) {
                                 if let errorMessage = authViewModel.errorMessage {
                                     Text(errorMessage)
-                                        .foregroundColor(Color.red)
+                                        .foregroundStyle(Color.red)
                                         .font(.caption)
                                         .multilineTextAlignment(.center)
                                 }
                                 
                                 if !newPassword.isEmpty && newPassword != confirmPassword {
                                     Text("New password and confirm password do not match.")
-                                        .foregroundColor(Color.red)
+                                        .foregroundStyle(Color.red)
                                         .font(.caption)
                                         .multilineTextAlignment(.center)
                                 }
                                 
                                 HStack {
                                     if isOldPasswordVisible {
-                                        TextField("", text: $oldPassword, prompt: Text("Old Password").foregroundColor(Color(.placeholderText)))
+                                        TextField("", text: $oldPassword, prompt: Text("Old Password").foregroundStyle(Color(.placeholderText)))
                                     } else {
-                                        SecureField("", text: $oldPassword, prompt: Text("Old Password").foregroundColor(Color(.placeholderText)))
+                                        SecureField("", text: $oldPassword, prompt: Text("Old Password").foregroundStyle(Color(.placeholderText)))
                                     }
                                     Button { isOldPasswordVisible.toggle() } label: {
-                                        Image(systemName: isOldPasswordVisible ? "eye.slash" : "eye").foregroundColor(.secondary)
+                                        Image(systemName: isOldPasswordVisible ? "eye.slash" : "eye").foregroundStyle(.secondary)
                                     }
                                 }
-                                .foregroundColor(Color.primary)
+                                .foregroundStyle(Color.primary)
                                 .padding(.horizontal, 18)
                                 .frame(height: 56)
                                 .background(Color(.secondarySystemBackground))
@@ -103,15 +103,15 @@ struct ChangePasswordSheetView: View {
                                 
                                 HStack {
                                     if isNewPasswordVisible {
-                                        TextField("", text: $newPassword, prompt: Text("New Password").foregroundColor(Color(.placeholderText)))
+                                        TextField("", text: $newPassword, prompt: Text("New Password").foregroundStyle(Color(.placeholderText)))
                                     } else {
-                                        SecureField("", text: $newPassword, prompt: Text("New Password").foregroundColor(Color(.placeholderText)))
+                                        SecureField("", text: $newPassword, prompt: Text("New Password").foregroundStyle(Color(.placeholderText)))
                                     }
                                     Button { isNewPasswordVisible.toggle() } label: {
-                                        Image(systemName: isNewPasswordVisible ? "eye.slash" : "eye").foregroundColor(.secondary)
+                                        Image(systemName: isNewPasswordVisible ? "eye.slash" : "eye").foregroundStyle(.secondary)
                                     }
                                 }
-                                .foregroundColor(Color.primary)
+                                .foregroundStyle(Color.primary)
                                 .padding(.horizontal, 18)
                                 .frame(height: 56)
                                 .background(Color(.secondarySystemBackground))
@@ -123,15 +123,15 @@ struct ChangePasswordSheetView: View {
                                 
                                 HStack {
                                     if isConfirmPasswordVisible {
-                                        TextField("", text: $confirmPassword, prompt: Text("Confirm Password").foregroundColor(Color(.placeholderText)))
+                                        TextField("", text: $confirmPassword, prompt: Text("Confirm Password").foregroundStyle(Color(.placeholderText)))
                                     } else {
-                                        SecureField("", text: $confirmPassword, prompt: Text("Confirm Password").foregroundColor(Color(.placeholderText)))
+                                        SecureField("", text: $confirmPassword, prompt: Text("Confirm Password").foregroundStyle(Color(.placeholderText)))
                                     }
                                     Button { isConfirmPasswordVisible.toggle() } label: {
-                                        Image(systemName: isConfirmPasswordVisible ? "eye.slash" : "eye").foregroundColor(.secondary)
+                                        Image(systemName: isConfirmPasswordVisible ? "eye.slash" : "eye").foregroundStyle(.secondary)
                                     }
                                 }
-                                .foregroundColor(Color.primary)
+                                .foregroundStyle(Color.primary)
                                 .padding(.horizontal, 18)
                                 .frame(height: 56)
                                 .background(Color(.secondarySystemBackground))
@@ -152,7 +152,7 @@ struct ChangePasswordSheetView: View {
                                     } else {
                                         Text("Update Password")
                                             .font(.system(size: 18, weight: .semibold))
-                                            .foregroundColor(isButtonDisabled ? Color(.tertiaryLabel) : .white)
+                                            .foregroundStyle(isButtonDisabled ? Color(.tertiaryLabel) : .white)
                                             .frame(maxWidth: .infinity)
                                             .frame(height: 56)
                                             .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.teal)

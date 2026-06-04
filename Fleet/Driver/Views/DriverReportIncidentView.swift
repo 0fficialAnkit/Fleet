@@ -189,7 +189,7 @@ struct DriverReportIncidentView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .tint(.green)
+            .tint(Color(.label))
             .padding(.horizontal, 32)
             .padding(.bottom, 40)
         }
@@ -201,7 +201,7 @@ struct DriverReportIncidentView: View {
             : selectedType.rawValue
 
         Task {
-            await viewModel.submitIncident(
+            viewModel.submitIncident(
                 tripId: trip.id,
                 driverId: trip.driverId,
                 incidentType: finalIncidentType,
