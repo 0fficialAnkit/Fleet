@@ -218,11 +218,17 @@ final class TripGeofenceMonitor: NSObject {
                     identifier: "gf_enter_\(fence.zoneType)_\(tId)",
                     content: content, trigger: nil))
         }
-        // Notify TripDetailView instantly — include fenceId so toggle uses it directly
+        // Notify TripDetailView instantly — include fenceId and tripId so the
+        // UserDefaults cache can be updated by any observer (even if TripDetailView
+        // is not currently in the view hierarchy).
         NotificationCenter.default.post(
             name: .gfZoneEntered,
             object: nil,
-            userInfo: ["zoneType": fence.zoneType, "geofenceId": fence.id.uuidString])
+            userInfo: [
+                "zoneType":   fence.zoneType,
+                "geofenceId": fence.id.uuidString,
+                "tripId":     tId.uuidString          // needed for global cache write
+            ])
         print("[GeofenceMonitor] \(emoji) Entered \(label) zone — trip \(tId.uuidString.prefix(6))")
     }
 }
