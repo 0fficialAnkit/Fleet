@@ -21,7 +21,7 @@ struct DashboardView: View {
                         }
                         
                         Section {
-                            MiniFuelDashboardCard()
+                            MiniFuelDashboardCard(adminId: viewModel.adminId)
                         }
 
                         liveFleetSection
@@ -79,7 +79,7 @@ struct DashboardView: View {
                         maintenanceStaff: viewModel.profiles.filter { $0.role == "maintenance" }
                     )
                 case .fuelAnalytics:
-                    FleetFuelAnalyticsView()
+                    FleetFuelAnalyticsView(adminId: viewModel.adminId)
                 }
             }
         }
@@ -652,6 +652,7 @@ struct AllMaintenanceAlertsView: View {
 // MARK: - Mini Fuel Dashboard Card
 
 struct MiniFuelDashboardCard: View {
+    let adminId: UUID?
     @State private var viewModel = FleetFuelAnalyticsViewModel()
 
     var body: some View {
@@ -708,6 +709,7 @@ struct MiniFuelDashboardCard: View {
             .padding(.vertical, 4)
         }
         .task {
+            viewModel.adminId = adminId
             await viewModel.loadData()
         }
     }

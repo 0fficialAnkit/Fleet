@@ -7,6 +7,12 @@ import Charts
 @Observable
 final class FleetFuelAnalyticsViewModel {
 
+    var adminId: UUID?
+
+    init(adminId: UUID? = nil) {
+        self.adminId = adminId
+    }
+
     // MARK: Raw data
     private(set) var trips: [Trip] = []
     private(set) var fuelLogs: [FuelLog] = []
@@ -188,14 +194,24 @@ final class FleetFuelAnalyticsViewModel {
         }
     }
 
-    // MARK: - Load (all vehicles, no driver filter)
+    // MARK: - Load
 
     func loadData() async {
         isLoading = true
-        async let t = TripService.fetchAllTrips()
+        async let t = TripService.fetchAllTrips(adminId: adminId)
+        async let v = VehicleService.fetchAllVehicles(adminId: adminId)
         async let f = FuelLogService.fetchAllFuelLogs()
-        trips    = (try? await t) ?? []
-        fuelLogs = (try? await f) ?? []
+        
+        trips = (try? await t) ?? []
+        let allFuelLogs = (try? await f) ?? []
+        let vehicles = (try? await v) ?? []
+        
+        if adminId != nil {
+            let adminVehicleIds = Set(vehicles.map { $0.id })
+            fuelLogs = allFuelLogs.filter { adminVehicleIds.contains($0.vehicleId) }
+        } else {
+            fuelLogs = allFuelLogs
+        }
         isLoading = false
     }
 }
@@ -204,6 +220,7 @@ final class FleetFuelAnalyticsViewModel {
 
 struct FleetFuelAnalyticsView: View {
 
+    let adminId: UUID?
     @State private var viewModel = FleetFuelAnalyticsViewModel()
     @State private var selectedSpan: FleetFuelAnalyticsViewModel.TimeSpan = .month
     @State private var showingFuelCost = false
@@ -235,8 +252,16 @@ struct FleetFuelAnalyticsView: View {
                     .scaleEffect(1.4)
             }
         }
-        .task { await viewModel.loadData() }
-        .refreshable { await viewModel.loadData() }
+        .task {
+            viewModel.adminId = adminId
+            await viewModel.loadData()
+        }
+        .refreshable {
+            viewModel.adminId = adminId
+            await viewModel.loadData()
+        }
+        .navigationTitle("Fuel Analytics")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
