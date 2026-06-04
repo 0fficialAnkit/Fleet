@@ -40,7 +40,7 @@ final class MaintenanceDashboardViewModel {
                 priorityColor: nil,
                 referenceId: "TSK-\(task.id.uuidString.prefix(4).uppercased())",
                 assignmentTag: "SCHEDULED",
-                vehicleName: vehiclePlate(for: task.vehicleId),
+                vehicleName: vehicleDisplayName(for: task.vehicleId),
                 taskDescription: taskTypeString(for: task.taskType),
                 estimatedDuration: "1h 30m",
                 location: "Bay 01",
@@ -62,7 +62,7 @@ final class MaintenanceDashboardViewModel {
                 priorityColor: woPriorityColor(wo.priority),
                 referenceId: "WO-\(wo.id.uuidString.prefix(4).uppercased())",
                 assignmentTag: "ASSIGNED TO YOU",
-                vehicleName: vehiclePlate(for: wo.vehicleId),
+                vehicleName: vehicleDisplayName(for: wo.vehicleId),
                 taskDescription: "Work Order Execution",
                 estimatedDuration: "2h 30m",
                 location: "Bay 04",
@@ -81,7 +81,7 @@ final class MaintenanceDashboardViewModel {
                 priorityColor: irSeverityColor(ir.severity),
                 referenceId: "REP-\(ir.id.uuidString.prefix(4).uppercased())",
                 assignmentTag: "ASSIGNED TO YOU",
-                vehicleName: vehiclePlate(for: ir.vehicleId),
+                vehicleName: vehicleDisplayName(for: ir.vehicleId),
                 taskDescription: ir.category + (ir.description?.isEmpty == false ? " - \(ir.description!)" : ""),
                 estimatedDuration: "1h 00m",
                 location: "Bay 02",
@@ -163,17 +163,19 @@ final class MaintenanceDashboardViewModel {
         async let i  = InventoryService.fetchAllInventory()
         async let v  = VehicleService.fetchAllVehicles()
 
+        // Await vehicles FIRST — upcomingItems is a computed property that reads vehicles.
+        // If vehicles is awaited last, the view renders with empty vehicles → "Unknown".
+        // All four fetches still run concurrently (async let), so there's no speed penalty.
+        if let result = try? await v  { vehicles     = result } else { print("Failed to fetch vehicles") }
         if let result = try? await t  { tasks        = result } else { print("Failed to fetch tasks") }
         if let result = try? await w  { workOrders   = result } else { print("Failed to fetch workOrders") }
-        
+        if let result = try? await i  { inventory    = result } else { print("Failed to fetch inventory") }
+
         do {
             issueReports = try await IssueReportService.fetchIssueReportsAssignedTo(userId: userId)
         } catch {
             print("Failed to fetch issue reports: \(error)")
         }
-
-        if let result = try? await i  { inventory    = result } else { print("Failed to fetch inventory") }
-        if let result = try? await v  { vehicles     = result } else { print("Failed to fetch vehicles") }
 
         isLoading = false
     }
@@ -187,8 +189,16 @@ final class MaintenanceDashboardViewModel {
         rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData() } }
     }
 
+    /// License plate — used for IDs / reference codes.
     func vehiclePlate(for vehicleId: UUID) -> String {
         vehicles.first(where: { $0.id == vehicleId })?.licensePlate ?? "Unknown"
+    }
+
+    /// Make + model display name — used as the card title in Upcoming Maintenance.
+    func vehicleDisplayName(for vehicleId: UUID) -> String {
+        guard let v = vehicles.first(where: { $0.id == vehicleId }) else { return "Unknown" }
+        let name = "\(v.make ?? "") \(v.model ?? "")".trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? (v.licensePlate ?? "Unknown") : name
     }
 
     func vehicleIdString(for vehicleId: UUID) -> String {
