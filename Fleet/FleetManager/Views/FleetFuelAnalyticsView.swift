@@ -587,6 +587,6 @@ extension FleetChartCard where Trailing == EmptyView {
 
 #Preview {
     NavigationStack {
-        FleetFuelAnalyticsView()
+        FleetFuelAnalyticsView(adminId: nil)
     }
 }

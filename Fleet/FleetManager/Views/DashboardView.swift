@@ -27,7 +27,7 @@ struct DashboardView: View {
 
                         liveDriverAlertsSection
 
-                        maintenanceSection
+                       // maintenanceSection
                     }
                     .refreshable { await viewModel.loadData() }
                     .listStyle(.insetGrouped)
