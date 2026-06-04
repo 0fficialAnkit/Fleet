@@ -252,44 +252,107 @@ struct DriverTripRow: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 14) {
+            // Header
             HStack {
-                Text(trip.orderType?.displayName ?? "Trip")
-                    .font(.headline)
-                    .lineLimit(1)
+                HStack(spacing: 8) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.blue.opacity(0.12))
+                            .frame(width: 32, height: 32)
+                        Image(systemName: "map.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.blue)
+                    }
+                    Text(trip.orderType?.displayName ?? "Trip")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                }
                 Spacer()
                 StatusBadge(text: statusText, color: statusColor)
             }
 
+            Divider()
+
+            // Route
             if let start = route?.startLocation, let end = route?.endLocation {
-                HStack(spacing: 8) {
-                    VStack(spacing: 3) {
-                        Circle().fill(.green).frame(width: 6, height: 6)
-                        Rectangle().fill(Color(.separator)).frame(width: 1.5, height: 12)
-                        Circle().fill(.red).frame(width: 6, height: 6)
+                HStack(alignment: .top, spacing: 12) {
+                    VStack(spacing: 4) {
+                        Image(systemName: "circle.circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.green)
+                            .background(Circle().fill(.white))
+                        
+                        Rectangle()
+                            .fill(Color(.tertiaryLabel))
+                            .frame(width: 1.5, height: 20)
+                        
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.red)
+                            .background(Circle().fill(.white))
                     }
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(start).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
-                        Text(end).font(.subheadline).foregroundStyle(.primary).lineLimit(1)
+                    .padding(.top, 4)
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("PICKUP")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.secondary)
+                            Text(start)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("DROPOFF")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.secondary)
+                            Text(end)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                        }
                     }
                 }
+                .padding(.horizontal, 4)
             }
 
-            HStack {
+            // Footer
+            HStack(spacing: 12) {
                 if let vehicle {
-                    Label("\(vehicle.make ?? "") \(vehicle.model ?? "")", systemImage: "car")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Image(systemName: "car.fill")
+                            .foregroundStyle(.teal)
+                        Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.teal.opacity(0.12))
+                    .clipShape(Capsule())
                 }
+                
                 Spacer()
+                
                 if let start = trip.startTime {
-                    Label(start.formatted(date: .omitted, time: .shortened), systemImage: "clock")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock.fill")
+                            .foregroundStyle(.orange)
+                        Text(start.formatted(date: .omitted, time: .shortened))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.orange.opacity(0.12))
+                    .clipShape(Capsule())
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
     }
 }
 

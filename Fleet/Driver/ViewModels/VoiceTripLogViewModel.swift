@@ -109,22 +109,14 @@ final class VoiceTripLogViewModel {
             // 1. Persist incident
             try await TripIncidentService.createIncident(incident)
 
-            // 2. Send in-app notification to all fleet managers
-            if let managers = try? await ProfileService.fetchProfilesByRole(role: "fleet_manager") {
-                for manager in managers {
-                    let notification = Notification(
-                        id: UUID(),
-                        userId: manager.id,
-                        title: "🚨 Driver Alert — \(incidentTypeName)",
-                        message: "\(routeName): \"\(data.rawTranscription)\"",
-                        type: .alert,
-                        isRead: false,
-                        referenceId: tripId,
-                        createdAt: Date()
-                    )
-                    try? await NotificationService.createNotification(notification)
-                }
-            }
+            // 2. Send in-app notification to fleet manager
+            try? await NotificationService.notifyManager(
+                forTrip: tripId,
+                title: "Driver Alert — \(incidentTypeName)",
+                message: "\(routeName): \"\(data.rawTranscription)\"",
+                type: .alert,
+                referenceId: tripId
+            )
 
             // 3. Local push notification (visible even if app is backgrounded)
             scheduleLocalPush(incidentType: incidentTypeName, transcript: data.rawTranscription)

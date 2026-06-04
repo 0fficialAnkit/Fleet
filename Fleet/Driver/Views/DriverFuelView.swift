@@ -405,19 +405,12 @@ struct DriverFuelView: View {
                 Task {
                     do {
                         if authViewModel.currentUser?.id != nil {
-                            let managers = try await ProfileService.fetchProfilesByRole(role: "fleet_manager")
-                            for manager in managers {
-                                let notification = Notification(
-                                    id: UUID(),
-                                    userId: manager.id,
-                                    title: "Fuel Log Submitted",
-                                    message: "Driver logged \(String(format: "%.1f", liters))L fuel — ₹\(Int(cost)).",
-                                    type: .info,
-                                    isRead: false,
-                                    createdAt: Date()
-                                )
-                                try await NotificationService.createNotification(notification)
-                            }
+                            try await NotificationService.notifyManager(
+                                forVehicle: vehicleId,
+                                title: "Fuel Log Submitted",
+                                message: "Driver logged \(String(format: "%.1f", liters))L fuel — ₹\(Int(cost)).",
+                                type: .info
+                            )
                         }
                     } catch {
                         print("[DriverFuelView] Failed to dispatch notifications: \(error)")

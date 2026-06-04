@@ -663,7 +663,7 @@ struct ShareSheet: UIViewControllerRepresentable {
             vehicleName: "Tata Ace", licensePlate: "MH-12-AB-1234",
             driverName: "Ravi Kumar", driverLicenseNumber: "DL-9876",
             issueCategory: "Engine Problem", severity: .high,
-            description: "Strange knocking sound from engine when accelerating above 60 km/h.\n\nLocation: On Highway\nDriveable: No ⚠️\nOdometer: 45230 km\nReported at: 29 May 2026, 9:57 PM",
+            description: "Strange knocking sound from engine when accelerating above 60 km/h.\n\nLocation: On Highway\nDriveable: No\nOdometer: 45230 km\nReported at: 29 May 2026, 9:57 PM",
             submittedAt: Date(), assignedTo: nil, status: .open, issuePhotoUrl: nil, assignedAt: nil
         ),
         viewModel: ReportsViewModel()

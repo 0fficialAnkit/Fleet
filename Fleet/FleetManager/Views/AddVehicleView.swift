@@ -75,6 +75,7 @@ struct AddVehicleView: View {
                         in: ...Date(),
                         displayedComponents: .date
                     )
+                    .tint(Color(.label))
                 }
 
                 // ── Specifications ─────────────────────────────────────

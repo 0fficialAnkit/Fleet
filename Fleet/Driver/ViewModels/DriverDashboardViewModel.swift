@@ -195,7 +195,7 @@ final class DriverDashboardViewModel {
         let ids    = Set([state.pickupFenceId, state.dropoffFenceId])
         if events.contains(where: { ids.contains($0.geofenceId) && $0.eventType == "pickup_done" }) {
             gfDistState?.pickupPhaseDone = true
-            print("[Geofence] 🔄 pickupPhaseDone synced from Realtime")
+            print("[Geofence] pickupPhaseDone synced from Realtime")
         }
     }
 
@@ -230,14 +230,12 @@ final class DriverDashboardViewModel {
                     try? await GeofenceService.createEvent(TripGeofenceEvent(
                         id: UUID(), geofenceId: df.id, vehicleId: vehicleId,
                         driverId: currentUserId, eventType: "trip_ended", occurredAt: Date()))
-                    let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-                    for mgr in managers {
-                        try? await NotificationService.createNotification(Fleet.Notification(
-                            id: UUID(), userId: mgr.id,
-                            title: "🏁 Trip Ended",
-                            message: "Driver has completed the trip. Trip is now ending.",
-                            type: .info, isRead: false, createdAt: Date()))
-                    }
+                    try? await NotificationService.notifyManager(
+                        forVehicle: vehicleId,
+                        title: "Trip Ended",
+                        message: "Driver has completed the trip. Trip is now ending.",
+                        type: .info
+                    )
                 }
 
                 try await TripService.endTrip(id: id, distance: distance)
@@ -284,7 +282,7 @@ final class DriverDashboardViewModel {
     private func startLocationTracking(vehicleId: UUID) {
         stopLocationTracking()
         locationManager.requestPermission()
-        print("[LocationTracking] 🚛 Started tracking for vehicle \(vehicleId)")
+        print("[LocationTracking] Started tracking for vehicle \(vehicleId)")
 
         trackingTask = Task { [weak self] in
             // Wait up to 20 s for first GPS fix before entering the main loop.
@@ -303,7 +301,7 @@ final class DriverDashboardViewModel {
             // low battery drain, manageable Supabase write volume.
             while !Task.isCancelled {
                 if let coord = self?.locationManager.coordinate {
-                    print("[LocationTracking] 📍 Pushing location — lat:\(String(format: "%.5f", coord.latitude)) lon:\(String(format: "%.5f", coord.longitude))")
+                    print("[LocationTracking] Pushing location — lat:\(String(format: "%.5f", coord.latitude)) lon:\(String(format: "%.5f", coord.longitude))")
                     await VehicleLocationService.insertLocation(
                         vehicleId: vehicleId,
                         latitude: coord.latitude,
@@ -319,7 +317,7 @@ final class DriverDashboardViewModel {
                 }
                 try? await Task.sleep(for: .seconds(15))
             }
-            print("[LocationTracking] 🛑 Tracking stopped for vehicle \(vehicleId)")
+            print("[LocationTracking] Tracking stopped for vehicle \(vehicleId)")
         }
     }
 
@@ -382,7 +380,7 @@ final class DriverDashboardViewModel {
             dropoffFenceId: dId,
             vehicleId:      vehicleId,
             tripId:         tripId)
-        print("[Geofence] ✅ Distance fallback ready — pickup: \(pickup)  dropoff: \(dropoff)")
+        print("[Geofence] Distance fallback ready — pickup: \(pickup)  dropoff: \(dropoff)")
     }
 
     /// Checks distance every 15 s as a backup when CLCircularRegion doesn't fire.
@@ -425,9 +423,8 @@ final class DriverDashboardViewModel {
         }
 
         let isPickup = zoneType == "pickup"
-        let emoji    = isPickup ? "📍" : "🏁"
         let label    = isPickup ? "Pickup" : "Drop-off"
-        let title    = "\(emoji) Driver Entered \(label) Zone"
+        let title    = "Driver Entered \(label) Zone"
         let body     = "Driver is within \(Int(kGeofenceRadiusMeters/1000)) km of the \(label.lowercased()) location."
         // Notify TripDetailView instantly — include fenceId so toggle uses it directly
         NotificationCenter.default.post(
@@ -439,14 +436,12 @@ final class DriverDashboardViewModel {
             id: UUID(), geofenceId: fenceId, vehicleId: vehicleId,
             driverId: currentUserId, eventType: "enter", occurredAt: Date()))
         // Notify fleet managers
-        let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-        for mgr in managers {
-            try? await NotificationService.createNotification(Fleet.Notification(
-                id: UUID(), userId: mgr.id,
-                title: title, message: body,
-                type: .info, isRead: false, createdAt: Date()))
-        }
-        print("[Geofence] \(emoji) Fired zone-enter (distance fallback) — \(label)")
+        try? await NotificationService.notifyManager(
+            forVehicle: vehicleId,
+            title: title, message: body,
+            type: .info
+        )
+        print("[Geofence] Fired zone-enter (distance fallback) — \(label)")
     }
 
     /// Called when driver taps "Pickup Done".
@@ -479,9 +474,9 @@ final class DriverDashboardViewModel {
                 try? await GeofenceService.createEvent(TripGeofenceEvent(
                     id: UUID(), geofenceId: pId, vehicleId: vehicleId,
                     driverId: currentUserId, eventType: "pickup_done", occurredAt: Date()))
-                print("[Geofence] ✅ pickup_done event saved")
+                print("[Geofence] pickup_done event saved")
             } else {
-                print("[Geofence] ⚠️ No valid pickup fence ID — pickup_done event skipped")
+                print("[Geofence] No valid pickup fence ID — pickup_done event skipped")
             }
 
             // Transition CLCircularRegion from pickup → dropoff
@@ -492,14 +487,12 @@ final class DriverDashboardViewModel {
             }
 
             // Notify fleet managers
-            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-            for mgr in managers {
-                try? await NotificationService.createNotification(Fleet.Notification(
-                    id: UUID(), userId: mgr.id,
-                    title: "✅ Pickup Completed",
-                    message: "Driver completed pickup and is now heading to drop-off.",
-                    type: .info, isRead: false, createdAt: Date()))
-            }
+            try? await NotificationService.notifyManager(
+                forVehicle: vehicleId,
+                title: "Pickup Completed",
+                message: "Driver completed pickup and is now heading to drop-off.",
+                type: .info
+            )
         }
     }
 
@@ -515,7 +508,7 @@ final class DriverDashboardViewModel {
             }
 
             guard let gfId = dropoffFenceId else {
-                print("[Geofence] ❌ gf_dropoffDone: dropoff fence not found in trip_geofences — event not saved")
+                print("[Geofence] gf_dropoffDone: dropoff fence not found in trip_geofences — event not saved")
                 return
             }
 
@@ -523,19 +516,17 @@ final class DriverDashboardViewModel {
                 try await GeofenceService.createEvent(TripGeofenceEvent(
                     id: UUID(), geofenceId: gfId, vehicleId: vehicleId,
                     driverId: currentUserId, eventType: "dropoff_done", occurredAt: Date()))
-                print("[Geofence] ✅ dropoff_done saved (fence: \(gfId.uuidString.prefix(6)))")
+                print("[Geofence] dropoff_done saved (fence: \(gfId.uuidString.prefix(6)))")
             } catch {
-                print("[Geofence] ❌ dropoff_done save failed: \(error)")
+                print("[Geofence] dropoff_done save failed: \(error)")
             }
 
-            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-            for mgr in managers {
-                try? await NotificationService.createNotification(Fleet.Notification(
-                    id: UUID(), userId: mgr.id,
-                    title: "🏁 Drop-off Completed",
-                    message: "Driver has completed the drop-off.",
-                    type: .info, isRead: false, createdAt: Date()))
-            }
+            try? await NotificationService.notifyManager(
+                forVehicle: vehicleId,
+                title: "Drop-off Completed",
+                message: "Driver has completed the drop-off.",
+                type: .info
+            )
         }
     }
 

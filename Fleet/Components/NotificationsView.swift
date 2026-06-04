@@ -20,18 +20,36 @@ struct NotificationsView: View {
                         description: Text("You're all caught up.")
                     )
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 10) {
-                            ForEach(viewModel.notifications) { notification in
-                                NotificationCard(
-                                    notification: notification,
-                                    onMarkRead: { viewModel.markAsRead(notification) }
-                                )
+                    List {
+                        ForEach(viewModel.notifications) { notification in
+                            NotificationCard(
+                                notification: notification,
+                                onMarkRead: { viewModel.markAsRead(notification) }
+                            )
+                            .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                if !notification.isRead {
+                                    Button {
+                                        viewModel.markAsRead(notification)
+                                    } label: {
+                                        Label("Read", systemImage: "envelope.open")
+                                    }
+                                    .tint(.blue)
+                                }
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    viewModel.deleteNotification(notification)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                .tint(.red)
                             }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
                     }
+                    .listStyle(.plain)
                     .refreshable { await viewModel.loadData() }
                 }
             }
@@ -88,23 +106,18 @@ private struct NotificationCard: View {
 
     var body: some View {
         Group {
-            if let referenceId = notification.referenceId {
-                NavigationLink {
-                    NotificationDetailDestination(notification: notification)
-                        .onAppear { onMarkRead() }
-                } label: {
+            if notification.referenceId != nil {
+                ZStack {
+                    NavigationLink {
+                        NotificationDetailDestination(notification: notification)
+                            .onAppear { onMarkRead() }
+                    } label: {
+                        EmptyView()
+                    }
+                    .opacity(0)
+                    
                     cardContent
                 }
-                .buttonStyle(.plain)
-                // Explicit overlay chevron so it stays visible on the card
-                .overlay(alignment: .trailing) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.tertiary)
-                        .padding(.trailing, 14)
-                }
-                // Silence unused referenceId warning
-                .id(referenceId)
             } else {
                 cardContent
                     .contentShape(Rectangle())
@@ -160,10 +173,13 @@ private struct NotificationCard: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-            // Extra trailing space so text doesn't collide with the chevron overlay
-            .padding(.trailing, notification.referenceId != nil ? 16 : 0)
+            
+            if notification.referenceId != nil {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color(.tertiaryLabel))
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
