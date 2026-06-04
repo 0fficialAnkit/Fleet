@@ -13,11 +13,9 @@ struct DriverDashboardView: View {
             Group {
                 if viewModel.isLoading && viewModel.trips.isEmpty {
                     ProgressView()
-                        .tint(Color.green)
                 } else {
                     List {
                         Section { overviewCard }
-
                         todayScheduleSection
                     }
                     .refreshable { await viewModel.loadData() }
@@ -25,26 +23,25 @@ struct DriverDashboardView: View {
                 }
             }
             .navigationTitle("Dashboard")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button { showingNotifications = true } label: {
                         Image(systemName: "bell")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(Color.primary)
+                            .foregroundStyle(.primary)
                     }
+                    .buttonStyle(.plain)
+
                     Button { showingProfile = true } label: {
-                        Image(systemName: "person.crop.circle.fill")
-                            .font(.system(size: 22, weight: .medium))
-                            .foregroundStyle(Color.green)
+                        Image(systemName: "person.crop.circle")
+                            .foregroundStyle(.primary)
                     }
+                    .buttonStyle(.plain)
                 }
             }
-            .sheet(isPresented: $showingNotifications) {
-                NotificationsView()
-            }
+            .sheet(isPresented: $showingNotifications) { NotificationsView() }
             .sheet(isPresented: $showingProfile) {
-                DriverProfileView()
-                    .environment(authViewModel)
+                DriverProfileView().environment(authViewModel)
             }
             .onChange(of: authViewModel.currentUser?.id, initial: true) { _, newUserId in
                 guard let userId = newUserId else { return }
@@ -65,78 +62,78 @@ struct DriverDashboardView: View {
     // MARK: - Overview Card
 
     private var overviewCard: some View {
-        let scheduledCount = viewModel.trips.filter { $0.status == .scheduled }.count
-        let completedCount = viewModel.totalCompletedTrips
-        let totalTrips     = viewModel.trips.count
+        let scheduled  = viewModel.trips.filter { $0.status == .scheduled }.count
+        let completed  = viewModel.totalCompletedTrips
+        let totalTrips = viewModel.trips.count
 
         return VStack(spacing: 0) {
-            HStack(alignment: .top, spacing: 16) {
+            HStack(spacing: 14) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .fill(Color.green.opacity(0.12))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "truck.box.fill")
-                        .font(.system(size: 22, weight: .medium))
-                        .foregroundStyle(Color.green)
+                        .frame(width: 40, height: 40)
+                    Image(systemName: "truck.box")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(.green)
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("My Trips \(totalTrips)")
-                        .font(.title2.bold())
-                        .foregroundStyle(Color.primary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("My Trips")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text("\(totalTrips) total")
+                        .font(.headline)
                 }
 
                 Spacer()
             }
 
-            Divider()
-                .background(Color(.separator))
-                .padding(.vertical, 16)
+            Divider().padding(.vertical, 14)
 
-            HStack(spacing: 8) {
-                FleetStatPill(
-                    value: scheduledCount,
-                    label: "Scheduled",
-                    color: Color.blue
-                )
-                FleetStatPill(
-                    value: completedCount,
-                    label: "Completed",
-                    color: Color.green
-                )
+            HStack(spacing: 0) {
+                kpiCell(value: "\(scheduled)", label: "Scheduled", color: .blue)
+                Divider().frame(height: 36)
+                kpiCell(value: "\(completed)", label: "Completed", color: .green)
+                if let active = viewModel.activeTrip {
+                    Divider().frame(height: 36)
+                    kpiCell(value: "1", label: "Active", color: .green)
+                    let _ = active
+                }
             }
         }
         .padding(.vertical, 4)
     }
 
-    // MARK: - Today's Schedule Section
+    private func kpiCell(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.title2.bold())
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Today's Schedule
 
     private var todayScheduleSection: some View {
         let todayTrips = viewModel.todaysTrips
-
-        return Section(header: HStack {
-            Text("Today's Schedule")
-            Spacer()
-            if !todayTrips.isEmpty {
-                Text("\(todayTrips.count) trip\(todayTrips.count == 1 ? "" : "s")")
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(Color.secondary)
-                    .textCase(.none)
-            }
-        }) {
+        return Section {
             if todayTrips.isEmpty {
-                HStack(spacing: 12) {
-                    Image(systemName: "calendar.badge.checkmark")
-                        .font(.system(size: 28))
-                        .foregroundStyle(Color.green)
+                Label {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("All caught up!")
-                            .font(.body.bold())
-                            .foregroundStyle(Color.primary)
+                            .font(.subheadline.weight(.medium))
                         Text("No trips scheduled for today")
                             .font(.caption)
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(.secondary)
                     }
+                } icon: {
+                    Image(systemName: "calendar.badge.checkmark")
+                        .foregroundStyle(.green)
+                        .font(.title3)
                 }
                 .padding(.vertical, 6)
             } else {
@@ -151,6 +148,9 @@ struct DriverDashboardView: View {
                         },
                         onPickupDone: { id, vId in
                             viewModel.gf_pickupDone(tripId: id, vehicleId: vId)
+                        },
+                        onDropoffDone: { id, vId, fenceId in
+                            viewModel.gf_dropoffDone(tripId: id, vehicleId: vId, geofenceId: fenceId)
                         }
                     )) {
                         DriverTripRow(
@@ -159,6 +159,17 @@ struct DriverDashboardView: View {
                             vehicle: viewModel.vehicleForTrip(trip)
                         )
                     }
+                }
+            }
+        } header: {
+            HStack {
+                Text("Today's Schedule")
+                Spacer()
+                if !todayTrips.isEmpty {
+                    Text("\(todayTrips.count) trip\(todayTrips.count == 1 ? "" : "s")")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .textCase(.none)
                 }
             }
         }
@@ -174,11 +185,11 @@ struct DriverTripRow: View {
 
     var statusColor: Color {
         switch trip.status {
-        case .scheduled: return Color.blue
-        case .active:    return Color.green
-        case .completed: return Color.green
-        case .cancelled: return Color.red
-        case .none:      return Color(.quaternaryLabel)
+        case .scheduled: return .blue
+        case .active:    return .green
+        case .completed: return .green
+        case .cancelled: return .red
+        default:         return Color(.quaternaryLabel)
         }
     }
 
@@ -188,62 +199,51 @@ struct DriverTripRow: View {
         case .active:    return "Active"
         case .completed: return "Completed"
         case .cancelled: return "Cancelled"
-        case .none:      return "Unknown"
+        default:         return "Unknown"
         }
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(trip.orderType?.displayName ?? "Trip")
-                    .font(.body.bold())
-                    .foregroundStyle(Color.primary)
+                    .font(.headline)
                     .lineLimit(1)
                 Spacer()
                 StatusBadge(text: statusText, color: statusColor)
             }
 
             if let start = route?.startLocation, let end = route?.endLocation {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.forward")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.secondary)
-                    Text("\(start) → \(end)")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.secondary)
-                        .lineLimit(1)
+                HStack(spacing: 8) {
+                    VStack(spacing: 3) {
+                        Circle().fill(.green).frame(width: 6, height: 6)
+                        Rectangle().fill(Color(.separator)).frame(width: 1.5, height: 12)
+                        Circle().fill(.red).frame(width: 6, height: 6)
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(start).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+                        Text(end).font(.subheadline).foregroundStyle(.primary).lineLimit(1)
+                    }
                 }
             }
 
             HStack {
                 if let vehicle {
-                    HStack(spacing: 6) {
-                        Image(systemName: "truck.box.fill")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.green)
-                        Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.secondary)
-                    }
+                    Label("\(vehicle.make ?? "") \(vehicle.model ?? "")", systemImage: "car")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 Spacer()
                 if let start = trip.startTime {
-                    HStack(spacing: 6) {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color(.tertiaryLabel))
-                        Text(start.formatted(date: .omitted, time: .shortened))
-                            .font(.subheadline)
-                            .foregroundStyle(Color.secondary)
-                    }
+                    Label(start.formatted(date: .omitted, time: .shortened), systemImage: "clock")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
         .padding(.vertical, 4)
     }
 }
-
-// MARK: - Preview
 
 #Preview {
     DriverDashboardView()

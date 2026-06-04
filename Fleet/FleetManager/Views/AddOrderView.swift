@@ -89,7 +89,7 @@ struct AddOrderView: View {
                         in: Date()...,
                         displayedComponents: [.date, .hourAndMinute]
                     )
-                    .tint(Color.teal)
+                    .tint(Color(.label))
                 }
 
                 // ── Order Type ────────────────────────────────────────
@@ -318,7 +318,7 @@ struct AddOrderView: View {
                 startLocation: pickup.fullAddress,
                 endLocation: dropoff.fullAddress
             )
-            try await RouteService.createRoute(route)
+            try await RouteService.createRoute(route, managerId: viewModel.adminId)
 
             // 2. Create trip linked to new route
             try await viewModel.addTrip(

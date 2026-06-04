@@ -9,35 +9,31 @@ final class VehiclesViewModel {
 
     var isLoading = false
     var errorMessage: String?
+    /// Set once on login from AuthViewModel.currentUserId
+    var adminId: UUID?
 
-    func setupRealtime(adminId: UUID? = nil) {
+    func setupRealtime() {
         let rt = RealtimeManager.shared
-        rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData(adminId: adminId) } }
-        rt.addProfilesChangeHandler { [weak self] in Task { await self?.loadData(adminId: adminId) } }
-        rt.addTripsChangeHandler { [weak self] in Task { await self?.loadData(adminId: adminId) } }
+        rt.addVehiclesChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addProfilesChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addTripsChangeHandler { [weak self] in Task { await self?.loadData() } }
     }
 
     func loadData(adminId: UUID? = nil) async {
+        // Keep self.adminId in sync if a new value is passed
+        if let adminId { self.adminId = adminId }
         isLoading = true
         errorMessage = nil
         do {
-            async let v = VehicleService.fetchAllVehicles()
-            async let p = ProfileService.fetchAllProfiles()
-            async let t = TripService.fetchAllTrips()
-            let allVehicles = try await v
+            async let v = VehicleService.fetchAllVehicles(adminId: self.adminId)
+            async let p = ProfileService.fetchAllProfiles(managerId: self.adminId)
+            async let t = TripService.fetchAllTrips(adminId: self.adminId)
+            vehicles = try await v
             profiles = try await p
             trips = try await t
-            
-            if let adminId = adminId {
-                // Show vehicles assigned to this admin OR vehicles with no admin assigned (test data)
-                vehicles = allVehicles.filter { $0.adminId == adminId || $0.adminId == nil }
-            } else {
-                vehicles = allVehicles
-            }
         } catch {
             errorMessage = error.localizedDescription
         }
-        
         isLoading = false
     }
 
@@ -123,6 +119,7 @@ final class VehiclesViewModel {
 
     func addVehicle(make: String, model: String, year: Int, tankCapacity: Double?, mileage: Double?, licensePlate: String, vehicleType: VehicleType, adminId: UUID? = nil) async throws {
         print("[VehiclesViewModel] addVehicle: make=\(make) model=\(model) plate=\(licensePlate) type=\(vehicleType)")
+        let effectiveAdminId = adminId ?? self.adminId
         do {
             try await VehicleService.createVehicle(
                 make: make,
@@ -133,7 +130,7 @@ final class VehiclesViewModel {
                 tankCapacity: tankCapacity,
                 mileage: mileage,
                 assignedDriverId: nil,   // Always nil on creation — assign via driver selection
-                adminId: adminId,
+                adminId: effectiveAdminId,
                 status: .active,
                 vehicleType: vehicleType
             )

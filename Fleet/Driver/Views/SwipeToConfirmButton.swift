@@ -47,8 +47,8 @@ struct SwipeToConfirmButton: View {
                     .shadow(color: enabled ? tint.opacity(0.25) : .clear,
                             radius: 4, y: 2)
                     .overlay {
-                        Image(systemName: confirmed
-                              ? "checkmark" : "chevron.right.2")
+                        Image(systemName: confirmed ? "checkmark"
+                              : enabled ? "chevron.right.2" : "lock.fill")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(.white)
                     }

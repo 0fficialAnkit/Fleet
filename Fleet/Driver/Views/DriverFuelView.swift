@@ -8,11 +8,19 @@ struct DriverFuelView: View {
     @State private var price: String = ""
     @State private var showSuccess: Bool = false
     @State private var isSubmitting: Bool = false
+    @State private var isExtractingText: Bool = false
     @State private var errorMessage: String?
 
     // Photo picker
-    @State private var selectedPhotoItem: PhotosPickerItem?
     @State private var billImage: UIImage?
+    @State private var imageSourceType: UIImagePickerController.SourceType = .camera
+    @State private var showImageSourceOptions = false
+    @State private var showImagePicker = false
+    
+    // Date tracking
+    @State private var logDate: Date? = nil
+    @State private var showDatePrompt = false
+    @State private var manualDate: Date = Date()
 
     @State private var viewModel = DriverFuelViewModel()
     @State private var assignedVehicleId: UUID?
@@ -111,10 +119,24 @@ struct DriverFuelView: View {
                                     RoundedRectangle(cornerRadius: 16)
                                         .stroke(Color.green.opacity(0.5), lineWidth: 1.5)
                                 )
+                                .overlay {
+                                    if isExtractingText {
+                                        ZStack {
+                                            Color.black.opacity(0.4)
+                                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                            VStack(spacing: 8) {
+                                                ProgressView()
+                                                    .tint(.white)
+                                                Text("Scanning Bill...")
+                                                    .foregroundStyle(.white)
+                                                    .font(.caption.weight(.medium))
+                                            }
+                                        }
+                                    }
+                                }
 
                             Button {
                                 self.billImage = nil
-                                selectedPhotoItem = nil
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
                                     .font(.title2)
@@ -124,30 +146,49 @@ struct DriverFuelView: View {
                             .padding(8)
                         }
                     } else {
-                        PhotosPicker(
-                            selection: $selectedPhotoItem,
-                            matching: .images,
-                            photoLibrary: .shared()
-                        ) {
-                            VStack(spacing: 8) {
-                                Image(systemName: "doc.viewfinder")
-                                    .font(.system(size: 32))
-                                    .foregroundStyle(Color.green)
-                                Text("Tap to attach bill photo")
-                                    .font(.body.weight(.medium))
-                                    .foregroundStyle(Color.green)
-                                Text("Photo will be sent to Fleet Manager")
-                                    .font(.body)
-                                    .foregroundStyle(Color(UIColor.tertiaryLabel))
+                        HStack(spacing: 16) {
+                            Button {
+                                imageSourceType = .camera
+                                showImagePicker = true
+                            } label: {
+                                VStack(spacing: 12) {
+                                    Image(systemName: "camera.fill")
+                                        .font(.system(size: 32))
+                                    Text("Camera")
+                                        .font(.subheadline.weight(.medium))
+                                }
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 120)
+                                .background(Color.green.opacity(0.06))
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Color.green.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [8]))
+                                )
+                                .foregroundStyle(Color.green)
                             }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 140)
-                            .background(Color.green.opacity(0.06))
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .stroke(Color.green.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [8]))
-                            )
+
+                            Button {
+                                imageSourceType = .photoLibrary
+                                showImagePicker = true
+                            } label: {
+                                VStack(spacing: 12) {
+                                    Image(systemName: "photo.on.rectangle.angled")
+                                        .font(.system(size: 32))
+                                    Text("Select from Gallery")
+                                        .font(.subheadline.weight(.medium))
+                                        .multilineTextAlignment(.center)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 120)
+                                .background(Color.green.opacity(0.06))
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(Color.green.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [8]))
+                                )
+                                .foregroundStyle(Color.green)
+                            }
                         }
                     }
                 }
@@ -165,11 +206,11 @@ struct DriverFuelView: View {
                     }
                     .font(.body.weight(.medium))
                     .frame(maxWidth: .infinity)
-                    .padding(16)
-                    .background(!isFormValid || isSubmitting ? Color(UIColor.tertiarySystemFill) : Color.green)
-                    .foregroundStyle(!isFormValid || isSubmitting ? Color(UIColor.tertiaryLabel) : Color(UIColor.systemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(Color(.label))
+                .controlSize(.large)
+                .buttonBorderShape(.capsule)
                 .disabled(!isFormValid || isSubmitting)
             }
             .disabled(assignedVehicleId == nil)
@@ -258,13 +299,46 @@ struct DriverFuelView: View {
             .navigationTitle("Fuel")
             .navigationBarTitleDisplayMode(.large)
             .toolbar { }
-            .onChange(of: selectedPhotoItem) { _, newItem in
+            .onChange(of: billImage) { _, newImage in
+                guard let image = newImage else { return }
                 Task {
-                    if let data = try? await newItem?.loadTransferable(type: Data.self),
-                       let image = UIImage(data: data) {
-                        billImage = image
+                    isExtractingText = true
+                    let (extractedVolume, extractedPrice, extractedDate) = await OCRService.shared.extractFuelData(from: image)
+                    if let extractedVolume {
+                        volume = String(format: "%.1f", extractedVolume)
+                    }
+                    if let extractedPrice {
+                        price = String(format: "%.2f", extractedPrice)
+                    }
+                    if let extractedDate {
+                        logDate = extractedDate
+                    } else {
+                        showDatePrompt = true
+                    }
+                    isExtractingText = false
+                }
+            }
+            .sheet(isPresented: $showImagePicker) {
+                ImagePicker(selectedImage: $billImage, sourceType: imageSourceType)
+                    .ignoresSafeArea()
+            }
+            .sheet(isPresented: $showDatePrompt) {
+                NavigationStack {
+                    Form {
+                        DatePicker("Date & Time", selection: $manualDate, displayedComponents: [.date, .hourAndMinute])
+                    }
+                    .navigationTitle("Select Date & Time")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                logDate = manualDate
+                                showDatePrompt = false
+                            }
+                        }
                     }
                 }
+                .presentationDetents([.medium, .fraction(0.4)])
             }
             .alert("Error", isPresented: Binding(
                 get: { errorMessage != nil },
@@ -323,6 +397,7 @@ struct DriverFuelView: View {
                     liters: liters,
                     cost: cost,
                     vehicleId: vehicleId,
+                    recordedAt: logDate ?? Date(),
                     billUrl: billUrl
                 )
 
@@ -357,7 +432,7 @@ struct DriverFuelView: View {
                     volume = ""
                     price = ""
                     self.billImage = nil
-                    selectedPhotoItem = nil
+                    logDate = nil
                 }
             } catch {
                 await MainActor.run {

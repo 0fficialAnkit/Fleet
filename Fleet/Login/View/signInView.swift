@@ -14,6 +14,7 @@ struct SignInView: View {
     
     @State private var emailOrPhone = ""
     @State private var password = ""
+    @State private var otpCode = ""
 
     @State private var isPasswordVisible = false
     @State private var showingResetPassword = false
@@ -45,6 +46,9 @@ struct SignInView: View {
                 }
                 .padding(.horizontal, 24)
             }
+        }
+        .onDisappear {
+            authViewModel.resetOTPState()
         }
     }
     // MARK: - App Icon
@@ -79,13 +83,15 @@ struct SignInView: View {
                     .font(.caption)
                     .multilineTextAlignment(.center)
             }
-            TextField(
-                "",
-                text: $emailOrPhone,
-                prompt: Text("Enter email or phone")
-                    .foregroundStyle(Color(.placeholderText))
-            )
-                .keyboardType(.emailAddress)
+            
+            if authViewModel.isWaitingForOTP {
+                TextField(
+                    "",
+                    text: $otpCode,
+                    prompt: Text("Enter 6-digit OTP")
+                        .foregroundStyle(Color(.placeholderText))
+                )
+                .keyboardType(.numberPad)
                 .textInputAutocapitalization(.never)
                 .foregroundStyle(Color.primary)
                 .padding(.horizontal, 18)
@@ -96,42 +102,59 @@ struct SignInView: View {
                     RoundedRectangle(cornerRadius: 14)
                         .stroke(Color(.separator), lineWidth: 1)
                 )
+            } else {
+                TextField(
+                    "",
+                    text: $emailOrPhone,
+                    prompt: Text("Enter email or phone")
+                        .foregroundStyle(Color(.placeholderText))
+                )
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+                    .foregroundStyle(Color.primary)
+                    .padding(.horizontal, 18)
+                    .frame(height: 56)
+                    .background(Color(.secondarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color(.separator), lineWidth: 1)
+                    )
 
-            HStack {
-                if isPasswordVisible {
-                    TextField(
-                        "",
-                        text: $password,
-                        prompt: Text("Password")
-                            .foregroundStyle(Color(.placeholderText))
-                    )
-                } else {
-                    SecureField(
-                        "",
-                        text: $password,
-                        prompt: Text("Password")
-                            .foregroundStyle(Color(.placeholderText))
-                    )
+                HStack {
+                    if isPasswordVisible {
+                        TextField(
+                            "",
+                            text: $password,
+                            prompt: Text("Password")
+                                .foregroundStyle(Color(.placeholderText))
+                        )
+                    } else {
+                        SecureField(
+                            "",
+                            text: $password,
+                            prompt: Text("Password")
+                                .foregroundStyle(Color(.placeholderText))
+                        )
+                    }
+                    Button {
+                        isPasswordVisible.toggle()
+                    } label: {
+                        Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
+                            .foregroundStyle(Color.secondary)
+                    }
                 }
-                Button {
-                    isPasswordVisible.toggle()
-                } label: {
-                    Image(systemName: isPasswordVisible ? "eye.slash" : "eye")
-                        .foregroundStyle(Color.secondary)
-                }
-            }
-            .foregroundStyle(Color.primary)
-            .padding(.horizontal, 18)
-            .frame(height: 56)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color(.separator), lineWidth: 1)
-            )
-            
-            // Forgot Password Link
-            if roleId != 1 {
+                .foregroundStyle(Color.primary)
+                .padding(.horizontal, 18)
+                .frame(height: 56)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color(.separator), lineWidth: 1)
+                )
+                
+                // Forgot Password Link
                 HStack {
                     Spacer()
                     Button {
@@ -139,7 +162,7 @@ struct SignInView: View {
                     } label: {
                         Text("Forgot Password?")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.teal)
+                            .foregroundStyle(.teal)
                     }
                     .padding(.top, 4)
                 }
@@ -148,10 +171,14 @@ struct SignInView: View {
     }
     // MARK: - Main Button
     var actionButton: some View {
-        let isButtonDisabled = emailOrPhone.isEmpty || password.isEmpty
+        let isButtonDisabled = authViewModel.isWaitingForOTP ? otpCode.isEmpty : (emailOrPhone.isEmpty || password.isEmpty)
         return Button {
             Task {
-                await authViewModel.signIn(email: emailOrPhone, password: password)
+                if authViewModel.isWaitingForOTP {
+                    await authViewModel.verifyOTP(token: otpCode)
+                } else {
+                    await authViewModel.signIn(email: emailOrPhone, password: password)
+                }
             }
         } label: {
             if authViewModel.isLoading {
@@ -162,7 +189,7 @@ struct SignInView: View {
                     .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.teal)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             } else {
-                Text("Sign In")
+                Text(authViewModel.isWaitingForOTP ? "Verify OTP & Sign In" : "Sign In")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(isButtonDisabled ? Color(.tertiaryLabel) : Color(.systemBackground))
                     .frame(maxWidth: .infinity)

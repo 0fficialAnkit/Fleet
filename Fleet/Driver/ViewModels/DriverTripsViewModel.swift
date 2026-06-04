@@ -93,18 +93,18 @@ final class DriverTripsViewModel {
         print("[DriverTripsViewModel] endTrip called with distance: \(String(describing: distance))")
         Task {
             do {
-                // Log dropoff_done before ending trip (geofences are still active)
+                // Log trip_ended (dropoff_done was already logged when driver flipped the toggle)
                 let fences = (try? await GeofenceService.fetchGeofences(forTrip: id)) ?? []
                 if let df = fences.first(where: { $0.zoneType == "dropoff" }) {
                     try? await GeofenceService.createEvent(TripGeofenceEvent(
                         id: UUID(), geofenceId: df.id, vehicleId: vehicleId,
-                        driverId: currentUserId, eventType: "dropoff_done", occurredAt: Date()))
+                        driverId: currentUserId, eventType: "trip_ended", occurredAt: Date()))
                     let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
                     for mgr in managers {
                         try? await NotificationService.createNotification(Fleet.Notification(
                             id: UUID(), userId: mgr.id,
-                            title: "🏁 Drop-off Completed",
-                            message: "Driver has completed the drop-off. Trip is now ending.",
+                            title: "🏁 Trip Ended",
+                            message: "Driver has completed the trip. Trip is now ending.",
                             type: .info, isRead: false, createdAt: Date()))
                     }
                 }
@@ -119,6 +119,47 @@ final class DriverTripsViewModel {
                 await loadData()
             } catch {
                 errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    /// Called when driver flips the Drop-off toggle ON.
+    /// Saves dropoff_done using the SAME proven pattern as endTrip's trip_ended:
+    /// query trip_geofences directly for the dropoff fence (it has existed since
+    /// trip start — zero race). The fence id from the table is always a valid FK.
+    func gf_dropoffDone(tripId: UUID, vehicleId: UUID, geofenceId: UUID?) {
+        Task {
+            // Primary: query trip_geofences for the dropoff fence (guaranteed valid FK)
+            var dropoffFenceId: UUID? = nil
+            let allFences = (try? await GeofenceService.fetchAllGeofences(forTrip: tripId)) ?? []
+            if let df = allFences.first(where: { $0.zoneType == "dropoff" }) {
+                dropoffFenceId = df.id
+            } else if let passed = geofenceId {
+                // Fallback to the id cached from the zone-entry notification
+                dropoffFenceId = passed
+            }
+
+            guard let gfId = dropoffFenceId else {
+                print("[Geofence] ❌ gf_dropoffDone: dropoff fence not found in trip_geofences — event not saved")
+                return
+            }
+
+            do {
+                try await GeofenceService.createEvent(TripGeofenceEvent(
+                    id: UUID(), geofenceId: gfId, vehicleId: vehicleId,
+                    driverId: currentUserId, eventType: "dropoff_done", occurredAt: Date()))
+                print("[Geofence] ✅ dropoff_done saved (fence: \(gfId.uuidString.prefix(6)))")
+            } catch {
+                print("[Geofence] ❌ dropoff_done save failed: \(error)")
+            }
+
+            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
+            for mgr in managers {
+                try? await NotificationService.createNotification(Fleet.Notification(
+                    id: UUID(), userId: mgr.id,
+                    title: "🏁 Drop-off Completed",
+                    message: "Driver has completed the drop-off.",
+                    type: .info, isRead: false, createdAt: Date()))
             }
         }
     }

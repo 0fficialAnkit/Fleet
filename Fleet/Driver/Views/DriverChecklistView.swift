@@ -147,12 +147,13 @@ struct DriverChecklistView: View {
                             ) {
                                 Label(capturedImages.isEmpty ? "Add Photos" : "Add More Photos",
                                       systemImage: "camera.fill")
+                                    .font(.body.weight(.semibold))
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.bordered)
                             .tint(.secondary)
-                            .controlSize(.regular)
-                            .buttonBorderShape(.capsule)
+                            .controlSize(.large)
+                            .buttonBorderShape(.roundedRectangle(radius: 12))
                         }
 
                         // Additional notes
@@ -164,7 +165,7 @@ struct DriverChecklistView: View {
                                       text: $additionalNotes, axis: .vertical)
                                 .lineLimit(2...5)
                                 .padding(12)
-                                .background(Color(.secondarySystemBackground))
+                                .background(Color(.secondarySystemGroupedBackground))
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
 
@@ -173,12 +174,13 @@ struct DriverChecklistView: View {
                             NavigationLink(destination: DriverReportIssueView(vehicle: vehicle)) {
                                 Label("Report Vehicle Issue",
                                       systemImage: "exclamationmark.triangle.fill")
+                                    .font(.body.weight(.semibold))
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.bordered)
                             .tint(.orange)
                             .controlSize(.large)
-                            .buttonBorderShape(.capsule)
+                            .buttonBorderShape(.roundedRectangle(radius: 12))
                         }
                     }
                     .padding(.horizontal)

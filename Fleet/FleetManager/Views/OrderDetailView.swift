@@ -11,6 +11,7 @@ struct OrderDetailView: View {
     @State private var driverProfile:  Profile?            = nil
     @State private var geofences:      [TripGeofence]      = []
     @State private var gfEvents:       [TripGeofenceEvent] = []
+    @State private var routeBreaches:  [RouteBreach]       = []
     @State private var pollingTask:    Task<Void, Never>?  = nil
 
     var route:       Route? { viewModel.route(for: trip.routeId) }
@@ -24,19 +25,19 @@ struct OrderDetailView: View {
         return f.string(from: d)
     }
 
-    // Events for this trip — oldest first, de-duplicated.
-    // Works for both active AND completed trips.
+    // Events for this trip in strict milestone order: pickup-enter → pickup-done → dropoff-enter → dropoff-done.
+    // Logical priority overrides timestamp so same-second events always display in the correct order.
     var tripEvents: [TripGeofenceEvent] {
-        // If we have fence IDs, filter precisely; otherwise show all fetched events
-        let sorted: [TripGeofenceEvent]
-        if geofences.isEmpty {
-            sorted = gfEvents.sorted { ($0.occurredAt ?? .distantPast) < ($1.occurredAt ?? .distantPast) }
-        } else {
-            let ids = Set(geofences.map { $0.id })
-            sorted = gfEvents
-                .filter { ids.contains($0.geofenceId) }
-                .sorted { ($0.occurredAt ?? .distantPast) < ($1.occurredAt ?? .distantPast) }
-        }
+        guard !geofences.isEmpty else { return [] }
+        let ids    = Set(geofences.map { $0.id })
+        let sorted = gfEvents
+            .filter { ids.contains($0.geofenceId) }
+            .sorted { a, b in
+                let pa = logicalPriority(a)
+                let pb = logicalPriority(b)
+                if pa != pb { return pa < pb }
+                return (a.occurredAt ?? .distantPast) < (b.occurredAt ?? .distantPast)
+            }
 
         // Keep only the first occurrence of each logical milestone (dedup)
         var seen    = Set<String>()
@@ -120,6 +121,75 @@ struct OrderDetailView: View {
                 }
             }
 
+            // ── Route Deviation — fits the existing List style ────────────────
+            if !routeBreaches.isEmpty {
+                Section {
+                    ForEach(Array(routeBreaches.enumerated()), id: \.element.id) { idx, breach in
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 8) {
+                                Circle()
+                                    .fill(.red)
+                                    .frame(width: 8, height: 8)
+                                Text("Violation #\(idx + 1)")
+                                    .font(.subheadline.bold())
+                                    .foregroundStyle(.secondary)
+                            }
+                            
+                            VStack(spacing: 0) {
+                                LabeledContent("Time") {
+                                    Text(breach.occurredAt?.formatted(date: .abbreviated, time: .shortened) ?? "—")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .padding(.vertical, 10)
+                                
+                                Divider()
+                                
+                                LabeledContent("Distance Off-Route") {
+                                    Text(String(format: "%.1f km", breach.distanceFromCenter / 1000))
+                                        .foregroundStyle(severityColor(breach.distanceFromCenter))
+                                        .fontWeight(.semibold)
+                                }
+                                .padding(.vertical, 10)
+                                
+                                Divider()
+                                
+                                LabeledContent("Route Boundary Radius") {
+                                    Text(String(format: "%.1f km", breach.fenceRadius / 1000))
+                                        .foregroundStyle(.secondary)
+                                }
+                                .padding(.vertical, 10)
+                                
+                                Divider()
+                                
+                                LabeledContent("Severity") {
+                                    Text(severityLabel(breach.distanceFromCenter))
+                                        .foregroundStyle(severityColor(breach.distanceFromCenter))
+                                        .fontWeight(.semibold)
+                                }
+                                .padding(.vertical, 10)
+                            }
+                            .padding(.horizontal, 16)
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .padding(.vertical, 6)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
+                } header: {
+                    HStack {
+                        Text("Route Deviation Alert")
+                            .foregroundStyle(.red)
+                        Spacer()
+                        Text("\(routeBreaches.count)")
+                            .font(.caption.weight(.bold)).foregroundStyle(.white)
+                            .padding(.horizontal, 7).padding(.vertical, 2)
+                            .background(.red, in: Capsule())
+                            .textCase(nil)
+                    }
+                }
+            }
+
             // ── Order details ────────────────────────────────────────────────
             Section("Order Details") {
                 LabeledContent("Order ID") {
@@ -193,15 +263,21 @@ struct OrderDetailView: View {
         .navigationBarTitleDisplayMode(.large)
         .refreshable { await refreshAll() }
         .task {
-            await loadAll()          // loads geofences + events for all trip states
-            if isActive {
-                startPolling()
-                RealtimeManager.shared.addGeofenceEventsChangeHandler {
-                    Task { await self.refreshGeofenceData() }
-                }
-                RealtimeManager.shared.addVehicleLocationsChangeHandler {
-                    Task { await self.refreshLocations() }
-                }
+            await loadAll()
+
+            // Always subscribe to Realtime and poll — the trip may be scheduled
+            // when the fleet manager opens this view and become active later.
+            // Without this, zone-entry events are missed entirely.
+            startPolling()
+            RealtimeManager.shared.addGeofenceEventsChangeHandler {
+                Task { await self.refreshGeofenceData() }
+            }
+            RealtimeManager.shared.addRouteBreachHandler {
+                // Instant update when a breach is logged — no 15s wait
+                Task { await self.refreshRouteBreach() }
+            }
+            RealtimeManager.shared.addVehicleLocationsChangeHandler {
+                Task { await self.refreshLocations() }
             }
         }
         .onDisappear { pollingTask?.cancel(); pollingTask = nil }
@@ -235,7 +311,11 @@ struct OrderDetailView: View {
         case "dropoff_done":
             icon = "flag.checkered.circle.fill"; tint = .teal
             title = "Drop-off Done"
-            sub   = "Trip is ending"
+            sub   = "Driver completing trip"
+        case "trip_ended":
+            icon = "checkmark.seal.fill";        tint = .green
+            title = "Trip Ended"
+            sub   = "Trip completed successfully"
         default:
             icon = "circle.fill";                tint = .secondary
             title = event.eventType;             sub = ""
@@ -270,6 +350,47 @@ struct OrderDetailView: View {
         .padding(.vertical, 6)
     }
 
+    // MARK: - Helpers
+
+    // MARK: - Route breach helpers (follow real fleet-app severity conventions)
+
+    /// < 1 km off = yellow, 1–3 km = orange, > 3 km = red
+    private func severityColor(_ distanceFromCenter: Double) -> Color {
+        let km = distanceFromCenter / 1000
+        if km < 1 { return .yellow }
+        if km < 3 { return .orange }
+        return .red
+    }
+
+    private func severityLabel(_ distanceFromCenter: Double) -> String {
+        let km = distanceFromCenter / 1000
+        if km < 1 { return "Minor" }
+        if km < 3 { return "Moderate" }
+        return "Critical"
+    }
+
+    private func metricCell(label: String, value: String, color: Color) -> some View {
+        VStack(spacing: 3) {
+            Text(value).font(.footnote.bold()).foregroundStyle(color)
+            Text(label).font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Priority 0-3 enforces 1→2→3→4 display order regardless of same-second timestamps.
+    private func logicalPriority(_ event: TripGeofenceEvent) -> Int {
+        let fence    = geofences.first(where: { $0.id == event.geofenceId })
+        let isPickup = fence?.zoneType == "pickup"
+        switch event.eventType {
+        case "enter"         where isPickup: return 0  // 1. pickup zone entered
+        case "pickup_done":                  return 1  // 2. pickup confirmed
+        case "enter":                        return 2  // 3. dropoff zone entered
+        case "dropoff_done":                 return 3  // 4. dropoff confirmed
+        case "trip_ended":                   return 4  // 5. trip ended
+        default:                             return 5
+        }
+    }
+
     // MARK: - Data helpers
 
     private func loadAll() async {
@@ -285,9 +406,24 @@ struct OrderDetailView: View {
     }
 
     private func refreshGeofenceData() async {
-        // fetchAllGeofences includes inactive fences — keeps history visible after trip ends
+        // Fetch all fences for THIS trip (active + inactive = survives trip end)
         geofences = (try? await GeofenceService.fetchAllGeofences(forTrip: trip.id)) ?? []
-        gfEvents  = (try? await GeofenceService.fetchEvents(forVehicle: trip.vehicleId, limit: 30)) ?? []
+
+        // Only fetch events if this trip has its own geofences
+        if geofences.isEmpty {
+            gfEvents = []
+        } else {
+            let all  = (try? await GeofenceService.fetchEvents(forVehicle: trip.vehicleId, limit: 30)) ?? []
+            let ids  = Set(geofences.map { $0.id })
+            gfEvents = all.filter { ids.contains($0.geofenceId) }
+        }
+
+        // Fetch route breach events for this trip
+        routeBreaches = (try? await RouteBreachService.fetchBreaches(forTrip: trip.id)) ?? []
+    }
+
+    private func refreshRouteBreach() async {
+        routeBreaches = (try? await RouteBreachService.fetchBreaches(forTrip: trip.id)) ?? []
     }
 
     private func refreshAll() async {
@@ -302,6 +438,8 @@ struct OrderDetailView: View {
                 try? await Task.sleep(for: .seconds(15))
                 guard !Task.isCancelled else { break }
                 await refreshAll()
+                // Stop polling once trip is completed — Realtime handles late stragglers
+                if trip.status == .completed { break }
             }
         }
     }

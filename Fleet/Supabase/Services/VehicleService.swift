@@ -38,14 +38,26 @@ private struct VehicleUpdate: Encodable {
 
 enum VehicleService {
 
-    static func fetchAllVehicles() async throws -> [Vehicle] {
+    /// Fetches vehicles. When `adminId` is provided only vehicles owned by
+    /// that fleet manager are returned. Pass nil to get all (service-internal use).
+    static func fetchAllVehicles(adminId: UUID? = nil) async throws -> [Vehicle] {
         do {
-            let result: [Vehicle] = try await supabase
-                .from("vehicles")
-                .select()
-                .execute()
-                .value
-            print("[VehicleService] fetchAllVehicles: \(result.count) vehicles loaded")
+            let result: [Vehicle]
+            if let adminId {
+                result = try await supabase
+                    .from("vehicles")
+                    .select()
+                    .eq("admin_id", value: adminId)
+                    .execute()
+                    .value
+            } else {
+                result = try await supabase
+                    .from("vehicles")
+                    .select()
+                    .execute()
+                    .value
+            }
+            print("[VehicleService] fetchAllVehicles(adminId:\(adminId?.uuidString.prefix(6) ?? "nil")): \(result.count) vehicles loaded")
             return result
         } catch {
             print("[VehicleService] fetchAllVehicles ERROR: \(error)")

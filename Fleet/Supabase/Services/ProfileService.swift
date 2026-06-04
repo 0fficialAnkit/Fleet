@@ -63,16 +63,28 @@ enum ProfileService {
 
     // MARK: - Fetch all profiles
 
-    static func fetchAllProfiles() async throws -> [Profile] {
+    /// Fetches profiles. When `managerId` is provided only employees created
+    /// by that manager are returned. Pass nil to get everyone (admin use only).
+    static func fetchAllProfiles(managerId: UUID? = nil) async throws -> [Profile] {
         do {
-            let users: [User] = try await supabase
-                .from("users")
-                .select()
-                .execute()
-                .value
+            let users: [User]
+            if let managerId {
+                users = try await supabase
+                    .from("users")
+                    .select()
+                    .or("created_by_manager_id.eq.\(managerId.uuidString),created_by_manager_id.is.null")
+                    .execute()
+                    .value
+            } else {
+                users = try await supabase
+                    .from("users")
+                    .select()
+                    .execute()
+                    .value
+            }
             let roles = try await allRoles()
             let profiles = users.map { toProfile(user: $0, roles: roles) }
-            print("[ProfileService] fetchAllProfiles: \(profiles.count) profiles")
+            print("[ProfileService] fetchAllProfiles(managerId:\(managerId?.uuidString.prefix(6) ?? "nil")): \(profiles.count) profiles")
             return profiles
         } catch {
             print("[ProfileService] fetchAllProfiles ERROR: \(error)")
@@ -82,7 +94,9 @@ enum ProfileService {
 
     // MARK: - Fetch profiles by role
 
-    static func fetchProfilesByRole(role: String) async throws -> [Profile] {
+    /// Fetches profiles matching a role. When `managerId` is provided only users
+    /// created by that manager are returned.
+    static func fetchProfilesByRole(role: String, managerId: UUID? = nil) async throws -> [Profile] {
         let roles = try await allRoles()
         // Find the role ID that matches the requested normalized role
         let matchingRoleIds = roles.filter { normalizeRoleName($0.roleName) == role }.map(\.id)
@@ -90,12 +104,14 @@ enum ProfileService {
 
         var allMatching: [Profile] = []
         for roleId in matchingRoleIds {
-            let users: [User] = try await supabase
+            var query = supabase
                 .from("users")
                 .select()
                 .eq("role_id", value: roleId)
-                .execute()
-                .value
+            if let managerId {
+                query = query.or("created_by_manager_id.eq.\(managerId.uuidString),created_by_manager_id.is.null")
+            }
+            let users: [User] = try await query.execute().value
             allMatching.append(contentsOf: users.map { toProfile(user: $0, roles: roles) })
         }
         return allMatching
@@ -143,7 +159,8 @@ enum ProfileService {
         fullName: String,
         phone: String?,
         licenseNumber: String?,
-        role: String
+        role: String,
+        createdByManagerId: UUID? = nil
     ) async throws -> UUID {
 
         // 1. Fetch role_id
@@ -204,30 +221,45 @@ enum ProfileService {
             throw NSError(domain: "ProfileService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Could not parse new user ID"])
         }
 
-        // 4. Directly upsert into public.users table to ensure phone and license_number are stored correctly
-        let newUserRow = User(
+        // 4. Upsert into public.users using an explicit struct that matches
+        //    the exact DB column names — avoids silent failures from mismatches.
+        struct UserInsertPayload: Encodable {
+            let id: UUID
+            let full_name: String
+            let email: String
+            let password_hash: String
+            let phone: String?
+            let license_number: String?
+            let role_id: UUID
+            let status: String
+            let created_by_manager_id: UUID?
+        }
+
+        let payload = UserInsertPayload(
             id: newUserId,
-            fullName: fullName,
+            full_name: fullName,
             email: email,
-            passwordHash: "auth_managed",
+            password_hash: "auth_managed",
             phone: phone?.isEmpty == false ? phone : nil,
-            licenseNumber: licenseNumber?.isEmpty == false ? licenseNumber : nil,
-            roleId: roleId,
-            status: .active,
-            createdAt: Date()
+            license_number: licenseNumber?.isEmpty == false ? licenseNumber : nil,
+            role_id: roleId,
+            status: "active",
+            created_by_manager_id: createdByManagerId
         )
 
         do {
             try await supabase
                 .from("users")
-                .upsert(newUserRow)
+                .upsert(payload, onConflict: "id")
                 .execute()
-            print("[ProfileService] Successfully upserted user \(newUserId) in public.users table.")
+            print("[ProfileService] Upserted user \(newUserId) created_by_manager_id=\(createdByManagerId?.uuidString ?? "nil")")
         } catch {
-            print("[ProfileService] Public users upsert failed: \(error). Trying standard update...")
-            _ = try? await supabase
+            print("[ProfileService] Upsert failed: \(error)")
+            // Fallback: plain update to set created_by_manager_id on existing row
+            struct ManagerPatch: Encodable { let created_by_manager_id: UUID? }
+            try? await supabase
                 .from("users")
-                .update(newUserRow)
+                .update(ManagerPatch(created_by_manager_id: createdByManagerId))
                 .eq("id", value: newUserId)
                 .execute()
         }

@@ -97,7 +97,7 @@ struct AddMaintenanceView: View {
                         if scheduleType == .date {
                             DatePicker("Scheduled Date", selection: $scheduledDate, displayedComponents: .date)
                                 .foregroundStyle(Color.primary)
-                                .tint(Color.teal)
+                                .tint(Color(.label))
                         } else if scheduleType == .mileage {
                             TextField("Target Mileage (km)", text: $targetMileage)
                                 .keyboardType(.numberPad)

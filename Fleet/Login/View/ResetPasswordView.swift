@@ -4,14 +4,12 @@ struct ResetPasswordView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AuthViewModel.self) private var authViewModel
     
-    @State var email: String = ""
-    @State private var oldPassword = ""
-    @State private var newPassword = ""
-    @State private var confirmPassword = ""
-    
-    @State private var isOldPasswordVisible = false
-    @State private var isNewPasswordVisible = false
-    @State private var isConfirmPasswordVisible = false
+    @State private var email: String = ""
+
+    init(email: String = "") {
+        self._email = State(initialValue: email)
+    }
+    // No longer need old/new password fields
     
     @State private var isSuccess = false
     
@@ -30,19 +28,19 @@ struct ResetPasswordView: View {
                                 .frame(width: 80, height: 80)
                             Image(systemName: "lock.fill")
                                 .font(.system(size: 32))
-                                .foregroundColor(.teal)
+                                .foregroundStyle(.teal)
                         }
                         .padding(.top, 32)
                         
                         // Text description
                         VStack(spacing: 8) {
-                            Text("Forgot Password")
+                            Text("Reset Password")
                                 .font(.title2.bold())
-                                .foregroundColor(.primary)
+                                .foregroundStyle(.primary)
                             
-                            Text("Enter your old password and your new password to reset it.")
+                            Text("Enter your email address to receive a password reset link.")
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 16)
                         }
@@ -52,12 +50,12 @@ struct ResetPasswordView: View {
                             VStack(spacing: 12) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 40))
-                                    .foregroundColor(.green)
+                                    .foregroundStyle(.green)
                                 Text("Success!")
                                     .font(.headline)
-                                Text("Your password has been changed successfully. You can now log in.")
+                                Text("A password reset link has been sent to your email address. Please check your inbox.")
                                     .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                                    .foregroundStyle(.secondary)
                                     .multilineTextAlignment(.center)
                             }
                             .padding()
@@ -70,69 +68,19 @@ struct ResetPasswordView: View {
                             VStack(spacing: 16) {
                                 if let errorMessage = authViewModel.errorMessage {
                                     Text(errorMessage)
-                                        .foregroundColor(Color.red)
-                                        .font(.caption)
-                                        .multilineTextAlignment(.center)
-                                }
-                                
-                                if !newPassword.isEmpty && newPassword != confirmPassword {
-                                    Text("New password and confirm password do not match.")
-                                        .foregroundColor(Color.red)
+                                        .foregroundStyle(Color.red)
                                         .font(.caption)
                                         .multilineTextAlignment(.center)
                                 }
                                 
                                 HStack {
-                                    if isOldPasswordVisible {
-                                        TextField("", text: $oldPassword, prompt: Text("Old Password").foregroundColor(Color(.placeholderText)))
-                                    } else {
-                                        SecureField("", text: $oldPassword, prompt: Text("Old Password").foregroundColor(Color(.placeholderText)))
-                                    }
-                                    Button { isOldPasswordVisible.toggle() } label: {
-                                        Image(systemName: isOldPasswordVisible ? "eye.slash" : "eye").foregroundColor(.secondary)
-                                    }
+                                    Image(systemName: "envelope")
+                                        .foregroundStyle(Color(.placeholderText))
+                                    TextField("", text: $email, prompt: Text("Email Address").foregroundStyle(Color(.placeholderText)))
+                                        .keyboardType(.emailAddress)
+                                        .textInputAutocapitalization(.never)
                                 }
-                                .foregroundColor(Color.primary)
-                                .padding(.horizontal, 18)
-                                .frame(height: 56)
-                                .background(Color(.secondarySystemBackground))
-                                .cornerRadius(14)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .stroke(Color(.separator), lineWidth: 1)
-                                )
-                                
-                                HStack {
-                                    if isNewPasswordVisible {
-                                        TextField("", text: $newPassword, prompt: Text("New Password").foregroundColor(Color(.placeholderText)))
-                                    } else {
-                                        SecureField("", text: $newPassword, prompt: Text("New Password").foregroundColor(Color(.placeholderText)))
-                                    }
-                                    Button { isNewPasswordVisible.toggle() } label: {
-                                        Image(systemName: isNewPasswordVisible ? "eye.slash" : "eye").foregroundColor(.secondary)
-                                    }
-                                }
-                                .foregroundColor(Color.primary)
-                                .padding(.horizontal, 18)
-                                .frame(height: 56)
-                                .background(Color(.secondarySystemBackground))
-                                .cornerRadius(14)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .stroke(Color(.separator), lineWidth: 1)
-                                )
-                                
-                                HStack {
-                                    if isConfirmPasswordVisible {
-                                        TextField("", text: $confirmPassword, prompt: Text("Confirm Password").foregroundColor(Color(.placeholderText)))
-                                    } else {
-                                        SecureField("", text: $confirmPassword, prompt: Text("Confirm Password").foregroundColor(Color(.placeholderText)))
-                                    }
-                                    Button { isConfirmPasswordVisible.toggle() } label: {
-                                        Image(systemName: isConfirmPasswordVisible ? "eye.slash" : "eye").foregroundColor(.secondary)
-                                    }
-                                }
-                                .foregroundColor(Color.primary)
+                                .foregroundStyle(Color.primary)
                                 .padding(.horizontal, 18)
                                 .frame(height: 56)
                                 .background(Color(.secondarySystemBackground))
@@ -153,7 +101,7 @@ struct ResetPasswordView: View {
                                     } else {
                                         Text("Reset Password")
                                             .font(.system(size: 18, weight: .semibold))
-                                            .foregroundColor(isButtonDisabled ? Color(.tertiaryLabel) : .white)
+                                            .foregroundStyle(isButtonDisabled ? Color(.tertiaryLabel) : .white)
                                             .frame(maxWidth: .infinity)
                                             .frame(height: 56)
                                             .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.teal)
@@ -169,7 +117,7 @@ struct ResetPasswordView: View {
                     .padding(.horizontal, 24)
                 }
             }
-            .navigationTitle("Forgot Password")
+            .navigationTitle("Reset Password")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -182,14 +130,12 @@ struct ResetPasswordView: View {
     }
     
     private var isButtonDisabled: Bool {
-        if oldPassword.isEmpty || newPassword.isEmpty || confirmPassword.isEmpty { return true }
-        if newPassword != confirmPassword { return true }
-        return false
+        return email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     
     private func handleSubmit() {
         Task {
-            await authViewModel.changePassword(email: email, oldPassword: oldPassword, newPassword: newPassword)
+            await authViewModel.resetPassword(email: email.trimmingCharacters(in: .whitespacesAndNewlines))
             
             if authViewModel.errorMessage == nil {
                 withAnimation {

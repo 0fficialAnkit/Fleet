@@ -11,10 +11,11 @@ struct EmployeeDetailView: View {
     @State private var isSharingCredentials = false
     @State private var shareCredentialsAlertMessage: String?
 
-    @State private var trips:    [Trip] = []
-    @State private var tasks:    [MaintenanceTask] = []
-    @State private var routes:   [Route] = []
-    @State private var vehicles: [Vehicle] = []
+    @State private var trips:         [Trip]         = []
+    @State private var tasks:         [MaintenanceTask] = []
+    @State private var routes:        [Route]        = []
+    @State private var vehicles:      [Vehicle]      = []
+    @State private var routeBreaches: [RouteBreach]  = []   // geofence breach history
     @State private var isLoadingHistory = false
 
     var currentProfile: Profile {
@@ -45,7 +46,7 @@ struct EmployeeDetailView: View {
                     ZStack {
                         Circle()
                             .fill(viewModel.getColor(for: currentRoleName).opacity(0.15))
-                            .frame(width: 110, height: 110)
+                            .frame(width: 80, height: 80)
                         Image(systemName: viewModel.getIcon(for: currentRoleName))
                             .font(.system(size: 44))
                             .foregroundStyle(viewModel.getColor(for: currentRoleName))
@@ -120,6 +121,127 @@ struct EmployeeDetailView: View {
                 }
             }
 
+            // MARK: Safety & Compliance — only for drivers
+            if currentProfile.role == "driver" {
+                let totalTrips    = trips.count
+                let breachedTrips = Set(routeBreaches.map { $0.tripId }).count
+                let cleanTrips    = max(0, totalTrips - breachedTrips)
+                let compliance    = totalTrips > 0
+                    ? Int(Double(cleanTrips) / Double(totalTrips) * 100) : 100
+                let worst         = routeBreaches.map { $0.distanceFromCenter }.max() ?? 0
+
+                // Matches the existing InfoRowView card style used everywhere in this view
+                Section(header: Text("Safety & Compliance")) {
+                    InfoRowView(
+                        icon:       "shield.checkered",
+                        title:      "Route Compliance",
+                        value:      "\(compliance)%",
+                        valueColor: complianceColor(compliance)
+                    )
+                    InfoRowView(
+                        icon:       compliance >= 90 ? "checkmark.circle.fill" : "exclamationmark.circle.fill",
+                        title:      "Rating",
+                        value:      complianceLabel(compliance),
+                        valueColor: complianceColor(compliance)
+                    )
+                    InfoRowView(
+                        icon:  "road.lanes",
+                        title: "Compliant Trips",
+                        value: "\(cleanTrips) of \(totalTrips)"
+                    )
+                    if !routeBreaches.isEmpty {
+                        InfoRowView(
+                            icon:       "exclamationmark.triangle.fill",
+                            title:      "Route Violations",
+                            value:      "\(routeBreaches.count)",
+                            valueColor: .red
+                        )
+                        InfoRowView(
+                            icon:       "arrow.up.right",
+                            title:      "Worst Deviation",
+                            value:      String(format: "%.1f km", worst / 1000),
+                            valueColor: severityColorEmployee(worst)
+                        )
+                    }
+                }
+
+                // Violation history — grouped by trip, collapsible
+                // Violation history — flat list of cards
+                if !routeBreaches.isEmpty {
+                    Section {
+                        ForEach(Array(routeBreaches.enumerated()), id: \.element.id) { idx, v in
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack(spacing: 8) {
+                                    Circle()
+                                        .fill(.red)
+                                        .frame(width: 8, height: 8)
+                                    Text("Violation #\(idx + 1)")
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(.secondary)
+                                    
+                                    Spacer()
+                                    
+                                    Text("Trip #\(v.tripId.uuidString.prefix(8).uppercased())")
+                                        .font(.system(.caption, design: .monospaced))
+                                        .foregroundStyle(Color(.tertiaryLabel))
+                                }
+                                
+                                VStack(spacing: 0) {
+                                    LabeledContent("Time") {
+                                        Text(v.occurredAt?.formatted(date: .abbreviated, time: .shortened) ?? "—")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .padding(.vertical, 10)
+                                    
+                                    Divider()
+                                    
+                                    LabeledContent("Distance Off-Route") {
+                                        Text(String(format: "%.1f km", v.distanceFromCenter / 1000))
+                                            .foregroundStyle(severityColorEmployee(v.distanceFromCenter))
+                                            .fontWeight(.semibold)
+                                    }
+                                    .padding(.vertical, 10)
+                                    
+                                    Divider()
+                                    
+                                    LabeledContent("Route Boundary Radius") {
+                                        Text(String(format: "%.1f km", v.fenceRadius / 1000))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .padding(.vertical, 10)
+                                    
+                                    Divider()
+                                    
+                                    LabeledContent("Severity") {
+                                        Text(severityLabelEmployee(v.distanceFromCenter))
+                                            .foregroundStyle(severityColorEmployee(v.distanceFromCenter))
+                                            .fontWeight(.semibold)
+                                    }
+                                    .padding(.vertical, 10)
+                                }
+                                .padding(.horizontal, 16)
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            .padding(.vertical, 6)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                        }
+                    } header: {
+                        HStack {
+                            Text("Route Deviation Alert")
+                                .foregroundStyle(.red)
+                            Spacer()
+                            Text("\(routeBreaches.count)")
+                                .font(.caption.weight(.bold)).foregroundStyle(.white)
+                                .padding(.horizontal, 7).padding(.vertical, 2)
+                                .background(.red, in: Capsule())
+                                .textCase(nil)
+                        }
+                    }
+                }
+            }
+
             // MARK: Work History — same pattern for maintenance staff
             if currentProfile.role == "maintenance" {
                 if isLoadingHistory {
@@ -145,8 +267,8 @@ struct EmployeeDetailView: View {
                 }
             }
         }
-        .navigationTitle("Details")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle(currentProfile.fullName)
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -339,18 +461,61 @@ struct EmployeeDetailView: View {
         .padding(.vertical, 6)
     }
 
+    // MARK: - Safety helpers
+
+    private func complianceColor(_ pct: Int) -> Color {
+        if pct >= 90 { return .green }
+        if pct >= 70 { return .orange }
+        return .red
+    }
+
+    private func complianceLabel(_ pct: Int) -> String {
+        if pct == 100 { return "Perfect compliance" }
+        if pct >= 90  { return "Good — minor violations" }
+        if pct >= 70  { return "Fair — review needed" }
+        return "Poor — training required"
+    }
+
+    private func severityColorEmployee(_ dist: Double) -> Color {
+        let km = dist / 1000
+        if km < 1 { return .yellow }
+        if km < 3 { return .orange }
+        return .red
+    }
+
+    private func severityLabelEmployee(_ dist: Double) -> String {
+        let km = dist / 1000
+        if km < 1 { return "Minor" }
+        if km < 3 { return "Moderate" }
+        return "Critical"
+    }
+
+    private func statPill(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 3) {
+            Text(value).font(.subheadline.bold()).foregroundStyle(color)
+            Text(label).font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(color.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .padding(2)
+    }
+
     // MARK: - Data Loading
 
     private func loadHistory() async {
         isLoadingHistory = true
         do {
             if currentProfile.role == "driver" {
-                async let t = TripService.fetchTripsForDriver(driverId: currentProfile.id)
-                async let r = RouteService.fetchAllRoutes()
-                async let v = VehicleService.fetchAllVehicles()
-                trips    = try await t
-                routes   = try await r
-                vehicles = try await v
+                async let t  = TripService.fetchTripsForDriver(driverId: currentProfile.id)
+                async let r  = RouteService.fetchAllRoutes()
+                async let v  = VehicleService.fetchAllVehicles()
+                async let br = RouteBreachService.fetchBreaches(forDriver: currentProfile.id)
+                trips         = try await t
+                routes        = try await r
+                vehicles      = try await v
+                routeBreaches = (try? await br) ?? []
             } else if currentProfile.role == "maintenance" {
                 async let ta = MaintenanceTaskService.fetchTasksForUser(assignedTo: currentProfile.id)
                 async let v  = VehicleService.fetchAllVehicles()
