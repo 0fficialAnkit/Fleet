@@ -107,7 +107,7 @@ final class TripGeofenceMonitor: NSObject {
         // NOTE: registrationTime is intentionally NOT set for dropoff.
         // We want the iOS catch-up to fire immediately if the driver is already
         // inside the dropoff zone — this is the correct behaviour after pickup.
-        print("[GeofenceMonitor] 🏁 Transitioned to dropoff zone (\(Int(fence.radiusMeters/1000)) km)")
+        print("[GeofenceMonitor] Transitioned to dropoff zone (\(Int(fence.radiusMeters/1000)) km)")
     }
 
     /// Registers a route-boundary circle around the midpoint of pickup ↔ drop-off.
@@ -141,7 +141,7 @@ final class TripGeofenceMonitor: NSObject {
             tripId: tripId, vehicleId: vehicleId, driverId: driverId,
             center: center, radius: radius
         )
-        print("[GeofenceMonitor] 🔵 Route boundary: centre (\(String(format:"%.4f",centerLat)),\(String(format:"%.4f",centerLon))) radius \(String(format:"%.1f",radius/1000)) km")
+        print("[GeofenceMonitor] Route boundary: centre (\(String(format:"%.4f",centerLat)),\(String(format:"%.4f",centerLon))) radius \(String(format:"%.1f",radius/1000)) km")
     }
 
     func stopAll() {
@@ -177,9 +177,8 @@ final class TripGeofenceMonitor: NSObject {
               let vId   = vehicleId else { return }
 
         let isPickup = fence.zoneType == "pickup"
-        let emoji    = isPickup ? "📍" : "🏁"
         let label    = isPickup ? "Pickup" : "Drop-off"
-        let title    = "\(emoji) Driver Entered \(label) Zone"
+        let title    = "Driver Entered \(label) Zone"
         let body     = "Driver is within \(Int(kGeofenceRadiusMeters/1000)) km of the \(label.lowercased()): \(fence.name)"
         let dId      = driverId
 
@@ -227,7 +226,7 @@ final class TripGeofenceMonitor: NSObject {
                 "geofenceId": fence.id.uuidString,
                 "tripId":     tId.uuidString          // needed for global cache write
             ])
-        print("[GeofenceMonitor] \(emoji) Entered \(label) zone — trip \(tId.uuidString.prefix(6))")
+        print("[GeofenceMonitor] Fired zone-enter — \(label) zone — trip \(tId.uuidString.prefix(6))")
     }
 }
 
@@ -275,7 +274,7 @@ extension TripGeofenceMonitor {
         let centerLoc  = CLLocation(latitude: meta.center.latitude, longitude: meta.center.longitude)
         let distOutside = max(0, driverLoc.distance(from: centerLoc) - meta.radius)
 
-        print("[GeofenceMonitor] 🚨 Route breach! Driver is \(Int(distOutside))m outside the boundary.")
+        print("[GeofenceMonitor] Route breach! Driver is \(Int(distOutside))m outside the boundary.")
 
         // Notify driver immediately on-device
         NotificationCenter.default.post(
@@ -302,14 +301,14 @@ extension TripGeofenceMonitor {
             // 2. Notify fleet managers
             try? await NotificationService.notifyManager(
                 forVehicle: meta.vehicleId,
-                title: "🚨 Route Deviation Alert",
+                title: "Route Deviation Alert",
                 message: "Driver has left the route boundary. Currently \(Int(distOutside / 1000 * 10) / 10) km outside the permitted area.",
                 type: .alert
             )
 
             // 3. Local push to driver
             let content = UNMutableNotificationContent()
-            content.title = "⚠️ Route Deviation"
+            content.title = "Route Deviation"
             content.body  = "You have left the assigned route boundary. Please return to the route."
             content.sound = .defaultCritical
             try? await UNUserNotificationCenter.current().add(

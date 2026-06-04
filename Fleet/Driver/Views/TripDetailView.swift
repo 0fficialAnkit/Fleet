@@ -13,13 +13,18 @@ struct TripDetailView: View {
     @State private var currentStatus:    TripStatus?
     @State private var showingChecklist: InspectionType? = nil
     @State private var showingReportIncident = false
-    @State private var pickupCompleted  = false
-    @State private var dropoffCompleted = false
-    @State private var dropoffGeofenceId: UUID? = nil   // cached when dropoff zone fires
+    @AppStorage private var pickupCompleted:  Bool
+    @AppStorage private var dropoffCompleted: Bool
+    @AppStorage private var dropoffGeofenceIdStr: String
 
     // Zone entry — gated by geofence "enter" events from Supabase
-    @State private var inPickupZone     = false
-    @State private var inDropoffZone    = false
+    @AppStorage private var inPickupZone:     Bool
+    @AppStorage private var inDropoffZone:    Bool
+    
+    var dropoffGeofenceId: UUID? {
+        get { UUID(uuidString: dropoffGeofenceIdStr) }
+        nonmutating set { dropoffGeofenceIdStr = newValue?.uuidString ?? "" }
+    }
     @State private var zoneTask: Task<Void, Never>? = nil
     @State private var realtimeHandlerRegistered = false
 
@@ -34,6 +39,11 @@ struct TripDetailView: View {
     
     // Voice logging
     @State private var voiceViewModel = VoiceTripLogViewModel()
+    @State private var isHoldingMic   = false
+
+    // Pre-trip checklist results
+    @State private var preTripNotes: String?
+    @State private var preTripUrls: [String]?
 
     init(trip: Trip,
          onStart:       @escaping (UUID, UUID, String, [String]) -> Void,
@@ -46,43 +56,23 @@ struct TripDetailView: View {
         self.onPickupDone  = onPickupDone
         self.onDropoffDone = onDropoffDone
         self._currentStatus = State(initialValue: trip.status)
+        
+        // Initialize AppStorage with dynamic trip-specific keys
+        self._pickupCompleted = AppStorage(wrappedValue: false, "fleet.zone.pkDone.\(trip.id.uuidString)")
+        self._dropoffCompleted = AppStorage(wrappedValue: false, "fleet.zone.doDone.\(trip.id.uuidString)")
+        self._inPickupZone = AppStorage(wrappedValue: false, "fleet.zone.pickup.\(trip.id.uuidString)")
+        self._inDropoffZone = AppStorage(wrappedValue: false, "fleet.zone.dropoff.\(trip.id.uuidString)")
+        self._dropoffGeofenceIdStr = AppStorage(wrappedValue: "", "fleet.zone.doFence.\(trip.id.uuidString)")
     }
 
-    // MARK: - Zone state persistence (UserDefaults, keyed by trip ID)
-    // Survives any @State reset — view recreation, memory pressure, sheet onDisappear.
-
-    private var udPickup:      String { "fleet.zone.pickup.\(trip.id.uuidString)" }
-    private var udDropoff:     String { "fleet.zone.dropoff.\(trip.id.uuidString)" }
-    private var udPickupDone:  String { "fleet.zone.pkDone.\(trip.id.uuidString)" }
-    private var udDropoffDone: String { "fleet.zone.doDone.\(trip.id.uuidString)" }
-    private var udDropoffFence:String { "fleet.zone.doFence.\(trip.id.uuidString)" }
-
-    /// Called on every onAppear — restores state instantly with no network round-trip.
-    private func restoreZoneFromCache() {
-        let ud = UserDefaults.standard
-        if ud.bool(forKey: udPickup)     { inPickupZone     = true }
-        if ud.bool(forKey: udDropoff)    { inDropoffZone    = true }
-        if ud.bool(forKey: udPickupDone) { pickupCompleted  = true }
-        if ud.bool(forKey: udDropoffDone){ dropoffCompleted = true }
-        if let s = ud.string(forKey: udDropoffFence), let id = UUID(uuidString: s) {
-            dropoffGeofenceId = id
-        }
-    }
-
-    /// Call after any zone flag becomes true.
-    private func saveZoneToCache() {
-        let ud = UserDefaults.standard
-        ud.set(inPickupZone,     forKey: udPickup)
-        ud.set(inDropoffZone,    forKey: udDropoff)
-        ud.set(pickupCompleted,  forKey: udPickupDone)
-        ud.set(dropoffCompleted, forKey: udDropoffDone)
-        if let fid = dropoffGeofenceId { ud.set(fid.uuidString, forKey: udDropoffFence) }
-    }
-
+    // MARK: - Zone state persistence
+    
     /// Call when trip ends to free up UserDefaults space.
     private func clearZoneCache() {
         let ud = UserDefaults.standard
-        [udPickup, udDropoff, udPickupDone, udDropoffDone, udDropoffFence].forEach {
+        ["fleet.zone.pickup.\(trip.id.uuidString)", "fleet.zone.dropoff.\(trip.id.uuidString)", 
+         "fleet.zone.pkDone.\(trip.id.uuidString)", "fleet.zone.doDone.\(trip.id.uuidString)", 
+         "fleet.zone.doFence.\(trip.id.uuidString)"].forEach {
             ud.removeObject(forKey: $0)
         }
     }
@@ -186,7 +176,7 @@ struct TripDetailView: View {
                         NavigationLink(destination: DriverReportIssueView(vehicle: v)) {
                             Label("Report Vehicle Issue",
                                   systemImage: "exclamationmark.triangle")
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(.red)
                         }
                     }
                 } else {
@@ -199,11 +189,13 @@ struct TripDetailView: View {
             if isScheduled {
                 Section {
                     let canStart = canStartTrip
+                    let isChecklistDone = preTripNotes != nil
+                    
                     Button {
                         showingChecklist = .preTrip
                     } label: {
                         if canStart {
-                            Label("Start Pre-Trip Checklist", systemImage: "checklist")
+                            Label(isChecklistDone ? "Edit Pre-Trip Checklist" : "Start Pre-Trip Checklist", systemImage: isChecklistDone ? "checkmark.circle.fill" : "checklist")
                                 .frame(maxWidth: .infinity)
                         } else {
                             if let start = trip.startTime {
@@ -216,10 +208,24 @@ struct TripDetailView: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(canStart ? .green : .secondary)
+                    .tint(canStart ? (isChecklistDone ? .blue : .green) : .secondary)
                     .controlSize(.large)
                     .buttonBorderShape(.capsule)
                     .disabled(!canStart)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    
+                    SwipeToConfirmButton(
+                        label: "Slide to Start Trip",
+                        tint: .green,
+                        enabled: isChecklistDone
+                    ) {
+                        if let notes = preTripNotes, let urls = preTripUrls {
+                            onStart(trip.id, trip.vehicleId, notes, urls)
+                            withAnimation { currentStatus = .active }
+                            openMapsNavigation()
+                        }
+                    }
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                 }
@@ -239,7 +245,6 @@ struct TripDetailView: View {
                         doneHint: "Pickup confirmed"
                     ) {
                         withAnimation(.spring(response: 0.3)) { pickupCompleted = true }
-                        saveZoneToCache()
                         onPickupDone?(trip.id, trip.vehicleId)
                         withAnimation(.spring(response: 0.4)) { showPickupBanner = true }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
@@ -257,28 +262,11 @@ struct TripDetailView: View {
                         doneHint: "Drop-off confirmed"
                     ) {
                         withAnimation(.spring(response: 0.3)) { dropoffCompleted = true }
-                        saveZoneToCache()
                         onDropoffDone?(trip.id, trip.vehicleId, dropoffGeofenceId)
                     }
                 }
-
-                Section {
-                    Button {
-                        showingReportIncident = true
-                    } label: {
-                        Label("Report Incident", systemImage: "exclamationmark.triangle.fill")
-                            .font(.headline.bold())
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color(red: 0.85, green: 0.65, blue: 0.0)) // dark yellow / gold
-                    .controlSize(.large)
-                    .buttonBorderShape(.capsule)
-                }
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
             }
+
 
 
             // ── 9. Completed ─────────────────────────────────────────────
@@ -333,33 +321,61 @@ struct TripDetailView: View {
                         }
                     }
 
-                    HStack(spacing: 12) {
-                        // Circular mic button
-                        Button {
-                            if voiceViewModel.voiceService.isRecording {
-                                voiceViewModel.stopAndExtract(
-                                    tripId: trip.id,
-                                    driverId: trip.driverId,
-                                    routeName: "\(route?.startLocation ?? "Origin") → \(route?.endLocation ?? "Destination")"
-                                )
-                            } else {
-                                voiceViewModel.startVoiceCapture()
-                                withAnimation(.spring(response: 0.4)) { showVoiceRecordingBanner = true }
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
-                                    withAnimation(.easeOut) { showVoiceRecordingBanner = false }
-                                }
+                    VStack(spacing: 12) {
+                        HStack(spacing: 12) {
+                            // Manual Report Incident button
+                            Button {
+                                showingReportIncident = true
+                            } label: {
+                                Label("Report Incident", systemImage: "exclamationmark.triangle.fill")
+                                    .font(.headline)
+                                    .minimumScaleFactor(0.8)
+                                    .lineLimit(1)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 54)
                             }
-                        } label: {
-                            Image(systemName: voiceViewModel.voiceService.isRecording ? "stop.fill" : "mic.fill")
-                                .font(.title2.bold())
-                                .foregroundColor(.white)
-                                .frame(width: 54, height: 54)
-                                .background(voiceViewModel.voiceService.isRecording ? Color.red : Color.orange)
-                                .clipShape(Circle())
-                                .shadow(radius: 1.5)
+                            .buttonStyle(.borderedProminent)
+                            .tint(Color(red: 0.85, green: 0.65, blue: 0.0)) // dark yellow / gold
+                            .buttonBorderShape(.capsule)
+                            .disabled(isHoldingMic || voiceViewModel.isProcessing)
+                            
+                            // Hold to Voice Log button
+                            Label(isHoldingMic ? "Recording..." : "Voice Log", systemImage: isHoldingMic ? "waveform" : "mic.fill")
+                                .font(.headline)
+                                .minimumScaleFactor(0.8)
+                                .lineLimit(1)
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 54)
+                                .background(isHoldingMic ? Color.red : Color(red: 0.85, green: 0.65, blue: 0.0))
+                                .clipShape(Capsule())
+                                .scaleEffect(isHoldingMic ? 0.95 : 1.0)
+                                .animation(.spring(response: 0.3), value: isHoldingMic)
+                                .simultaneousGesture(
+                                    DragGesture(minimumDistance: 0)
+                                        .onChanged { _ in
+                                            if !isHoldingMic {
+                                                isHoldingMic = true
+                                                let generator = UIImpactFeedbackGenerator(style: .medium)
+                                                generator.impactOccurred()
+                                                voiceViewModel.startVoiceCapture()
+                                                withAnimation(.spring(response: 0.4)) { showVoiceRecordingBanner = true }
+                                            }
+                                        }
+                                        .onEnded { _ in
+                                            isHoldingMic = false
+                                            let generator = UIImpactFeedbackGenerator(style: .rigid)
+                                            generator.impactOccurred()
+                                            voiceViewModel.stopAndExtract(
+                                                tripId: trip.id,
+                                                driverId: trip.driverId,
+                                                routeName: "\(route?.startLocation ?? "Origin") → \(route?.endLocation ?? "Destination")"
+                                            )
+                                            withAnimation(.easeOut) { showVoiceRecordingBanner = false }
+                                        }
+                                )
+                                .disabled(voiceViewModel.isProcessing)
                         }
-                        .buttonStyle(.plain)
-                        .disabled(voiceViewModel.isProcessing)
                         
                         // Expanding Post-Trip Checklist button (always active)
                         Button {
@@ -420,10 +436,8 @@ struct TripDetailView: View {
         }
         .animation(.spring(response: 0.4), value: showVoiceRecordingBanner)
         .navigationBarTitleDisplayMode(.large)
-        // Instant restore from cache — runs before .task's async work completes.
-        // Prevents locked buttons during the network round-trip on every re-appear.
+        // Instant restore from cache is handled automatically by @AppStorage.
         .onAppear {
-            restoreZoneFromCache()
         }
         .task {
             // Route and vehicle fetches start immediately (concurrent)
@@ -466,18 +480,19 @@ struct TripDetailView: View {
                     if let s = fenceIdStr { dropoffGeofenceId = UUID(uuidString: s) }
                 }
             }
-            saveZoneToCache()   // persist so re-appear restores instantly
         }
         .onDisappear {
             zoneTask?.cancel()
             zoneTask = nil
         }
+        .navigationDestination(isPresented: $showingReportIncident) {
+            DriverReportIncidentView(trip: trip)
+        }
         .sheet(item: $showingChecklist) { type in
             DriverChecklistView(checklistType: type, vehicle: vehicle) { notes, urls in
                 if type == .preTrip {
-                    onStart(trip.id, trip.vehicleId, notes, urls)
-                    withAnimation { currentStatus = .active }
-                    openMapsNavigation()
+                    preTripNotes = notes
+                    preTripUrls = urls
                 } else {
                     onEnd(trip.id, trip.vehicleId, estimatedDistance, notes, urls)
                     withAnimation { currentStatus = .completed }
@@ -486,9 +501,7 @@ struct TripDetailView: View {
                 showingChecklist = nil
             }
         }
-        .navigationDestination(isPresented: $showingReportIncident) {
-            DriverReportIncidentView(trip: trip)
-        }
+
     }
 
     // MARK: - Zone status (gates button visibility)
@@ -533,7 +546,6 @@ struct TripDetailView: View {
                 }
             }
         }
-        saveZoneToCache()   // write to UserDefaults after every DB-driven update
     }
 
     private func startZonePolling() {
