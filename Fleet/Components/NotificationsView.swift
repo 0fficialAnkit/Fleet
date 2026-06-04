@@ -8,57 +8,50 @@ struct NotificationsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
-
+            Group {
                 if viewModel.isLoading && viewModel.notifications.isEmpty {
                     ProgressView()
-                        .tint(.white)
                 } else if viewModel.notifications.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "bell.slash")
-                            .font(.system(size: 48))
-                            .foregroundStyle(Color.secondary)
-                        Text("No notifications")
-                            .font(.body)
-                            .foregroundStyle(Color.secondary)
+                    if #available(iOS 17.0, *) {
+                        ContentUnavailableView(
+                            "No Notifications",
+                            systemImage: "bell.slash",
+                            description: Text("You're all caught up.")
+                        )
+                    } else {
+                        VStack(spacing: 16) {
+                            Image(systemName: "bell.slash")
+                                .font(.system(size: 48))
+                                .foregroundStyle(.secondary)
+                            Text("No Notifications")
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 } else {
                     List {
                         ForEach(viewModel.notifications) { notification in
                             if notification.referenceId != nil {
-                                ZStack {
+                                NavigationLink {
+                                    NotificationDetailDestination(notification: notification)
+                                        .onAppear {
+                                            viewModel.markAsRead(notification)
+                                        }
+                                } label: {
                                     NotificationRowContent(notification: notification)
-                                    
-                                    NavigationLink {
-                                        NotificationDetailDestination(notification: notification)
-                                            .onAppear {
-                                                viewModel.markAsRead(notification)
-                                            }
-                                    } label: {
-                                        EmptyView()
-                                    }
-                                    .opacity(0)
                                 }
-                                .listRowBackground(Color.clear)
-                                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                                .listRowSeparator(.hidden)
                             } else {
                                 Button {
                                     viewModel.markAsRead(notification)
                                 } label: {
                                     NotificationRowContent(notification: notification)
                                 }
-                                .buttonStyle(.plain)
-                                .listRowBackground(Color.clear)
-                                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                                .listRowSeparator(.hidden)
+                                .tint(.primary)
                             }
                         }
                     }
                     .refreshable { await viewModel.loadData() }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
+                    .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle("Notifications")
@@ -68,15 +61,12 @@ struct NotificationsView: View {
                     Button("Close") {
                         dismiss()
                     }
-                    .foregroundStyle(Color.primary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     if !viewModel.notifications.filter({ !$0.isRead }).isEmpty {
                         Button("Mark All Read") {
                             viewModel.markAllAsRead()
                         }
-                        .foregroundStyle(Color.teal)
-                        .font(.footnote)
                     }
                 }
             }
@@ -145,48 +135,46 @@ struct NotificationRowContent: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            HStack(alignment: .top, spacing: 16) {
-                Image(systemName: iconName)
-                    .font(.title2)
-                    .foregroundStyle(iconColor)
-                    .padding(.top, 4)
+        HStack(alignment: .top, spacing: 12) {
+            // Unread indicator
+            Circle()
+                .fill(notification.isRead ? Color.clear : Color.blue)
+                .frame(width: 10, height: 10)
+                .padding(.top, 10)
+                .padding(.trailing, -4)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(notification.title ?? "Notification")
-                            .font(.body.bold())
-                            .foregroundStyle(notification.isRead ? Color.secondary : Color.primary)
-                        Spacer()
-                        if let date = notification.createdAt {
-                            Text(date.formatted(date: .abbreviated, time: .shortened))
-                                .font(.caption)
-                                .foregroundStyle(Color(.tertiaryLabel))
-                        }
+            Image(systemName: iconName)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(iconColor)
+                .frame(width: 32, height: 32)
+                .background(iconColor.opacity(0.15))
+                .clipShape(Circle())
+                .padding(.top, 0)
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(notification.title ?? "Notification")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(notification.isRead ? .secondary : .primary)
+                        .lineLimit(2)
+                    
+                    Spacer(minLength: 8)
+                    
+                    if let date = notification.createdAt {
+                        Text(date.formatted(date: .omitted, time: .shortened))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .layoutPriority(1)
                     }
-
-                    Text(notification.message ?? "")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.secondary)
-                        .multilineTextAlignment(.leading)
                 }
-            }
-            
-            if notification.referenceId != nil {
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color(.tertiaryLabel))
+
+                Text(notification.message ?? "")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(notification.isRead ? Color.white.opacity(0.02) : Color.white.opacity(0.06))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(notification.isRead ? Color.clear : iconColor.opacity(0.3), lineWidth: 1)
-        )
+        .padding(.vertical, 8)
     }
 }

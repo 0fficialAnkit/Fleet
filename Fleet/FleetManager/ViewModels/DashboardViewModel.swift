@@ -20,6 +20,8 @@ final class DashboardViewModel {
     /// Predictive alerts derived by the on-device rules engine after each data load.
     private(set) var predictiveAlerts: [PredictiveMaintenanceAlert] = []
 
+    var hasUnreadNotifications = false
+
     var isLoading = false
     var errorMessage: String?
     /// Set once on login from AuthViewModel.currentUserId
@@ -40,6 +42,10 @@ final class DashboardViewModel {
         async let mh = try? MaintenanceHistoryService.fetchAllHistory()
         async let vl = try? VoiceTripLogService.fetchAllRecentLogs(limit: 10)
         async let vi = try? TripIncidentService.fetchRecentVoiceIncidents(limit: 5)
+        
+        // Notification check
+        let n = (try? await NotificationService.fetchNotifications(userId: adminId ?? UUID())) ?? []
+        hasUnreadNotifications = n.contains(where: { !$0.isRead })
         
         vehicles           = (await v) ?? []
         trips              = (await t) ?? []
@@ -103,6 +109,7 @@ final class DashboardViewModel {
         rt.addProfilesChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addVoiceTripLogsChangeHandler { [weak self] in Task { await self?.loadData() } }
         rt.addTripIncidentsChangeHandler { [weak self] in Task { await self?.loadData() } }
+        rt.addNotificationsChangeHandler { [weak self] in Task { await self?.loadData() } }
         // Refresh vehicle pins whenever a driver pushes a new location row
         rt.addVehicleLocationsChangeHandler { [weak self] in
             Task { await self?.refreshVehicleLocations() }
@@ -181,4 +188,5 @@ enum DashboardDestination: Hashable {
     case vehiclesRoot
     case orderDetail(Trip)
     case allMaintenanceAlerts
+    case fuelAnalytics
 }

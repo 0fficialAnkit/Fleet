@@ -19,6 +19,10 @@ struct DashboardView: View {
                         Section {
                             fleetOverviewCard
                         }
+                        
+                        Section {
+                            MiniFuelDashboardCard()
+                        }
 
                         liveFleetSection
 
@@ -34,9 +38,10 @@ struct DashboardView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button(action: { showingNotifications = true }) {
-                        Image(systemName: "bell")
+                        Image(systemName: viewModel.hasUnreadNotifications ? "bell.badge" : "bell")
                             .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(Color.primary)
+                            //.symbolRenderingMode(viewModel.hasUnreadNotifications ? .multicolor : .monochrome)
+                            .foregroundStyle(.primary)
                             .frame(width: 38, height: 38)
                     }
 
@@ -73,6 +78,8 @@ struct DashboardView: View {
                         alerts: viewModel.predictiveAlerts,
                         maintenanceStaff: viewModel.profiles.filter { $0.role == "maintenance" }
                     )
+                case .fuelAnalytics:
+                    FleetFuelAnalyticsView()
                 }
             }
         }
@@ -376,22 +383,18 @@ struct FleetStatPill: View {
     let color: Color
 
     var body: some View {
-        VStack(spacing: 5) {
+        VStack(spacing: 4) {
             Text("\(value)")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(Color.primary)
+                .font(.title2.weight(.bold))
+                .foregroundStyle(color)
             Text(label)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(Color.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(color.opacity(0.08))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(color.opacity(0.25), lineWidth: 0.5)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.vertical, 12)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -643,6 +646,91 @@ struct AllMaintenanceAlertsView: View {
         .listStyle(.insetGrouped)
         .navigationTitle("All Maintenance Alerts")
         .navigationBarTitleDisplayMode(.large)
+    }
+}
+
+// MARK: - Mini Fuel Dashboard Card
+
+struct MiniFuelDashboardCard: View {
+    @State private var viewModel = FleetFuelAnalyticsViewModel()
+
+    var body: some View {
+        ZStack {
+            NavigationLink(value: DashboardDestination.fuelAnalytics) {
+                EmptyView()
+            }
+            .opacity(0)
+
+            VStack(spacing: 0) {
+                // Header
+                HStack(alignment: .top, spacing: 16) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.orange.opacity(0.12))
+                            .frame(width: 48, height: 48)
+                        Image(systemName: "drop.fill")
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundStyle(Color.orange)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Fuel Analytics")
+                            .font(.title2.bold())
+                            .foregroundStyle(Color.primary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color(.tertiaryLabel))
+                        .padding(.top, 4)
+                }
+
+                Divider()
+                    .background(Color(.separator))
+                    .padding(.vertical, 16)
+
+                // Stats breakdown row
+                HStack(spacing: 8) {
+                    FuelStatPill(
+                        value: String(format: "%.0f km", viewModel.totalDistance),
+                        label: "Total Distance",
+                        color: Color.blue
+                    )
+                    FuelStatPill(
+                        value: String(format: "%.1f L", viewModel.totalLiters),
+                        label: "Fuel Used",
+                        color: Color.orange
+                    )
+                }
+            }
+            .padding(.vertical, 4)
+        }
+        .task {
+            await viewModel.loadData()
+        }
+    }
+}
+
+struct FuelStatPill: View {
+    let value: String
+    let label: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.headline.weight(.bold))
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 

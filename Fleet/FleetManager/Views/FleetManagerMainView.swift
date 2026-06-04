@@ -30,11 +30,11 @@ struct FleetManagerMainView: View {
                 .tag(2)
 
 
-            // MARK: Reports
+            // MARK: Alerts
             ReportsView()
                 .tabItem {
                     Image(systemName: "externaldrive.fill.trianglebadge.exclamationmark")
-                    Text("Reports")
+                    Text("Alerts")
                 }
                 .tag(3)
         }
