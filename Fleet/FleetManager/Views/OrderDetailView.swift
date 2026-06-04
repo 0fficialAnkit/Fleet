@@ -12,6 +12,7 @@ struct OrderDetailView: View {
     @State private var geofences:      [TripGeofence]      = []
     @State private var gfEvents:       [TripGeofenceEvent] = []
     @State private var routeBreaches:  [RouteBreach]       = []
+    @State private var incidents:      [TripIncident]      = []
     @State private var pollingTask:    Task<Void, Never>?  = nil
     @State private var isEditingOrder = false
 
@@ -58,6 +59,27 @@ struct OrderDetailView: View {
         return unique
     }
 
+    // Merges geofence milestone events and driver-reported incidents into one
+    // chronological timeline. Incidents slot in by their real timestamp; geofence
+    // events keep their logical order when timestamps collide (< 1 s apart).
+    private var driverStatusTimeline: [DriverStatusItem] {
+        let gf  = tripEvents.map { DriverStatusItem.geofenceEvent($0) }
+        let inc = incidents.map  { DriverStatusItem.incident($0) }
+        return (gf + inc).sorted { a, b in
+            let ta = a.timestamp; let tb = b.timestamp
+            if abs(ta.timeIntervalSince(tb)) < 1.0 {
+                switch (a, b) {
+                case (.geofenceEvent(let ea), .geofenceEvent(let eb)):
+                    return logicalPriority(ea) < logicalPriority(eb)
+                case (.geofenceEvent, .incident): return true
+                case (.incident, .geofenceEvent): return false
+                default: return ta < tb
+                }
+            }
+            return ta < tb
+        }
+    }
+
     // MARK: - Body
 
     var body: some View {
@@ -94,18 +116,21 @@ struct OrderDetailView: View {
                 }
             }
 
-            // ── Driver Status — shown for active trips AND completed trips with history ──
-            if !tripEvents.isEmpty || isActive {
+            // ── Driver Status — geofence milestones + driver incident reports ──
+            if !driverStatusTimeline.isEmpty || isActive {
                 Section {
-                    if tripEvents.isEmpty {
+                    if driverStatusTimeline.isEmpty {
                         Label("Waiting for driver to enter a zone…",
                               systemImage: "location.magnifyingglass")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .padding(.vertical, 4)
                     } else {
-                        ForEach(tripEvents) { event in
-                            eventRow(event)
+                        ForEach(driverStatusTimeline) { item in
+                            switch item {
+                            case .geofenceEvent(let event): eventRow(event)
+                            case .incident(let incident):   incidentRow(incident)
+                            }
                         }
                     }
                 } header: {
@@ -190,6 +215,8 @@ struct OrderDetailView: View {
                     }
                 }
             }
+
+
 
             // ── Order details ────────────────────────────────────────────────
             Section("Order Details") {
@@ -280,6 +307,9 @@ struct OrderDetailView: View {
             RealtimeManager.shared.addVehicleLocationsChangeHandler {
                 Task { await self.refreshLocations() }
             }
+            RealtimeManager.shared.addTripIncidentsChangeHandler {
+                Task { await self.refreshIncidents() }
+            }
         }
         .onDisappear { pollingTask?.cancel(); pollingTask = nil }
         .toolbar {
@@ -363,6 +393,133 @@ struct OrderDetailView: View {
         .padding(.vertical, 6)
     }
 
+    // MARK: - Incident row
+
+    @ViewBuilder
+    private func incidentRow(_ incident: TripIncident) -> some View {
+        let isVoice = incident.isVoiceReported
+        let type    = TripIncidentType(rawValue: incident.incidentType)
+        let icon    = isVoice ? "mic.circle.fill" : (type?.icon ?? "exclamationmark.triangle.fill")
+        let tint: Color = (type == .breakdown || type == .accident) ? .red : .orange
+
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundStyle(tint)
+                .frame(width: 30)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 5) {
+                    Text(incident.incidentType)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    if isVoice {
+                        Text("Voice")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5).padding(.vertical, 2)
+                            .background(Color.orange, in: Capsule())
+                    }
+                }
+                if !incident.description.isEmpty {
+                    Text(incident.description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                if !incident.location.isEmpty {
+                    Label(incident.location, systemImage: "mappin")
+                        .font(.caption2)
+                        .foregroundStyle(Color(.tertiaryLabel))
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer()
+
+            if let t = incident.createdAt {
+                Text(t.formatted(date: .omitted, time: .shortened))
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
+    // Full-detail card shown in the dedicated Incidents section.
+    // incidentRow() is the compact inline version for the Driver Status timeline.
+    @ViewBuilder
+    private func incidentDetailRow(_ incident: TripIncident) -> some View {
+        let isVoice = incident.isVoiceReported
+        let type    = TripIncidentType(rawValue: incident.incidentType)
+        let icon    = isVoice ? "mic.circle.fill" : (type?.icon ?? "exclamationmark.triangle.fill")
+        let tint: Color = (type == .breakdown || type == .accident) ? .red : .orange
+
+        VStack(alignment: .leading, spacing: 10) {
+            // Header row: icon + type label + source badge + time
+            HStack(alignment: .center, spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(tint.opacity(0.12))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(tint)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(incident.incidentType)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    if isVoice {
+                        HStack(spacing: 3) {
+                            Image(systemName: "mic.fill")
+                                .font(.caption2)
+                            Text("Voice Report")
+                        }
+                        .foregroundStyle(.orange)
+                    } else {
+                        Text("Manual Report")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                if let t = incident.createdAt {
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text(t.formatted(date: .abbreviated, time: .omitted))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text(t.formatted(date: .omitted, time: .shortened))
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            Divider()
+
+            // Description
+            if !incident.description.isEmpty {
+                Text(incident.description)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            // Location (if present)
+            if !incident.location.isEmpty {
+                Label(incident.location, systemImage: "mappin.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.vertical, 8)
+    }
+
     // MARK: - Helpers
 
     // MARK: - Route breach helpers (follow real fleet-app severity conventions)
@@ -412,6 +569,7 @@ struct OrderDetailView: View {
         driverProfile  = try? await profile
         liveLocations  = (try? await locs) ?? []
         await refreshGeofenceData()
+        await refreshIncidents()
     }
 
     private func refreshLocations() async {
@@ -439,9 +597,15 @@ struct OrderDetailView: View {
         routeBreaches = (try? await RouteBreachService.fetchBreaches(forTrip: trip.id)) ?? []
     }
 
+    private func refreshIncidents() async {
+        // fetchIncidents already orders by created_at DESC (newest first)
+        incidents = (try? await TripIncidentService.fetchIncidents(forTripId: trip.id)) ?? []
+    }
+
     private func refreshAll() async {
         await refreshLocations()
         await refreshGeofenceData()
+        await refreshIncidents()
     }
 
     private func startPolling() {
@@ -454,6 +618,27 @@ struct OrderDetailView: View {
                 // Stop polling once trip is completed — Realtime handles late stragglers
                 if trip.status == .completed { break }
             }
+        }
+    }
+}
+
+// MARK: - Unified Driver Status timeline item
+
+private enum DriverStatusItem: Identifiable {
+    case geofenceEvent(TripGeofenceEvent)
+    case incident(TripIncident)
+
+    var id: UUID {
+        switch self {
+        case .geofenceEvent(let e): return e.id
+        case .incident(let i):     return i.id
+        }
+    }
+
+    var timestamp: Date {
+        switch self {
+        case .geofenceEvent(let e): return e.occurredAt ?? .distantPast
+        case .incident(let i):     return i.createdAt  ?? .distantPast
         }
     }
 }
