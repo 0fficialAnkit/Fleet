@@ -206,13 +206,10 @@ struct ReportDetailView: View {
                         }
                         .padding(.vertical, 4)
                     }
-                    
-                    // ── Assignment ────────────────────────────────────
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Assign to Maintenance")
-                            .font(.headline)
-                            .padding(.top, 8)
-                            .foregroundStyle(Color.primary)
+                }
+                
+                // ── Assignment ────────────────────────────────────
+                Section("Assign to Maintenance") {
                         
                         if isLocked {
                             if let staffId = selectedStaffId,
@@ -263,9 +260,10 @@ struct ReportDetailView: View {
                                 .foregroundStyle(Color.teal)
                                 .padding(.top, 4)
                         }
-                    }
-                    .padding(.vertical, 8)
+                }
 
+                // ── Information ───────────────────────────────────
+                Section("Information") {
                     // ── Reporter ──────────────────────────────────────
                     DisclosureGroup("Reported By", isExpanded: $isReportedByExpanded) {
                         LabeledContent("Driver", value: report.driverName)

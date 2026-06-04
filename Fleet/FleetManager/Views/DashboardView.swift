@@ -296,7 +296,10 @@ struct DashboardView: View {
     // MARK: - Driver Alerts
 
     private var liveDriverAlertsSection: some View {
-        let incidents = viewModel.recentVoiceIncidents
+        let incidents = viewModel.recentVoiceIncidents.filter { incident in
+            let trip = viewModel.trips.first(where: { $0.id == incident.tripId })
+            return trip?.status != .completed
+        }
         return Section {
             if incidents.isEmpty {
                 Label("No driver alerts", systemImage: "checkmark.shield")

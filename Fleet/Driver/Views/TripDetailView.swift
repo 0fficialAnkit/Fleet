@@ -43,6 +43,7 @@ struct TripDetailView: View {
     // Pre-trip checklist results
     @State private var preTripNotes: String?
     @State private var preTripUrls: [String]?
+    @State private var showingFuelSheet = false
 
     init(trip: Trip,
          onStart:       @escaping (UUID, UUID, String, [String]) -> Void,
@@ -160,15 +161,20 @@ struct TripDetailView: View {
             Section("Vehicle") {
                 if let v = vehicle {
                     NavigationLink(destination: DriverVehicleDetailView(vehicle: v)) {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("\(v.make ?? "") \(v.model ?? "")").font(.body)
-                                Text(v.licensePlate ?? "—").font(.caption).foregroundStyle(.secondary)
-                            }
-                        } icon: {
+                        HStack(spacing: 12) {
                             Image(systemName: "truck.box.fill")
-                                .foregroundStyle(.green).font(.title3).frame(width: 28)
+                                .foregroundStyle(.green)
+                                .font(.title2)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(v.make ?? "") \(v.model ?? "")")
+                                    .font(.body)
+                                Text(v.licensePlate ?? "—")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
+                        .padding(.vertical, 4)
                     }
 
                     if !isCompleted {
@@ -237,6 +243,18 @@ struct TripDetailView: View {
         .listStyle(.insetGrouped)
         .navigationTitle("Trip Details")
         .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button { showingFuelSheet = true } label: {
+                    Image(systemName: "fuelpump")
+                }
+            }
+        }
+        .sheet(isPresented: $showingFuelSheet) {
+            NavigationView {
+                DriverFuelView()
+            }
+        }
         .safeAreaInset(edge: .bottom) {
             if isActive {
                 VStack(spacing: 8) {
@@ -352,18 +370,18 @@ struct TripDetailView: View {
                             Label("Start Pre-Trip Checklist", systemImage: "checklist")
                                 .font(.headline)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 54)
+                                .frame(height: 44)
                         } else {
                             if let start = trip.startTime {
                                 Label("Scheduled for \(start.formatted(date: .abbreviated, time: .shortened))", systemImage: "calendar.badge.clock")
                                     .font(.headline)
                                     .frame(maxWidth: .infinity)
-                                    .frame(height: 54)
+                                    .frame(height: 44)
                             } else {
                                 Label("Start Pre-Trip Checklist", systemImage: "checklist")
                                     .font(.headline)
                                     .frame(maxWidth: .infinity)
-                                    .frame(height: 54)
+                                    .frame(height: 44)
                             }
                         }
                     }

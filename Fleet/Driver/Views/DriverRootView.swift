@@ -12,11 +12,6 @@ struct DriverRootView: View {
                 .tabItem {
                     Label("Trips", systemImage: "road.lanes")
                 }
-
-            DriverFuelView()
-                .tabItem {
-                    Label("Fuel", systemImage: "fuelpump")
-                }
         }
         .tint(Color.green)
     }

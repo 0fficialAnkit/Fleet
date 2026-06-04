@@ -41,8 +41,7 @@ final class DashboardViewModel {
         async let ir = try? IssueReportService.fetchAllIssueReports()
         async let mh = try? MaintenanceHistoryService.fetchAllHistory()
         async let vl = try? VoiceTripLogService.fetchAllRecentLogs(limit: 10)
-        async let vi = try? TripIncidentService.fetchRecentVoiceIncidents(limit: 5)
-        
+        async let vi = try? TripIncidentService.fetchRecentVoiceIncidents(limit: 20)
         // Notification check
         let n = (try? await NotificationService.fetchNotifications(userId: adminId ?? UUID())) ?? []
         hasUnreadNotifications = n.contains(where: { !$0.isRead })
