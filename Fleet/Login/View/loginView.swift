@@ -84,7 +84,7 @@ struct LoginView: View {
         Button(action: {
             navigationPath.append(.createAccount)
         }) {
-            AppLogoView(size: 160, cornerRadius: 32)
+            AppLogoView(size: 120, cornerRadius: 26)
         }
         .buttonStyle(PlainButtonStyle())
     }
