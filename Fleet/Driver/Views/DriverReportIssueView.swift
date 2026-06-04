@@ -384,21 +384,14 @@ struct DriverReportIssueView: View {
                 )
                 try await IssueReportService.createIssueReport(report)
 
-                // Notify fleet managers — critical/non-driveable triggers urgent title
+                // Notify fleet manager — critical/non-driveable triggers urgent title
                 let isUrgent = selectedSeverity == .critical || !isDriveable
-                let managers = try await ProfileService.fetchProfilesByRole(role: "fleet_manager")
-                for manager in managers {
-                    let notification = Notification(
-                        id: UUID(),
-                        userId: manager.id,
-                        title: isUrgent ? "🚨 Urgent: \(selectedCategory.rawValue)" : "New Issue Report",
-                        message: "\(selectedCategory.rawValue) on \(vehicle.make ?? "") \(vehicle.model ?? "") (\(vehicle.licensePlate ?? "")). Severity: \(selectedSeverity.rawValue.capitalized).",
-                        type: .maintenance,
-                        isRead: false,
-                        createdAt: Date()
-                    )
-                    try? await NotificationService.createNotification(notification)
-                }
+                try? await NotificationService.notifyManager(
+                    forVehicle: vehicle.id,
+                    title: isUrgent ? "🚨 Urgent: \(selectedCategory.rawValue)" : "New Issue Report",
+                    message: "\(selectedCategory.rawValue) on \(vehicle.make ?? "") \(vehicle.model ?? "") (\(vehicle.licensePlate ?? "")). Severity: \(selectedSeverity.rawValue.capitalized).",
+                    type: .maintenance
+                )
 
                 await MainActor.run {
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {

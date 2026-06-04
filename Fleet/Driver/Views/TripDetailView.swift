@@ -170,18 +170,16 @@ struct TripDetailView: View {
             // ── 6. Vehicle ───────────────────────────────────────────────
             Section("Vehicle") {
                 if let v = vehicle {
-                    Label {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("\(v.make ?? "") \(v.model ?? "")").font(.body)
-                            Text(v.licensePlate ?? "—").font(.caption).foregroundStyle(.secondary)
-                        }
-                    } icon: {
-                        Image(systemName: "truck.box.fill")
-                            .foregroundStyle(.green).font(.title3).frame(width: 28)
-                    }
-
                     NavigationLink(destination: DriverVehicleDetailView(vehicle: v)) {
-                        Label("Vehicle Details", systemImage: "info.circle")
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(v.make ?? "") \(v.model ?? "")").font(.body)
+                                Text(v.licensePlate ?? "—").font(.caption).foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "truck.box.fill")
+                                .foregroundStyle(.green).font(.title3).frame(width: 28)
+                        }
                     }
 
                     if !isActive {

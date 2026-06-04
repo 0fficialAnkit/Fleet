@@ -55,6 +55,30 @@ enum NotificationService {
         }
     }
 
+    /// Notifies the specific fleet manager associated with a vehicle
+    static func notifyManager(forVehicle vehicleId: UUID, title: String, message: String, type: NotificationType, referenceId: UUID? = nil) async throws {
+        if let vehicle = try? await VehicleService.fetchVehicle(id: vehicleId), let adminId = vehicle.adminId {
+            let notification = Notification(
+                id: UUID(),
+                userId: adminId,
+                title: title,
+                message: message,
+                type: type,
+                isRead: false,
+                referenceId: referenceId,
+                createdAt: Date()
+            )
+            try await createNotification(notification)
+        }
+    }
+
+    /// Notifies the specific fleet manager associated with a trip's vehicle
+    static func notifyManager(forTrip tripId: UUID, title: String, message: String, type: NotificationType, referenceId: UUID? = nil) async throws {
+        if let trip = try? await TripService.fetchTrip(id: tripId) {
+            try await notifyManager(forVehicle: trip.vehicleId, title: title, message: message, type: type, referenceId: referenceId)
+        }
+    }
+
     static func markAsRead(id: UUID) async throws {
         struct ReadUpdate: Encodable {
             let is_read: Bool
@@ -68,6 +92,31 @@ enum NotificationService {
             print("[NotificationService] markAsRead(\(id)): OK")
         } catch {
             print("[NotificationService] markAsRead(\(id)) ERROR: \(error)")
+            throw error
+        }
+    }
+
+    static func deleteNotifications(forReferenceId referenceId: UUID) async throws {
+        do {
+            try await supabase
+                .from("notifications")
+                .delete()
+                .eq("reference_id", value: referenceId)
+                .execute()
+            print("[NotificationService] deleteNotifications(referenceId:\(referenceId)): OK")
+        }
+    }
+
+    static func deleteNotification(id: UUID) async throws {
+        do {
+            try await supabase
+                .from("notifications")
+                .delete()
+                .eq("id", value: id)
+                .execute()
+            print("[NotificationService] deleteNotification(id:\(id)): OK")
+        } catch {
+            print("[NotificationService] deleteNotification ERROR: \(error)")
             throw error
         }
     }
