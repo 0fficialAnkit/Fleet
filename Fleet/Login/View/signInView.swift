@@ -99,7 +99,7 @@ struct SignInView: View {
                 TextField(
                     "",
                     text: $emailOrPhone,
-                    prompt: Text("Enter email or phone")
+                    prompt: Text("Enter email")
                         .foregroundStyle(Color(.placeholderText))
                 )
                     .keyboardType(.emailAddress)
