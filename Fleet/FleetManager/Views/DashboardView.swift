@@ -552,45 +552,46 @@ struct MiniFuelDashboardCard: View {
 
             VStack(spacing: 0) {
                 // Header
-                HStack(alignment: .top, spacing: 16) {
+                HStack(spacing: 14) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .fill(Color.orange.opacity(0.12))
-                            .frame(width: 48, height: 48)
+                            .frame(width: 40, height: 40)
                         Image(systemName: "drop.fill")
-                            .font(.system(size: 22, weight: .medium))
-                            .foregroundStyle(Color.orange)
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(.orange)
                     }
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Fuel Analytics")
-                            .font(.title2.bold())
-                            .foregroundStyle(Color.primary)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Fuel")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Text("Analytics")
+                            .font(.headline)
                     }
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(Color(.tertiaryLabel))
-                        .padding(.top, 4)
                 }
 
                 Divider()
-                    .background(Color(.separator))
-                    .padding(.vertical, 16)
+                    .padding(.vertical, 14)
 
                 // Stats breakdown row
-                HStack(spacing: 8) {
-                    FuelStatPill(
+                HStack(spacing: 0) {
+                    fuelKpiCell(
                         value: String(format: "%.0f km", viewModel.totalDistance),
                         label: "Total Distance",
-                        color: Color.blue
+                        color: .blue
                     )
-                    FuelStatPill(
+                    Divider().frame(height: 36)
+                    fuelKpiCell(
                         value: String(format: "%.1f L", viewModel.totalLiters),
                         label: "Fuel Used",
-                        color: Color.orange
+                        color: .orange
                     )
                 }
             }
@@ -601,26 +602,17 @@ struct MiniFuelDashboardCard: View {
             await viewModel.loadData()
         }
     }
-}
 
-struct FuelStatPill: View {
-    let value: String
-    let label: String
-    let color: Color
-
-    var body: some View {
+    private func fuelKpiCell(value: String, label: String, color: Color) -> some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.headline.weight(.bold))
+                .font(.title2.bold())
                 .foregroundStyle(color)
             Text(label)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Color.secondary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(Color(uiColor: .tertiarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
