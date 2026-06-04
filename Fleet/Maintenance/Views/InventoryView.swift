@@ -28,23 +28,13 @@ struct InventoryView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
-
+            Group {
                 if isLoading && inventoryItems.isEmpty {
-                    VStack(spacing: 14) {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .brown))
-                            .scaleEffect(1.1)
-                        Text("Loading inventory…")
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(Color.secondary)
-                    }
+                    ProgressView()
                 } else {
-                    ScrollView {
-                        VStack(spacing: 20) {
-
-                            // MARK: - Filter Chips
+                    List {
+                        // Filter chips
+                        Section {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 8) {
                                     ForEach(InventoryFilter.allCases, id: \.self) { filter in
@@ -53,7 +43,7 @@ struct InventoryView: View {
                                             count: countFor(filter),
                                             isSelected: selectedFilter == filter
                                         ) {
-                                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                            withAnimation(.easeInOut(duration: 0.2)) {
                                                 selectedFilter = filter
                                             }
                                         }
@@ -61,46 +51,42 @@ struct InventoryView: View {
                                 }
                                 .padding(.horizontal, 16)
                             }
+                            .padding(.vertical, 6)
+                        }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
 
-
-
-                            // MARK: - Items List
-                            if filteredItems.isEmpty {
+                        // Items
+                        if filteredItems.isEmpty {
+                            Section {
                                 InventoryEmptyState(isFiltered: selectedFilter != .all || !searchText.isEmpty)
-                            } else {
-                                LazyVStack(spacing: 14) {
-                                    ForEach(filteredItems) { item in
-                                        Button(action: {
-                                            selectedItem = item
-                                        }) {
-                                            InventoryRow(item: item)
-                                        }
-                                        .buttonStyle(InventoryCardButtonStyle())
-                                        .scrollTransition { content, phase in
-                                            content
-                                                .opacity(phase.isIdentity ? 1 : 0.7)
-                                                .scaleEffect(phase.isIdentity ? 1 : 0.97)
-                                                .offset(y: phase.isIdentity ? 0 : 6)
-                                        }
+                                    .listRowBackground(Color.clear)
+                            }
+                        } else {
+                            Section {
+                                ForEach(filteredItems) { item in
+                                    Button(action: { selectedItem = item }) {
+                                        InventoryRow(item: item)
                                     }
+                                    .buttonStyle(.plain)
                                 }
-                                .padding(.horizontal, 16)
                             }
                         }
-                        .padding(.vertical, 16)
                     }
+                    .listStyle(.insetGrouped)
                     .refreshable { await loadInventory() }
                 }
             }
             .navigationTitle("Inventory")
-            .searchable(text: $searchText, prompt: "Search parts...")
+            .navigationBarTitleDisplayMode(.large)
+            .searchable(text: $searchText, prompt: "Search parts…")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        isShowingAddSheet = true
-                    }) {
-                        Image(systemName: "plus")
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { isShowingAddSheet = true }) {
+                        Image(systemName: "plus").foregroundStyle(.primary)
                     }
+                    .buttonStyle(.plain)
                 }
             }
             .sheet(isPresented: $isShowingAddSheet) {

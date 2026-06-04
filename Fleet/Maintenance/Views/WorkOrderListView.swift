@@ -72,7 +72,7 @@ struct WorkOrderListView: View {
                         Section {
                             VStack(spacing: 12) {
                                 Image(systemName: "tray")
-                                    .font(.system(size: 40))
+                                    .font(.largeTitle)
                                     .foregroundStyle(Color(.tertiaryLabel))
                                 Text("No orders found")
                                     .font(.subheadline)
@@ -95,11 +95,12 @@ struct WorkOrderListView: View {
         }
         .background(Color(.systemGroupedBackground))
         .navigationTitle("Work Orders")
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: { showNewOrderSheet = true }) {
                     Image(systemName: "plus")
-                        .font(.system(size: 17, weight: .medium))
+                        .font(.body.weight(.medium))
                         .foregroundStyle(Color.primary)
                 }
             }
@@ -302,7 +303,7 @@ struct UnifiedWorkItemRow: View {
                     .fill(priorityColor.opacity(0.12))
                     .frame(width: 40, height: 40)
                 Image(systemName: iconName)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(priorityColor)
             }
 
@@ -310,12 +311,12 @@ struct UnifiedWorkItemRow: View {
                 // Vehicle Plate
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(vehiclePlate)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.primary)
                     
                     if !vehicleModel.isEmpty {
                         Text("· \(vehicleModel)")
-                            .font(.system(size: 12))
+                            .font(.caption)
                             .foregroundStyle(Color(.secondaryLabel))
                             .lineLimit(1)
                     }
@@ -338,9 +339,9 @@ struct UnifiedWorkItemRow: View {
                 
                 HStack(spacing: 4) {
                     Image(systemName: "exclamationmark.circle.fill")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.caption2.weight(.semibold))
                     Text(priorityLabel)
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.caption.bold())
                 }
                 .foregroundStyle(priorityColor)
                 .padding(.horizontal, 6)

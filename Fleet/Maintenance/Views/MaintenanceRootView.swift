@@ -11,13 +11,13 @@ struct MaintenanceRootView: View {
                 schedulerViewModel: schedulerViewModel
             )
             .tabItem {
-                Label("Dashboard", systemImage: "gauge.with.dots.needle.33percent")
+                Label("Dashboard", systemImage: "square.grid.2x2")
             }
             .tag(0)
 
             MaintenanceSchedulerView(viewModel: schedulerViewModel)
                 .tabItem {
-                    Label("Schedule", systemImage: "calendar.badge.clock")
+                    Label("Schedule", systemImage: "calendar")
                 }
                 .tag(1)
         }

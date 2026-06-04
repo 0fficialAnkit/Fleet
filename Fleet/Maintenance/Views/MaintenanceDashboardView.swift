@@ -29,13 +29,14 @@ struct MaintenanceDashboardView: View {
                 }
             }
             .navigationTitle("Dashboard")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { isShowingProfile = true }) {
-                        Image(systemName: "person.crop.circle.fill")
-                            .font(.system(size: 22, weight: .medium))
-                            .foregroundStyle(Color.brown)
+                        Image(systemName: "person.crop.circle")
+                            .foregroundStyle(.primary)
                     }
+                    .buttonStyle(.plain)
                 }
             }
             .navigationDestination(for: MaintenanceDestination.self) { destination in
@@ -64,58 +65,43 @@ struct MaintenanceDashboardView: View {
 
     private var inventoryOverviewCard: some View {
         ZStack {
-            NavigationLink(destination: InventoryView()) {
-                EmptyView()
-            }
-            .opacity(0)
+            NavigationLink(destination: InventoryView()) { EmptyView() }
+                .opacity(0)
 
             VStack(spacing: 0) {
-                // Header: icon badge + count + chevron on top trailing
-                HStack(alignment: .top, spacing: 16) {
+                HStack(spacing: 14) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .fill(Color.brown.opacity(0.12))
-                            .frame(width: 48, height: 48)
-                        Image(systemName: "shippingbox.fill")
-                            .font(.system(size: 22, weight: .medium))
-                            .foregroundStyle(Color.brown)
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "shippingbox")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(.brown)
                     }
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Inventory Status")
-                            .font(.title2.bold())
-                            .foregroundStyle(Color.primary)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Inventory")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Text("\(viewModel.inventory.count) parts")
+                            .font(.headline)
                     }
 
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(Color(.tertiaryLabel))
-                        .padding(.top, 4)
                 }
 
-                Divider()
-                    .background(Color(.separator))
-                    .padding(.vertical, 16)
+                Divider().padding(.vertical, 14)
 
-                // Status breakdown row
-                HStack(spacing: 8) {
-                    MaintenanceStatPillLocal(
-                        value: viewModel.inventory.count,
-                        label: "Total Parts",
-                        color: Color.brown
-                    )
-                    MaintenanceStatPillLocal(
-                        value: viewModel.lowStockItemsCount,
-                        label: "Low Stock",
-                        color: Color.red
-                    )
-                    MaintenanceStatPillTextLocal(
-                        value: viewModel.estimatedValueFormatted,
-                        label: "Est. Value",
-                        color: Color.green
-                    )
+                HStack(spacing: 0) {
+                    mKpiCell("\(viewModel.inventory.count)", "Total", .brown)
+                    Divider().frame(height: 36)
+                    mKpiCell("\(viewModel.lowStockItemsCount)", "Low Stock", .red)
+                    Divider().frame(height: 36)
+                    mKpiCell(viewModel.estimatedValueFormatted, "Est. Value", .green)
                 }
             }
             .padding(.vertical, 4)
@@ -220,6 +206,19 @@ struct MaintenanceDashboardView: View {
                 }
             }
         }
+    }
+
+    // MARK: - KPI cell helper
+    private func mKpiCell(_ value: String, _ label: String, _ color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.title2.bold())
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

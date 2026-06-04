@@ -392,7 +392,7 @@ private struct WorkOrderCard: View {
                 // Priority badge
                 HStack(spacing: 4) {
                     Image(systemName: priorityIcon(workOrder.priority))
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.caption2.weight(.semibold))
                     Text(priorityLabel(workOrder.priority))
                         .font(.caption.weight(.semibold))
                 }
@@ -753,7 +753,7 @@ struct TaskDetailSheet: View {
                             HStack(alignment: .top, spacing: 16) {
                                 Image(systemName: "sparkles")
                                     .foregroundStyle(Color.yellow)
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .font(.headline)
                                 Text(currentTask.aiRecommendation)
                                     .font(.body)
                                     .foregroundStyle(Color.primary)
@@ -880,7 +880,7 @@ struct TaskDetailSheet: View {
                                                             }
                                                         } label: {
                                                             Image(systemName: "minus.circle.fill")
-                                                                .font(.system(size: 22))
+                                                                .font(.title2)
                                                                 .foregroundStyle((partQuantities[item.id] ?? 0) > 0 ? Color.brown : Color(.tertiaryLabel))
                                                         }
                                                         .buttonStyle(.plain)
@@ -900,7 +900,7 @@ struct TaskDetailSheet: View {
                                                             }
                                                         } label: {
                                                             Image(systemName: "plus.circle.fill")
-                                                                .font(.system(size: 22))
+                                                                .font(.title2)
                                                                 .foregroundStyle((partQuantities[item.id] ?? 0) < (item.stockQuantity ?? 0) ? Color.brown : Color(.tertiaryLabel))
                                                         }
                                                     }
@@ -981,7 +981,7 @@ struct TaskDetailSheet: View {
                                     Image(systemName: "checkmark.circle.fill")
                                     Text("Mark as Complete")
                                 }
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 52)
@@ -1112,7 +1112,7 @@ struct WorkOrderDetailSheet: View {
                         SheetSection(title: "Reported Problem") {
                             HStack(alignment: .top, spacing: 14) {
                                 Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.system(size: 20))
+                                    .font(.title3)
                                     .foregroundStyle(Color.red)
                                     .padding(.top, 2)
                                 
@@ -1165,7 +1165,7 @@ struct WorkOrderDetailSheet: View {
                                             Image(systemName: "calendar.badge.checkmark")
                                             Text("Schedule")
                                         }
-                                        .font(.system(size: 16, weight: .semibold))
+                                        .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(.white)
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 48)
@@ -1182,7 +1182,7 @@ struct WorkOrderDetailSheet: View {
                                             Image(systemName: "play.fill")
                                             Text("Start")
                                         }
-                                        .font(.system(size: 16, weight: .semibold))
+                                        .font(.subheadline.weight(.semibold))
                                         .foregroundStyle(Color.brown)
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 48)
@@ -1197,7 +1197,7 @@ struct WorkOrderDetailSheet: View {
                             SheetSection(title: "Scheduled") {
                                 HStack(spacing: 14) {
                                     Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 22))
+                                        .font(.title2)
                                         .foregroundStyle(.green)
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("Scheduled for")
@@ -1319,7 +1319,7 @@ struct WorkOrderDetailSheet: View {
                                                             }
                                                         } label: {
                                                             Image(systemName: "minus.circle.fill")
-                                                                .font(.system(size: 22))
+                                                                .font(.title2)
                                                                 .foregroundStyle((partQuantities[item.id] ?? 0) > 0 ? Color.brown : Color(.tertiaryLabel))
                                                         }
                                                         .buttonStyle(.plain)
@@ -1339,7 +1339,7 @@ struct WorkOrderDetailSheet: View {
                                                             }
                                                         } label: {
                                                             Image(systemName: "plus.circle.fill")
-                                                                .font(.system(size: 22))
+                                                                .font(.title2)
                                                                 .foregroundStyle((partQuantities[item.id] ?? 0) < (item.stockQuantity ?? 0) ? Color.brown : Color(.tertiaryLabel))
                                                         }
                                                         .buttonStyle(.plain)
@@ -1443,7 +1443,7 @@ struct WorkOrderDetailSheet: View {
                                     Image(systemName: "checkmark.circle.fill")
                                     Text("Mark as Complete")
                                 }
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 52)
@@ -1617,7 +1617,7 @@ private struct ChecklistRow: View {
             HStack(spacing: 16) {
                 Image(systemName: item.isChecked ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(item.isChecked ? Color.green : Color(.quaternaryLabel))
-                    .font(.system(size: 20))
+                    .font(.title3)
                     .symbolEffect(.bounce, value: item.isChecked)
 
                 Text(item.title)
