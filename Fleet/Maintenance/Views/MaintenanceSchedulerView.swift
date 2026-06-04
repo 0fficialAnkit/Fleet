@@ -1433,7 +1433,11 @@ struct WorkOrderDetailSheet: View {
 
                             // Mark as Complete Button
                             Button {
-                                viewModel.updateWorkOrderStatus(id: currentWO.id, to: .completed)
+                                viewModel.completeWorkOrder(
+                                    id: currentWO.id,
+                                    totalCost: totalCost,
+                                    serviceNotes: serviceNotes
+                                )
                                 withAnimation { isCompleted = true }
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                                     dismiss()
