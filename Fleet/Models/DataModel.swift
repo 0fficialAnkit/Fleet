@@ -154,6 +154,7 @@ struct User: Codable, Identifiable, Hashable, Sendable {
   var licenseNumber: String?
   var roleId: UUID //FK
   var status: UserStatus?
+  var isOnDuty: Bool?
   var createdAt: Date?
   var createdByManagerId: UUID? // FK — which fleet manager created this user
 
@@ -166,6 +167,7 @@ struct User: Codable, Identifiable, Hashable, Sendable {
       case licenseNumber = "license_number"
       case roleId = "role_id"
       case status
+      case isOnDuty = "is_on_duty"
       case createdAt = "created_at"
       case createdByManagerId = "created_by_manager_id"
   }
@@ -294,7 +296,7 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
       case description
       case scheduledDate = "scheduled_date"
       case targetMileage = "target_mileage"
-      case serviceIntervalMonths = "service_internal"
+      case serviceIntervalMonths = "service_interval_months"
       case scheduleType = "schedule_type"
       case status
       case completedAt = "completed_at"
@@ -318,7 +320,7 @@ struct WorkOrder: Codable, Identifiable, Hashable, Sendable {
       case createdBy = "created_by"
       case assignedTo = "assigned_to"
       case priority
-      case status = "lifecycle_status"
+      case status = "status"
       case createdAt = "created_at"
       case completedAt = "completed_at"
   }
@@ -750,6 +752,7 @@ struct Profile: Codable, Identifiable, Hashable, Sendable {
     var licenseNumber: String?
     var role: String // "fleet_manager", "driver", "maintenance"
     var status: String?
+    var isOnDuty: Bool?
     var createdAt: Date?
 
     enum CodingKeys: String, CodingKey {
@@ -760,6 +763,7 @@ struct Profile: Codable, Identifiable, Hashable, Sendable {
         case licenseNumber = "license_number"
         case role
         case status
+        case isOnDuty = "is_on_duty"
         case createdAt = "created_at"
     }
 

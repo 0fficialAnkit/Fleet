@@ -9,6 +9,10 @@ struct ReportDetailView: View {
     @State private var isAssigning = false
     @State private var exportURL: URL?
     @State private var showingShareSheet = false
+    @State private var isReportedByExpanded = false
+    @State private var isVehicleDetailsExpanded = false
+    @State private var isLastTripExpanded = false
+    @State private var isComplianceExpanded = false
     @Environment(\.dismiss) private var dismiss
 
     // Track original assignment to detect changes on Done
@@ -205,77 +209,133 @@ struct ReportDetailView: View {
                 }
 
                 // ── Reporter ──────────────────────────────────────
-                Section("Reported By") {
-                    LabeledContent("Driver", value: report.driverName)
-                    let lic = driverProfile?.licenseNumber ?? report.driverLicenseNumber
-                    if let l = lic, !l.isEmpty { LabeledContent("Licence No.", value: l) }
-                    if let email = driverProfile?.email { LabeledContent("Email", value: email) }
-                    if let phone = driverProfile?.phone { LabeledContent("Phone", value: phone) }
+                Section {
+                    if isReportedByExpanded {
+                        LabeledContent("Driver", value: report.driverName)
+                        let lic = driverProfile?.licenseNumber ?? report.driverLicenseNumber
+                        if let l = lic, !l.isEmpty { LabeledContent("Licence No.", value: l) }
+                        if let email = driverProfile?.email { LabeledContent("Email", value: email) }
+                        if let phone = driverProfile?.phone { LabeledContent("Phone", value: phone) }
+                    }
+                } header: {
+                    Button(action: {
+                        withAnimation { isReportedByExpanded.toggle() }
+                    }) {
+                        HStack {
+                            Text("Reported By")
+                            Spacer()
+                            Image(systemName: isReportedByExpanded ? "chevron.up" : "chevron.down")
+                        }
+                        .foregroundStyle(Color.secondary)
+                    }
+                    .textCase(nil)
                 }
 
                 // ── Vehicle Details ───────────────────────────────
-                Section("Vehicle Details") {
-                    LabeledContent("Make & Model",
-                                   value: "\(vehicle?.make ?? "—") \(vehicle?.model ?? "")".trimmingCharacters(in: .whitespaces))
-                    if let year = vehicle?.year {
-                        LabeledContent("Year", value: "\(year)")
+                Section {
+                    if isVehicleDetailsExpanded {
+                        LabeledContent("Make & Model",
+                                       value: "\(vehicle?.make ?? "—") \(vehicle?.model ?? "")".trimmingCharacters(in: .whitespaces))
+                        if let year = vehicle?.year {
+                            LabeledContent("Year", value: "\(year)")
+                        }
+                        LabeledContent("Licence Plate", value: report.licensePlate)
+                        if let type = vehicle?.vehicleType {
+                            LabeledContent("Type", value: type.displayName)
+                        }
+                        if let cap = vehicle?.tankCapacity {
+                            LabeledContent("Tank Capacity", value: String(format: "%.0f L", cap))
+                        }
+                        if let mil = vehicle?.mileage {
+                            LabeledContent("Mileage", value: String(format: "%.0f km/L", mil))
+                        }
                     }
-                    LabeledContent("Licence Plate", value: report.licensePlate)
-                    if let type = vehicle?.vehicleType {
-                        LabeledContent("Type", value: type.displayName)
+                } header: {
+                    Button(action: {
+                        withAnimation { isVehicleDetailsExpanded.toggle() }
+                    }) {
+                        HStack {
+                            Text("Vehicle Details")
+                            Spacer()
+                            Image(systemName: isVehicleDetailsExpanded ? "chevron.up" : "chevron.down")
+                        }
+                        .foregroundStyle(Color.secondary)
                     }
-                    if let cap = vehicle?.tankCapacity {
-                        LabeledContent("Tank Capacity", value: String(format: "%.0f L", cap))
-                    }
-                    if let mil = vehicle?.mileage {
-                        LabeledContent("Mileage", value: String(format: "%.0f km/L", mil))
-                    }
+                    .textCase(nil)
                 }
 
                 // ── Compliance ────────────────────────────────────
-                if vehicle != nil {
-                    Section("Compliance & Reminders") {
-                        VehicleComplianceSection(vehicle: vehicle!, editable: false)
-                            .listRowInsets(EdgeInsets())
-                            .listRowBackground(Color.clear)
+                if let vehicle = vehicle {
+                    Section {
+                        if isComplianceExpanded {
+                            VehicleComplianceSection(vehicle: vehicle, editable: false)
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                        }
+                    } header: {
+                        Button(action: {
+                            withAnimation { isComplianceExpanded.toggle() }
+                        }) {
+                            HStack {
+                                Text("Compliance & Reminders")
+                                Spacer()
+                                Image(systemName: isComplianceExpanded ? "chevron.up" : "chevron.down")
+                            }
+                            .foregroundStyle(Color.secondary)
+                        }
+                        .textCase(nil)
                     }
                 }
 
                 // ── Last Trip ─────────────────────────────────────
                 if let trip = lastTrip {
-                    Section("Last Trip on This Vehicle") {
-                        if let type = trip.orderType {
-                            LabeledContent("Order Type", value: type.displayName)
-                        }
-                        if let status = trip.status {
-                            HStack {
-                                Text("Status")
-                                Spacer()
-                                Text(status.rawValue.capitalized)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(tripStatusColor(status))
+                    Section {
+                        if isLastTripExpanded {
+                            if let type = trip.orderType {
+                                LabeledContent("Order Type", value: type.displayName)
+                            }
+                            if let status = trip.status {
+                                HStack {
+                                    Text("Status")
+                                    Spacer()
+                                    Text(status.rawValue.capitalized)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(tripStatusColor(status))
+                                }
+                            }
+
+                            // Pickup → Drop-off
+                            if let pickup = lastTripRoute?.startLocation {
+                                LabeledContent("Pickup", value: pickup)
+                            }
+                            if let dropoff = lastTripRoute?.endLocation {
+                                LabeledContent("Drop-off", value: dropoff)
+                            }
+
+                            if let start = trip.startTime {
+                                LabeledContent("Started",
+                                               value: start.formatted(date: .abbreviated, time: .shortened))
+                            }
+                            if let end = trip.endTime {
+                                LabeledContent("Ended",
+                                               value: end.formatted(date: .abbreviated, time: .shortened))
+                            }
+                            if let dist = trip.distance {
+                                LabeledContent("Distance", value: String(format: "%.1f km", dist))
                             }
                         }
-
-                        // Pickup → Drop-off
-                        if let pickup = lastTripRoute?.startLocation {
-                            LabeledContent("Pickup", value: pickup)
+                    } header: {
+                        Button(action: {
+                            withAnimation { isLastTripExpanded.toggle() }
+                        }) {
+                            HStack {
+                                Text("Last Trip on This Vehicle")
+                                Spacer()
+                                Image(systemName: isLastTripExpanded ? "chevron.up" : "chevron.down")
+                            }
+                            .foregroundStyle(Color.secondary)
                         }
-                        if let dropoff = lastTripRoute?.endLocation {
-                            LabeledContent("Drop-off", value: dropoff)
-                        }
-
-                        if let start = trip.startTime {
-                            LabeledContent("Started",
-                                           value: start.formatted(date: .abbreviated, time: .shortened))
-                        }
-                        if let end = trip.endTime {
-                            LabeledContent("Ended",
-                                           value: end.formatted(date: .abbreviated, time: .shortened))
-                        }
-                        if let dist = trip.distance {
-                            LabeledContent("Distance", value: String(format: "%.1f km", dist))
-                        }
+                        .textCase(nil)
                     }
                 }
 
@@ -412,8 +472,7 @@ struct ReportDetailView: View {
                         vehicleId: report.vehicleId,
                         createdBy: nil,
                         assignedTo: staffId,
-                        priority: report.severity == .critical ? .critical
-                            : (report.severity == .high ? .high : .medium),
+                        priority: (report.severity == .critical || report.severity == .high) ? .high : .medium,
                         status: .open
                     )
 

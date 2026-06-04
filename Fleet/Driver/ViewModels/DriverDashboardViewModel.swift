@@ -10,6 +10,8 @@ final class DriverDashboardViewModel {
     private(set) var routes: [UUID: Route] = [:]
     private(set) var vehicles: [UUID: Vehicle] = [:]
     private(set) var assignedVehicle: Vehicle?
+    var isOnDuty: Bool = true
+    private var profile: Profile?
 
     var isLoading = false
     var errorMessage: String?
@@ -137,6 +139,11 @@ final class DriverDashboardViewModel {
         isLoading = true
         errorMessage = nil
         do {
+            if let p = try? await ProfileService.fetchProfile(id: userId) {
+                profile = p
+                isOnDuty = p.isOnDuty ?? true
+                driverName = p.fullName
+            }
             trips = try await TripService.fetchTripsForDriver(driverId: userId)
             assignedVehicle = try? await VehicleService.fetchVehicleForDriver(driverId: userId)
             await loadEnrichmentData()
@@ -196,6 +203,25 @@ final class DriverDashboardViewModel {
         if events.contains(where: { ids.contains($0.geofenceId) && $0.eventType == "pickup_done" }) {
             gfDistState?.pickupPhaseDone = true
             print("[Geofence] pickupPhaseDone synced from Realtime")
+        }
+    }
+
+    func toggleDutyStatus() {
+        guard var p = profile else { return }
+        let newStatus = !isOnDuty
+        p.isOnDuty = newStatus
+        isOnDuty = newStatus
+        profile = p
+        
+        Task {
+            do {
+                try await ProfileService.updateProfile(p)
+            } catch {
+                self.errorMessage = "Failed to update duty status: \(error.localizedDescription)"
+                // Revert on failure
+                self.isOnDuty = !newStatus
+                self.profile?.isOnDuty = !newStatus
+            }
         }
     }
 

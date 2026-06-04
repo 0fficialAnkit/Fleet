@@ -6,6 +6,7 @@ final class VehiclesViewModel {
     var vehicles: [Vehicle] = []
     private(set) var profiles: [Profile] = []
     private(set) var trips: [Trip] = []
+    private(set) var fuelLogs: [FuelLog] = []
 
     var isLoading = false
     var errorMessage: String?
@@ -28,9 +29,11 @@ final class VehiclesViewModel {
             async let v = VehicleService.fetchAllVehicles(adminId: self.adminId)
             async let p = ProfileService.fetchAllProfiles(managerId: self.adminId)
             async let t = TripService.fetchAllTrips(adminId: self.adminId)
+            async let f = FuelLogService.fetchAllFuelLogs() // Fetch all fuel logs
             vehicles = try await v
             profiles = try await p
             trips = try await t
+            fuelLogs = (try? await f) ?? []
         } catch {
             errorMessage = error.localizedDescription
         }
