@@ -78,7 +78,7 @@ struct VehicleDetailView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .navigationTitle("\(vehicle.make ?? "") \(vehicle.model ?? "")")
+        .navigationTitle("Detail")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

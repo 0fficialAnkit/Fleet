@@ -14,12 +14,6 @@
       "filename" : "resized-image-4 2.jpeg",
       "idiom" : "universal",
       "scale" : "3x"
-    },
-    {
-      "filename" : "AppIcon.png",
-      "idiom" : "universal",
-      "scale" : "1x",
-      "unassigned" : true
     }
   ],
   "info" : {

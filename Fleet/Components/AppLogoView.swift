@@ -9,8 +9,16 @@ struct AppLogoView: View {
             if let uiImage = getAppIcon() {
                 Image(uiImage: uiImage)
                     .resizable()
-                    .scaledToFit()
+                    .scaledToFill()
                     .frame(width: size, height: size)
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .stroke(Color.black.opacity(0.08), lineWidth: 0.5)
+                    )
+                    .shadow(color: Color.black.opacity(0.06), radius: 1, x: 0, y: 1)
+                    .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 8)
+                    .shadow(color: Color.black.opacity(0.05), radius: 24, x: 0, y: 16)
             } else {
                 // Fallback
                 ZStack {
