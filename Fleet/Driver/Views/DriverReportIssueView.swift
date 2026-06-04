@@ -194,7 +194,7 @@ struct DriverReportIssueView: View {
                 Text("When & Where")
             } footer: {
                 if !isDriveable {
-                    Text("⚠️ Vehicle marked as not driveable. Fleet manager will be alerted immediately.")
+                    Label("Vehicle marked as not driveable. Fleet manager will be alerted immediately.", systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(.red)
                 }
             }
@@ -364,7 +364,7 @@ struct DriverReportIssueView: View {
                 // Build full description
                 var full = descriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
                 full += "\n\nLocation: \(selectedLocation.rawValue)"
-                full += "\nDriveable: \(isDriveable ? "Yes" : "No ⚠️")"
+                full += "\nDriveable: \(isDriveable ? "Yes" : "No")"
                 full += "\nReported at: \(issueDate.formatted(date: .abbreviated, time: .shortened))"
                 if !uploadedUrls.isEmpty {
                     full += "\n\n[Photos]\n" + uploadedUrls.map { "- \($0)" }.joined(separator: "\n")
@@ -388,7 +388,7 @@ struct DriverReportIssueView: View {
                 let isUrgent = selectedSeverity == .critical || !isDriveable
                 try? await NotificationService.notifyManager(
                     forVehicle: vehicle.id,
-                    title: isUrgent ? "🚨 Urgent: \(selectedCategory.rawValue)" : "New Issue Report",
+                    title: isUrgent ? "Urgent: \(selectedCategory.rawValue)" : "New Issue Report",
                     message: "\(selectedCategory.rawValue) on \(vehicle.make ?? "") \(vehicle.model ?? "") (\(vehicle.licensePlate ?? "")). Severity: \(selectedSeverity.rawValue.capitalized).",
                     type: .maintenance
                 )

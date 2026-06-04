@@ -112,7 +112,7 @@ final class VoiceTripLogViewModel {
             // 2. Send in-app notification to fleet manager
             try? await NotificationService.notifyManager(
                 forTrip: tripId,
-                title: "🚨 Driver Alert — \(incidentTypeName)",
+                title: "Driver Alert — \(incidentTypeName)",
                 message: "\(routeName): \"\(data.rawTranscription)\"",
                 type: .alert,
                 referenceId: tripId
