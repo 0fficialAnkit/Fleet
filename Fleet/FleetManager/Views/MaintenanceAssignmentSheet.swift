@@ -141,6 +141,7 @@ struct MaintenanceAssignmentSheet: View {
                 try? await Task.sleep(for: .seconds(1.2))
                 await MainActor.run { dismiss() }
             } catch {
+                print("[MaintenanceAssignmentSheet] assignTask error: \(error)")
                 await MainActor.run {
                     isAssigning = false
                     errorMessage = "Failed to assign: \(error.localizedDescription)"
