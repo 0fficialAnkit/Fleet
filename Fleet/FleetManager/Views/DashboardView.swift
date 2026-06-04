@@ -41,7 +41,7 @@ struct DashboardView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button(action: { showingNotifications = true }) {
-                        Image(systemName: viewModel.hasUnreadNotifications ? "bell.badge" : "bell")
+                        Image(systemName: "bell")
                             .font(.system(size: 17, weight: .medium))
                             //.symbolRenderingMode(viewModel.hasUnreadNotifications ? .multicolor : .monochrome)
                             .foregroundStyle(.primary)
@@ -297,8 +297,10 @@ struct DashboardView: View {
 
     private var liveDriverAlertsSection: some View {
         let incidents = viewModel.recentVoiceIncidents.filter { incident in
-            let trip = viewModel.trips.first(where: { $0.id == incident.tripId })
-            return trip?.status != .completed
+            guard let trip = viewModel.trips.first(where: { $0.id == incident.tripId }) else {
+                return false // Trip not found — don't show the alert
+            }
+            return trip.status == .active
         }
         return Section {
             if incidents.isEmpty {

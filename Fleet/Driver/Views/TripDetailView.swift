@@ -38,7 +38,9 @@ struct TripDetailView: View {
     
     // Voice logging
     @State private var voiceViewModel = VoiceTripLogViewModel()
-    @State private var isHoldingMic   = false
+    @State private var isHoldingMic       = false
+    @State private var recordingSecondsLeft = 10
+    @State private var recordingTask: Task<Void, Never>? = nil
 
     // Pre-trip checklist results
     @State private var preTripNotes: String?
@@ -68,6 +70,23 @@ struct TripDetailView: View {
     // MARK: - Zone state persistence
     
     /// Call when trip ends to free up UserDefaults space.
+    // MARK: - Voice Recording
+
+    @MainActor
+    private func stopRecording() {
+        recordingTask?.cancel()
+        recordingTask = nil
+        isHoldingMic = false
+        recordingSecondsLeft = 10
+        UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+        voiceViewModel.stopAndExtract(
+            tripId: trip.id,
+            driverId: trip.driverId,
+            routeName: "\(route?.startLocation ?? "Origin") → \(route?.endLocation ?? "Destination")"
+        )
+        withAnimation(.easeOut) { showVoiceRecordingBanner = false }
+    }
+
     private func clearZoneCache() {
         let ud = UserDefaults.standard
         ["fleet.zone.pickup.\(trip.id.uuidString)", "fleet.zone.dropoff.\(trip.id.uuidString)", 
@@ -251,9 +270,7 @@ struct TripDetailView: View {
             }
         }
         .sheet(isPresented: $showingFuelSheet) {
-            NavigationView {
-                DriverFuelView()
-            }
+            DriverFuelView()
         }
         .safeAreaInset(edge: .bottom) {
             if isActive {
@@ -282,14 +299,30 @@ struct TripDetailView: View {
                     VStack(spacing: 12) {
                         // Voice Log section
                         HStack(spacing: 12) {
-                            Image(systemName: isHoldingMic ? "waveform" : "mic.fill")
-                                .font(.title3.weight(.bold))
-                                .foregroundStyle(.white)
-                                .frame(width: 54, height: 54)
-                                .background(isHoldingMic ? Color.red : Color(red: 0.85, green: 0.65, blue: 0.0))
-                                .clipShape(Circle())
-                                .scaleEffect(isHoldingMic ? 0.95 : 1.0)
-                                .animation(.spring(response: 0.3), value: isHoldingMic)
+                            // Mic button with countdown badge
+                            ZStack(alignment: .topTrailing) {
+                                Image(systemName: isHoldingMic ? "waveform" : "mic.fill")
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 54, height: 54)
+                                    .background(isHoldingMic ? Color.red : Color(red: 0.85, green: 0.65, blue: 0.0))
+                                    .clipShape(Circle())
+                                    .scaleEffect(isHoldingMic ? 0.95 : 1.0)
+                                    .animation(.spring(response: 0.3), value: isHoldingMic)
+
+                                // Countdown badge
+                                if isHoldingMic {
+                                    Text("\(recordingSecondsLeft)")
+                                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 2)
+                                        .background(Color.black.opacity(0.75))
+                                        .clipShape(Capsule())
+                                        .offset(x: 4, y: -4)
+                                        .transition(.scale.combined(with: .opacity))
+                                }
+                            }
                             
                             if isHoldingMic {
                                 if !voiceViewModel.voiceService.liveTranscript.isEmpty {
@@ -315,26 +348,27 @@ struct TripDetailView: View {
                         .frame(maxWidth: .infinity)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            guard !isHoldingMic else { return }
-                            isHoldingMic = true
-                            let generator = UIImpactFeedbackGenerator(style: .medium)
-                            generator.impactOccurred()
-                            voiceViewModel.startVoiceCapture()
-                            withAnimation(.spring(response: 0.4)) { showVoiceRecordingBanner = true }
-                            
-                            Task {
-                                try? await Task.sleep(for: .seconds(10))
-                                await MainActor.run {
-                                    guard isHoldingMic else { return }
-                                    isHoldingMic = false
-                                    let generator = UIImpactFeedbackGenerator(style: .rigid)
-                                    generator.impactOccurred()
-                                    voiceViewModel.stopAndExtract(
-                                        tripId: trip.id,
-                                        driverId: trip.driverId,
-                                        routeName: "\(route?.startLocation ?? "Origin") → \(route?.endLocation ?? "Destination")"
-                                    )
-                                    withAnimation(.easeOut) { showVoiceRecordingBanner = false }
+                            if isHoldingMic {
+                                // Tap while recording → stop early and send
+                                stopRecording()
+                            } else {
+                                // Start recording
+                                isHoldingMic = true
+                                recordingSecondsLeft = 10
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                voiceViewModel.startVoiceCapture()
+                                withAnimation(.spring(response: 0.4)) { showVoiceRecordingBanner = true }
+
+                                recordingTask = Task {
+                                    // Tick down every second
+                                    for remaining in stride(from: 9, through: 0, by: -1) {
+                                        try? await Task.sleep(for: .seconds(1))
+                                        guard !Task.isCancelled else { return }
+                                        await MainActor.run { recordingSecondsLeft = remaining }
+                                    }
+                                    // Auto-stop after 10 s
+                                    guard !Task.isCancelled else { return }
+                                    await MainActor.run { stopRecording() }
                                 }
                             }
                         }
