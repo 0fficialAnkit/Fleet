@@ -115,8 +115,9 @@ final class DriverDashboardViewModel {
         liveTimer?.invalidate()
         if activeTrip != nil {
             liveTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+                guard let self else { return }
                 Task { @MainActor in
-                    self?.currentTime = Date()
+                    self.currentTime = Date()
                 }
             }
         }
@@ -229,14 +230,12 @@ final class DriverDashboardViewModel {
                     try? await GeofenceService.createEvent(TripGeofenceEvent(
                         id: UUID(), geofenceId: df.id, vehicleId: vehicleId,
                         driverId: currentUserId, eventType: "trip_ended", occurredAt: Date()))
-                    let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-                    for mgr in managers {
-                        try? await NotificationService.createNotification(Fleet.Notification(
-                            id: UUID(), userId: mgr.id,
-                            title: "🏁 Trip Ended",
-                            message: "Driver has completed the trip. Trip is now ending.",
-                            type: .info, isRead: false, createdAt: Date()))
-                    }
+                    try? await NotificationService.notifyManager(
+                        forVehicle: vehicleId,
+                        title: "🏁 Trip Ended",
+                        message: "Driver has completed the trip. Trip is now ending.",
+                        type: .info
+                    )
                 }
 
                 try await TripService.endTrip(id: id, distance: distance)
@@ -359,11 +358,6 @@ final class DriverDashboardViewModel {
             driverId: currentUserId, name: pickup,
             latitude: pickupCoord.latitude, longitude: pickupCoord.longitude,
             radiusMeters: kGeofenceRadiusMeters, zoneType: "pickup", isActive: true, createdAt: Date())
-        let dFence = TripGeofence(id: dId, tripId: tripId, vehicleId: vehicleId,
-            driverId: currentUserId, name: dropoff,
-            latitude: dropCoord.latitude, longitude: dropCoord.longitude,
-            radiusMeters: kGeofenceRadiusMeters, zoneType: "dropoff", isActive: true, createdAt: Date())
-
         // Only register pickup zone initially — dropoff is activated when driver taps "Pickup Done"
         TripGeofenceMonitor.shared.register(tripId: tripId, vehicleId: vehicleId,
                                              driverId: currentUserId, fences: [pFence])
@@ -443,13 +437,11 @@ final class DriverDashboardViewModel {
             id: UUID(), geofenceId: fenceId, vehicleId: vehicleId,
             driverId: currentUserId, eventType: "enter", occurredAt: Date()))
         // Notify fleet managers
-        let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-        for mgr in managers {
-            try? await NotificationService.createNotification(Fleet.Notification(
-                id: UUID(), userId: mgr.id,
-                title: title, message: body,
-                type: .info, isRead: false, createdAt: Date()))
-        }
+        try? await NotificationService.notifyManager(
+            forVehicle: vehicleId,
+            title: title, message: body,
+            type: .info
+        )
         print("[Geofence] \(emoji) Fired zone-enter (distance fallback) — \(label)")
     }
 
@@ -496,14 +488,12 @@ final class DriverDashboardViewModel {
             }
 
             // Notify fleet managers
-            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-            for mgr in managers {
-                try? await NotificationService.createNotification(Fleet.Notification(
-                    id: UUID(), userId: mgr.id,
-                    title: "✅ Pickup Completed",
-                    message: "Driver completed pickup and is now heading to drop-off.",
-                    type: .info, isRead: false, createdAt: Date()))
-            }
+            try? await NotificationService.notifyManager(
+                forVehicle: vehicleId,
+                title: "✅ Pickup Completed",
+                message: "Driver completed pickup and is now heading to drop-off.",
+                type: .info
+            )
         }
     }
 
@@ -532,14 +522,12 @@ final class DriverDashboardViewModel {
                 print("[Geofence] ❌ dropoff_done save failed: \(error)")
             }
 
-            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-            for mgr in managers {
-                try? await NotificationService.createNotification(Fleet.Notification(
-                    id: UUID(), userId: mgr.id,
-                    title: "🏁 Drop-off Completed",
-                    message: "Driver has completed the drop-off.",
-                    type: .info, isRead: false, createdAt: Date()))
-            }
+            try? await NotificationService.notifyManager(
+                forVehicle: vehicleId,
+                title: "🏁 Drop-off Completed",
+                message: "Driver has completed the drop-off.",
+                type: .info
+            )
         }
     }
 
@@ -552,7 +540,7 @@ final class DriverDashboardViewModel {
             req.region = MKCoordinateRegion(center: b,
                                             latitudinalMeters: 300_000, longitudinalMeters: 300_000)
         }
-        return try? await MKLocalSearch(request: req).start().mapItems.first?.placemark.coordinate
+        return try? await MKLocalSearch(request: req).start().mapItems.first?.location.coordinate
     }
 
     // MARK: - Helpers

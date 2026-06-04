@@ -25,7 +25,9 @@ CREATE TABLE public.users (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   license_number character varying UNIQUE,
+  created_by_manager_id uuid,
   CONSTRAINT users_pkey PRIMARY KEY (id),
+  CONSTRAINT users_created_by_manager_id_fkey FOREIGN KEY (created_by_manager_id) REFERENCES public.users(id),
   CONSTRAINT users_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id),
   CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
@@ -56,7 +58,9 @@ CREATE TABLE public.routes (
   end_location character varying NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT routes_pkey PRIMARY KEY (id)
+  created_by_manager_id uuid,
+  CONSTRAINT routes_pkey PRIMARY KEY (id),
+  CONSTRAINT routes_created_by_manager_id_fkey FOREIGN KEY (created_by_manager_id) REFERENCES public.users(id)
 );
 CREATE TABLE public.trips (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -319,4 +323,17 @@ CREATE TABLE public.voice_trip_logs (
   CONSTRAINT voice_trip_logs_pkey PRIMARY KEY (id),
   CONSTRAINT voice_trip_logs_trip_id_fkey FOREIGN KEY (trip_id) REFERENCES public.trips(id),
   CONSTRAINT voice_trip_logs_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.route_breach_events (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  trip_id uuid,
+  vehicle_id uuid,
+  driver_id uuid,
+  latitude double precision,
+  longitude double precision,
+  distance_from_center double precision,
+  fence_radius double precision,
+  occurred_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT route_breach_events_pkey PRIMARY KEY (id),
+  CONSTRAINT route_breach_events_trip_id_fkey FOREIGN KEY (trip_id) REFERENCES public.trips(id)
 );

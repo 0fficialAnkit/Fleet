@@ -46,4 +46,16 @@ enum GeofenceService {
             .limit(limit)
             .execute().value
     }
+
+    /// Fetch ALL events for a specific set of fence IDs (trip-scoped, no limit).
+    /// Preferred over fetchEvents(forVehicle:) for zone restoration — avoids cross-trip
+    /// contamination and the 30-event limit cutting off older events.
+    static func fetchEvents(forFences fenceIds: [UUID]) async throws -> [TripGeofenceEvent] {
+        guard !fenceIds.isEmpty else { return [] }
+        return try await supabase
+            .from("trip_geofence_events").select()
+            .in("geofence_id", values: fenceIds.map { $0.uuidString })
+            .order("occurred_at", ascending: false)
+            .execute().value
+    }
 }

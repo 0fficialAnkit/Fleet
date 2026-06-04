@@ -58,21 +58,13 @@ final class DriverReportIncidentViewModel {
                 
                 try await TripIncidentService.createIncident(incident)
                 
-                // Notify all fleet managers
-                if let managers = try? await ProfileService.fetchProfilesByRole(role: "fleet_manager") {
-                    for manager in managers {
-                        let notification = Notification(
-                            id: UUID(),
-                            userId: manager.id,
-                            title: "Trip Incident Reported",
-                            message: "A \(incidentType) incident was reported by the driver.",
-                            type: .alert, // or appropriate type like .maintenance
-                            isRead: false,
-                            createdAt: Date()
-                        )
-                        try? await NotificationService.createNotification(notification)
-                    }
-                }
+                // Notify fleet manager
+                try? await NotificationService.notifyManager(
+                    forTrip: tripId,
+                    title: "Trip Incident Reported",
+                    message: "A \(incidentType) incident was reported by the driver.",
+                    type: .alert
+                )
                 
                 await MainActor.run {
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {

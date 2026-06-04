@@ -68,6 +68,23 @@ final class DriverTripsViewModel {
         RealtimeManager.shared.addTripsChangeHandler { [weak self] in
             Task { await self?.loadData() }
         }
+
+        // Global zone-entry cache writer.
+        // TripDetailView caches zone state in UserDefaults so it survives view recreation.
+        // But if TripDetailView is off-screen when the geofence fires, it misses the
+        // notification and the cache is never written.
+        // DriverTripsViewModel lives for the entire driver session, so it writes the cache
+        // here — guaranteeing it's populated before TripDetailView even appears.
+        NotificationCenter.default.addObserver(
+            forName: .gfZoneEntered,
+            object: nil,
+            queue: .main
+        ) { note in
+            guard let tripIdStr = note.userInfo?["tripId"]   as? String,
+                  let zoneType  = note.userInfo?["zoneType"] as? String else { return }
+            // Mirror the exact UserDefaults key format used in TripDetailView
+            UserDefaults.standard.set(true, forKey: "fleet.zone.\(zoneType).\(tripIdStr)")
+        }
     }
 
     func startTrip(id: UUID, vehicleId: UUID, notes: String, imageUrls: [String]) {
@@ -99,14 +116,12 @@ final class DriverTripsViewModel {
                     try? await GeofenceService.createEvent(TripGeofenceEvent(
                         id: UUID(), geofenceId: df.id, vehicleId: vehicleId,
                         driverId: currentUserId, eventType: "trip_ended", occurredAt: Date()))
-                    let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-                    for mgr in managers {
-                        try? await NotificationService.createNotification(Fleet.Notification(
-                            id: UUID(), userId: mgr.id,
-                            title: "🏁 Trip Ended",
-                            message: "Driver has completed the trip. Trip is now ending.",
-                            type: .info, isRead: false, createdAt: Date()))
-                    }
+                    try? await NotificationService.notifyManager(
+                        forVehicle: vehicleId,
+                        title: "🏁 Trip Ended",
+                        message: "Driver has completed the trip. Trip is now ending.",
+                        type: .info
+                    )
                 }
                 try await TripService.endTrip(id: id, distance: distance)
                 let inspectionId = UUID()
@@ -153,14 +168,12 @@ final class DriverTripsViewModel {
                 print("[Geofence] ❌ dropoff_done save failed: \(error)")
             }
 
-            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-            for mgr in managers {
-                try? await NotificationService.createNotification(Fleet.Notification(
-                    id: UUID(), userId: mgr.id,
-                    title: "🏁 Drop-off Completed",
-                    message: "Driver has completed the drop-off.",
-                    type: .info, isRead: false, createdAt: Date()))
-            }
+            try? await NotificationService.notifyManager(
+                forVehicle: vehicleId,
+                title: "🏁 Drop-off Completed",
+                message: "Driver has completed the drop-off.",
+                type: .info
+            )
         }
     }
 
@@ -191,14 +204,12 @@ final class DriverTripsViewModel {
                     tripId: tripId, vehicleId: vehicleId, driverId: currentUserId)
             }
 
-            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-            for mgr in managers {
-                try? await NotificationService.createNotification(Fleet.Notification(
-                    id: UUID(), userId: mgr.id,
-                    title: "✅ Pickup Completed",
-                    message: "Driver completed pickup and is heading to drop-off.",
-                    type: .info, isRead: false, createdAt: Date()))
-            }
+            try? await NotificationService.notifyManager(
+                forVehicle: vehicleId,
+                title: "✅ Pickup Completed",
+                message: "Driver completed pickup and is heading to drop-off.",
+                type: .info
+            )
         }
     }
 

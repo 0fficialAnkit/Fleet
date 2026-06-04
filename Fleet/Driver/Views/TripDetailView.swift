@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import CoreLocation
 
 struct TripDetailView: View {
 
@@ -20,6 +21,7 @@ struct TripDetailView: View {
     @State private var inPickupZone     = false
     @State private var inDropoffZone    = false
     @State private var zoneTask: Task<Void, Never>? = nil
+    @State private var realtimeHandlerRegistered = false
 
     // Brief confirmation banners
     @State private var showPickupBanner  = false
@@ -44,6 +46,45 @@ struct TripDetailView: View {
         self.onPickupDone  = onPickupDone
         self.onDropoffDone = onDropoffDone
         self._currentStatus = State(initialValue: trip.status)
+    }
+
+    // MARK: - Zone state persistence (UserDefaults, keyed by trip ID)
+    // Survives any @State reset — view recreation, memory pressure, sheet onDisappear.
+
+    private var udPickup:      String { "fleet.zone.pickup.\(trip.id.uuidString)" }
+    private var udDropoff:     String { "fleet.zone.dropoff.\(trip.id.uuidString)" }
+    private var udPickupDone:  String { "fleet.zone.pkDone.\(trip.id.uuidString)" }
+    private var udDropoffDone: String { "fleet.zone.doDone.\(trip.id.uuidString)" }
+    private var udDropoffFence:String { "fleet.zone.doFence.\(trip.id.uuidString)" }
+
+    /// Called on every onAppear — restores state instantly with no network round-trip.
+    private func restoreZoneFromCache() {
+        let ud = UserDefaults.standard
+        if ud.bool(forKey: udPickup)     { inPickupZone     = true }
+        if ud.bool(forKey: udDropoff)    { inDropoffZone    = true }
+        if ud.bool(forKey: udPickupDone) { pickupCompleted  = true }
+        if ud.bool(forKey: udDropoffDone){ dropoffCompleted = true }
+        if let s = ud.string(forKey: udDropoffFence), let id = UUID(uuidString: s) {
+            dropoffGeofenceId = id
+        }
+    }
+
+    /// Call after any zone flag becomes true.
+    private func saveZoneToCache() {
+        let ud = UserDefaults.standard
+        ud.set(inPickupZone,     forKey: udPickup)
+        ud.set(inDropoffZone,    forKey: udDropoff)
+        ud.set(pickupCompleted,  forKey: udPickupDone)
+        ud.set(dropoffCompleted, forKey: udDropoffDone)
+        if let fid = dropoffGeofenceId { ud.set(fid.uuidString, forKey: udDropoffFence) }
+    }
+
+    /// Call when trip ends to free up UserDefaults space.
+    private func clearZoneCache() {
+        let ud = UserDefaults.standard
+        [udPickup, udDropoff, udPickupDone, udDropoffDone, udDropoffFence].forEach {
+            ud.removeObject(forKey: $0)
+        }
     }
 
     // MARK: - Computed
@@ -129,18 +170,16 @@ struct TripDetailView: View {
             // ── 6. Vehicle ───────────────────────────────────────────────
             Section("Vehicle") {
                 if let v = vehicle {
-                    Label {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("\(v.make ?? "") \(v.model ?? "")").font(.body)
-                            Text(v.licensePlate ?? "—").font(.caption).foregroundStyle(.secondary)
-                        }
-                    } icon: {
-                        Image(systemName: "truck.box.fill")
-                            .foregroundStyle(.green).font(.title3).frame(width: 28)
-                    }
-
                     NavigationLink(destination: DriverVehicleDetailView(vehicle: v)) {
-                        Label("Vehicle Details", systemImage: "info.circle")
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(v.make ?? "") \(v.model ?? "")").font(.body)
+                                Text(v.licensePlate ?? "—").font(.caption).foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "truck.box.fill")
+                                .foregroundStyle(.green).font(.title3).frame(width: 28)
+                        }
                     }
 
                     if !isActive {
@@ -200,6 +239,7 @@ struct TripDetailView: View {
                         doneHint: "Pickup confirmed"
                     ) {
                         withAnimation(.spring(response: 0.3)) { pickupCompleted = true }
+                        saveZoneToCache()
                         onPickupDone?(trip.id, trip.vehicleId)
                         withAnimation(.spring(response: 0.4)) { showPickupBanner = true }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
@@ -217,6 +257,7 @@ struct TripDetailView: View {
                         doneHint: "Drop-off confirmed"
                     ) {
                         withAnimation(.spring(response: 0.3)) { dropoffCompleted = true }
+                        saveZoneToCache()
                         onDropoffDone?(trip.id, trip.vehicleId, dropoffGeofenceId)
                     }
                 }
@@ -379,21 +420,38 @@ struct TripDetailView: View {
         }
         .animation(.spring(response: 0.4), value: showVoiceRecordingBanner)
         .navigationBarTitleDisplayMode(.large)
+        // Instant restore from cache — runs before .task's async work completes.
+        // Prevents locked buttons during the network round-trip on every re-appear.
+        .onAppear {
+            restoreZoneFromCache()
+        }
         .task {
+            // Route and vehicle fetches start immediately (concurrent)
             async let r = trip.routeId != nil ? RouteService.fetchRoute(id: trip.routeId!) : nil
             async let v = VehicleService.fetchVehicle(id: trip.vehicleId)
+
+            // Zone restore runs concurrently with the above fetches.
+            // CRITICAL: this must NOT be placed after calculateDistance — MKDirections
+            // can take 5-10 seconds, and if the driver navigates away before it finishes
+            // the task is cancelled and zone state is never restored from DB.
+            await refreshZoneStatus()
+
+            // Now collect the concurrent results
             route   = try? await r
             vehicle = try? await v
+
+            // Distance calc is display-only — run last so it never blocks zone UI
             if let s = route?.startLocation, let e = route?.endLocation {
                 await calculateDistance(from: s, to: e)
             }
-            // Restore state from Supabase
-            await refreshZoneStatus()
-            // Subscribe to geofence events for live zone entry detection
-            if trip.status == .active {
+
+            if currentStatus == .active {
                 startZonePolling()
-                RealtimeManager.shared.addGeofenceEventsChangeHandler {
-                    Task { await self.refreshZoneStatus() }
+                if !realtimeHandlerRegistered {
+                    realtimeHandlerRegistered = true
+                    RealtimeManager.shared.addGeofenceEventsChangeHandler {
+                        Task { await self.refreshZoneStatus() }
+                    }
                 }
             }
         }
@@ -408,6 +466,7 @@ struct TripDetailView: View {
                     if let s = fenceIdStr { dropoffGeofenceId = UUID(uuidString: s) }
                 }
             }
+            saveZoneToCache()   // persist so re-appear restores instantly
         }
         .onDisappear {
             zoneTask?.cancel()
@@ -422,6 +481,7 @@ struct TripDetailView: View {
                 } else {
                     onEnd(trip.id, trip.vehicleId, estimatedDistance, notes, urls)
                     withAnimation { currentStatus = .completed }
+                    clearZoneCache()
                 }
                 showingChecklist = nil
             }
@@ -433,44 +493,47 @@ struct TripDetailView: View {
 
     // MARK: - Zone status (gates button visibility)
 
-    /// Reads geofence events from Supabase and updates inPickupZone / inDropoffZone.
-    /// Also restores pickupCompleted so the correct phase shows after app restart.
+    /// Reads geofence events from Supabase and updates zone state.
+    /// Zone flags (inPickupZone / inDropoffZone) are ONE-DIRECTIONAL — once true they
+    /// never revert to false via a DB refresh. This means a failed or empty fetch never
+    /// re-locks a button the driver already unlocked by physically entering the zone.
     private func refreshZoneStatus() async {
         let fences = (try? await GeofenceService.fetchAllGeofences(forTrip: trip.id)) ?? []
         guard !fences.isEmpty else { return }
 
-        let pFence = fences.first(where: { $0.zoneType == "pickup"  })
-        let dFence = fences.first(where: { $0.zoneType == "dropoff" })
-        let fenceIds = Set(fences.map { $0.id })
+        let pFence   = fences.first(where: { $0.zoneType == "pickup"  })
+        let dFence   = fences.first(where: { $0.zoneType == "dropoff" })
+        let fenceIds = fences.map { $0.id }
 
-        let all    = (try? await GeofenceService.fetchEvents(forVehicle: trip.vehicleId, limit: 30)) ?? []
-        let events = all.filter { fenceIds.contains($0.geofenceId) }
+        // Query directly by fence IDs — no cross-trip contamination, no limit cutoff.
+        guard let events = try? await GeofenceService.fetchEvents(forFences: fenceIds) else { return }
+
+        // Multiple fences of the same type can exist (e.g. if setup ran twice).
+        // Check ANY pickup/dropoff fence so we don't miss the event.
+        let pFenceIds = fences.filter { $0.zoneType == "pickup"  }.map { $0.id }
+        let dFenceIds = fences.filter { $0.zoneType == "dropoff" }.map { $0.id }
 
         withAnimation(.spring(response: 0.35)) {
-            // Driver entered pickup zone?
-            inPickupZone = events.contains {
-                $0.geofenceId == pFence?.id && $0.eventType == "enter"
+            // Only promote false → true. A DB refresh can never re-lock a button.
+            if events.contains(where: { pFenceIds.contains($0.geofenceId) && $0.eventType == "enter" }) {
+                inPickupZone = true
             }
-            // Driver entered dropoff zone?
-            inDropoffZone = events.contains {
-                $0.geofenceId == dFence?.id && $0.eventType == "enter"
-            }
-            // Pickup already completed?
-            if !pickupCompleted {
-                pickupCompleted = events.contains {
-                    $0.geofenceId == pFence?.id && $0.eventType == "pickup_done"
-                }
-            }
-            // Dropoff already completed?
-            if !dropoffCompleted {
-                dropoffCompleted = events.contains {
-                    $0.geofenceId == dFence?.id && $0.eventType == "dropoff_done"
-                }
-            }
-            if inDropoffZone {
+            if events.contains(where: { dFenceIds.contains($0.geofenceId) && $0.eventType == "enter" }) {
+                inDropoffZone     = true
                 dropoffGeofenceId = dFence?.id
             }
+            if !pickupCompleted {
+                pickupCompleted = events.contains {
+                    pFenceIds.contains($0.geofenceId) && $0.eventType == "pickup_done"
+                }
+            }
+            if !dropoffCompleted {
+                dropoffCompleted = events.contains {
+                    dFenceIds.contains($0.geofenceId) && $0.eventType == "dropoff_done"
+                }
+            }
         }
+        saveZoneToCache()   // write to UserDefaults after every DB-driven update
     }
 
     private func startZonePolling() {
@@ -506,7 +569,7 @@ struct TripDetailView: View {
             if parts.count == 2,
                let lat = Double(parts[0].trimmingCharacters(in: .whitespacesAndNewlines)),
                let lon = Double(parts[1].trimmingCharacters(in: .whitespacesAndNewlines)) {
-                let item = MKMapItem(placemark: MKPlacemark(coordinate: .init(latitude: lat, longitude: lon)))
+                let item = MKMapItem(location: CLLocation(latitude: lat, longitude: lon), address: nil)
                 item.name = address[..<range.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
                 return item
             }

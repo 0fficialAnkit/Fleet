@@ -37,7 +37,7 @@ final class TripGeofenceMonitor: NSObject {
         let center: CLLocationCoordinate2D; let radius: Double
     }
     private var routeBoundaryMeta: [String: RouteBoundaryMeta] = [:]
-    private static let routeBoundaryPrefix = "route_boundary_"
+    nonisolated private static let routeBoundaryPrefix = "route_boundary_"
 
     /// iOS fires a catch-up `didEnterRegion` within ~1-2 s of `startMonitoring`
     /// if the device is already inside the region. We ignore any entry event that
@@ -202,13 +202,11 @@ final class TripGeofenceMonitor: NSObject {
                 driverId: dId, eventType: "enter", occurredAt: Date()))
 
             // 2 – in-app notification to fleet managers
-            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-            for mgr in managers {
-                try? await NotificationService.createNotification(Fleet.Notification(
-                    id: UUID(), userId: mgr.id,
-                    title: title, message: body,
-                    type: .info, isRead: false, createdAt: Date()))
-            }
+            try? await NotificationService.notifyManager(
+                forVehicle: vId,
+                title: title, message: body,
+                type: .info
+            )
 
             // 3 – local notification to driver
             let content   = UNMutableNotificationContent()
@@ -218,11 +216,17 @@ final class TripGeofenceMonitor: NSObject {
                     identifier: "gf_enter_\(fence.zoneType)_\(tId)",
                     content: content, trigger: nil))
         }
-        // Notify TripDetailView instantly — include fenceId so toggle uses it directly
+        // Notify TripDetailView instantly — include fenceId and tripId so the
+        // UserDefaults cache can be updated by any observer (even if TripDetailView
+        // is not currently in the view hierarchy).
         NotificationCenter.default.post(
             name: .gfZoneEntered,
             object: nil,
-            userInfo: ["zoneType": fence.zoneType, "geofenceId": fence.id.uuidString])
+            userInfo: [
+                "zoneType":   fence.zoneType,
+                "geofenceId": fence.id.uuidString,
+                "tripId":     tId.uuidString          // needed for global cache write
+            ])
         print("[GeofenceMonitor] \(emoji) Entered \(label) zone — trip \(tId.uuidString.prefix(6))")
     }
 }
@@ -296,14 +300,12 @@ extension TripGeofenceMonitor {
             try? await RouteBreachService.logBreach(breach)
 
             // 2. Notify fleet managers
-            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-            for mgr in managers {
-                try? await NotificationService.createNotification(Fleet.Notification(
-                    id: UUID(), userId: mgr.id,
-                    title: "🚨 Route Deviation Alert",
-                    message: "Driver has left the route boundary. Currently \(Int(distOutside / 1000 * 10) / 10) km outside the permitted area.",
-                    type: .alert, isRead: false, createdAt: Date()))
-            }
+            try? await NotificationService.notifyManager(
+                forVehicle: meta.vehicleId,
+                title: "🚨 Route Deviation Alert",
+                message: "Driver has left the route boundary. Currently \(Int(distOutside / 1000 * 10) / 10) km outside the permitted area.",
+                type: .alert
+            )
 
             // 3. Local push to driver
             let content = UNMutableNotificationContent()

@@ -57,4 +57,15 @@ final class NotificationsViewModel {
             markAsRead(notification)
         }
     }
+
+    func deleteNotification(_ notification: Notification) {
+        Task {
+            do {
+                try await NotificationService.deleteNotification(id: notification.id)
+                await loadData()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
 }

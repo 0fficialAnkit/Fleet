@@ -257,7 +257,7 @@ enum ProfileService {
             print("[ProfileService] Upsert failed: \(error)")
             // Fallback: plain update to set created_by_manager_id on existing row
             struct ManagerPatch: Encodable { let created_by_manager_id: UUID? }
-            try? await supabase
+            _ = try? await supabase
                 .from("users")
                 .update(ManagerPatch(created_by_manager_id: createdByManagerId))
                 .eq("id", value: newUserId)
