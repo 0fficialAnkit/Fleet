@@ -21,8 +21,6 @@ struct MaintenanceDashboardView: View {
                         }
 
                         upcomingMaintenanceSection
-
-                        priorityQueueSection
                     }
                     .refreshable { await viewModel.loadData() }
                     .listStyle(.insetGrouped)
@@ -157,59 +155,7 @@ struct MaintenanceDashboardView: View {
         }
     }
 
-    // MARK: - Priority Queue Section
 
-    private var priorityQueueSection: some View {
-        Section {
-            if viewModel.priorityQueueItems.isEmpty {
-                HStack(spacing: 12) {
-                    Image(systemName: "checkmark.shield.fill")
-                        .font(.system(size: 28))
-                        .foregroundStyle(Color.green)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("All clear")
-                            .font(.body.bold())
-                            .foregroundStyle(Color.primary)
-                        Text("No priority tasks detected")
-                            .font(.caption)
-                            .foregroundStyle(Color.secondary)
-                    }
-                }
-                .padding(.vertical, 6)
-            } else {
-                ForEach(viewModel.priorityQueueItems) { item in
-                    if case .workOrder(let wo) = item {
-                        NavigationLink(value: MaintenanceDestination.scheduledWorkOrderDetail(viewModel.buildScheduledWO(wo))) {
-                            PriorityQueueCard(item: item, viewModel: viewModel)
-                        }
-                    } else if case .issueReport(let report) = item {
-                        NavigationLink(value: MaintenanceDestination.issueReportDetail(report)) {
-                            PriorityQueueCard(item: item, viewModel: viewModel)
-                        }
-                    } else {
-                        PriorityQueueCard(item: item, viewModel: viewModel)
-                    }
-                }
-            }
-        } header: {
-            HStack {
-                Text("Priority Queue")
-                Spacer()
-                if !viewModel.priorityQueueItems.isEmpty {
-                    NavigationLink(value: MaintenanceDestination.workOrderList(filter: nil, assignedTo: nil, priority: nil)) {
-                        HStack(spacing: 4) {
-                            Text("See All (\(viewModel.priorityQueueItems.count))")
-                                .font(.caption.weight(.medium))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 10, weight: .semibold))
-                        }
-                        .foregroundStyle(Color.orange)
-                        .textCase(.none)
-                    }
-                }
-            }
-        }
-    }
 
     // MARK: - KPI cell helper
     private func mKpiCell(_ value: String, _ label: String, _ color: Color) -> some View {
@@ -280,75 +226,7 @@ struct UpcomingMaintenanceCard: View {
     }
 }
 
-// MARK: - Priority Queue Card
-struct PriorityQueueCard: View {
-    let item: UnifiedMaintenanceItem
-    let viewModel: MaintenanceDashboardViewModel
 
-    var iconName: String {
-        switch item {
-        case .issueReport: return "exclamationmark.triangle.fill"
-        case .workOrder: return "wrench.and.screwdriver.fill"
-        }
-    }
-
-    var priorityColor: Color {
-        switch item.unifiedPriority {
-        case .critical, .high: return Color.red
-        case .medium: return Color.orange
-        case .low: return Color.blue
-        case nil: return Color.secondary
-        }
-    }
-
-    var priorityLabel: String {
-        switch item.unifiedPriority {
-        case .critical: return "Critical"
-        case .high: return "High"
-        case .medium: return "Medium"
-        case .low: return "Low"
-        case nil: return "Unknown"
-        }
-    }
-
-    var body: some View {
-        HStack(spacing: 10) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(priorityColor.opacity(0.12))
-                    .frame(width: 40, height: 40)
-                Image(systemName: iconName)
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(priorityColor)
-            }
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(viewModel.vehiclePlate(for: item.vehicleId))
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.primary)
-                Text(item.subtitle)
-                    .font(.caption)
-                    .foregroundStyle(Color.secondary)
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            HStack(spacing: 4) {
-                Image(systemName: "exclamationmark.circle.fill")
-                    .font(.system(size: 11, weight: .semibold))
-                Text(priorityLabel)
-                    .font(.system(size: 12, weight: .bold))
-            }
-            .foregroundStyle(priorityColor)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(priorityColor.opacity(0.15))
-            .clipShape(Capsule())
-        }
-        .padding(.vertical, 4)
-    }
-}
 
 // MARK: - Maintenance Stat Pill (matches Fleet Manager style locally)
 struct MaintenanceStatPillLocal: View {

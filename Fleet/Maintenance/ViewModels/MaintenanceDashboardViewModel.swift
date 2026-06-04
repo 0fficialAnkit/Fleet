@@ -47,7 +47,8 @@ final class MaintenanceDashboardViewModel {
                 actionButtonTitle: "Start Task",
                 actionButtonIcon: "play.fill",
                 destination: .scheduledWorkOrderDetail(buildScheduledWOFromTask(task)),
-                isTask: true
+                isTask: true,
+                createdAt: task.scheduledDate
             )
         }
         items.append(contentsOf: tItems)
@@ -69,7 +70,8 @@ final class MaintenanceDashboardViewModel {
                 actionButtonTitle: "Start Work",
                 actionButtonIcon: "play.fill",
                 destination: .scheduledWorkOrderDetail(buildScheduledWO(wo)),
-                isTask: false
+                isTask: false,
+                createdAt: wo.createdAt
             )
         }
         items.append(contentsOf: woItems)
@@ -88,10 +90,13 @@ final class MaintenanceDashboardViewModel {
                 actionButtonTitle: "Start Repair",
                 actionButtonIcon: "play.fill",
                 destination: .scheduledWorkOrderDetail(buildScheduledWOFromIR(ir)),
-                isTask: false
+                isTask: false,
+                createdAt: ir.createdAt
             )
         }
         items.append(contentsOf: irItems)
+        
+        items.sort { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
 
         return Array(items.prefix(3))
     }
@@ -100,25 +105,6 @@ final class MaintenanceDashboardViewModel {
         let woItems = workOrders.map { UnifiedMaintenanceItem.workOrder($0) }
         let irItems = issueReports.map { UnifiedMaintenanceItem.issueReport($0) }
         return woItems + irItems
-    }
-
-    var priorityQueueItems: [UnifiedMaintenanceItem] {
-        // Include items that are open, in-progress, OR have nil status (newly created, DB default not decoded yet)
-        unifiedItems
-            .filter {
-                $0.unifiedStatus == .open ||
-                $0.unifiedStatus == .inProgress ||
-                $0.unifiedStatus == .pending ||
-                $0.unifiedStatus == nil
-            }
-            .sorted { (a, b) -> Bool in
-                let priorityScore: [WorkOrderPriority: Int] = [.critical: 4, .high: 3, .medium: 2, .low: 1]
-                let scoreA = priorityScore[a.unifiedPriority ?? .low] ?? 0
-                let scoreB = priorityScore[b.unifiedPriority ?? .low] ?? 0
-                return scoreA > scoreB
-            }
-            .prefix(3)
-            .map { $0 }
     }
 
     var openWorkOrders: Int {
@@ -391,4 +377,5 @@ struct UpcomingDisplayItem: Identifiable, Hashable {
     let actionButtonIcon: String
     let destination: MaintenanceDestination?
     let isTask: Bool
+    let createdAt: Date?
 }
