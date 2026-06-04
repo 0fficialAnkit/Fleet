@@ -160,15 +160,20 @@ final class MaintenanceDashboardViewModel {
         // Each fetch is independent — one DB failure won't block the others.
         async let t  = MaintenanceTaskService.fetchTasksForUser(assignedTo: userId)
         async let w  = WorkOrderService.fetchWorkOrdersForUser(assignedTo: userId)
-        async let ir = IssueReportService.fetchIssueReportsAssignedTo(userId: userId)
         async let i  = InventoryService.fetchAllInventory()
         async let v  = VehicleService.fetchAllVehicles()
 
-        if let result = try? await t  { tasks        = result }
-        if let result = try? await w  { workOrders   = result }
-        if let result = try? await ir { issueReports = result }
-        if let result = try? await i  { inventory    = result }
-        if let result = try? await v  { vehicles     = result }
+        if let result = try? await t  { tasks        = result } else { print("Failed to fetch tasks") }
+        if let result = try? await w  { workOrders   = result } else { print("Failed to fetch workOrders") }
+        
+        do {
+            issueReports = try await IssueReportService.fetchIssueReportsAssignedTo(userId: userId)
+        } catch {
+            print("Failed to fetch issue reports: \(error)")
+        }
+
+        if let result = try? await i  { inventory    = result } else { print("Failed to fetch inventory") }
+        if let result = try? await v  { vehicles     = result } else { print("Failed to fetch vehicles") }
 
         isLoading = false
     }

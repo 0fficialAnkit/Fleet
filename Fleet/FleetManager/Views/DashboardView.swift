@@ -28,6 +28,8 @@ struct DashboardView: View {
 
                         liveDriverAlertsSection
 
+                        resolvedMaintenanceCostSection
+
                         predictiveMaintenanceSection
                     }
                     .refreshable { await viewModel.loadData() }
@@ -78,7 +80,7 @@ struct DashboardView: View {
                         vehicleId: alert.vehicle.id,
                         createdBy: nil,
                         assignedTo: staffId,
-                        priority: alert.severity == .critical ? .critical : .medium,
+                        priority: alert.severity == .critical ? .high : .medium,
                         status: .open
                     )
                     let task = MaintenanceTask(
@@ -324,6 +326,55 @@ struct DashboardView: View {
                         .padding(.vertical, 2)
                         .background(.orange)
                         .clipShape(Capsule())
+                }
+            }
+        }
+    }
+
+
+    // MARK: - Resolved Maintenance Cost Section
+
+    private var resolvedMaintenanceCostSection: some View {
+        // Show resolved records with a recorded cost, most recent first, last 30 days
+        let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+        let resolved = viewModel.maintenanceHistory
+            .filter { ($0.cost ?? 0) > 0 && ($0.completedAt ?? .distantPast) >= cutoff }
+            .sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
+
+        return Section {
+            if resolved.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.teal)
+                    Text("No resolved work orders with costs in the last 30 days")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            } else {
+                ForEach(resolved) { history in
+                    ResolvedMaintenanceCostCard(
+                        history: history,
+                        vehicle: viewModel.vehicles.first { $0.id == history.vehicleId }
+                    )
+                }
+            }
+        } header: {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.teal)
+                Text("Resolved Work Orders – Cost")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if !resolved.isEmpty {
+                    let total = resolved.compactMap { $0.cost }.reduce(0, +)
+                    Text(String(format: "₹ %.0f total", total))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.teal)
+                        .textCase(.none)
                 }
             }
         }
@@ -611,7 +662,7 @@ struct AllMaintenanceAlertsView: View {
                     vehicleId: alert.vehicle.id,
                     createdBy: nil,
                     assignedTo: staffId,
-                    priority: alert.severity == .critical ? .critical : .medium,
+                    priority: alert.severity == .critical ? .high : .medium,
                     status: .open
                 )
                 let task = MaintenanceTask(
@@ -636,6 +687,76 @@ struct AllMaintenanceAlertsView: View {
                 onAssignSuccess()
             }
         }
+    }
+}
+
+// MARK: - Resolved Maintenance Cost Card
+
+struct ResolvedMaintenanceCostCard: View {
+    let history: MaintenanceHistory
+    let vehicle: Vehicle?
+
+    private var vehicleName: String {
+        guard let v = vehicle else { return "Unknown Vehicle" }
+        return "\(v.make ?? "") \(v.model ?? "")"
+    }
+
+    private var vehiclePlate: String {
+        vehicle?.licensePlate ?? ""
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            // Icon
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.teal.opacity(0.12))
+                    .frame(width: 36, height: 36)
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.teal)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(vehicleName)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.primary)
+                        if !vehiclePlate.isEmpty {
+                            Text(vehiclePlate)
+                                .font(.caption.monospaced())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Spacer()
+                    // Cost badge
+                    if let cost = history.cost {
+                        Text(String(format: "₹ %.0f", cost))
+                            .font(.subheadline.bold())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color.teal)
+                            .clipShape(Capsule())
+                    }
+                }
+
+                if let details = history.serviceDetails, !details.isEmpty {
+                    Text(details.components(separatedBy: "\n").first ?? details)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                if let date = history.completedAt {
+                    Label(date.formatted(date: .abbreviated, time: .shortened), systemImage: "calendar")
+                        .font(.caption2)
+                        .foregroundStyle(Color(.tertiaryLabel))
+                }
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 

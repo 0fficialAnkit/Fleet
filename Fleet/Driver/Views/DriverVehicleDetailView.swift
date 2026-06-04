@@ -15,9 +15,6 @@ struct DriverVehicleDetailView: View {
                     // MARK: - Hero Header
                     vehicleHeroHeader
 
-                    // MARK: - Status Chips
-                    statusChipsRow
-
                     // MARK: - Vehicle Info Card
                     vehicleInfoCard
 
@@ -65,22 +62,7 @@ struct DriverVehicleDetailView: View {
         }
     }
 
-    // MARK: - Status Chips Row
-    private var statusChipsRow: some View {
-        HStack(spacing: 8) {
-            StatusBadge(
-                text: vehicle.status?.rawValue.capitalized ?? "Unknown",
-                color: vehicle.status == .active ? Color.green : Color.orange,
-                icon: vehicle.status == .active ? "checkmark.circle.fill" : "exclamationmark.circle.fill"
-            )
 
-            if let year = vehicle.year {
-                StatusBadge(text: String(year), color: Color.blue, icon: "calendar")
-            }
-
-            Spacer()
-        }
-    }
 
     // MARK: - Vehicle Info Card
     private var vehicleInfoCard: some View {
