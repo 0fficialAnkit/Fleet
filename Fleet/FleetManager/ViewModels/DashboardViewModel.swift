@@ -60,7 +60,21 @@ final class DashboardViewModel {
         recentVoiceIncidents = (await vi) ?? []
         
         isLoading = false
-        
+
+        // Trigger preventive alerts check
+        let oldAlertCount = issueReports.count
+        await PredictiveMaintenanceService.checkAndTriggerPreventiveAlerts(
+            vehicles: vehicles,
+            trips: trips,
+            maintenanceHistory: maintenanceHistory,
+            issueReports: issueReports,
+            adminId: adminId
+        )
+
+        // Refetch issue reports if new alerts were generated
+        if let latestIr = try? await IssueReportService.fetchAllIssueReports(), latestIr.count > oldAlertCount {
+            issueReports = latestIr
+        }
 
         // Run predictive analysis on updated data
         predictiveAlerts = PredictiveMaintenanceService.analyze(
