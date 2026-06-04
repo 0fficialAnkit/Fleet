@@ -24,9 +24,12 @@ struct FleetManagerMainView: View {
                 }
                 .tag(2)
 
+
+            // MARK: Alerts
             ReportsView()
                 .tabItem {
-                    Label("Reports", systemImage: "chart.bar.xaxis")
+                    Image(systemName: "externaldrive.fill.trianglebadge.exclamationmark")
+                    Text("Alerts")
                 }
                 .tag(3)
         }

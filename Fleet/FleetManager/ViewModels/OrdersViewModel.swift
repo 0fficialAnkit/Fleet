@@ -155,6 +155,35 @@ final class OrdersViewModel {
         await loadData()
     }
 
+    func updateTrip(
+        id: UUID,
+        vehicleId: UUID,
+        driverId: UUID,
+        routeId: UUID,
+        startTime: Date,
+        orderType: OrderType,
+        status: TripStatus = .scheduled
+    ) async throws {
+        let updatedTrip = Trip(
+            id: id,
+            vehicleId: vehicleId,
+            driverId: driverId,
+            routeId: routeId,
+            startTime: startTime,
+            endTime: nil,
+            distance: nil,
+            status: status,
+            orderType: orderType,
+            createdAt: Date()
+        )
+        try await TripService.updateTrip(updatedTrip)
+        
+        // Also update assignment
+        try? await VehicleService.assignDriver(vehicleId: vehicleId, driverId: driverId)
+        
+        await loadData()
+    }
+
     func deleteTrip(_ trip: Trip) async throws {
         try await TripService.deleteTrip(id: trip.id)
         await loadData()

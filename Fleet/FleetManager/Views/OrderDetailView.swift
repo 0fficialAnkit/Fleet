@@ -13,6 +13,7 @@ struct OrderDetailView: View {
     @State private var gfEvents:       [TripGeofenceEvent] = []
     @State private var routeBreaches:  [RouteBreach]       = []
     @State private var pollingTask:    Task<Void, Never>?  = nil
+    @State private var isEditingOrder = false
 
     var route:       Route? { viewModel.route(for: trip.routeId) }
     var driverName:  String { viewModel.driverName(for: trip.driverId) }
@@ -281,6 +282,18 @@ struct OrderDetailView: View {
             }
         }
         .onDisappear { pollingTask?.cancel(); pollingTask = nil }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if trip.status == .scheduled {
+                    Button("Edit") {
+                        isEditingOrder = true
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $isEditingOrder) {
+            AddOrderView(viewModel: viewModel, tripToEdit: trip)
+        }
     }
 
     // MARK: - Event row (Apple native style)
