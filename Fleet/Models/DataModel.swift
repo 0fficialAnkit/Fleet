@@ -794,19 +794,36 @@ struct IssueReportRecord: Codable, Identifiable, Hashable, Sendable {
     var status: String
     var assignedTo: UUID?
     var createdAt: Date?
-    var issuePhoto: String?   // comma-separated public URLs
+    var issuePhoto: String?       // comma-separated public URLs
+    // Populated when maintenance marks the work complete:
+    var workStartedAt: Date?      // when maintenance started (status → inProgress)
+    var resolvedAt: Date?         // when the work was completed
+    var maintenanceNotes: String? // technician's service notes
+    var laborCost: String?        // labour cost (₹)
+    var extraCost: String?        // extra/miscellaneous cost (₹)
+    var partsCost: String?        // auto-calculated inventory parts cost (₹)
+    var totalCost: String?        // labour + parts + extra (₹)
+    var partsUsed: String?        // comma-separated parts with quantities
 
     enum CodingKeys: String, CodingKey {
         case id
-        case vehicleId  = "vehicle_id"
-        case reportedBy = "reported_by"
+        case vehicleId        = "vehicle_id"
+        case reportedBy       = "reported_by"
         case category
         case severity
         case description
         case status
-        case assignedTo = "assigned_to"
-        case createdAt  = "created_at"
-        case issuePhoto = "issue_photo"
+        case assignedTo       = "assigned_to"
+        case createdAt        = "created_at"
+        case issuePhoto       = "issue_photo"
+        case workStartedAt    = "work_started_at"
+        case resolvedAt       = "resolved_at"
+        case maintenanceNotes = "maintenance_notes"
+        case laborCost        = "labor_cost"
+        case extraCost        = "extra_cost"
+        case partsCost        = "parts_cost"
+        case totalCost        = "total_cost"
+        case partsUsed        = "parts_used"
     }
 }
 

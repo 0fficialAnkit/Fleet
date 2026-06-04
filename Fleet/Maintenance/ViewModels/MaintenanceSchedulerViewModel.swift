@@ -574,27 +574,66 @@ final class MaintenanceSchedulerViewModel {
                 }
             } else if let sourceIrId = wo.sourceIssueReportId, let uid = currentUserId {
                 Task {
-                    let statusStr: String
-                    switch status {
-                    case .pending: statusStr = "open"
-                    case .open: statusStr = "open"
-                    case .inProgress: statusStr = "in_progress"
-                    case .completed: statusStr = "resolved"
-                    case .cancelled: statusStr = "closed"
-                    }
-                    try? await IssueReportService.updateIssueReport(id: sourceIrId, assignedTo: uid, status: statusStr)
-                    if status == .completed {
+                    if status == .inProgress {
+                        // Record the start time on the issue report
+                        try? await IssueReportService.markInProgress(id: sourceIrId, assignedTo: uid)
+                    } else if status == .completed {
+                        let partsStr  = wo.partsUsed.joined(separator: ", ")
+                        let laborStr  = wo.laborCost.isEmpty ? "" : wo.laborCost
+                        let notesStr  = wo.notes
+
+                        // 1. Resolve issue report with available details
+                        try? await IssueReportService.resolveWithDetails(
+                            id: sourceIrId,
+                            assignedTo: uid,
+                            notes: notesStr,
+                            laborCost: laborStr,
+                            extraCost: "",
+                            partsCost: "",
+                            totalCost: laborStr,
+                            parts: partsStr
+                        )
+
+                        // 2. Create maintenance history for the vehicle record
                         if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                            let costDouble = Double(laborStr.filter { $0.isNumber || $0 == "." })
                             let history = MaintenanceHistory(
                                 id: UUID(),
                                 vehicleId: vehicle.id,
                                 workOrderId: nil,
-                                serviceDetails: "Issue resolved: \(wo.vehicleIssue)",
-                                cost: nil,
+                                serviceDetails: "Issue resolved: \(wo.vehicleIssue)\nNotes: \(notesStr)\nParts: \(partsStr)",
+                                cost: costDouble,
                                 completedAt: Date()
                             )
                             try? await MaintenanceHistoryService.createHistory(history)
                         }
+
+                        // 3. Notify ALL fleet managers with the full completion report
+                        let managers = profiles.filter { $0.role == "fleet_manager" }
+                        for manager in managers {
+                            let partsLine = partsStr.isEmpty  ? "" : "\nParts used: \(partsStr)"
+                            let costLine  = laborStr.isEmpty  ? "" : "\nLabour cost: ₹\(laborStr)"
+                            let noteLine  = notesStr.isEmpty  ? "" : "\nNotes: \(notesStr)"
+                            let notification = Fleet.Notification(
+                                id: UUID(),
+                                userId: manager.id,
+                                title: "✅ Maintenance Completed — \(wo.vehicleNumber)",
+                                message: "\(wo.vehicleIssue)\(partsLine)\(costLine)\(noteLine)",
+                                type: .maintenance,
+                                isRead: false,
+                                createdAt: Date()
+                            )
+                            try? await NotificationService.createNotification(notification)
+                        }
+                    } else {
+                        let statusStr: String
+                        switch status {
+                        case .inProgress: statusStr = "in_progress"
+                        case .cancelled:  statusStr = "closed"
+                        default:          statusStr = "open"
+                        }
+                        try? await IssueReportService.updateIssueReport(
+                            id: sourceIrId, assignedTo: uid, status: statusStr)
                     }
                     try? await Task.sleep(for: .seconds(2))
                     woStatusOverrides.removeValue(forKey: id)
@@ -616,52 +655,87 @@ final class MaintenanceSchedulerViewModel {
 
     /// Marks a work order as completed, persisting the full cost breakdown into MaintenanceHistory.
     /// Call this instead of `updateWorkOrderStatus(_:to:.completed)` when the tech has entered cost data.
-    func completeWorkOrder(id: UUID, totalCost: Double, serviceNotes: String) {
+    /// Called by WorkOrderDetailSheet when maintenance taps "Mark as Complete".
+    /// Receives the full cost + parts breakdown so nothing is lost.
+    func completeWorkOrder(
+        id: UUID,
+        laborCost: String,
+        extraCost: String,
+        partsCost: Double,
+        totalCost: Double,
+        serviceNotes: String,
+        partsDetail: String    // "Part A (x2) ₹200, Part B (x1) ₹150"
+    ) {
         woStatusOverrides[id] = .completed
 
         if let i = allWorkOrders.firstIndex(where: { $0.id == id }) {
             allWorkOrders[i].status = .completed
-            allWorkOrders[i].notes = serviceNotes
+            allWorkOrders[i].notes  = serviceNotes
 
             let wo = allWorkOrders[i]
             isUpdating = true
 
+            let laborStr = laborCost
+            let extraStr = extraCost
+            let partsStr = String(format: "%.0f", partsCost)
+            let totalStr = String(format: "%.0f", totalCost)
+            let completedAt = Date()
+
             Task {
+                // ── Work order sourced from a regular WorkOrder record ──
                 if let sourceId = wo.sourceWorkOrderId {
                     try? await WorkOrderService.updateWorkOrderStatusWithCompletion(
-                        id: sourceId, status: .completed, completedAt: Date()
-                    )
+                        id: sourceId, status: .completed, completedAt: completedAt)
                     if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
-                        let details = serviceNotes.isEmpty
-                            ? "Work order completed: \(wo.vehicleIssue)"
-                            : "Work order completed: \(wo.vehicleIssue)\nNotes: \(serviceNotes)"
+                        let details = "Work order completed: \(wo.vehicleIssue)"
+                            + (serviceNotes.isEmpty ? "" : "\nNotes: \(serviceNotes)")
+                            + (partsDetail.isEmpty  ? "" : "\nParts: \(partsDetail)")
                         let history = MaintenanceHistory(
-                            id: UUID(),
-                            vehicleId: vehicle.id,
-                            workOrderId: sourceId,
-                            serviceDetails: details,
-                            cost: totalCost > 0 ? totalCost : nil,
-                            completedAt: Date()
-                        )
+                            id: UUID(), vehicleId: vehicle.id, workOrderId: sourceId,
+                            serviceDetails: details, cost: totalCost > 0 ? totalCost : nil,
+                            completedAt: completedAt)
                         try? await MaintenanceHistoryService.createHistory(history)
                     }
+
+                // ── Work order sourced from a driver's Issue Report ──
                 } else if let sourceIrId = wo.sourceIssueReportId, let uid = currentUserId {
-                    try? await IssueReportService.updateIssueReport(
-                        id: sourceIrId, assignedTo: uid, status: "resolved"
+                    try? await IssueReportService.resolveWithDetails(
+                        id: sourceIrId,
+                        assignedTo: uid,
+                        notes: serviceNotes,
+                        laborCost: laborStr,
+                        extraCost: extraStr,
+                        partsCost: partsStr,
+                        totalCost: totalStr,
+                        parts: partsDetail,
+                        resolvedAt: completedAt
                     )
                     if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
-                        let details = serviceNotes.isEmpty
-                            ? "Issue resolved: \(wo.vehicleIssue)"
-                            : "Issue resolved: \(wo.vehicleIssue)\nNotes: \(serviceNotes)"
+                        let details = "Issue resolved: \(wo.vehicleIssue)"
+                            + (serviceNotes.isEmpty ? "" : "\nNotes: \(serviceNotes)")
+                            + (partsDetail.isEmpty  ? "" : "\nParts: \(partsDetail)")
                         let history = MaintenanceHistory(
-                            id: UUID(),
-                            vehicleId: vehicle.id,
-                            workOrderId: nil,
-                            serviceDetails: details,
-                            cost: totalCost > 0 ? totalCost : nil,
-                            completedAt: Date()
-                        )
+                            id: UUID(), vehicleId: vehicle.id, workOrderId: nil,
+                            serviceDetails: details, cost: totalCost > 0 ? totalCost : nil,
+                            completedAt: completedAt)
                         try? await MaintenanceHistoryService.createHistory(history)
+                    }
+
+                    // Notify ALL fleet managers with the full completion report
+                    let managers = profiles.filter { $0.role == "fleet_manager" }
+                    for manager in managers {
+                        var lines = [wo.vehicleIssue]
+                        if !serviceNotes.isEmpty { lines.append("Notes: \(serviceNotes)") }
+                        if !partsDetail.isEmpty  { lines.append("Parts: \(partsDetail)") }
+                        if !laborStr.isEmpty     { lines.append("Labour: ₹\(laborStr)") }
+                        if !extraStr.isEmpty     { lines.append("Extra: ₹\(extraStr)") }
+                        if totalCost > 0         { lines.append("Total: ₹\(totalStr)") }
+                        let notification = Fleet.Notification(
+                            id: UUID(), userId: manager.id,
+                            title: "✅ Maintenance Complete — \(wo.vehicleNumber)",
+                            message: lines.joined(separator: "\n"),
+                            type: .maintenance, isRead: false, createdAt: completedAt)
+                        try? await NotificationService.createNotification(notification)
                     }
                 }
                 try? await Task.sleep(for: .seconds(2))
@@ -669,9 +743,7 @@ final class MaintenanceSchedulerViewModel {
                 isUpdating = false
             }
         }
-        if selectedWorkOrder?.id == id {
-            selectedWorkOrder?.status = .completed
-        }
+        if selectedWorkOrder?.id == id { selectedWorkOrder?.status = .completed }
     }
 
     func updateWorkOrderNotes(id: UUID, notes: String) {
