@@ -185,51 +185,7 @@ struct TripDetailView: View {
                 }
             }
 
-            // ── 7. Pre-trip checklist button — below vehicle, scheduled only ─
-            if isScheduled {
-                Section {
-                    let canStart = canStartTrip
-                    let isChecklistDone = preTripNotes != nil
-                    
-                    Button {
-                        showingChecklist = .preTrip
-                    } label: {
-                        if canStart {
-                            Label(isChecklistDone ? "Edit Pre-Trip Checklist" : "Start Pre-Trip Checklist", systemImage: isChecklistDone ? "checkmark.circle.fill" : "checklist")
-                                .frame(maxWidth: .infinity)
-                        } else {
-                            if let start = trip.startTime {
-                                Label("Cannot Start Yet (Scheduled for \(start.formatted(date: .abbreviated, time: .shortened)))", systemImage: "calendar.badge.clock")
-                                    .frame(maxWidth: .infinity)
-                            } else {
-                                Label("Start Pre-Trip Checklist", systemImage: "checklist")
-                                    .frame(maxWidth: .infinity)
-                            }
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(canStart ? (isChecklistDone ? .blue : .green) : .secondary)
-                    .controlSize(.large)
-                    .buttonBorderShape(.capsule)
-                    .disabled(!canStart)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    
-                    SwipeToConfirmButton(
-                        label: "Slide to Start Trip",
-                        tint: .green,
-                        enabled: isChecklistDone
-                    ) {
-                        if let notes = preTripNotes, let urls = preTripUrls {
-                            onStart(trip.id, trip.vehicleId, notes, urls)
-                            withAnimation { currentStatus = .active }
-                            openMapsNavigation()
-                        }
-                    }
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                }
-            }
+
 
             // ── 8. In-trip actions ────────────────────────────────────────
             if isActive {
@@ -396,6 +352,41 @@ struct TripDetailView: View {
                 .padding(.top, 12)
                 .padding(.bottom, 8)
                 .background(.ultraThinMaterial)
+            } else if isScheduled {
+                VStack(spacing: 8) {
+                    let canStart = canStartTrip
+                    
+                    Button {
+                        showingChecklist = .preTrip
+                    } label: {
+                        if canStart {
+                            Label("Start Pre-Trip Checklist", systemImage: "checklist")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 54)
+                        } else {
+                            if let start = trip.startTime {
+                                Label("Scheduled for \(start.formatted(date: .abbreviated, time: .shortened))", systemImage: "calendar.badge.clock")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 54)
+                            } else {
+                                Label("Start Pre-Trip Checklist", systemImage: "checklist")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 54)
+                            }
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(canStart ? .green : .secondary)
+                    .buttonBorderShape(.capsule)
+                    .disabled(!canStart)
+                }
+                .padding(.horizontal)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+                .background(.ultraThinMaterial)
             }
         }
         // ── Pickup confirmation banner ─────────────────────────────────
@@ -493,6 +484,9 @@ struct TripDetailView: View {
                 if type == .preTrip {
                     preTripNotes = notes
                     preTripUrls = urls
+                    onStart(trip.id, trip.vehicleId, notes, urls)
+                    withAnimation { currentStatus = .active }
+                    openMapsNavigation()
                 } else {
                     onEnd(trip.id, trip.vehicleId, estimatedDistance, notes, urls)
                     withAnimation { currentStatus = .completed }

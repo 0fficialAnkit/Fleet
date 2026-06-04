@@ -139,37 +139,6 @@ struct ReportDetailView: View {
                     }
                 }
 
-                // ── Incident Details ──────────────────────────────
-                Section("Incident Details") {
-                    if let loc = meta["Location"] {
-                        LabeledContent("Where Noticed", value: loc)
-                    }
-                    if let rat = meta["Reported at"] {
-                        LabeledContent("Time of Incident", value: rat)
-                    }
-                    if let drv = meta["Driveable"] {
-                        HStack {
-                            Text("Vehicle Driveable")
-                            Spacer()
-                            Text(drv)
-                                .fontWeight(.medium)
-                                .foregroundStyle(isNotDriveable ? Color.red : Color.green)
-                        }
-                    }
-                    if !cleanDescription.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Description")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                                .textCase(.uppercase)
-                            Text(cleanDescription)
-                                .font(.body)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
-
                 // ── Damage Photos ─────────────────────────────────
                 if !photoURLs.isEmpty {
                     Section {
@@ -208,32 +177,106 @@ struct ReportDetailView: View {
                     }
                 }
 
-                // ── Reporter ──────────────────────────────────────
-                Section {
-                    if isReportedByExpanded {
+                // ── Details ──────────────────────────────
+                Section("Details") {
+                    if let loc = meta["Location"] {
+                        LabeledContent("Where Noticed", value: loc)
+                    }
+                    if let rat = meta["Reported at"] {
+                        LabeledContent("Time of Incident", value: rat)
+                    }
+                    if let drv = meta["Driveable"] {
+                        HStack {
+                            Text("Vehicle Driveable")
+                            Spacer()
+                            Text(drv)
+                                .fontWeight(.medium)
+                                .foregroundStyle(isNotDriveable ? Color.red : Color.green)
+                        }
+                    }
+                    if !cleanDescription.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Description")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                                .textCase(.uppercase)
+                            Text(cleanDescription)
+                                .font(.body)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    
+                    // ── Assignment ────────────────────────────────────
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Assign to Maintenance")
+                            .font(.headline)
+                            .padding(.top, 8)
+                            .foregroundStyle(Color.primary)
+                        
+                        if isLocked {
+                            if let staffId = selectedStaffId,
+                               let staff = viewModel.maintenanceStaff.first(where: { $0.id == staffId }) {
+                                LabeledContent("Assigned To", value: staff.fullName)
+                            } else {
+                                LabeledContent("Assigned To", value: "Not Assigned")
+                            }
+
+                            HStack(spacing: 6) {
+                                Image(systemName: report.status == .resolved
+                                      ? "checkmark.seal.fill" : "wrench.and.screwdriver.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(report.status == .resolved ? Color.green : Color.blue)
+                                Text(report.status == .resolved
+                                     ? "Task resolved — reassignment not allowed."
+                                     : "Task in progress — reassignment not allowed.")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.secondary)
+                            }
+                        } else if viewModel.maintenanceStaff.isEmpty {
+                            Text("No maintenance staff available")
+                                .foregroundStyle(Color.secondary)
+                        } else {
+                            Picker("Assign To", selection: $selectedStaffId) {
+                                Text("Not Assigned").tag(nil as UUID?)
+                                ForEach(viewModel.maintenanceStaff, id: \.id) { staff in
+                                    Text(staff.fullName).tag(staff.id as UUID?)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .tint(Color.primary)
+
+                            if let staffId = selectedStaffId {
+                                HStack {
+                                    Text("Workload")
+                                    Spacer()
+                                    Text(viewModel.staffWorkloadStatus(staffId))
+                                        .foregroundStyle(viewModel.staffWorkloadColor(staffId))
+                                        .font(.footnote)
+                                }
+                            }
+                        }
+                        
+                        if !isLocked && assignmentChanged {
+                            Text("Tap Done to confirm assignment and notify the maintenance staff.")
+                                .font(.caption)
+                                .foregroundStyle(Color.teal)
+                                .padding(.top, 4)
+                        }
+                    }
+                    .padding(.vertical, 8)
+
+                    // ── Reporter ──────────────────────────────────────
+                    DisclosureGroup("Reported By", isExpanded: $isReportedByExpanded) {
                         LabeledContent("Driver", value: report.driverName)
                         let lic = driverProfile?.licenseNumber ?? report.driverLicenseNumber
                         if let l = lic, !l.isEmpty { LabeledContent("Licence No.", value: l) }
                         if let email = driverProfile?.email { LabeledContent("Email", value: email) }
                         if let phone = driverProfile?.phone { LabeledContent("Phone", value: phone) }
                     }
-                } header: {
-                    Button(action: {
-                        withAnimation { isReportedByExpanded.toggle() }
-                    }) {
-                        HStack {
-                            Text("Reported By")
-                            Spacer()
-                            Image(systemName: isReportedByExpanded ? "chevron.up" : "chevron.down")
-                        }
-                        .foregroundStyle(Color.secondary)
-                    }
-                    .textCase(nil)
-                }
-
-                // ── Vehicle Details ───────────────────────────────
-                Section {
-                    if isVehicleDetailsExpanded {
+                    
+                    // ── Vehicle Details ───────────────────────────────
+                    DisclosureGroup("Vehicle Details", isExpanded: $isVehicleDetailsExpanded) {
                         LabeledContent("Make & Model",
                                        value: "\(vehicle?.make ?? "—") \(vehicle?.model ?? "")".trimmingCharacters(in: .whitespaces))
                         if let year = vehicle?.year {
@@ -250,47 +293,20 @@ struct ReportDetailView: View {
                             LabeledContent("Mileage", value: String(format: "%.0f km/L", mil))
                         }
                     }
-                } header: {
-                    Button(action: {
-                        withAnimation { isVehicleDetailsExpanded.toggle() }
-                    }) {
-                        HStack {
-                            Text("Vehicle Details")
-                            Spacer()
-                            Image(systemName: isVehicleDetailsExpanded ? "chevron.up" : "chevron.down")
-                        }
-                        .foregroundStyle(Color.secondary)
-                    }
-                    .textCase(nil)
-                }
-
-                // ── Compliance ────────────────────────────────────
-                if let vehicle = vehicle {
-                    Section {
-                        if isComplianceExpanded {
+                    
+                    // ── Compliance ────────────────────────────────────
+                    if let vehicle = vehicle {
+                        DisclosureGroup("Compliance & Reminders", isExpanded: $isComplianceExpanded) {
                             VehicleComplianceSection(vehicle: vehicle, editable: false)
                                 .listRowInsets(EdgeInsets())
                                 .listRowBackground(Color.clear)
+                                .padding(.vertical, 8)
                         }
-                    } header: {
-                        Button(action: {
-                            withAnimation { isComplianceExpanded.toggle() }
-                        }) {
-                            HStack {
-                                Text("Compliance & Reminders")
-                                Spacer()
-                                Image(systemName: isComplianceExpanded ? "chevron.up" : "chevron.down")
-                            }
-                            .foregroundStyle(Color.secondary)
-                        }
-                        .textCase(nil)
                     }
-                }
-
-                // ── Last Trip ─────────────────────────────────────
-                if let trip = lastTrip {
-                    Section {
-                        if isLastTripExpanded {
+                    
+                    // ── Last Trip ─────────────────────────────────────
+                    if let trip = lastTrip {
+                        DisclosureGroup("Last Trip on This Vehicle", isExpanded: $isLastTripExpanded) {
                             if let type = trip.orderType {
                                 LabeledContent("Order Type", value: type.displayName)
                             }
@@ -324,86 +340,20 @@ struct ReportDetailView: View {
                                 LabeledContent("Distance", value: String(format: "%.1f km", dist))
                             }
                         }
-                    } header: {
-                        Button(action: {
-                            withAnimation { isLastTripExpanded.toggle() }
-                        }) {
-                            HStack {
-                                Text("Last Trip on This Vehicle")
-                                Spacer()
-                                Image(systemName: isLastTripExpanded ? "chevron.up" : "chevron.down")
+                    }
+                    
+                    // ── Last Driver ───────────────────────────────────
+                    if let driver = lastDriver {
+                        DisclosureGroup("Last Driver on This Vehicle") {
+                            LabeledContent("Name", value: driver.fullName)
+                            if let lic = driver.licenseNumber, !lic.isEmpty {
+                                LabeledContent("Licence No.", value: lic)
                             }
-                            .foregroundStyle(Color.secondary)
-                        }
-                        .textCase(nil)
-                    }
-                }
-
-                // ── Last Driver (if different) ────────────────────
-                if let driver = lastDriver {
-                    Section("Last Driver on This Vehicle") {
-                        LabeledContent("Name", value: driver.fullName)
-                        if let lic = driver.licenseNumber, !lic.isEmpty {
-                            LabeledContent("Licence No.", value: lic)
-                        }
-                        LabeledContent("Email", value: driver.email)
-                        if let phone = driver.phone {
-                            LabeledContent("Phone", value: phone)
-                        }
-                    }
-                }
-
-                // ── Assignment ────────────────────────────────────
-                Section {
-                    if isLocked {
-                        // Read-only when task is already active or resolved
-                        if let staffId = selectedStaffId,
-                           let staff = viewModel.maintenanceStaff.first(where: { $0.id == staffId }) {
-                            LabeledContent("Assigned To", value: staff.fullName)
-                        } else {
-                            LabeledContent("Assigned To", value: "Not Assigned")
-                        }
-
-                        HStack(spacing: 6) {
-                            Image(systemName: report.status == .resolved
-                                  ? "checkmark.seal.fill" : "wrench.and.screwdriver.fill")
-                                .font(.caption)
-                                .foregroundStyle(report.status == .resolved ? Color.green : Color.blue)
-                            Text(report.status == .resolved
-                                 ? "Task resolved — reassignment not allowed."
-                                 : "Task in progress — reassignment not allowed.")
-                                .font(.caption)
-                                .foregroundStyle(Color.secondary)
-                        }
-                    } else if viewModel.maintenanceStaff.isEmpty {
-                        Text("No maintenance staff available")
-                            .foregroundStyle(Color.secondary)
-                    } else {
-                        Picker("Assign To", selection: $selectedStaffId) {
-                            Text("Not Assigned").tag(nil as UUID?)
-                            ForEach(viewModel.maintenanceStaff, id: \.id) { staff in
-                                Text(staff.fullName).tag(staff.id as UUID?)
+                            LabeledContent("Email", value: driver.email)
+                            if let phone = driver.phone {
+                                LabeledContent("Phone", value: phone)
                             }
                         }
-                        .pickerStyle(.menu)
-                        .tint(Color.primary)
-
-                        if let staffId = selectedStaffId {
-                            HStack {
-                                Text("Workload")
-                                Spacer()
-                                Text(viewModel.staffWorkloadStatus(staffId))
-                                    .foregroundStyle(viewModel.staffWorkloadColor(staffId))
-                                    .font(.footnote)
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Assign to Maintenance")
-                } footer: {
-                    if !isLocked && assignmentChanged {
-                        Text("Tap Done to confirm assignment and notify the maintenance staff.")
-                            .foregroundStyle(Color.teal)
                     }
                 }
             }
