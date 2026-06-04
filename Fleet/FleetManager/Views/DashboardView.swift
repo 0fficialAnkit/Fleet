@@ -28,8 +28,6 @@ struct DashboardView: View {
 
                         liveDriverAlertsSection
 
-                        resolvedMaintenanceCostSection
-
                         predictiveMaintenanceSection
                     }
                     .refreshable { await viewModel.loadData() }
@@ -41,7 +39,7 @@ struct DashboardView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button(action: { showingNotifications = true }) {
-                        Image(systemName: viewModel.hasUnreadNotifications ? "bell.badge" : "bell")
+                        Image(systemName: "bell")
                             .font(.system(size: 17, weight: .medium))
                             //.symbolRenderingMode(viewModel.hasUnreadNotifications ? .multicolor : .monochrome)
                             .foregroundStyle(.primary)
@@ -76,18 +74,21 @@ struct DashboardView: View {
                     recommendationDescription: alert.recommendation,
                     maintenanceStaff: viewModel.profiles.filter { $0.role == "maintenance" }
                 ) { staffId, notes in
+                    print("[DashboardView] Starting assignment for alert: \(alert.reason) to staff: \(staffId)")
                     let workOrderId = try await WorkOrderService.createWorkOrder(
                         vehicleId: alert.vehicle.id,
-                        createdBy: nil,
+                        createdBy: authViewModel.currentUserId,
                         assignedTo: staffId,
                         priority: alert.severity == .critical ? .high : .medium,
                         status: .open
                     )
+                    print("[DashboardView] Created work order: \(workOrderId)")
+
                     let task = MaintenanceTask(
                         id: UUID(),
                         workOrderId: workOrderId,
                         vehicleId: alert.vehicle.id,
-                        scheduledBy: nil,
+                        scheduledBy: authViewModel.currentUserId,
                         assignedTo: staffId,
                         taskType: .inspection,
                         description: "\(alert.reason). \(alert.recommendation)\(notes.isEmpty ? "" : "\nNotes: \(notes)")",
@@ -98,9 +99,29 @@ struct DashboardView: View {
                         status: .pending
                     )
                     try await MaintenanceTaskService.createTask(task)
+                    print("[DashboardView] Created maintenance task")
+
+                    let reporterId = authViewModel.currentUserId ?? staffId
+                    let reportId = UUID()
+                    let issueReport = IssueReportRecord(
+                        id: reportId,
+                        vehicleId: alert.vehicle.id,
+                        reportedBy: reporterId,
+                        category: "Predictive Alert",
+                        severity: alert.severity == .critical ? "critical" : "high",
+                        description: "\(alert.reason)\n\(alert.recommendation)\(notes.isEmpty ? "" : "\nNotes: \(notes)")",
+                        status: "assigned",
+                        assignedTo: staffId,
+                        createdAt: Date(),
+                        issuePhoto: nil
+                    )
+                    try await IssueReportService.createIssueReport(issueReport)
+                    print("[DashboardView] Created issue report record")
+
                     var updatedVehicle = alert.vehicle
                     updatedVehicle.status = .maintenance
-                    try? await VehicleService.updateVehicle(updatedVehicle)
+                    try await VehicleService.updateVehicle(updatedVehicle)
+                    print("[DashboardView] Updated vehicle status to maintenance")
                     
                     // Reload data to reflect assignment instantly
                     Task {
@@ -296,7 +317,12 @@ struct DashboardView: View {
     // MARK: - Driver Alerts
 
     private var liveDriverAlertsSection: some View {
-        let incidents = viewModel.recentVoiceIncidents
+        let incidents = viewModel.recentVoiceIncidents.filter { incident in
+            guard let trip = viewModel.trips.first(where: { $0.id == incident.tripId }) else {
+                return false // Trip not found — don't show the alert
+            }
+            return trip.status == .active
+        }
         return Section {
             if incidents.isEmpty {
                 Label("No driver alerts", systemImage: "checkmark.shield")
@@ -332,53 +358,7 @@ struct DashboardView: View {
     }
 
 
-    // MARK: - Resolved Maintenance Cost Section
 
-    private var resolvedMaintenanceCostSection: some View {
-        // Show resolved records with a recorded cost, most recent first, last 30 days
-        let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
-        let resolved = viewModel.maintenanceHistory
-            .filter { ($0.cost ?? 0) > 0 && ($0.completedAt ?? .distantPast) >= cutoff }
-            .sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
-
-        return Section {
-            if resolved.isEmpty {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.teal)
-                    Text("No resolved work orders with costs in the last 30 days")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 4)
-            } else {
-                ForEach(resolved) { history in
-                    ResolvedMaintenanceCostCard(
-                        history: history,
-                        vehicle: viewModel.vehicles.first { $0.id == history.vehicleId }
-                    )
-                }
-            }
-        } header: {
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.teal)
-                Text("Resolved Work Orders – Cost")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if !resolved.isEmpty {
-                    let total = resolved.compactMap { $0.cost }.reduce(0, +)
-                    Text(String(format: "₹ %.0f total", total))
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.teal)
-                        .textCase(.none)
-                }
-            }
-        }
-    }
 
     private var predictiveMaintenanceSection: some View {
         let alerts = viewModel.predictiveAlerts
@@ -633,6 +613,7 @@ struct AllMaintenanceAlertsView: View {
     let maintenanceStaff: [Profile]
     let onAssignSuccess: () -> Void
     @State private var selectedAlert: PredictiveMaintenanceAlert?
+    @Environment(AuthViewModel.self) private var authViewModel
 
     var body: some View {
         List {
@@ -658,18 +639,21 @@ struct AllMaintenanceAlertsView: View {
                 recommendationDescription: alert.recommendation,
                 maintenanceStaff: maintenanceStaff
             ) { staffId, notes in
+                print("[AllMaintenanceAlertsView] Starting assignment for alert: \(alert.reason) to staff: \(staffId)")
                 let workOrderId = try await WorkOrderService.createWorkOrder(
                     vehicleId: alert.vehicle.id,
-                    createdBy: nil,
+                    createdBy: authViewModel.currentUserId,
                     assignedTo: staffId,
                     priority: alert.severity == .critical ? .high : .medium,
                     status: .open
                 )
+                print("[AllMaintenanceAlertsView] Created work order: \(workOrderId)")
+
                 let task = MaintenanceTask(
                     id: UUID(),
                     workOrderId: workOrderId,
                     vehicleId: alert.vehicle.id,
-                    scheduledBy: nil,
+                    scheduledBy: authViewModel.currentUserId,
                     assignedTo: staffId,
                     taskType: .inspection,
                     description: "\(alert.reason). \(alert.recommendation)\(notes.isEmpty ? "" : "\nNotes: \(notes)")",
@@ -680,9 +664,29 @@ struct AllMaintenanceAlertsView: View {
                     status: .pending
                 )
                 try await MaintenanceTaskService.createTask(task)
+                print("[AllMaintenanceAlertsView] Created maintenance task")
+
+                let reporterId = authViewModel.currentUserId ?? staffId
+                let reportId = UUID()
+                let issueReport = IssueReportRecord(
+                    id: reportId,
+                    vehicleId: alert.vehicle.id,
+                    reportedBy: reporterId,
+                    category: "Predictive Alert",
+                    severity: alert.severity == .critical ? "critical" : "high",
+                    description: "\(alert.reason)\n\(alert.recommendation)\(notes.isEmpty ? "" : "\nNotes: \(notes)")",
+                    status: "assigned",
+                    assignedTo: staffId,
+                    createdAt: Date(),
+                    issuePhoto: nil
+                )
+                try await IssueReportService.createIssueReport(issueReport)
+                print("[AllMaintenanceAlertsView] Created issue report record")
+
                 var updatedVehicle = alert.vehicle
                 updatedVehicle.status = .maintenance
-                try? await VehicleService.updateVehicle(updatedVehicle)
+                try await VehicleService.updateVehicle(updatedVehicle)
+                print("[AllMaintenanceAlertsView] Updated vehicle status to maintenance")
                 
                 onAssignSuccess()
             }

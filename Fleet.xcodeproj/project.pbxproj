@@ -290,6 +290,8 @@
 				DEVELOPMENT_TEAM = 433L6U33WG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Kafila";
+				INFOPLIST_KEY_CFBundleName = "Kafila";
 				INFOPLIST_KEY_NSCameraUsageDescription = "need camera access";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet uses your location to show your position on the route map and guide you to your destination.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Fleet needs microphone access to record your voice for hands-free trip logging while driving.";
@@ -326,6 +328,8 @@
 				DEVELOPMENT_TEAM = 433L6U33WG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Kafila";
+				INFOPLIST_KEY_CFBundleName = "Kafila";
 				INFOPLIST_KEY_NSCameraUsageDescription = "need camera access";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Fleet uses your location to show your position on the route map and guide you to your destination.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Fleet needs microphone access to record your voice for hands-free trip logging while driving.";

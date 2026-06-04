@@ -79,16 +79,12 @@ struct LoginView: View {
             }
         }
     }
-    // MARK: - App Icon (blue truck)
+    // MARK: - App Icon
     var appIconView: some View {
         Button(action: {
             navigationPath.append(.createAccount)
         }) {
-            Image("AppLogo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 120, height: 120)
-                .clipShape(RoundedRectangle(cornerRadius: 28))
+            AppLogoView(size: 160, cornerRadius: 32)
         }
         .buttonStyle(PlainButtonStyle())
     }

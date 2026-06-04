@@ -65,6 +65,15 @@ struct IssueReport: Identifiable {
     let issuePhotoUrl: String?
     /// When the report was assigned to maintenance staff (from the linked MaintenanceTask.scheduledDate)
     var assignedAt: Date?
+    // Populated when maintenance marks work complete:
+    var workStartedAt: Date?
+    var resolvedAt: Date?
+    var maintenanceNotes: String?
+    var laborCost: String?
+    var extraCost: String?
+    var partsCost: String?
+    var totalCost: String?
+    var partsUsed: String?        // "Brake Pad (x2) ₹400, Oil Filter (x1) ₹150"
 }
 
 // MARK: - Status History Entry
@@ -165,7 +174,15 @@ final class ReportsViewModel {
                     assignedTo: record.assignedTo,
                     status: IssueReportStatus.from(dbValue: record.status),
                     issuePhotoUrl: record.issuePhoto,
-                    assignedAt: assignedAt
+                    assignedAt: assignedAt,
+                    workStartedAt: record.workStartedAt,
+                    resolvedAt: record.resolvedAt,
+                    maintenanceNotes: record.maintenanceNotes,
+                    laborCost: record.laborCost,
+                    extraCost: record.extraCost,
+                    partsCost: record.partsCost,
+                    totalCost: record.totalCost,
+                    partsUsed: record.partsUsed
                 )
             }
         isLoading = false
@@ -276,6 +293,21 @@ final class ReportsViewModel {
                     )
                     try? await NotificationService.createNotification(notification)
                 }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    // MARK: - Delete Report
+
+    /// Removes the report from Supabase and immediately from the local array.
+    /// Realtime propagates the deletion to all other subscribers (driver, maintenance).
+    func deleteReport(reportId: UUID) {
+        reports.removeAll { $0.id == reportId }
+        Task {
+            do {
+                try await IssueReportService.deleteReport(id: reportId)
             } catch {
                 errorMessage = error.localizedDescription
             }

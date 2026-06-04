@@ -1,8 +1,3 @@
-// DriverCarbonDashboardView.swift
-// Fleet
-//
-// Carbon Score Dashboard for Drivers.
-
 import SwiftUI
 
 struct DriverCarbonDashboardView: View {
