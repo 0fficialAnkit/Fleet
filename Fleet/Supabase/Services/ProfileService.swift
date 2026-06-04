@@ -36,6 +36,7 @@ enum ProfileService {
             licenseNumber: user.licenseNumber,
             role: normalizeRoleName(roleName),
             status: user.status?.rawValue ?? "active",
+            isOnDuty: user.isOnDuty,
             createdAt: user.createdAt
         )
     }
@@ -96,7 +97,7 @@ enum ProfileService {
 
     /// Fetches profiles matching a role. When `managerId` is provided only users
     /// created by that manager are returned.
-    static func fetchProfilesByRole(role: String, managerId: UUID? = nil) async throws -> [Profile] {
+    static func fetchProfilesByRole(role: String, managerId: UUID? = nil, onlyOnDuty: Bool = false) async throws -> [Profile] {
         let roles = try await allRoles()
         // Find the role ID that matches the requested normalized role
         let matchingRoleIds = roles.filter { normalizeRoleName($0.roleName) == role }.map(\.id)
@@ -110,6 +111,9 @@ enum ProfileService {
                 .eq("role_id", value: roleId)
             if let managerId {
                 query = query.or("created_by_manager_id.eq.\(managerId.uuidString),created_by_manager_id.is.null")
+            }
+            if onlyOnDuty {
+                query = query.eq("is_on_duty", value: true)
             }
             let users: [User] = try await query.execute().value
             allMatching.append(contentsOf: users.map { toProfile(user: $0, roles: roles) })
@@ -126,6 +130,7 @@ enum ProfileService {
             let phone: String?
             let licenseNumber: String?
             let userStatus: String?
+            let isOnDuty: Bool?
 
             enum CodingKeys: String, CodingKey {
                 case fullName    = "full_name"
@@ -133,6 +138,7 @@ enum ProfileService {
                 case phone
                 case licenseNumber = "license_number"
                 case userStatus    = "status"
+                case isOnDuty      = "is_on_duty"
             }
         }
 
@@ -141,7 +147,8 @@ enum ProfileService {
             email:         profile.email,
             phone:         profile.phone,
             licenseNumber: profile.licenseNumber,
-            userStatus:    profile.status
+            userStatus:    profile.status,
+            isOnDuty:      profile.isOnDuty
         )
 
         try await supabase

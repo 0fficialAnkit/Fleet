@@ -86,6 +86,21 @@ struct DriverDashboardView: View {
                 }
 
                 Spacer()
+                
+                Button(action: {
+                    let generator = UIImpactFeedbackGenerator(style: .medium)
+                    generator.impactOccurred()
+                    viewModel.toggleDutyStatus()
+                }) {
+                    Text(viewModel.isOnDuty ? "On Duty" : "Off Duty")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(viewModel.isOnDuty ? Color.green : Color.gray)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
             }
 
             Divider().padding(.vertical, 14)

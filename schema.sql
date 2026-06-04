@@ -25,6 +25,7 @@ CREATE TABLE public.users (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   license_number character varying UNIQUE,
+  is_on_duty boolean DEFAULT true,
   created_by_manager_id uuid,
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_created_by_manager_id_fkey FOREIGN KEY (created_by_manager_id) REFERENCES public.users(id),
@@ -337,3 +338,27 @@ CREATE TABLE public.route_breach_events (
   CONSTRAINT route_breach_events_pkey PRIMARY KEY (id),
   CONSTRAINT route_breach_events_trip_id_fkey FOREIGN KEY (trip_id) REFERENCES public.trips(id)
 );
+
+-- ==========================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- ==========================================
+
+-- Enable RLS on issue_reports
+ALTER TABLE public.issue_reports ENABLE ROW LEVEL SECURITY;
+
+-- Admins manage issue reports
+CREATE POLICY "Admins manage issue reports" ON public.issue_reports FOR ALL TO authenticated USING (true);
+
+-- Drivers can insert and view their own issue reports
+CREATE POLICY "Drivers can insert and view their own issue reports" ON public.issue_reports FOR ALL TO authenticated USING (auth.uid() = reported_by);
+
+-- Maintenance staff can view and update their assigned issue reports
+CREATE POLICY "Maintenance staff can view and update their assigned issue reports" ON public.issue_reports FOR ALL TO authenticated USING (auth.uid() = assigned_to);
+
+
+-- ==========================================
+-- SCHEMA PATCHES (Columns missing in initial dumps)
+-- ==========================================
+
+ALTER TABLE public.work_orders ADD COLUMN IF NOT EXISTS completed_at timestamp with time zone;
+ALTER TABLE public.maintenance_tasks ADD COLUMN IF NOT EXISTS completed_at timestamp with time zone;
