@@ -53,11 +53,7 @@ struct SignInView: View {
     }
     // MARK: - App Icon
     var appIcon: some View {
-        Image("AppLogo")
-            .resizable()
-            .scaledToFit()
-            .frame(width: 120, height: 120)
-            .clipShape(RoundedRectangle(cornerRadius: 28))
+        AppLogoView(size: 160, cornerRadius: 32)
     }
     // MARK: - Title
     var titleSection: some View {
@@ -103,7 +99,7 @@ struct SignInView: View {
                 TextField(
                     "",
                     text: $emailOrPhone,
-                    prompt: Text("Enter email or phone")
+                    prompt: Text("Enter email")
                         .foregroundStyle(Color(.placeholderText))
                 )
                     .keyboardType(.emailAddress)
