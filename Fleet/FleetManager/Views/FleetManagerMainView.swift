@@ -6,35 +6,27 @@ struct FleetManagerMainView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
 
-            // MARK: Dashboard (profile access via toolbar)
             DashboardView()
                 .tabItem {
-                    Image(systemName: "square.grid.2x2.fill")
-                    Text("Dashboard")
+                    Label("Dashboard", systemImage: "square.grid.2x2")
                 }
                 .tag(0)
 
             OrdersView()
                 .tabItem {
-                    Image(systemName: "shippingbox.fill")
-                    Text("Orders")
+                    Label("Orders", systemImage: "shippingbox")
                 }
                 .tag(1)
 
-            // MARK: Fleet — Drivers + Maintenance
             FleetView()
                 .tabItem {
-                    Image(systemName: "person.2.fill")
-                    Text("Fleet")
+                    Label("Fleet", systemImage: "person.2")
                 }
                 .tag(2)
 
-
-            // MARK: Reports
             ReportsView()
                 .tabItem {
-                    Image(systemName: "externaldrive.fill.trianglebadge.exclamationmark")
-                    Text("Reports")
+                    Label("Reports", systemImage: "chart.bar.xaxis")
                 }
                 .tag(3)
         }

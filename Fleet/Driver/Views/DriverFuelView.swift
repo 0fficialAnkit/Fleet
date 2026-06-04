@@ -206,11 +206,11 @@ struct DriverFuelView: View {
                     }
                     .font(.body.weight(.medium))
                     .frame(maxWidth: .infinity)
-                    .padding(16)
-                    .background(!isFormValid || isSubmitting ? Color(UIColor.tertiarySystemFill) : Color.green)
-                    .foregroundStyle(!isFormValid || isSubmitting ? Color(UIColor.tertiaryLabel) : Color(UIColor.systemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+                .buttonStyle(.borderedProminent)
+                .tint(Color(.label))
+                .controlSize(.large)
+                .buttonBorderShape(.capsule)
                 .disabled(!isFormValid || isSubmitting)
             }
             .disabled(assignedVehicleId == nil)
