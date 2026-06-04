@@ -53,7 +53,7 @@ struct SignInView: View {
     }
     // MARK: - App Icon
     var appIcon: some View {
-        AppLogoView(size: 80, cornerRadius: 22)
+        AppLogoView(size: 160, cornerRadius: 32)
     }
     // MARK: - Title
     var titleSection: some View {
