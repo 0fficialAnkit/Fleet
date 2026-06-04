@@ -149,6 +149,28 @@ enum MaintenanceTaskService {
         }
     }
 
+    /// Persists labor hours, cost, and estimated duration for a task.
+    /// Requires `labor_hours text null`, `labor_cost text null`,
+    /// and `estimated_duration text null` columns on the maintenance_tasks table.
+    static func updateLabor(id: UUID, hours: String, cost: String, duration: String) async throws {
+        struct Patch: Encodable {
+            let labor_hours: String
+            let labor_cost: String
+            let estimated_duration: String
+        }
+        do {
+            try await supabase
+                .from("maintenance_tasks")
+                .update(Patch(labor_hours: hours, labor_cost: cost, estimated_duration: duration))
+                .eq("id", value: id)
+                .execute()
+            print("[MaintenanceTaskService] updateLabor(\(id)): OK")
+        } catch {
+            print("[MaintenanceTaskService] updateLabor(\(id)) ERROR: \(error)")
+            throw error
+        }
+    }
+
     static func updateTaskStatus(id: UUID, status: MaintenanceTaskStatus) async throws {
         struct StatusUpdate: Encodable {
             let status: MaintenanceTaskStatus

@@ -285,21 +285,27 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
   var scheduleType: MaintenanceScheduleType?
   var status: MaintenanceTaskStatus?
   var completedAt: Date?
+  var laborHours: String?        // e.g. "2.5" — hours spent
+  var laborCost: String?         // e.g. "1200" — cost in ₹
+  var estimatedDuration: String? // e.g. "1-2 hrs"
 
   enum CodingKeys: String, CodingKey {
       case id
-      case workOrderId = "work_order_id"
-      case vehicleId = "vehicle_id"
-      case scheduledBy = "scheduled_by"
-      case assignedTo = "assigned_to"
-      case taskType = "task_type"
+      case workOrderId           = "work_order_id"
+      case vehicleId             = "vehicle_id"
+      case scheduledBy           = "scheduled_by"
+      case assignedTo            = "assigned_to"
+      case taskType              = "task_type"
       case description
-      case scheduledDate = "scheduled_date"
-      case targetMileage = "target_mileage"
+      case scheduledDate         = "scheduled_date"
+      case targetMileage         = "target_mileage"
       case serviceIntervalMonths = "service_interval_months"
-      case scheduleType = "schedule_type"
+      case scheduleType          = "schedule_type"
       case status
-      case completedAt = "completed_at"
+      case completedAt           = "completed_at"
+      case laborHours            = "labor_hours"
+      case laborCost             = "labor_cost"
+      case estimatedDuration     = "estimated_duration"
   }
 }
 
@@ -313,16 +319,20 @@ struct WorkOrder: Codable, Identifiable, Hashable, Sendable {
   var status: WorkOrderStatus?
   var createdAt: Date?
   var completedAt: Date?
+  var scheduledDate: Date?   // when the maintenance tech schedules it
+  var notes: String?         // technician notes saved during work
 
   enum CodingKeys: String, CodingKey {
       case id
-      case vehicleId = "vehicle_id"
-      case createdBy = "created_by"
-      case assignedTo = "assigned_to"
+      case vehicleId    = "vehicle_id"
+      case createdBy    = "created_by"
+      case assignedTo   = "assigned_to"
       case priority
-      case status = "status"
-      case createdAt = "created_at"
-      case completedAt = "completed_at"
+      case status       = "status"
+      case createdAt    = "created_at"
+      case completedAt  = "completed_at"
+      case scheduledDate = "scheduled_date"
+      case notes
   }
 }
 

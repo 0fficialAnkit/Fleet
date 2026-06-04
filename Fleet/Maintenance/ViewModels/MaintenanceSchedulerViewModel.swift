@@ -246,7 +246,7 @@ final class MaintenanceSchedulerViewModel {
                 priority: priority,
                 scheduledTime: task.scheduledDate.map { timeFormatter.string(from: $0) } ?? "TBD",
                 assignedBy: scheduledBy?.fullName ?? "Fleet Manager",
-                estimatedDuration: "1-2 hrs",
+                estimatedDuration: task.estimatedDuration ?? "1-2 hrs",
                 status: displayStatus,
                 description: task.description ?? "No description.",
                 date: task.scheduledDate ?? Date(),
@@ -255,8 +255,8 @@ final class MaintenanceSchedulerViewModel {
                 previousNote: "",
                 aiRecommendation: "",
                 sourceTaskId: task.id,
-                laborHours: nil,
-                laborCost: nil
+                laborHours: task.laborHours,
+                laborCost: task.laborCost
             )
         }
 
@@ -264,10 +264,16 @@ final class MaintenanceSchedulerViewModel {
             let vehicle = vehicles.first { $0.id == wo.vehicleId }
             let createdBy = profiles.first { $0.id == wo.createdBy }
 
+            // Prefer DB value; fall back to UserDefaults cache for offline resilience
+            let dbScheduledDate = wo.scheduledDate
             let savedTime = UserDefaults.standard.double(forKey: "WO_SCHED_\(wo.id.uuidString)")
-            let scheduledDate = savedTime > 0 ? Date(timeIntervalSince1970: savedTime) : nil
+            let scheduledDate = dbScheduledDate ?? (savedTime > 0 ? Date(timeIntervalSince1970: savedTime) : nil)
 
-            // Use local override if we have one
+            // Sync DB value back to UserDefaults so it survives a fresh install
+            if let d = dbScheduledDate {
+                UserDefaults.standard.set(d.timeIntervalSince1970, forKey: "WO_SCHED_\(wo.id.uuidString)")
+            }
+
             let status = woStatusOverrides[wo.id] ?? wo.status ?? .open
 
             return ScheduledWorkOrder(
@@ -281,7 +287,7 @@ final class MaintenanceSchedulerViewModel {
                 assignedBy: createdBy?.fullName ?? "Fleet Manager",
                 laborHours: "—",
                 laborCost: "—",
-                notes: "",
+                notes: wo.notes ?? "",       // restored from DB on next load
                 partsUsed: [],
                 sourceWorkOrderId: wo.id,
                 vehicleIssue: "Scheduled maintenance / Service required."
@@ -451,14 +457,25 @@ final class MaintenanceSchedulerViewModel {
     /// Status stays .open — the WO will appear under In Progress on the scheduled date
     /// because the filter checks for (open + scheduledDate != nil).
     func scheduleWorkOrder(id: UUID, date: Date) {
+        // 1. Update in-memory display model immediately (instant UI)
         if let i = allWorkOrders.firstIndex(where: { $0.id == id }) {
             allWorkOrders[i].scheduledDate = date
-            
-            // Save to UserDefaults persistently
-            if let sourceWoId = allWorkOrders[i].sourceWorkOrderId {
-                UserDefaults.standard.set(date.timeIntervalSince1970, forKey: "WO_SCHED_\(sourceWoId.uuidString)")
-            } else if let sourceIrId = allWorkOrders[i].sourceIssueReportId {
-                UserDefaults.standard.set(date.timeIntervalSince1970, forKey: "IR_SCHED_\(sourceIrId.uuidString)")
+
+            let sourceWoId = allWorkOrders[i].sourceWorkOrderId
+            let sourceIrId = allWorkOrders[i].sourceIssueReportId
+
+            // 2. Persist to Supabase (work_orders.scheduled_date)
+            //    Falls back to the IssueReport's linked WO if available.
+            //    Requires: ALTER TABLE work_orders ADD COLUMN scheduled_date timestamptz;
+            if let woId = sourceWoId {
+                Task {
+                    try? await WorkOrderService.updateScheduledDate(id: woId, date: date)
+                }
+            } else if let irId = sourceIrId {
+                // Issue reports don't have their own scheduled_date column.
+                // Store against the issue report's ID in UserDefaults as fallback.
+                UserDefaults.standard.set(date.timeIntervalSince1970,
+                                          forKey: "IR_SCHED_\(irId.uuidString)")
             }
         }
         if selectedWorkOrder?.id == id {
@@ -598,8 +615,15 @@ final class MaintenanceSchedulerViewModel {
     }
 
     func updateWorkOrderNotes(id: UUID, notes: String) {
+        // 1. Update in-memory display model immediately
         if let i = allWorkOrders.firstIndex(where: { $0.id == id }) {
             allWorkOrders[i].notes = notes
+            let sourceWoId = allWorkOrders[i].sourceWorkOrderId
+            // 2. Persist to Supabase (work_orders.notes)
+            //    Requires: ALTER TABLE work_orders ADD COLUMN notes text;
+            if let woId = sourceWoId {
+                Task { try? await WorkOrderService.updateNotes(id: woId, notes: notes) }
+            }
         }
         if selectedWorkOrder?.id == id {
             selectedWorkOrder?.notes = notes
@@ -643,19 +667,40 @@ final class MaintenanceSchedulerViewModel {
     var allVehicles: [Vehicle] { vehicles }
 
     func updateTaskLabor(id: UUID, hours: String, cost: String) {
+        // 1. Update in-memory display model immediately
         if let idx = allTasks.firstIndex(where: { $0.id == id }) {
             allTasks[idx].laborHours = hours
-            allTasks[idx].laborCost = cost
+            allTasks[idx].laborCost  = cost
+            let duration = allTasks[idx].estimatedDuration ?? ""
+            let sourceId = allTasks[idx].sourceTaskId ?? id
+            // 2. Persist to Supabase — bundles hours + cost + duration in one call
+            //    Requires: ALTER TABLE maintenance_tasks
+            //              ADD COLUMN labor_hours text,
+            //              ADD COLUMN labor_cost text,
+            //              ADD COLUMN estimated_duration text;
+            Task { try? await MaintenanceTaskService.updateLabor(id: sourceId,
+                                                                  hours: hours,
+                                                                  cost: cost,
+                                                                  duration: duration) }
         }
         if selectedTask?.id == id {
             selectedTask?.laborHours = hours
-            selectedTask?.laborCost = cost
+            selectedTask?.laborCost  = cost
         }
     }
 
     func updateTaskDuration(id: UUID, duration: String) {
+        // 1. Update in-memory display model immediately
         if let idx = allTasks.firstIndex(where: { $0.id == id }) {
             allTasks[idx].estimatedDuration = duration
+            let hours    = allTasks[idx].laborHours ?? ""
+            let cost     = allTasks[idx].laborCost  ?? ""
+            let sourceId = allTasks[idx].sourceTaskId ?? id
+            // 2. Persist to Supabase alongside current labor values
+            Task { try? await MaintenanceTaskService.updateLabor(id: sourceId,
+                                                                  hours: hours,
+                                                                  cost: cost,
+                                                                  duration: duration) }
         }
         if selectedTask?.id == id {
             selectedTask?.estimatedDuration = duration

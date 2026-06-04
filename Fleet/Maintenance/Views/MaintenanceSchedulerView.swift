@@ -764,12 +764,12 @@ struct TaskDetailSheet: View {
                         // MARK: Action Buttons
                         VStack(spacing: 16) {
                             if currentTask.status == .pending || currentTask.status == .delayed {
-                                SheetActionButton(title: "Start Task", icon: "play.circle.fill", color: Color.brown) {
+                                SheetActionButton(title: "Start Task", icon: "play.circle.fill", color: Color(.label)) {
                                     viewModel.updateTaskStatus(id: currentTask.id, to: .inProgress)
                                 }
                             }
                             if currentTask.status != .completed && currentTask.status != .delayed {
-                                SheetActionButton(title: "Report Issue / Delay", icon: "exclamationmark.triangle.fill", color: Color.yellow) {
+                                SheetActionButton(title: "Report Issue / Delay", icon: "exclamationmark.triangle.fill", color: Color.orange) {
                                     viewModel.updateTaskStatus(id: currentTask.id, to: .delayed)
                                 }
                             }
@@ -977,15 +977,10 @@ struct TaskDetailSheet: View {
                                     dismiss()
                                 }
                             } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                    Text("Mark as Complete")
-                                }
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 52)
-                                .background(Color.green, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                Label("Mark as Complete", systemImage: "checkmark.circle.fill")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 52)
                             }
                         }
 
@@ -1165,11 +1160,9 @@ struct WorkOrderDetailSheet: View {
                                             Image(systemName: "calendar.badge.checkmark")
                                             Text("Schedule")
                                         }
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(.white)
+                                        .font(.headline)
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 48)
-                                        .background(Color.brown, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                     }
 
                                     Button {
@@ -1182,11 +1175,10 @@ struct WorkOrderDetailSheet: View {
                                             Image(systemName: "play.fill")
                                             Text("Start")
                                         }
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(Color.brown)
+                                        .font(.headline)
+                                        .foregroundStyle(Color(.label))
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 48)
-                                        .background(Color.brown.opacity(0.15), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                     }
                                 }
                             }
@@ -1439,15 +1431,10 @@ struct WorkOrderDetailSheet: View {
                                     dismiss()
                                 }
                             } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                    Text("Mark as Complete")
-                                }
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 52)
-                                .background(Color.green, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                Label("Mark as Complete", systemImage: "checkmark.circle.fill")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 52)
                             }
                             .padding(.bottom, 8)
                         }
@@ -1645,18 +1632,15 @@ private struct SheetActionButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                Text(title)
-            }
-            .font(.headline)
-            .foregroundStyle(color)
-            .frame(maxWidth: .infinity)
-            .padding(16)
-            .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
+            Label(title, systemImage: icon)
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
         }
+        .buttonStyle(.borderedProminent)
+        .tint(color)
+        .controlSize(.large)
+        .buttonBorderShape(.roundedRectangle(radius: 12))
     }
 }
 
