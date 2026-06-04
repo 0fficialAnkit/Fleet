@@ -203,4 +203,5 @@ enum DashboardDestination: Hashable {
     case orderDetail(Trip)
     case allMaintenanceAlerts
     case fuelAnalytics
+    case esgCompliance
 }
