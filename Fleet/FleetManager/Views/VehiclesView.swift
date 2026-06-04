@@ -2,18 +2,67 @@ import SwiftUI
 
 struct VehiclesView: View {
     var viewModel: VehiclesViewModel
+    @State private var showingESG = false
 
     var body: some View {
-        List(viewModel.vehicles) { vehicle in
-            NavigationLink(value: vehicle) {
-                VehicleRowView(
-                    vehicle: vehicle,
-                    statusText: viewModel.getVehicleStatusText(for: vehicle),
-                    statusColor: viewModel.getVehicleStatusColor(for: vehicle)
-                )
+        List {
+            Section {
+                Button(action: { showingESG = true }) {
+                    HStack(spacing: 16) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.green.opacity(0.15))
+                                .frame(width: 50, height: 50)
+                            Image(systemName: "leaf.arrow.circlepath")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundStyle(Color.green)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("ESG Compliance")
+                                .font(.headline)
+                                .foregroundStyle(Color.primary)
+                            Text("View fleet carbon footprint & reports")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            .listRowBackground(Color(uiColor: .secondarySystemGroupedBackground))
+            
+            Section("All Vehicles") {
+                ForEach(viewModel.vehicles) { vehicle in
+                    NavigationLink(value: vehicle) {
+                        VehicleRowView(
+                            vehicle: vehicle,
+                            statusText: viewModel.getVehicleStatusText(for: vehicle),
+                            statusColor: viewModel.getVehicleStatusColor(for: vehicle)
+                        )
+                    }
+                }
             }
         }
         .listStyle(.insetGrouped)
+        .sheet(isPresented: $showingESG) {
+            NavigationStack {
+                ESGComplianceDashboardView(
+                    trips: viewModel.trips,
+                    vehicles: viewModel.vehicles,
+                    fuelLogs: viewModel.fuelLogs
+                )
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Done") { showingESG = false }
+                    }
+                }
+            }
+        }
     }
 }
 

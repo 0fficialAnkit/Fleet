@@ -132,6 +132,12 @@ struct DashboardView: View {
                     )
                 case .fuelAnalytics:
                     FleetFuelAnalyticsView(adminId: viewModel.adminId)
+                case .esgCompliance:
+                    ESGComplianceDashboardView(
+                        trips: viewModel.trips,
+                        vehicles: viewModel.vehicles,
+                        fuelLogs: []
+                    )
                 }
             }
         }
