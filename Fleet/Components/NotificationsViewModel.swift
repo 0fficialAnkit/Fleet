@@ -13,7 +13,19 @@ final class NotificationsViewModel {
         isLoading = true
         errorMessage = nil
         do {
-            notifications = try await NotificationService.fetchNotifications(userId: userId)
+            let fetched = try await NotificationService.fetchNotifications(userId: userId)
+            let excludedTitles = [
+                "driver entered pickup zone",
+                "driver picked up",
+                "driver entered drop-off zone",
+                "drop-off completed",
+                "driver dropped off"
+            ]
+            
+            notifications = fetched.filter { notification in
+                let title = (notification.title ?? "").lowercased()
+                return !excludedTitles.contains(where: { title.contains($0) })
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

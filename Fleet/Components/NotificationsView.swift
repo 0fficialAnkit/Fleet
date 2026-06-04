@@ -1,6 +1,8 @@
 import SwiftUI
 internal import Auth
 
+// MARK: - Notifications View
+
 struct NotificationsView: View {
     @State private var viewModel = NotificationsViewModel()
     @Environment(AuthViewModel.self) private var authViewModel
@@ -12,61 +14,52 @@ struct NotificationsView: View {
                 if viewModel.isLoading && viewModel.notifications.isEmpty {
                     ProgressView()
                 } else if viewModel.notifications.isEmpty {
-                    if #available(iOS 17.0, *) {
-                        ContentUnavailableView(
-                            "No Notifications",
-                            systemImage: "bell.slash",
-                            description: Text("You're all caught up.")
-                        )
-                    } else {
-                        VStack(spacing: 16) {
-                            Image(systemName: "bell.slash")
-                                .font(.system(size: 48))
-                                .foregroundStyle(.secondary)
-                            Text("No Notifications")
-                                .font(.body)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+                    ContentUnavailableView(
+                        "No Notifications",
+                        systemImage: "bell.slash",
+                        description: Text("You're all caught up.")
+                    )
                 } else {
-                    List {
-                        ForEach(viewModel.notifications) { notification in
-                            if notification.referenceId != nil {
-                                NavigationLink {
-                                    NotificationDetailDestination(notification: notification)
-                                        .onAppear {
-                                            viewModel.markAsRead(notification)
-                                        }
-                                } label: {
-                                    NotificationRowContent(notification: notification)
-                                }
-                            } else {
-                                Button {
-                                    viewModel.markAsRead(notification)
-                                } label: {
-                                    NotificationRowContent(notification: notification)
-                                }
-                                .tint(.primary)
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(viewModel.notifications) { notification in
+                                NotificationCard(
+                                    notification: notification,
+                                    onMarkRead: { viewModel.markAsRead(notification) }
+                                )
                             }
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
                     }
                     .refreshable { await viewModel.loadData() }
-                    .listStyle(.insetGrouped)
                 }
             }
             .navigationTitle("Notifications")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 28, height: 28)
+                            .background(Color(.tertiarySystemFill))
+                            .clipShape(Circle())
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    if !viewModel.notifications.filter({ !$0.isRead }).isEmpty {
-                        Button("Mark All Read") {
+                    if viewModel.notifications.contains(where: { !$0.isRead }) {
+                        Button {
                             viewModel.markAllAsRead()
+                        } label: {
+                            Image(systemName: "checkmark.circle")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.tint)
                         }
+                        .accessibilityLabel("Mark all as read")
                     }
                 }
             }
@@ -79,102 +72,141 @@ struct NotificationsView: View {
     }
 }
 
-struct NotificationDetailDestination: View {
+// MARK: - Notification Card
+
+private struct NotificationCard: View {
     let notification: Notification
-    @State private var trip: Trip?
-    @State private var isLoading = true
+    let onMarkRead: () -> Void
+
+    private var cleanTitle: String {
+        let raw = notification.title ?? "Notification"
+        return raw
+            .unicodeScalars
+            .filter { $0.value < 0x2600 || ($0.value >= 0x2C00 && $0.value < 0xD800) }
+            .reduce("") { $0 + String($1) }
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var iconConfig: (name: String, color: Color) {
+        switch notification.type {
+        case .info:        return ("info.circle.fill", .blue)
+        case .warning:     return ("exclamationmark.triangle.fill", .orange)
+        case .alert:       return ("exclamationmark.triangle.fill", .red)
+        case .maintenance: return ("wrench.and.screwdriver.fill", .purple)
+        case .none:        return ("bell.fill", .secondary)
+        }
+    }
 
     var body: some View {
         Group {
-            if isLoading {
-                ProgressView("Loading...")
-            } else if let trip = trip {
-                TripDetailView(
-                    trip: trip,
-                    onStart: { id, vId, notes, urls in
-                        Task { try? await TripService.startTrip(id: id) }
-                    },
-                    onEnd: { id, vId, distance, notes, urls in
-                        Task { try? await TripService.endTrip(id: id, distance: distance) }
-                    }
-                )
+            if let referenceId = notification.referenceId {
+                NavigationLink {
+                    NotificationDetailDestination(notification: notification)
+                        .onAppear { onMarkRead() }
+                } label: {
+                    cardContent
+                }
+                .buttonStyle(.plain)
+                // Explicit overlay chevron so it stays visible on the card
+                .overlay(alignment: .trailing) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                        .padding(.trailing, 14)
+                }
+                // Silence unused referenceId warning
+                .id(referenceId)
             } else {
-                Text("Details not found")
+                cardContent
+                    .contentShape(Rectangle())
+                    .onTapGesture { onMarkRead() }
             }
         }
-        .task {
-            if let tripId = notification.referenceId {
-                trip = try? await TripService.fetchTrip(id: tripId)
-            }
-            isLoading = false
-        }
-    }
-}
-
-struct NotificationRowContent: View {
-    let notification: Notification
-
-    var iconName: String {
-        switch notification.type {
-        case .info: return "info.circle.fill"
-        case .warning: return "exclamationmark.triangle.fill"
-        case .alert: return "exclamationmark.triangle.fill"
-        case .maintenance: return "wrench.and.screwdriver.fill"
-        case .none: return "bell.fill"
-        }
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
 
-    var iconColor: Color {
-        switch notification.type {
-        case .info: return Color.blue
-        case .warning: return Color.yellow
-        case .alert: return Color.red
-        case .maintenance: return Color.purple
-        case .none: return Color.secondary
-        }
-    }
-
-    var body: some View {
+    private var cardContent: some View {
         HStack(alignment: .top, spacing: 12) {
-            // Unread indicator
+
+            // Unread dot
             Circle()
-                .fill(notification.isRead ? Color.clear : Color.blue)
-                .frame(width: 10, height: 10)
-                .padding(.top, 10)
-                .padding(.trailing, -4)
+                .fill(notification.isRead ? Color.clear : Color.accentColor)
+                .frame(width: 8, height: 8)
+                .padding(.top, 5)
 
-            Image(systemName: iconName)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(iconColor)
-                .frame(width: 32, height: 32)
-                .background(iconColor.opacity(0.15))
-                .clipShape(Circle())
-                .padding(.top, 0)
+            // Icon
+            Image(systemName: iconConfig.name)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 34, height: 34)
+                .background(iconConfig.color)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(notification.title ?? "Notification")
+            // Text
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(cleanTitle)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(notification.isRead ? .secondary : .primary)
-                        .lineLimit(2)
-                    
-                    Spacer(minLength: 8)
-                    
+                        .lineLimit(1)
+
+                    Spacer(minLength: 4)
+
                     if let date = notification.createdAt {
                         Text(date.formatted(date: .omitted, time: .shortened))
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.tertiary)
                             .layoutPriority(1)
                     }
                 }
 
                 Text(notification.message ?? "")
-                    .font(.subheadline)
+                    .font(.footnote)
                     .foregroundStyle(.secondary)
-                    .lineLimit(3)
+                    .lineLimit(2)
                     .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            // Extra trailing space so text doesn't collide with the chevron overlay
+            .padding(.trailing, notification.referenceId != nil ? 16 : 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+}
+
+// MARK: - Notification Detail Destination
+
+struct NotificationDetailDestination: View {
+    let notification: Notification
+    @State private var trip: Trip?
+    @State private var isLoading = true
+    @State private var ordersViewModel = OrdersViewModel()
+    @Environment(AuthViewModel.self) private var authViewModel
+
+    var body: some View {
+        Group {
+            if isLoading {
+                ProgressView("Loading...")
+            } else if let trip {
+                OrderDetailView(trip: trip, viewModel: ordersViewModel)
+            } else {
+                ContentUnavailableView(
+                    "Trip Not Found",
+                    systemImage: "questionmark.circle",
+                    description: Text("This trip may have been deleted.")
+                )
             }
         }
-        .padding(.vertical, 8)
+        .task {
+            ordersViewModel.adminId = authViewModel.currentUserId
+            await ordersViewModel.loadData()
+            if let tripId = notification.referenceId {
+                trip = try? await TripService.fetchTrip(id: tripId)
+            }
+            isLoading = false
+        }
     }
 }
