@@ -3,6 +3,7 @@ import SwiftUI
 struct MaintenanceProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var profileVM = ProfileViewModel()
+    @State private var showingChangePassword = false
 
     var body: some View {
         NavigationStack {
@@ -43,15 +44,13 @@ struct MaintenanceProfileView: View {
                             }
                         }
 
-                        // Navigation links
+
+                        // Change Password
                         Section {
-                            NavigationLink(destination: CertificationsView()) {
-                                Label("Certifications", systemImage: "rosette")
+                            Button { showingChangePassword = true } label: {
+                                Label("Change Password", systemImage: "key.fill")
+                                    .foregroundStyle(.primary)
                             }
-                            NavigationLink(destination: PerformanceReportView()) {
-                                Label("Performance Report", systemImage: "chart.bar.xaxis")
-                            }
-                            Label("Notifications", systemImage: "bell")
                         }
 
                         // Sign out
@@ -59,8 +58,14 @@ struct MaintenanceProfileView: View {
                             Button(role: .destructive) {
                                 Task { await authViewModel.signOut() }
                             } label: {
-                                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                                    .frame(maxWidth: .infinity, alignment: .center)
+                                Label {
+                                    Text("Sign Out")
+                                } icon: {
+                                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                                        .font(.body)
+                                        .foregroundStyle(.red)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .center)
                             }
                         }
                     }
@@ -73,6 +78,9 @@ struct MaintenanceProfileView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .task { await profileVM.loadProfile() }
+        .sheet(isPresented: $showingChangePassword) {
+            ChangePasswordSheetView()
+        }
     }
 }
 

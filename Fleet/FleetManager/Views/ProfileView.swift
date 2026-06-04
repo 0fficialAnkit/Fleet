@@ -5,6 +5,7 @@ struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = ProfileViewModel()
     @State private var isEditing = false
+    @State private var showingChangePassword = false
 
     var body: some View {
         NavigationStack {
@@ -47,10 +48,12 @@ struct ProfileView: View {
                             }
                         }
 
-                        // Support
+                        // Change Password
                         Section {
-                            Label("Settings", systemImage: "gearshape")
-                            Label("Help & Support", systemImage: "questionmark.circle")
+                            Button { showingChangePassword = true } label: {
+                                Label("Change Password", systemImage: "key.fill")
+                                    .foregroundStyle(.primary)
+                            }
                         }
 
                         // Sign out
@@ -58,8 +61,14 @@ struct ProfileView: View {
                             Button(role: .destructive) {
                                 Task { await authViewModel.signOut() }
                             } label: {
-                                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                                    .frame(maxWidth: .infinity, alignment: .center)
+                                Label {
+                                    Text("Sign Out")
+                                } icon: {
+                                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                                        .font(.body)
+                                        .foregroundStyle(.red)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .center)
                             }
                         }
                     }
@@ -93,6 +102,9 @@ struct ProfileView: View {
                         }
                     )
                 }
+            }
+            .sheet(isPresented: $showingChangePassword) {
+                ChangePasswordSheetView()
             }
         }
         .task {
@@ -130,25 +142,20 @@ struct EditProfileSheet: View {
                         .keyboardType(.phonePad)
                         .textContentType(.telephoneNumber)
                 }
-
-                Section {
-                    Button("Save Changes") {
-                        onSave(fullName, phone)
-                        dismiss()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color(.label))
-                    .controlSize(.large)
-                    .frame(maxWidth: .infinity)
-                    .disabled(fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-                .listRowBackground(Color.clear)
             }
             .navigationTitle("Edit Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        onSave(fullName, phone)
+                        dismiss()
+                    }
+                    .font(.headline)
+                    .disabled(fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }

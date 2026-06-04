@@ -140,26 +140,6 @@ struct ChangePasswordSheetView: View {
                                     RoundedRectangle(cornerRadius: 14)
                                         .stroke(Color(.separator), lineWidth: 1)
                                 )
-                                
-                                Button(action: handleSubmit) {
-                                    if authViewModel.isLoading {
-                                        ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                            .frame(maxWidth: .infinity)
-                                            .frame(height: 56)
-                                            .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.teal)
-                                            .cornerRadius(14)
-                                    } else {
-                                        Text("Update Password")
-                                            .font(.system(size: 18, weight: .semibold))
-                                            .foregroundStyle(isButtonDisabled ? Color(.tertiaryLabel) : .white)
-                                            .frame(maxWidth: .infinity)
-                                            .frame(height: 56)
-                                            .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.teal)
-                                            .cornerRadius(14)
-                                    }
-                                }
-                                .disabled(authViewModel.isLoading || isButtonDisabled)
                             }
                         }
                         
@@ -171,9 +151,20 @@ struct ChangePasswordSheetView: View {
             .navigationTitle("Change Password")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
                         dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if authViewModel.isLoading {
+                        ProgressView()
+                    } else {
+                        Button("Save") {
+                            handleSubmit()
+                        }
+                        .font(.headline)
+                        .disabled(authViewModel.isLoading || isButtonDisabled)
                     }
                 }
             }
