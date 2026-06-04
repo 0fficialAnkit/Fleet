@@ -614,6 +614,66 @@ final class MaintenanceSchedulerViewModel {
         }
     }
 
+    /// Marks a work order as completed, persisting the full cost breakdown into MaintenanceHistory.
+    /// Call this instead of `updateWorkOrderStatus(_:to:.completed)` when the tech has entered cost data.
+    func completeWorkOrder(id: UUID, totalCost: Double, serviceNotes: String) {
+        woStatusOverrides[id] = .completed
+
+        if let i = allWorkOrders.firstIndex(where: { $0.id == id }) {
+            allWorkOrders[i].status = .completed
+            allWorkOrders[i].notes = serviceNotes
+
+            let wo = allWorkOrders[i]
+            isUpdating = true
+
+            Task {
+                if let sourceId = wo.sourceWorkOrderId {
+                    try? await WorkOrderService.updateWorkOrderStatusWithCompletion(
+                        id: sourceId, status: .completed, completedAt: Date()
+                    )
+                    if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                        let details = serviceNotes.isEmpty
+                            ? "Work order completed: \(wo.vehicleIssue)"
+                            : "Work order completed: \(wo.vehicleIssue)\nNotes: \(serviceNotes)"
+                        let history = MaintenanceHistory(
+                            id: UUID(),
+                            vehicleId: vehicle.id,
+                            workOrderId: sourceId,
+                            serviceDetails: details,
+                            cost: totalCost > 0 ? totalCost : nil,
+                            completedAt: Date()
+                        )
+                        try? await MaintenanceHistoryService.createHistory(history)
+                    }
+                } else if let sourceIrId = wo.sourceIssueReportId, let uid = currentUserId {
+                    try? await IssueReportService.updateIssueReport(
+                        id: sourceIrId, assignedTo: uid, status: "resolved"
+                    )
+                    if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                        let details = serviceNotes.isEmpty
+                            ? "Issue resolved: \(wo.vehicleIssue)"
+                            : "Issue resolved: \(wo.vehicleIssue)\nNotes: \(serviceNotes)"
+                        let history = MaintenanceHistory(
+                            id: UUID(),
+                            vehicleId: vehicle.id,
+                            workOrderId: nil,
+                            serviceDetails: details,
+                            cost: totalCost > 0 ? totalCost : nil,
+                            completedAt: Date()
+                        )
+                        try? await MaintenanceHistoryService.createHistory(history)
+                    }
+                }
+                try? await Task.sleep(for: .seconds(2))
+                woStatusOverrides.removeValue(forKey: id)
+                isUpdating = false
+            }
+        }
+        if selectedWorkOrder?.id == id {
+            selectedWorkOrder?.status = .completed
+        }
+    }
+
     func updateWorkOrderNotes(id: UUID, notes: String) {
         // 1. Update in-memory display model immediately
         if let i = allWorkOrders.firstIndex(where: { $0.id == id }) {
