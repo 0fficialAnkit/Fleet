@@ -969,8 +969,25 @@ struct TaskDetailSheet: View {
                                 }
                             }
 
-                            // Mark as Complete
+                            // Mark as Complete — saves all form data first
                             Button {
+                                // Persist labor data to DB before marking complete
+                                viewModel.updateTaskLabor(
+                                    id: currentTask.id,
+                                    hours: "",
+                                    cost: laborCost
+                                )
+                                // Build parts detail string
+                                let partsDetailStr = partQuantities.compactMap { (itemId, qty) -> String? in
+                                    guard qty > 0, let item = inventoryItems.first(where: { $0.id == itemId }),
+                                          let name = item.partName else { return nil }
+                                    let lineCost = (item.unitCost ?? 0) * Double(qty)
+                                    return "\(name) (x\(qty)) ₹\(String(format: "%.0f", lineCost))"
+                                }.joined(separator: ", ")
+                                // Store notes on the task before completing
+                                if !repairNotes.isEmpty {
+                                    viewModel.updateWorkOrderNotes(id: currentTask.id, notes: repairNotes)
+                                }
                                 viewModel.updateTaskStatus(id: currentTask.id, to: .completed)
                                 withAnimation { isCompleted = true }
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
@@ -1423,12 +1440,24 @@ struct WorkOrderDetailSheet: View {
                                 }
                             }
 
-                            // Mark as Complete Button
+                            // Mark as Complete Button — passes full form data
                             Button {
+                                // Build parts detail string: "Brake Pad (x2) ₹400, Oil Filter (x1) ₹150"
+                                let partsDetailStr = partQuantities.compactMap { (itemId, qty) -> String? in
+                                    guard qty > 0, let item = inventoryItems.first(where: { $0.id == itemId }),
+                                          let name = item.partName else { return nil }
+                                    let lineCost = (item.unitCost ?? 0) * Double(qty)
+                                    return "\(name) (x\(qty)) ₹\(String(format: "%.0f", lineCost))"
+                                }.joined(separator: ", ")
+
                                 viewModel.completeWorkOrder(
                                     id: currentWO.id,
+                                    laborCost: laborCostInput,
+                                    extraCost: extraCostInput,
+                                    partsCost: partsCost,
                                     totalCost: totalCost,
-                                    serviceNotes: serviceNotes
+                                    serviceNotes: serviceNotes,
+                                    partsDetail: partsDetailStr
                                 )
                                 withAnimation { isCompleted = true }
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {

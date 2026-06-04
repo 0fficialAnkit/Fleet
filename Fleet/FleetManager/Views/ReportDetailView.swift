@@ -302,6 +302,107 @@ struct ReportDetailView: View {
                         }
                     }
                     
+                    // ── Maintenance Work Report (shown when resolved) ─
+                    if report.status == .resolved {
+                        Section {
+                            // Start → End timing
+                            HStack(spacing: 14) {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .foregroundStyle(.green)
+                                    .font(.title3)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("Work Completed")
+                                        .font(.subheadline.weight(.semibold))
+                                    if let resolved = report.resolvedAt {
+                                        Text(resolved.formatted(date: .long, time: .shortened))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 4)
+
+                            if let started = report.workStartedAt {
+                                LabeledContent("Work Started") {
+                                    Text(started.formatted(date: .abbreviated, time: .shortened))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            if let started = report.workStartedAt, let ended = report.resolvedAt {
+                                let duration = ended.timeIntervalSince(started)
+                                let hrs  = Int(duration) / 3600
+                                let mins = (Int(duration) % 3600) / 60
+                                LabeledContent("Duration") {
+                                    Text(hrs > 0 ? "\(hrs)h \(mins)m" : "\(mins) min")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            // Service notes
+                            if let notes = report.maintenanceNotes, !notes.isEmpty {
+                                VStack(alignment: .leading, spacing: 5) {
+                                    Text("Service Notes")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                        .textCase(.uppercase)
+                                    Text(notes)
+                                        .font(.body)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .padding(.vertical, 4)
+                            }
+
+                            // Parts used
+                            if let parts = report.partsUsed, !parts.isEmpty {
+                                VStack(alignment: .leading, spacing: 5) {
+                                    Text("Parts Used")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                        .textCase(.uppercase)
+                                    Text(parts)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.primary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        } header: {
+                            HStack {
+                                Text("Maintenance Report")
+                                Spacer()
+                                StatusBadge(text: "Resolved", color: .green).textCase(nil)
+                            }
+                        }
+
+                        // Cost breakdown in a separate section
+                        let hasAnyCost = [report.laborCost, report.extraCost,
+                                          report.partsCost, report.totalCost]
+                            .contains { $0 != nil && !($0!.isEmpty) }
+                        if hasAnyCost {
+                            Section("Cost Breakdown") {
+                                if let lc = report.laborCost, !lc.isEmpty {
+                                    LabeledContent("Labour Cost", value: "₹\(lc)")
+                                }
+                                if let ec = report.extraCost, !ec.isEmpty {
+                                    LabeledContent("Extra Cost", value: "₹\(ec)")
+                                }
+                                if let pc = report.partsCost, !pc.isEmpty {
+                                    LabeledContent("Parts Cost", value: "₹\(pc)")
+                                }
+                                if let tc = report.totalCost, !tc.isEmpty {
+                                    HStack {
+                                        Text("Total Cost")
+                                            .font(.subheadline.weight(.semibold))
+                                        Spacer()
+                                        Text("₹\(tc)")
+                                            .font(.subheadline.weight(.bold))
+                                            .foregroundStyle(.primary)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // ── Last Trip ─────────────────────────────────────
                     if let trip = lastTrip {
                         DisclosureGroup("Last Trip on This Vehicle", isExpanded: $isLastTripExpanded) {
