@@ -84,6 +84,7 @@ struct ReportsView: View {
                 }
             }
             .navigationTitle("Reports")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     if selectedTab == .vehicles {

@@ -89,7 +89,7 @@ struct AddOrderView: View {
                         in: Date()...,
                         displayedComponents: [.date, .hourAndMinute]
                     )
-                    .tint(Color.teal)
+                    .tint(Color(.label))
                 }
 
                 // ── Order Type ────────────────────────────────────────

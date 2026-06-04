@@ -46,7 +46,7 @@ struct EmployeeDetailView: View {
                     ZStack {
                         Circle()
                             .fill(viewModel.getColor(for: currentRoleName).opacity(0.15))
-                            .frame(width: 110, height: 110)
+                            .frame(width: 80, height: 80)
                         Image(systemName: viewModel.getIcon(for: currentRoleName))
                             .font(.system(size: 44))
                             .foregroundStyle(viewModel.getColor(for: currentRoleName))
@@ -267,8 +267,8 @@ struct EmployeeDetailView: View {
                 }
             }
         }
-        .navigationTitle("Details")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle(currentProfile.fullName)
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
