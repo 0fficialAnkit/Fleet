@@ -61,19 +61,22 @@ enum ESGService {
                 emissionsByVehicleType[type, default: 0.0] += emissions
             }
         }
+        // Assume an industry baseline for an inefficient fleet is around 0.40 kg/km
+        let industryBaselineIntensity = 0.40
+        let currentIntensity = totalDistance > 0 ? (totalEmissions / totalDistance) : 0.0
         
-        // Recommended limit based on a 20% carbon reduction target relative to the vehicle-specific baseline emissions.
-        var totalBaselineEmissions = 0.0
-        for trip in trips {
-            guard let vehicle = vehicles.first(where: { $0.id == trip.vehicleId }) else { continue }
-            let distance = trip.distance ?? 0.0
-            totalBaselineEmissions += distance * baselineEmissionsPerKm(for: vehicle.vehicleType)
+        var estimatedCO2Saved = 0.0
+        if currentIntensity < industryBaselineIntensity && totalDistance > 0 {
+            // How much they would have emitted at the industry baseline
+            let hypotheticalEmissions = totalDistance * industryBaselineIntensity
+            estimatedCO2Saved = hypotheticalEmissions - totalEmissions
         }
-        let recommendedCO2LimitKg = totalBaselineEmissions > 0 ? totalBaselineEmissions * 1.20 : 150.0
         
         return FleetESGMetrics(
             totalCO2EmissionsKg: totalEmissions,
-            recommendedCO2LimitKg: recommendedCO2LimitKg,
+            totalDistance: totalDistance,
+            averageCarbonIntensity: currentIntensity,
+            estimatedCO2SavedKg: estimatedCO2Saved,
             emissionsByVehicleType: emissionsByVehicleType
         )
     }
@@ -115,6 +118,8 @@ enum ESGService {
 
 struct FleetESGMetrics {
     let totalCO2EmissionsKg: Double
-    let recommendedCO2LimitKg: Double
+    let totalDistance: Double
+    let averageCarbonIntensity: Double
+    let estimatedCO2SavedKg: Double
     let emissionsByVehicleType: [VehicleType: Double]
 }
