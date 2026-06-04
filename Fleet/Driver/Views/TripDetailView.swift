@@ -270,7 +270,7 @@ struct TripDetailView: View {
             }
         }
         .sheet(isPresented: $showingFuelSheet) {
-            DriverFuelView()
+            DriverFuelView(isReadOnly: isCompleted)
         }
         .safeAreaInset(edge: .bottom) {
             if isActive {

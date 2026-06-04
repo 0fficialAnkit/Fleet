@@ -4,6 +4,8 @@ import Supabase
 
 struct DriverFuelView: View {
 
+    var isReadOnly: Bool = false
+
     // MARK: - State
 
     @State private var volume: String = ""
@@ -44,6 +46,24 @@ struct DriverFuelView: View {
         NavigationStack {
             List {
 
+                // ── Trip-ended notice ─────────────────────────────────
+                if isReadOnly {
+                    Section {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Trip Has Ended")
+                                    .font(.subheadline.weight(.semibold))
+                                Text("Fuel logging is only available during an active trip.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "lock.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
                 // ── No-vehicle notice ─────────────────────────────────
                 if assignedVehicleId == nil {
                     Section {
@@ -82,7 +102,8 @@ struct DriverFuelView: View {
                         Label("Amount (₹)", systemImage: "indianrupeesign")
                     }
                 }
-                .disabled(assignedVehicleId == nil)
+                .disabled(assignedVehicleId == nil || isReadOnly)
+                .opacity(isReadOnly ? 0.4 : 1.0)
 
                 // ── Bill Photo ────────────────────────────────────────
                 Section {
@@ -166,7 +187,8 @@ struct DriverFuelView: View {
                         }
                     }
                 }
-                .disabled(assignedVehicleId == nil)
+                .disabled(assignedVehicleId == nil || isReadOnly)
+                .opacity(isReadOnly ? 0.4 : 1.0)
 
                 // ── Success row ───────────────────────────────────────
                 if showSuccess {
