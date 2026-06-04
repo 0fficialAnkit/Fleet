@@ -97,8 +97,8 @@ final class DashboardViewModel {
                         let vehicle = alert.vehicle
                         let content = UNMutableNotificationContent()
                         content.title = alert.severity == .critical
-                            ? "Critical Maintenance Alert 🚨"
-                            : "Maintenance Warning ⚠️"
+                            ? "Critical Maintenance Alert"
+                            : "Maintenance Warning"
                         content.body = "\(vehicle.make ?? "") \(vehicle.model ?? "") (\(vehicle.licensePlate ?? "")): \(alert.reason)"
                         content.sound = .default
 
@@ -203,4 +203,5 @@ enum DashboardDestination: Hashable {
     case orderDetail(Trip)
     case allMaintenanceAlerts
     case fuelAnalytics
+    case esgCompliance
 }

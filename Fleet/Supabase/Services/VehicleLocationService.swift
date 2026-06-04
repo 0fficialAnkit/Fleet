@@ -34,10 +34,10 @@ enum VehicleLocationService {
                 .from("vehicle_locations")
                 .insert(payload)
                 .execute()
-            print("[VehicleLocationService] ✅ Inserted location for vehicle \(vehicleId) — lat:\(latitude) lon:\(longitude)")
+            print("[VehicleLocationService] Inserted location for vehicle \(vehicleId) — lat:\(latitude) lon:\(longitude)")
             return true
         } catch {
-            print("[VehicleLocationService] ❌ INSERT FAILED for vehicle \(vehicleId)")
+            print("[VehicleLocationService] INSERT FAILED for vehicle \(vehicleId)")
             print("[VehicleLocationService]    Error: \(error)")
             print("[VehicleLocationService]    Localized: \(error.localizedDescription)")
             return false

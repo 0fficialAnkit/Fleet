@@ -118,7 +118,7 @@ final class DriverTripsViewModel {
                         driverId: currentUserId, eventType: "trip_ended", occurredAt: Date()))
                     try? await NotificationService.notifyManager(
                         forVehicle: vehicleId,
-                        title: "🏁 Trip Ended",
+                        title: "Trip Ended",
                         message: "Driver has completed the trip. Trip is now ending.",
                         type: .info
                     )
@@ -170,7 +170,7 @@ final class DriverTripsViewModel {
 
             try? await NotificationService.notifyManager(
                 forVehicle: vehicleId,
-                title: "🏁 Drop-off Completed",
+                title: "Drop-off Completed",
                 message: "Driver has completed the drop-off.",
                 type: .info
             )

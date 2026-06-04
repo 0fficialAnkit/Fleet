@@ -16,6 +16,7 @@ struct DriverDashboardView: View {
                 } else {
                     List {
                         Section { overviewCard }
+                        Section { carbonScoreCard }
                         todayScheduleSection
                     }
                     .refreshable { await viewModel.loadData() }
@@ -114,6 +115,53 @@ struct DriverDashboardView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Carbon Score Card
+    
+    private var carbonScoreCard: some View {
+        let driverTrips = viewModel.trips.filter { $0.driverId == viewModel.currentUserId }
+        let vehiclesList = Array(viewModel.vehicles.values)
+        let score = ESGService.calculateDriverCarbonScore(driverId: viewModel.currentUserId ?? UUID(), trips: viewModel.trips, vehicles: vehiclesList)
+        
+        let totalDistance = driverTrips.reduce(0.0) { $0 + ($1.distance ?? 0.0) }
+        let totalEmissions = driverTrips.reduce(0.0) { sum, trip in
+            if let vehicle = viewModel.vehicles[trip.vehicleId] {
+                return sum + ESGService.calculateEmissions(for: trip, vehicle: vehicle)
+            }
+            return sum
+        }
+        
+        return NavigationLink(destination: DriverCarbonDashboardView(carbonScore: score, totalEmissions: totalEmissions, totalDistance: totalDistance)) {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .stroke(Color.secondary.opacity(0.2), lineWidth: 4)
+                        .frame(width: 46, height: 46)
+                    
+                    Circle()
+                        .trim(from: 0, to: CGFloat(score) / 100.0)
+                        .stroke(score >= 80 ? Color.green : (score >= 50 ? Color.orange : Color.red), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                        .frame(width: 46, height: 46)
+                        .rotationEffect(.degrees(-90))
+                    
+                    Text("\(score)")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(score >= 80 ? Color.green : (score >= 50 ? Color.orange : Color.red))
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Carbon Score")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    Text("Tap to view your eco-profile")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.vertical, 4)
+        }
     }
 
     // MARK: - Today's Schedule

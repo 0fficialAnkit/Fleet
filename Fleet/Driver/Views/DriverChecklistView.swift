@@ -196,12 +196,26 @@ struct DriverChecklistView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    SwipeToConfirmButton(
-                        label:   swipeLabel,
-                        tint:    swipeTint,
-                        enabled: allMandatoryChecked && !isSubmitting
-                    ) {
-                        handleSubmit()
+                    if checklistType == .preTrip {
+                        Button {
+                            handleSubmit()
+                        } label: {
+                            Text("Save Checklist")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity, minHeight: 54)
+                                .foregroundStyle(.white)
+                                .background(allMandatoryChecked && !isSubmitting ? swipeTint : Color.gray)
+                                .clipShape(Capsule())
+                        }
+                        .disabled(!(allMandatoryChecked && !isSubmitting))
+                    } else {
+                        SwipeToConfirmButton(
+                            label:   swipeLabel,
+                            tint:    swipeTint,
+                            enabled: allMandatoryChecked && !isSubmitting
+                        ) {
+                            handleSubmit()
+                        }
                     }
                 }
                 .padding(.horizontal)
