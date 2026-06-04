@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import CoreLocation
 
 struct AddOrderView: View {
     @Environment(\.dismiss) private var dismiss
@@ -326,8 +327,8 @@ struct AddOrderView: View {
                let lat = Double(components[0].trimmingCharacters(in: .whitespacesAndNewlines)),
                let lon = Double(components[1].trimmingCharacters(in: .whitespacesAndNewlines)) {
                 let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-                let placemark = MKPlacemark(coordinate: coordinate)
-                let mapItem = MKMapItem(placemark: placemark)
+                let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                let mapItem = MKMapItem(location: location, address: nil)
                 let name = address[..<range.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
                 mapItem.name = name.isEmpty ? "Location" : name
                 return mapItem

@@ -115,8 +115,9 @@ final class DriverDashboardViewModel {
         liveTimer?.invalidate()
         if activeTrip != nil {
             liveTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+                guard let self else { return }
                 Task { @MainActor in
-                    self?.currentTime = Date()
+                    self.currentTime = Date()
                 }
             }
         }
@@ -357,11 +358,6 @@ final class DriverDashboardViewModel {
             driverId: currentUserId, name: pickup,
             latitude: pickupCoord.latitude, longitude: pickupCoord.longitude,
             radiusMeters: kGeofenceRadiusMeters, zoneType: "pickup", isActive: true, createdAt: Date())
-        let dFence = TripGeofence(id: dId, tripId: tripId, vehicleId: vehicleId,
-            driverId: currentUserId, name: dropoff,
-            latitude: dropCoord.latitude, longitude: dropCoord.longitude,
-            radiusMeters: kGeofenceRadiusMeters, zoneType: "dropoff", isActive: true, createdAt: Date())
-
         // Only register pickup zone initially — dropoff is activated when driver taps "Pickup Done"
         TripGeofenceMonitor.shared.register(tripId: tripId, vehicleId: vehicleId,
                                              driverId: currentUserId, fences: [pFence])
@@ -544,7 +540,7 @@ final class DriverDashboardViewModel {
             req.region = MKCoordinateRegion(center: b,
                                             latitudinalMeters: 300_000, longitudinalMeters: 300_000)
         }
-        return try? await MKLocalSearch(request: req).start().mapItems.first?.placemark.coordinate
+        return try? await MKLocalSearch(request: req).start().mapItems.first?.location.coordinate
     }
 
     // MARK: - Helpers

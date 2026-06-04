@@ -227,8 +227,7 @@ struct TripRouteMapView: View {
                let lat = Double(components[0].trimmingCharacters(in: .whitespacesAndNewlines)),
                let lon = Double(components[1].trimmingCharacters(in: .whitespacesAndNewlines)) {
                 let coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-                let placemark = MKPlacemark(coordinate: coordinate)
-                let mapItem = MKMapItem(placemark: placemark)
+                let mapItem = MKMapItem(location: CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude), address: nil)
                 let name = address[..<range.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
                 mapItem.name = name.isEmpty ? "Location" : name
                 return mapItem
