@@ -59,20 +59,23 @@ struct OrderDetailView: View {
         return unique
     }
 
-    // Merges geofence milestone events and driver-reported incidents into one
-    // chronological timeline. Incidents slot in by their real timestamp; geofence
-    // events keep their logical order when timestamps collide (< 1 s apart).
+    // Merges ALL driver activity into one chronological timeline:
+    //   • Geofence milestones (pickup zone → pickup done → dropoff zone → dropoff done → trip ended)
+    //   • Driver-reported incidents (manual form + voice)
+    //   • Route boundary breaches
+    // Geofence events keep their logical order when timestamps collide (< 1 s apart).
     private var driverStatusTimeline: [DriverStatusItem] {
-        let gf  = tripEvents.map { DriverStatusItem.geofenceEvent($0) }
-        let inc = incidents.map  { DriverStatusItem.incident($0) }
-        return (gf + inc).sorted { a, b in
+        let gf       = tripEvents.map    { DriverStatusItem.geofenceEvent($0) }
+        let inc      = incidents.map     { DriverStatusItem.incident($0)      }
+        let breaches = routeBreaches.map { DriverStatusItem.routeBreach($0)   }
+        return (gf + inc + breaches).sorted { a, b in
             let ta = a.timestamp; let tb = b.timestamp
             if abs(ta.timeIntervalSince(tb)) < 1.0 {
                 switch (a, b) {
                 case (.geofenceEvent(let ea), .geofenceEvent(let eb)):
                     return logicalPriority(ea) < logicalPriority(eb)
-                case (.geofenceEvent, .incident): return true
-                case (.incident, .geofenceEvent): return false
+                case (.geofenceEvent, _): return true   // milestones always lead
+                case (_, .geofenceEvent): return false
                 default: return ta < tb
                 }
             }
@@ -128,8 +131,9 @@ struct OrderDetailView: View {
                     } else {
                         ForEach(driverStatusTimeline) { item in
                             switch item {
-                            case .geofenceEvent(let event): eventRow(event)
-                            case .incident(let incident):   incidentRow(incident)
+                            case .geofenceEvent(let event):  eventRow(event)
+                            case .incident(let incident):    incidentRow(incident)
+                            case .routeBreach(let breach):   routeBreachTimelineRow(breach)
                             }
                         }
                     }
@@ -446,6 +450,38 @@ struct OrderDetailView: View {
         .padding(.vertical, 6)
     }
 
+    // Compact route-breach row for the Driver Status timeline.
+    // The Route Deviation section below still shows the full detail card.
+    @ViewBuilder
+    private func routeBreachTimelineRow(_ breach: RouteBreach) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.title3)
+                .foregroundStyle(severityColor(breach.distanceFromCenter))
+                .frame(width: 30)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Route Boundary Breached")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text(String(format: "%.1f km off route · %@",
+                            breach.distanceFromCenter / 1000,
+                            severityLabel(breach.distanceFromCenter)))
+                    .font(.caption)
+                    .foregroundStyle(severityColor(breach.distanceFromCenter))
+            }
+
+            Spacer()
+
+            if let t = breach.occurredAt {
+                Text(t.formatted(date: .omitted, time: .shortened))
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+
     // Full-detail card shown in the dedicated Incidents section.
     // incidentRow() is the compact inline version for the Driver Status timeline.
     @ViewBuilder
@@ -476,6 +512,7 @@ struct OrderDetailView: View {
                             Image(systemName: "mic.fill")
                                 .font(.caption2)
                             Text("Voice Report")
+                                .font(.caption2.weight(.medium))
                         }
                         .foregroundStyle(.orange)
                     } else {
@@ -577,19 +614,18 @@ struct OrderDetailView: View {
     }
 
     private func refreshGeofenceData() async {
-        // Fetch all fences for THIS trip (active + inactive = survives trip end)
+        // Fetch ALL fences for this trip — active + inactive, survives trip end
         geofences = (try? await GeofenceService.fetchAllGeofences(forTrip: trip.id)) ?? []
 
-        // Only fetch events if this trip has its own geofences
         if geofences.isEmpty {
             gfEvents = []
         } else {
-            let all  = (try? await GeofenceService.fetchEvents(forVehicle: trip.vehicleId, limit: 30)) ?? []
-            let ids  = Set(geofences.map { $0.id })
-            gfEvents = all.filter { ids.contains($0.geofenceId) }
+            // Query by fence IDs directly — no cross-trip contamination, no row-limit cutoff.
+            // This guarantees all historical events survive even for vehicles with many trips.
+            let fenceIds = geofences.map { $0.id }
+            gfEvents = (try? await GeofenceService.fetchEvents(forFences: fenceIds)) ?? []
         }
 
-        // Fetch route breach events for this trip
         routeBreaches = (try? await RouteBreachService.fetchBreaches(forTrip: trip.id)) ?? []
     }
 
@@ -627,11 +663,13 @@ struct OrderDetailView: View {
 private enum DriverStatusItem: Identifiable {
     case geofenceEvent(TripGeofenceEvent)
     case incident(TripIncident)
+    case routeBreach(RouteBreach)
 
     var id: UUID {
         switch self {
         case .geofenceEvent(let e): return e.id
         case .incident(let i):     return i.id
+        case .routeBreach(let b):  return b.id
         }
     }
 
@@ -639,6 +677,7 @@ private enum DriverStatusItem: Identifiable {
         switch self {
         case .geofenceEvent(let e): return e.occurredAt ?? .distantPast
         case .incident(let i):     return i.createdAt  ?? .distantPast
+        case .routeBreach(let b):  return b.occurredAt ?? .distantPast
         }
     }
 }
