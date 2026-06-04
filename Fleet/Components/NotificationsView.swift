@@ -38,18 +38,7 @@ struct NotificationsView: View {
             .navigationTitle("Notifications")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 28, height: 28)
-                            .background(Color(.tertiarySystemFill))
-                            .clipShape(Circle())
-                    }
-                }
+                // Removed explicit Close button to rely on native swipe-to-dismiss
                 ToolbarItem(placement: .topBarTrailing) {
                     if viewModel.notifications.contains(where: { !$0.isRead }) {
                         Button {
@@ -80,11 +69,11 @@ private struct NotificationCard: View {
 
     private var cleanTitle: String {
         let raw = notification.title ?? "Notification"
-        return raw
-            .unicodeScalars
-            .filter { $0.value < 0x2600 || ($0.value >= 0x2C00 && $0.value < 0xD800) }
-            .reduce("") { $0 + String($1) }
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return raw.replacingOccurrences(
+            of: "[^a-zA-Z0-9 :\\-.,!?'\"]",
+            with: "",
+            options: .regularExpression
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var iconConfig: (name: String, color: Color) {
@@ -128,13 +117,17 @@ private struct NotificationCard: View {
     }
 
     private var cardContent: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
 
             // Unread dot
-            Circle()
-                .fill(notification.isRead ? Color.clear : Color.accentColor)
-                .frame(width: 8, height: 8)
-                .padding(.top, 5)
+            if !notification.isRead {
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 8, height: 8)
+            } else {
+                Spacer()
+                    .frame(width: 8, height: 8)
+            }
 
             // Icon
             Image(systemName: iconConfig.name)

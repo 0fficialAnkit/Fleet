@@ -253,7 +253,7 @@ struct ReportRowView: View {
                 // Bottom row — changes by context
                 HStack(alignment: .bottom) {
                     if context == .maintenance, let staffName = assignedStaffName {
-                        // Maintenance: show who it's assigned to + actual assignment time
+                        // Maintenance: show who it's assigned to
                         HStack(spacing: 4) {
                             Image(systemName: "wrench.and.screwdriver.fill")
                                 .font(.caption2)
@@ -261,16 +261,6 @@ struct ReportRowView: View {
                             Text(staffName)
                                 .font(.subheadline)
                                 .foregroundStyle(Color.secondary)
-                        }
-                        Spacer()
-                        if let assignedAt = report.assignedAt {
-                            Text("Assigned \(timeAgo(from: assignedAt))")
-                                .font(.caption)
-                                .foregroundStyle(Color(.quaternaryLabel))
-                        } else {
-                            Text("Assigned")
-                                .font(.caption)
-                                .foregroundStyle(Color(.quaternaryLabel))
                         }
                     } else {
                         // Vehicles: show who reported it
