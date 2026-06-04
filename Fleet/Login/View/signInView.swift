@@ -53,14 +53,11 @@ struct SignInView: View {
     }
     // MARK: - App Icon
     var appIcon: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 22)
-                .fill(Color.teal)
-                .frame(width: 80, height: 80)
-            Image(systemName: "truck.box.fill")
-                .font(.system(size: 36))
-                .foregroundStyle(Color(.systemBackground))
-        }
+        Image("AppLogo")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 120, height: 120)
+            .clipShape(RoundedRectangle(cornerRadius: 28))
     }
     // MARK: - Title
     var titleSection: some View {
