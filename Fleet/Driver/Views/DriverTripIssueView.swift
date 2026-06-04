@@ -255,20 +255,13 @@ struct DriverTripIssueView: View {
                 )
                 try await IssueReportService.createIssueReport(report)
 
-                let managers = try await ProfileService.fetchProfilesByRole(role: "fleet_manager")
-                for manager in managers {
-                    let delayNote = selectedType.showsDelayPicker ? " (~\(estimatedDelayMinutes) min delay)" : ""
-                    let notification = Notification(
-                        id: UUID(),
-                        userId: manager.id,
-                        title: "Trip Issue: \(selectedType.rawValue)",
-                        message: "Driver reported \(selectedType.rawValue.lowercased()) on route #\(trip.id.uuidString.prefix(6).uppercased())\(delayNote).",
-                        type: selectedType.notificationType,
-                        isRead: false,
-                        createdAt: Date()
-                    )
-                    try? await NotificationService.createNotification(notification)
-                }
+                let delayNote = selectedType.showsDelayPicker ? " (~\(estimatedDelayMinutes) min delay)" : ""
+                try? await NotificationService.notifyManager(
+                    forVehicle: trip.vehicleId,
+                    title: "Trip Issue: \(selectedType.rawValue)",
+                    message: "Driver reported \(selectedType.rawValue.lowercased()) on route #\(trip.id.uuidString.prefix(6).uppercased())\(delayNote).",
+                    type: selectedType.notificationType
+                )
 
                 await MainActor.run {
                     withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) {

@@ -202,13 +202,11 @@ final class TripGeofenceMonitor: NSObject {
                 driverId: dId, eventType: "enter", occurredAt: Date()))
 
             // 2 – in-app notification to fleet managers
-            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-            for mgr in managers {
-                try? await NotificationService.createNotification(Fleet.Notification(
-                    id: UUID(), userId: mgr.id,
-                    title: title, message: body,
-                    type: .info, isRead: false, createdAt: Date()))
-            }
+            try? await NotificationService.notifyManager(
+                forVehicle: vId,
+                title: title, message: body,
+                type: .info
+            )
 
             // 3 – local notification to driver
             let content   = UNMutableNotificationContent()
@@ -296,14 +294,12 @@ extension TripGeofenceMonitor {
             try? await RouteBreachService.logBreach(breach)
 
             // 2. Notify fleet managers
-            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-            for mgr in managers {
-                try? await NotificationService.createNotification(Fleet.Notification(
-                    id: UUID(), userId: mgr.id,
-                    title: "🚨 Route Deviation Alert",
-                    message: "Driver has left the route boundary. Currently \(Int(distOutside / 1000 * 10) / 10) km outside the permitted area.",
-                    type: .alert, isRead: false, createdAt: Date()))
-            }
+            try? await NotificationService.notifyManager(
+                forVehicle: meta.vehicleId,
+                title: "🚨 Route Deviation Alert",
+                message: "Driver has left the route boundary. Currently \(Int(distOutside / 1000 * 10) / 10) km outside the permitted area.",
+                type: .alert
+            )
 
             // 3. Local push to driver
             let content = UNMutableNotificationContent()

@@ -241,6 +241,7 @@ enum TripService {
 
     static func deleteTrip(id: UUID) async throws {
         do {
+            try? await NotificationService.deleteNotifications(forReferenceId: id)
             try await supabase
                 .from("trips")
                 .delete()

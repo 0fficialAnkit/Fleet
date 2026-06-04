@@ -99,14 +99,12 @@ final class DriverTripsViewModel {
                     try? await GeofenceService.createEvent(TripGeofenceEvent(
                         id: UUID(), geofenceId: df.id, vehicleId: vehicleId,
                         driverId: currentUserId, eventType: "trip_ended", occurredAt: Date()))
-                    let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-                    for mgr in managers {
-                        try? await NotificationService.createNotification(Fleet.Notification(
-                            id: UUID(), userId: mgr.id,
-                            title: "🏁 Trip Ended",
-                            message: "Driver has completed the trip. Trip is now ending.",
-                            type: .info, isRead: false, createdAt: Date()))
-                    }
+                    try? await NotificationService.notifyManager(
+                        forVehicle: vehicleId,
+                        title: "🏁 Trip Ended",
+                        message: "Driver has completed the trip. Trip is now ending.",
+                        type: .info
+                    )
                 }
                 try await TripService.endTrip(id: id, distance: distance)
                 let inspectionId = UUID()
@@ -153,14 +151,12 @@ final class DriverTripsViewModel {
                 print("[Geofence] ❌ dropoff_done save failed: \(error)")
             }
 
-            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-            for mgr in managers {
-                try? await NotificationService.createNotification(Fleet.Notification(
-                    id: UUID(), userId: mgr.id,
-                    title: "🏁 Drop-off Completed",
-                    message: "Driver has completed the drop-off.",
-                    type: .info, isRead: false, createdAt: Date()))
-            }
+            try? await NotificationService.notifyManager(
+                forVehicle: vehicleId,
+                title: "🏁 Drop-off Completed",
+                message: "Driver has completed the drop-off.",
+                type: .info
+            )
         }
     }
 
@@ -191,14 +187,12 @@ final class DriverTripsViewModel {
                     tripId: tripId, vehicleId: vehicleId, driverId: currentUserId)
             }
 
-            let managers = (try? await ProfileService.fetchProfilesByRole(role: "fleet_manager")) ?? []
-            for mgr in managers {
-                try? await NotificationService.createNotification(Fleet.Notification(
-                    id: UUID(), userId: mgr.id,
-                    title: "✅ Pickup Completed",
-                    message: "Driver completed pickup and is heading to drop-off.",
-                    type: .info, isRead: false, createdAt: Date()))
-            }
+            try? await NotificationService.notifyManager(
+                forVehicle: vehicleId,
+                title: "✅ Pickup Completed",
+                message: "Driver completed pickup and is heading to drop-off.",
+                type: .info
+            )
         }
     }
 
