@@ -7,6 +7,7 @@ struct DashboardView: View {
     @State private var showingNotifications = false
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var navigationPath = NavigationPath()
+    var onServiceClick: (() -> Void)? = nil
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -63,7 +64,7 @@ struct DashboardView: View {
             .navigationDestination(for: DashboardDestination.self) { destination in
                 switch destination {
                 case .vehiclesRoot:
-                    VehiclesRootView()
+                     VehiclesRootView()
                 case .orderDetail(let trip):
                     OrderDetailView(
                         trip: trip,
@@ -151,6 +152,10 @@ struct DashboardView: View {
                         label: "Service",
                         color: .red
                     )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        onServiceClick?()
+                    }
                 }
             }
             .padding(.vertical, 4)

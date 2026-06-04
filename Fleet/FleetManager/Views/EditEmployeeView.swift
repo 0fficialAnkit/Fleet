@@ -83,6 +83,16 @@ struct EditEmployeeView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
                         guard !fullName.isEmpty else { return }
+                        
+                        if !phone.isEmpty {
+                            let digitsOnly = phone.filter { $0.isNumber }
+                            guard digitsOnly.count == 10 else {
+                                errorMessage = "Phone number should be 10 digit"
+                                showError = true
+                                return
+                            }
+                        }
+                        
                         isLoading = true
                         var updatedProfile = originalProfile
                         updatedProfile.fullName = fullName

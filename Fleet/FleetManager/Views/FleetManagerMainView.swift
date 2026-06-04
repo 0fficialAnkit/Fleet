@@ -6,7 +6,9 @@ struct FleetManagerMainView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
 
-            DashboardView()
+            DashboardView(onServiceClick: {
+                selectedTab = 3
+            })
                 .tabItem {
                     Label("Dashboard", systemImage: "square.grid.2x2")
                 }
