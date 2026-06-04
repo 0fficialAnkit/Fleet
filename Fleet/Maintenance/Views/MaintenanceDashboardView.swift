@@ -53,10 +53,13 @@ struct MaintenanceDashboardView: View {
                 MaintenanceProfileView()
                     .environment(authViewModel)
             }
-            .task {
-                viewModel.currentUserId = authViewModel.currentUser?.id
-                await viewModel.loadData()
-                viewModel.setupRealtime()
+            .onChange(of: authViewModel.currentUser?.id, initial: true) { _, newUserId in
+                guard let userId = newUserId else { return }
+                viewModel.currentUserId = userId
+                Task {
+                    await viewModel.loadData()
+                    viewModel.setupRealtime()
+                }
             }
         }
     }

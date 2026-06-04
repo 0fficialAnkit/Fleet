@@ -85,12 +85,12 @@ enum WorkOrderService {
 
     static func updateWorkOrderStatus(id: UUID, status: WorkOrderStatus) async throws {
         struct StatusUpdate: Encodable {
-            let lifecycle_status: WorkOrderStatus
+            let status: WorkOrderStatus
         }
         do {
             try await supabase
                 .from("work_orders")
-                .update(StatusUpdate(lifecycle_status: status))
+                .update(StatusUpdate(status: status))
                 .eq("id", value: id)
                 .execute()
             print("[WorkOrderService] updateWorkOrderStatus(\(id)) → \(status.rawValue): OK")

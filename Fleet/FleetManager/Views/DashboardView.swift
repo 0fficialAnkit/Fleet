@@ -80,7 +80,7 @@ struct DashboardView: View {
                         vehicleId: alert.vehicle.id,
                         createdBy: nil,
                         assignedTo: staffId,
-                        priority: alert.severity == .critical ? .critical : .medium,
+                        priority: alert.severity == .critical ? .high : .medium,
                         status: .open
                     )
                     let task = MaintenanceTask(
@@ -662,7 +662,7 @@ struct AllMaintenanceAlertsView: View {
                     vehicleId: alert.vehicle.id,
                     createdBy: nil,
                     assignedTo: staffId,
-                    priority: alert.severity == .critical ? .critical : .medium,
+                    priority: alert.severity == .critical ? .high : .medium,
                     status: .open
                 )
                 let task = MaintenanceTask(

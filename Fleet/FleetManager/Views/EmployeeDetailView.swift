@@ -267,7 +267,7 @@ struct EmployeeDetailView: View {
                 }
             }
         }
-        .navigationTitle(currentProfile.fullName)
+        .navigationTitle("Details")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
