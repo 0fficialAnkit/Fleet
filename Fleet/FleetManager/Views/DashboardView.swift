@@ -7,6 +7,7 @@ struct DashboardView: View {
     @State private var showingNotifications = false
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var navigationPath = NavigationPath()
+    @State private var selectedAlertForAssignment: PredictiveMaintenanceAlert?
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -27,7 +28,7 @@ struct DashboardView: View {
 
                         liveDriverAlertsSection
 
-                       // maintenanceSection
+                        predictiveMaintenanceSection
                     }
                     .refreshable { await viewModel.loadData() }
                     .listStyle(.insetGrouped)
@@ -60,6 +61,51 @@ struct DashboardView: View {
             .sheet(isPresented: $showingNotifications) {
                 NotificationsView()
             }
+            .sheet(item: $selectedAlertForAssignment) { alert in
+                MaintenanceAssignmentSheet(
+                    vehicleName: "\(alert.vehicle.make ?? "") \(alert.vehicle.model ?? "")",
+                    licensePlate: alert.vehicle.licensePlate ?? "No Plate",
+                    severityLabel: alert.severity == .critical ? "Critical" : "Warning",
+                    severityColor: alert.severity == .critical ? .red : .orange,
+                    severityIcon: alert.severity == .critical ? "exclamationmark.triangle.fill" : "exclamationmark.circle.fill",
+                    issueTitle: "Predicted Issue",
+                    issueDescription: alert.reason,
+                    recommendationTitle: "Recommended Action",
+                    recommendationDescription: alert.recommendation,
+                    maintenanceStaff: viewModel.profiles.filter { $0.role == "maintenance" }
+                ) { staffId, notes in
+                    let workOrderId = try await WorkOrderService.createWorkOrder(
+                        vehicleId: alert.vehicle.id,
+                        createdBy: nil,
+                        assignedTo: staffId,
+                        priority: alert.severity == .critical ? .critical : .medium,
+                        status: .open
+                    )
+                    let task = MaintenanceTask(
+                        id: UUID(),
+                        workOrderId: workOrderId,
+                        vehicleId: alert.vehicle.id,
+                        scheduledBy: nil,
+                        assignedTo: staffId,
+                        taskType: .inspection,
+                        description: "\(alert.reason). \(alert.recommendation)\(notes.isEmpty ? "" : "\nNotes: \(notes)")",
+                        scheduledDate: Date(),
+                        targetMileage: nil,
+                        serviceIntervalMonths: nil,
+                        scheduleType: .date,
+                        status: .pending
+                    )
+                    try await MaintenanceTaskService.createTask(task)
+                    var updatedVehicle = alert.vehicle
+                    updatedVehicle.status = .maintenance
+                    try? await VehicleService.updateVehicle(updatedVehicle)
+                    
+                    // Reload data to reflect assignment instantly
+                    Task {
+                        await viewModel.loadData()
+                    }
+                }
+            }
             .navigationDestination(for: DashboardDestination.self) { destination in
                 switch destination {
                 case .vehiclesRoot:
@@ -77,7 +123,12 @@ struct DashboardView: View {
                 case .allMaintenanceAlerts:
                     AllMaintenanceAlertsView(
                         alerts: viewModel.predictiveAlerts,
-                        maintenanceStaff: viewModel.profiles.filter { $0.role == "maintenance" }
+                        maintenanceStaff: viewModel.profiles.filter { $0.role == "maintenance" },
+                        onAssignSuccess: {
+                            Task {
+                                await viewModel.loadData()
+                            }
+                        }
                     )
                 case .fuelAnalytics:
                     FleetFuelAnalyticsView(adminId: viewModel.adminId)
@@ -272,6 +323,46 @@ struct DashboardView: View {
         }
     }
 
+    private var predictiveMaintenanceSection: some View {
+        let alerts = viewModel.predictiveAlerts
+        
+        return Section {
+            if alerts.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.purple)
+                    Text("All vehicles performing optimally")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 8)
+            } else {
+                ForEach(alerts.prefix(3)) { alert in
+                    PredictiveAlertCardView(alert: alert) {
+                        selectedAlertForAssignment = alert
+                    }
+                }
+                if alerts.count > 3 {
+                    NavigationLink(value: DashboardDestination.allMaintenanceAlerts) {
+                        Text("See All AI Recommendations (\(alerts.count))")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.purple)
+                    }
+                }
+            }
+        } header: {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.purple)
+                Text("AI Predictive Maintenance")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
     private func incidentRow(_ incident: TripIncident) -> some View {
         let trip = viewModel.trips.first(where: { $0.id == incident.tripId })
         let driverName = viewModel.driverName(for: incident.driverId ?? trip?.driverId)
@@ -427,8 +518,7 @@ struct TripCardView: View {
 
 struct PredictiveAlertCardView: View {
     let alert: PredictiveMaintenanceAlert
-    let maintenanceStaff: [Profile]
-    @State private var showingAssignment = false
+    let onSelect: () -> Void
 
     private var accentColor: Color {
         alert.severity == .critical ? .red : .orange
@@ -443,7 +533,7 @@ struct PredictiveAlertCardView: View {
     }
 
     var body: some View {
-        Button(action: { showingAssignment = true }) {
+        Button(action: onSelect) {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
@@ -476,13 +566,35 @@ struct PredictiveAlertCardView: View {
             .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
-        .sheet(isPresented: $showingAssignment) {
+    }
+}
+
+// MARK: - All Maintenance Alerts
+
+struct AllMaintenanceAlertsView: View {
+    let alerts: [PredictiveMaintenanceAlert]
+    let maintenanceStaff: [Profile]
+    let onAssignSuccess: () -> Void
+    @State private var selectedAlert: PredictiveMaintenanceAlert?
+
+    var body: some View {
+        List {
+            ForEach(alerts) { alert in
+                PredictiveAlertCardView(alert: alert) {
+                    selectedAlert = alert
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("All Alerts")
+        .navigationBarTitleDisplayMode(.large)
+        .sheet(item: $selectedAlert) { alert in
             MaintenanceAssignmentSheet(
                 vehicleName: "\(alert.vehicle.make ?? "") \(alert.vehicle.model ?? "")",
                 licensePlate: alert.vehicle.licensePlate ?? "No Plate",
-                severityLabel: severityLabel,
-                severityColor: accentColor,
-                severityIcon: severityIcon,
+                severityLabel: alert.severity == .critical ? "Critical" : "Warning",
+                severityColor: alert.severity == .critical ? .red : .orange,
+                severityIcon: alert.severity == .critical ? "exclamationmark.triangle.fill" : "exclamationmark.circle.fill",
                 issueTitle: "Predicted Issue",
                 issueDescription: alert.reason,
                 recommendationTitle: "Recommended Action",
@@ -514,26 +626,10 @@ struct PredictiveAlertCardView: View {
                 var updatedVehicle = alert.vehicle
                 updatedVehicle.status = .maintenance
                 try? await VehicleService.updateVehicle(updatedVehicle)
+                
+                onAssignSuccess()
             }
         }
-    }
-}
-
-// MARK: - All Maintenance Alerts
-
-struct AllMaintenanceAlertsView: View {
-    let alerts: [PredictiveMaintenanceAlert]
-    let maintenanceStaff: [Profile]
-
-    var body: some View {
-        List {
-            ForEach(alerts) { alert in
-                PredictiveAlertCardView(alert: alert, maintenanceStaff: maintenanceStaff)
-            }
-        }
-        .listStyle(.insetGrouped)
-        .navigationTitle("All Alerts")
-        .navigationBarTitleDisplayMode(.large)
     }
 }
 

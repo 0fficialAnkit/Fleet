@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import CoreLocation
 
 struct TripDetailView: View {
 
@@ -506,7 +507,7 @@ struct TripDetailView: View {
             if parts.count == 2,
                let lat = Double(parts[0].trimmingCharacters(in: .whitespacesAndNewlines)),
                let lon = Double(parts[1].trimmingCharacters(in: .whitespacesAndNewlines)) {
-                let item = MKMapItem(placemark: MKPlacemark(coordinate: .init(latitude: lat, longitude: lon)))
+                let item = MKMapItem(location: CLLocation(latitude: lat, longitude: lon), address: nil)
                 item.name = address[..<range.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
                 return item
             }

@@ -100,12 +100,29 @@ final class ReportsViewModel {
         async let ir = try? IssueReportService.fetchAllIssueReports()
         async let t  = try? MaintenanceTaskService.fetchAllTasks()
         async let tr = try? TripService.fetchAllTrips(adminId: adminId)
+        async let mh = try? MaintenanceHistoryService.fetchAllHistory()
 
         profiles         = (await p) ?? []
         allVehicles      = (await v) ?? []
-        let issueRecords = (await ir) ?? []
+        var issueRecords = (await ir) ?? []
         maintenanceTasks = (await t) ?? []
         allTrips         = (await tr) ?? []
+        let mHistory     = (await mh) ?? []
+
+        // Trigger preventive alerts check
+        let oldAlertCount = issueRecords.count
+        await PredictiveMaintenanceService.checkAndTriggerPreventiveAlerts(
+            vehicles: allVehicles,
+            trips: allTrips,
+            maintenanceHistory: mHistory,
+            issueReports: issueRecords,
+            adminId: adminId
+        )
+
+        // Refetch issue reports if new alerts were generated
+        if let latestIr = try? await IssueReportService.fetchAllIssueReports(), latestIr.count > oldAlertCount {
+            issueRecords = latestIr
+        }
 
             // Build display reports from issue_reports table
             self.reports = issueRecords.compactMap { record in

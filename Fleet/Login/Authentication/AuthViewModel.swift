@@ -121,7 +121,7 @@ class AuthViewModel {
         errorMessage = nil
         do {
             // 1. Verify Password First
-            let response = try await supabase.auth.signIn(email: email, password: password)
+            _ = try await supabase.auth.signIn(email: email, password: password)
             
             // 2. Send OTP
             try await supabase.auth.signInWithOTP(email: email)

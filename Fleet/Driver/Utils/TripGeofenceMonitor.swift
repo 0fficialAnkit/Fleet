@@ -37,7 +37,7 @@ final class TripGeofenceMonitor: NSObject {
         let center: CLLocationCoordinate2D; let radius: Double
     }
     private var routeBoundaryMeta: [String: RouteBoundaryMeta] = [:]
-    private static let routeBoundaryPrefix = "route_boundary_"
+    nonisolated private static let routeBoundaryPrefix = "route_boundary_"
 
     /// iOS fires a catch-up `didEnterRegion` within ~1-2 s of `startMonitoring`
     /// if the device is already inside the region. We ignore any entry event that
