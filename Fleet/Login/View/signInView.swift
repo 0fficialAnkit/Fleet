@@ -155,22 +155,41 @@ struct SignInView: View {
                     } label: {
                         Text("Forgot Password?")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.teal)
+                            .foregroundStyle(themeColor)
                     }
                     .padding(.top, 4)
                 }
             }
         }
     }
+    // MARK: - Computed Properties
+    var themeColor: Color {
+        switch roleId {
+        case 1: return .teal
+        case 2: return .green
+        case 3: return .brown
+        default: return .teal
+        }
+    }
+    
+    var expectedRoleName: String {
+        switch roleId {
+        case 1: return "fleet_manager"
+        case 2: return "driver"
+        case 3: return "maintenance"
+        default: return "fleet_manager"
+        }
+    }
+
     // MARK: - Main Button
     var actionButton: some View {
         let isButtonDisabled = authViewModel.isWaitingForOTP ? otpCode.isEmpty : (emailOrPhone.isEmpty || password.isEmpty)
         return Button {
             Task {
                 if authViewModel.isWaitingForOTP {
-                    await authViewModel.verifyOTP(token: otpCode)
+                    await authViewModel.verifyOTP(token: otpCode, expectedRole: expectedRoleName)
                 } else {
-                    await authViewModel.signIn(email: emailOrPhone, password: password)
+                    await authViewModel.signIn(email: emailOrPhone, password: password, expectedRole: expectedRoleName)
                 }
             }
         } label: {
@@ -179,7 +198,7 @@ struct SignInView: View {
                     .progressViewStyle(CircularProgressViewStyle(tint: isButtonDisabled ? Color(.tertiaryLabel) : Color(.systemBackground)))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.teal)
+                    .background(isButtonDisabled ? Color(.tertiarySystemFill) : themeColor)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             } else {
                 Text(authViewModel.isWaitingForOTP ? "Verify OTP & Sign In" : "Sign In")
@@ -187,13 +206,13 @@ struct SignInView: View {
                     .foregroundStyle(isButtonDisabled ? Color(.tertiaryLabel) : Color(.systemBackground))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(isButtonDisabled ? Color(.tertiarySystemFill) : Color.teal)
+                    .background(isButtonDisabled ? Color(.tertiarySystemFill) : themeColor)
                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
         }
         .disabled(authViewModel.isLoading || isButtonDisabled)
         .sheet(isPresented: $showingResetPassword) {
-            ResetPasswordView(email: emailOrPhone)
+            ResetPasswordView(email: emailOrPhone, roleId: roleId)
         }
     }
 

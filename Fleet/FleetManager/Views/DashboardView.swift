@@ -38,20 +38,15 @@ struct DashboardView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button(action: { showingNotifications = true }) {
+                    Button { showingNotifications = true } label: {
                         Image(systemName: "bell")
-                            .font(.system(size: 17, weight: .medium))
-                            //.symbolRenderingMode(viewModel.hasUnreadNotifications ? .multicolor : .monochrome)
-                            .foregroundStyle(.primary)
-                            .frame(width: 38, height: 38)
                     }
-                    .buttonStyle(.plain)
+                    .tint(.primary)
 
-                    Button(action: { isShowingProfile = true }) {
+                    Button { isShowingProfile = true } label: {
                         Image(systemName: "person.crop.circle")
-                            .foregroundStyle(.primary)
                     }
-                    .buttonStyle(.plain)
+                    .tint(.primary)
                 }
             }
             .sheet(isPresented: $isShowingProfile) {
