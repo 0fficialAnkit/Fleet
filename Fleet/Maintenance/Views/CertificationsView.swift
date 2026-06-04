@@ -25,102 +25,74 @@ struct Certificate: Codable, Identifiable, Hashable {
 struct CertificationsView: View {
     @State private var certificates: [Certificate] = []
     @State private var isShowingAddSheet = false
-    @State private var selectedCertificate: Certificate? = nil
+
+    var activeCount:  Int { certificates.filter { !$0.isExpired }.count }
+    var expiredCount: Int { certificates.filter  {  $0.isExpired }.count }
 
     var body: some View {
-        ZStack {
-            Color(.systemGroupedBackground).ignoresSafeArea()
+        List {
+            // ── KPI summary ──────────────────────────────────────────────
+            Section {
+                HStack(spacing: 0) {
+                    certKpi("\(certificates.count)", "Total",   .brown)
+                    Divider().frame(height: 36)
+                    certKpi("\(activeCount)",         "Active",  .green)
+                    Divider().frame(height: 36)
+                    certKpi("\(expiredCount)",         "Expired", .red)
+                }
+                .padding(.vertical, 4)
+            }
 
-            ScrollView {
-                VStack(spacing: 20) {
-
-                    // MARK: - Summary Strip
-                    HStack(spacing: 12) {
-                        CertStatPill(
-                            value: "\(certificates.count)",
-                            label: "Total",
-                            color: Color.brown
-                        )
-                        CertStatPill(
-                            value: "\(certificates.filter { !$0.isExpired }.count)",
-                            label: "Active",
-                            color: Color.green
-                        )
-                        CertStatPill(
-                            value: "\(certificates.filter { $0.isExpired }.count)",
-                            label: "Expired",
-                            color: Color.red
-                        )
+            // ── Certificate rows ─────────────────────────────────────────
+            if certificates.isEmpty {
+                Section {
+                    ContentUnavailableView(
+                        "No Certifications",
+                        systemImage: "rosette",
+                        description: Text("Tap + to add your professional certifications.")
+                    )
+                    .listRowBackground(Color.clear)
+                }
+            } else {
+                Section {
+                    ForEach(certificates) { cert in
+                        CertificateRow(certificate: cert)
                     }
-                    .padding(.horizontal, 16)
-
-                    // MARK: - Certificates List
-                    if certificates.isEmpty {
-                        VStack(spacing: 20) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.brown.opacity(0.06))
-                                    .frame(width: 100, height: 100)
-                                Image(systemName: "rosette")
-                                    .font(.system(size: 40, weight: .light))
-                                    .foregroundStyle(Color.brown.opacity(0.5))
-                                    .symbolEffect(.pulse)
-                            }
-                            VStack(spacing: 6) {
-                                Text("No certificates yet")
-                                    .font(.headline)
-                                    .foregroundStyle(Color.primary)
-                                Text("Tap + to add your professional certifications.")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color(.tertiaryLabel))
-                                    .multilineTextAlignment(.center)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 48)
-                    } else {
-                        LazyVStack(spacing: 14) {
-                            ForEach(certificates) { cert in
-                                CertificateCard(certificate: cert)
-                                    .contextMenu {
-                                        Button(role: .destructive) {
-                                            withAnimation(.spring(response: 0.35)) {
-                                                certificates.removeAll { $0.id == cert.id }
-                                                saveCertificates()
-                                            }
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
-                                    }
-                            }
-                        }
-                        .padding(.horizontal, 16)
+                    .onDelete { indices in
+                        certificates.remove(atOffsets: indices)
+                        saveCertificates()
                     }
                 }
-                .padding(.vertical, 16)
             }
         }
+        .listStyle(.insetGrouped)
         .navigationTitle("Certifications")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { isShowingAddSheet = true }) {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { isShowingAddSheet = true } label: {
                     Image(systemName: "plus")
-                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
                 }
+                .buttonStyle(.plain)
             }
         }
         .sheet(isPresented: $isShowingAddSheet) {
             AddCertificateSheet { newCert in
-                withAnimation(.spring(response: 0.35)) {
-                    certificates.append(newCert)
-                    saveCertificates()
-                }
+                certificates.append(newCert)
+                saveCertificates()
             }
         }
-        .onAppear {
-            loadCertificates()
+        .onAppear { loadCertificates() }
+    }
+
+    // MARK: - KPI cell
+    private func certKpi(_ value: String, _ label: String, _ color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(value).font(.title2.bold()).foregroundStyle(color)
+            Text(label).font(.caption).foregroundStyle(.secondary)
         }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Persistence
@@ -138,121 +110,60 @@ struct CertificationsView: View {
     }
 }
 
-// MARK: - Certificate Card
-private struct CertificateCard: View {
+// MARK: - Certificate Row (native list style)
+private struct CertificateRow: View {
     let certificate: Certificate
 
     var statusColor: Color {
-        if certificate.isExpired { return .red }
+        if certificate.isExpired    { return .red }
         if certificate.isExpiringSoon { return .orange }
         return .green
     }
 
     var statusLabel: String {
-        if certificate.isExpired { return "Expired" }
+        if certificate.isExpired      { return "Expired" }
         if certificate.isExpiringSoon { return "Expiring Soon" }
         return "Active"
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(statusColor.opacity(0.1))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "rosette")
-                        .font(.title2.weight(.medium))
-                        .foregroundStyle(statusColor)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(certificate.name)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.primary)
-                        .lineLimit(1)
-                    Text(certificate.issuingBody)
-                        .font(.caption)
-                        .foregroundStyle(Color.secondary)
-                }
-
-                Spacer(minLength: 0)
-
-                Text(statusLabel)
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(statusColor, in: Capsule())
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(statusColor.opacity(0.12))
+                    .frame(width: 40, height: 40)
+                Image(systemName: "rosette")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(statusColor)
             }
 
-            Divider().background(Color(.separator))
-
-            HStack(spacing: 16) {
-                CertInfoPill(icon: "number", text: certificate.certificateNumber)
-                CertInfoPill(icon: "calendar", text: certificate.dateIssued.formatted(date: .abbreviated, time: .omitted))
-                if let expiry = certificate.expiryDate {
-                    CertInfoPill(icon: "clock.badge.exclamationmark", text: expiry.formatted(date: .abbreviated, time: .omitted))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(certificate.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Text(certificate.issuingBody)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 8) {
+                    Label(certificate.dateIssued.formatted(date: .abbreviated, time: .omitted),
+                          systemImage: "calendar")
+                        .font(.caption2)
+                        .foregroundStyle(Color(.tertiaryLabel))
+                    if let expiry = certificate.expiryDate {
+                        Label(expiry.formatted(date: .abbreviated, time: .omitted),
+                              systemImage: "clock")
+                            .font(.caption2)
+                            .foregroundStyle(statusColor)
+                    }
                 }
             }
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(
-                    certificate.isExpired ? Color.red.opacity(0.25) : Color(.separator).opacity(0.2),
-                    lineWidth: certificate.isExpired ? 1.0 : 0.5
-                )
-        )
-    }
-}
 
-// MARK: - Cert Info Pill
-private struct CertInfoPill: View {
-    let icon: String
-    let text: String
+            Spacer()
 
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 9, weight: .semibold))
-            Text(text)
-                .font(.caption2.weight(.medium))
+            StatusBadge(text: statusLabel, color: statusColor)
         }
-        .foregroundStyle(Color.secondary)
-        .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(Color(.tertiarySystemFill))
-        .clipShape(Capsule())
-    }
-}
-
-// MARK: - Cert Stat Pill
-private struct CertStatPill: View {
-    let value: String
-    let label: String
-    let color: Color
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.headline)
-                .foregroundStyle(color)
-            Text(label)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Color(.tertiaryLabel))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(color.opacity(0.2), lineWidth: 0.8)
-        )
     }
 }
 
@@ -260,12 +171,12 @@ private struct CertStatPill: View {
 private struct AddCertificateSheet: View {
     @Environment(\.dismiss) private var dismiss
 
-    @State private var name = ""
-    @State private var issuingBody = ""
+    @State private var name              = ""
+    @State private var issuingBody       = ""
     @State private var certificateNumber = ""
-    @State private var dateIssued = Date()
-    @State private var hasExpiry = false
-    @State private var expiryDate = Calendar.current.date(byAdding: .year, value: 1, to: Date()) ?? Date()
+    @State private var dateIssued        = Date()
+    @State private var hasExpiry         = false
+    @State private var expiryDate        = Calendar.current.date(byAdding: .year, value: 1, to: Date()) ?? Date()
 
     let onSave: (Certificate) -> Void
 
@@ -277,128 +188,57 @@ private struct AddCertificateSheet: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
+            Form {
+                Section("Certificate Details") {
+                    TextField("Certificate Name", text: $name)
+                    TextField("Issuing Body",     text: $issuingBody)
+                    TextField("Certificate #",    text: $certificateNumber)
+                }
 
-                ScrollView {
-                    VStack(spacing: 24) {
-
-                        // Header Icon
-                        ZStack {
-                            Circle()
-                                .fill(Color.brown.opacity(0.08))
-                                .frame(width: 80, height: 80)
-                            Image(systemName: "rosette")
-                                .font(.system(size: 34, weight: .light))
-                                .foregroundStyle(Color.brown)
-                        }
-                        .padding(.top, 8)
-
-                        // Form Fields
-                        VStack(spacing: 16) {
-                            CertTextField(label: "Certificate Name", placeholder: "e.g. ASE Certification", text: $name)
-                            CertTextField(label: "Issuing Body", placeholder: "e.g. National Institute", text: $issuingBody)
-                            CertTextField(label: "Certificate Number", placeholder: "e.g. ASE-2024-1234", text: $certificateNumber)
-
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Date Issued")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(Color.secondary)
-                                DatePicker("", selection: $dateIssued, displayedComponents: .date)
-                                    .datePickerStyle(.compact)
-                                    .tint(Color.brown)
-                                    .labelsHidden()
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                            Toggle(isOn: $hasExpiry) {
-                                Text("Has Expiry Date")
-                                    .font(.subheadline.weight(.medium))
-                            }
-                            .tint(Color.brown)
-
-                            if hasExpiry {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Expiry Date")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(Color.secondary)
-                                    DatePicker("", selection: $expiryDate, displayedComponents: .date)
-                                        .datePickerStyle(.compact)
-                                        .tint(Color.brown)
-                                        .labelsHidden()
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                            }
-                        }
-                        .padding(16)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .stroke(Color.white.opacity(0.12), lineWidth: 0.5)
-                        )
-                        .padding(.horizontal, 16)
-
-                        // Save Button
-                        Button {
-                            let cert = Certificate(
-                                id: UUID(),
-                                name: name.trimmingCharacters(in: .whitespaces),
-                                issuingBody: issuingBody.trimmingCharacters(in: .whitespaces),
-                                dateIssued: dateIssued,
-                                expiryDate: hasExpiry ? expiryDate : nil,
-                                certificateNumber: certificateNumber.trimmingCharacters(in: .whitespaces)
-                            )
-                            onSave(cert)
-                            dismiss()
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "checkmark.circle.fill")
-                                Text("Save Certificate")
-                            }
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(16)
-                            .background(
-                                isValid ? Color.brown : Color.brown.opacity(0.4),
-                                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            )
-                        }
-                        .disabled(!isValid)
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 24)
+                Section("Dates") {
+                    DatePicker("Date Issued", selection: $dateIssued, displayedComponents: .date)
+                        .tint(.brown)
+                    Toggle("Has Expiry Date", isOn: $hasExpiry)
+                        .tint(.brown)
+                    if hasExpiry {
+                        DatePicker("Expiry Date", selection: $expiryDate,
+                                   in: dateIssued..., displayedComponents: .date)
+                            .tint(.brown)
+                            .transition(.opacity)
                     }
+                }
+
+                Section {
+                    Button {
+                        let cert = Certificate(
+                            id: UUID(),
+                            name: name.trimmingCharacters(in: .whitespaces),
+                            issuingBody: issuingBody.trimmingCharacters(in: .whitespaces),
+                            dateIssued: dateIssued,
+                            expiryDate: hasExpiry ? expiryDate : nil,
+                            certificateNumber: certificateNumber.trimmingCharacters(in: .whitespaces)
+                        )
+                        onSave(cert)
+                        dismiss()
+                    } label: {
+                        Text("Save Certificate")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color(.label))
+                    .disabled(!isValid)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                 }
             }
             .navigationTitle("Add Certificate")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundStyle(Color.brown)
                 }
             }
-        }
-    }
-}
-
-// MARK: - CertTextField
-private struct CertTextField: View {
-    let label: String
-    let placeholder: String
-    @Binding var text: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(label)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.secondary)
-            TextField(placeholder, text: $text)
-                .font(.body)
-                .padding(12)
-                .background(Color(.tertiarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+            .animation(.easeInOut(duration: 0.2), value: hasExpiry)
         }
     }
 }

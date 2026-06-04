@@ -83,6 +83,40 @@ enum WorkOrderService {
         }
     }
 
+    /// Persists the date the maintenance tech scheduled a work order.
+    /// Requires `scheduled_date timestamptz null` column on the work_orders table.
+    static func updateScheduledDate(id: UUID, date: Date) async throws {
+        struct Patch: Encodable { let scheduled_date: Date }
+        do {
+            try await supabase
+                .from("work_orders")
+                .update(Patch(scheduled_date: date))
+                .eq("id", value: id)
+                .execute()
+            print("[WorkOrderService] updateScheduledDate(\(id)): OK")
+        } catch {
+            print("[WorkOrderService] updateScheduledDate(\(id)) ERROR: \(error)")
+            throw error
+        }
+    }
+
+    /// Persists technician notes entered during the work order detail sheet.
+    /// Requires `notes text null` column on the work_orders table.
+    static func updateNotes(id: UUID, notes: String) async throws {
+        struct Patch: Encodable { let notes: String }
+        do {
+            try await supabase
+                .from("work_orders")
+                .update(Patch(notes: notes))
+                .eq("id", value: id)
+                .execute()
+            print("[WorkOrderService] updateNotes(\(id)): OK")
+        } catch {
+            print("[WorkOrderService] updateNotes(\(id)) ERROR: \(error)")
+            throw error
+        }
+    }
+
     static func updateWorkOrderStatus(id: UUID, status: WorkOrderStatus) async throws {
         struct StatusUpdate: Encodable {
             let status: WorkOrderStatus

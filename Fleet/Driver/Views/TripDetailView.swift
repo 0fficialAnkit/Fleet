@@ -12,7 +12,6 @@ struct TripDetailView: View {
 
     @State private var currentStatus:    TripStatus?
     @State private var showingChecklist: InspectionType? = nil
-    @State private var showingReportIncident = false
     @AppStorage private var pickupCompleted:  Bool
     @AppStorage private var dropoffCompleted: Bool
     @AppStorage private var dropoffGeofenceIdStr: String
@@ -39,11 +38,14 @@ struct TripDetailView: View {
     
     // Voice logging
     @State private var voiceViewModel = VoiceTripLogViewModel()
-    @State private var isHoldingMic   = false
+    @State private var isHoldingMic       = false
+    @State private var recordingSecondsLeft = 10
+    @State private var recordingTask: Task<Void, Never>? = nil
 
     // Pre-trip checklist results
     @State private var preTripNotes: String?
     @State private var preTripUrls: [String]?
+    @State private var showingFuelSheet = false
 
     init(trip: Trip,
          onStart:       @escaping (UUID, UUID, String, [String]) -> Void,
@@ -68,6 +70,23 @@ struct TripDetailView: View {
     // MARK: - Zone state persistence
     
     /// Call when trip ends to free up UserDefaults space.
+    // MARK: - Voice Recording
+
+    @MainActor
+    private func stopRecording() {
+        recordingTask?.cancel()
+        recordingTask = nil
+        isHoldingMic = false
+        recordingSecondsLeft = 10
+        UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+        voiceViewModel.stopAndExtract(
+            tripId: trip.id,
+            driverId: trip.driverId,
+            routeName: "\(route?.startLocation ?? "Origin") → \(route?.endLocation ?? "Destination")"
+        )
+        withAnimation(.easeOut) { showVoiceRecordingBanner = false }
+    }
+
     private func clearZoneCache() {
         let ud = UserDefaults.standard
         ["fleet.zone.pickup.\(trip.id.uuidString)", "fleet.zone.dropoff.\(trip.id.uuidString)", 
@@ -161,18 +180,23 @@ struct TripDetailView: View {
             Section("Vehicle") {
                 if let v = vehicle {
                     NavigationLink(destination: DriverVehicleDetailView(vehicle: v)) {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("\(v.make ?? "") \(v.model ?? "")").font(.body)
-                                Text(v.licensePlate ?? "—").font(.caption).foregroundStyle(.secondary)
-                            }
-                        } icon: {
+                        HStack(spacing: 12) {
                             Image(systemName: "truck.box.fill")
-                                .foregroundStyle(.green).font(.title3).frame(width: 28)
+                                .foregroundStyle(.green)
+                                .font(.title2)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("\(v.make ?? "") \(v.model ?? "")")
+                                    .font(.body)
+                                Text(v.licensePlate ?? "—")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
+                        .padding(.vertical, 4)
                     }
 
-                    if !isActive {
+                    if !isCompleted {
                         NavigationLink(destination: DriverReportIssueView(vehicle: v)) {
                             Label("Report Vehicle Issue",
                                   systemImage: "exclamationmark.triangle")
@@ -185,51 +209,7 @@ struct TripDetailView: View {
                 }
             }
 
-            // ── 7. Pre-trip checklist button — below vehicle, scheduled only ─
-            if isScheduled {
-                Section {
-                    let canStart = canStartTrip
-                    let isChecklistDone = preTripNotes != nil
-                    
-                    Button {
-                        showingChecklist = .preTrip
-                    } label: {
-                        if canStart {
-                            Label(isChecklistDone ? "Edit Pre-Trip Checklist" : "Start Pre-Trip Checklist", systemImage: isChecklistDone ? "checkmark.circle.fill" : "checklist")
-                                .frame(maxWidth: .infinity)
-                        } else {
-                            if let start = trip.startTime {
-                                Label("Cannot Start Yet (Scheduled for \(start.formatted(date: .abbreviated, time: .shortened)))", systemImage: "calendar.badge.clock")
-                                    .frame(maxWidth: .infinity)
-                            } else {
-                                Label("Start Pre-Trip Checklist", systemImage: "checklist")
-                                    .frame(maxWidth: .infinity)
-                            }
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(canStart ? (isChecklistDone ? .blue : .green) : .secondary)
-                    .controlSize(.large)
-                    .buttonBorderShape(.capsule)
-                    .disabled(!canStart)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    
-                    SwipeToConfirmButton(
-                        label: "Slide to Start Trip",
-                        tint: .green,
-                        enabled: isChecklistDone
-                    ) {
-                        if let notes = preTripNotes, let urls = preTripUrls {
-                            onStart(trip.id, trip.vehicleId, notes, urls)
-                            withAnimation { currentStatus = .active }
-                            openMapsNavigation()
-                        }
-                    }
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                }
-            }
+
 
             // ── 8. In-trip actions ────────────────────────────────────────
             if isActive {
@@ -282,25 +262,20 @@ struct TripDetailView: View {
         .listStyle(.insetGrouped)
         .navigationTitle("Trip Details")
         .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button { showingFuelSheet = true } label: {
+                    Image(systemName: "fuelpump")
+                }
+            }
+        }
+        .sheet(isPresented: $showingFuelSheet) {
+            DriverFuelView(isReadOnly: isCompleted)
+        }
         .safeAreaInset(edge: .bottom) {
             if isActive {
                 VStack(spacing: 8) {
-                    // Recording transcript feedback
-                    if voiceViewModel.voiceService.isRecording && !voiceViewModel.voiceService.liveTranscript.isEmpty {
-                        HStack(spacing: 6) {
-                            Circle()
-                                .fill(Color.red)
-                                .frame(width: 6, height: 6)
-                            Text(voiceViewModel.voiceService.liveTranscript)
-                                .font(.subheadline)
-                                .foregroundStyle(Color.primary)
-                                .multilineTextAlignment(.leading)
-                        }
-                        .padding(12)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.red.opacity(0.2), lineWidth: 1))
-                    }
+
                     
                     if voiceViewModel.isProcessing {
                         HStack(spacing: 8) {
@@ -322,60 +297,82 @@ struct TripDetailView: View {
                     }
 
                     VStack(spacing: 12) {
+                        // Voice Log section
                         HStack(spacing: 12) {
-                            // Manual Report Incident button
-                            Button {
-                                showingReportIncident = true
-                            } label: {
-                                Label("Report Incident", systemImage: "exclamationmark.triangle.fill")
-                                    .font(.headline)
-                                    .minimumScaleFactor(0.8)
-                                    .lineLimit(1)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 54)
+                            // Mic button with countdown badge
+                            ZStack(alignment: .topTrailing) {
+                                Image(systemName: isHoldingMic ? "waveform" : "mic.fill")
+                                    .font(.title3.weight(.bold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 54, height: 54)
+                                    .background(isHoldingMic ? Color.red : Color(red: 0.85, green: 0.65, blue: 0.0))
+                                    .clipShape(Circle())
+                                    .scaleEffect(isHoldingMic ? 0.95 : 1.0)
+                                    .animation(.spring(response: 0.3), value: isHoldingMic)
+
+                                // Countdown badge
+                                if isHoldingMic {
+                                    Text("\(recordingSecondsLeft)")
+                                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 2)
+                                        .background(Color.black.opacity(0.75))
+                                        .clipShape(Capsule())
+                                        .offset(x: 4, y: -4)
+                                        .transition(.scale.combined(with: .opacity))
+                                }
                             }
-                            .buttonStyle(.borderedProminent)
-                            .tint(Color(red: 0.85, green: 0.65, blue: 0.0)) // dark yellow / gold
-                            .buttonBorderShape(.capsule)
-                            .disabled(isHoldingMic || voiceViewModel.isProcessing)
                             
-                            // Hold to Voice Log button
-                            Label(isHoldingMic ? "Recording..." : "Voice Log", systemImage: isHoldingMic ? "waveform" : "mic.fill")
-                                .font(.headline)
-                                .minimumScaleFactor(0.8)
-                                .lineLimit(1)
-                                .foregroundStyle(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 54)
-                                .background(isHoldingMic ? Color.red : Color(red: 0.85, green: 0.65, blue: 0.0))
-                                .clipShape(Capsule())
-                                .scaleEffect(isHoldingMic ? 0.95 : 1.0)
-                                .animation(.spring(response: 0.3), value: isHoldingMic)
-                                .simultaneousGesture(
-                                    DragGesture(minimumDistance: 0)
-                                        .onChanged { _ in
-                                            if !isHoldingMic {
-                                                isHoldingMic = true
-                                                let generator = UIImpactFeedbackGenerator(style: .medium)
-                                                generator.impactOccurred()
-                                                voiceViewModel.startVoiceCapture()
-                                                withAnimation(.spring(response: 0.4)) { showVoiceRecordingBanner = true }
-                                            }
-                                        }
-                                        .onEnded { _ in
-                                            isHoldingMic = false
-                                            let generator = UIImpactFeedbackGenerator(style: .rigid)
-                                            generator.impactOccurred()
-                                            voiceViewModel.stopAndExtract(
-                                                tripId: trip.id,
-                                                driverId: trip.driverId,
-                                                routeName: "\(route?.startLocation ?? "Origin") → \(route?.endLocation ?? "Destination")"
-                                            )
-                                            withAnimation(.easeOut) { showVoiceRecordingBanner = false }
-                                        }
-                                )
-                                .disabled(voiceViewModel.isProcessing)
+                            if isHoldingMic {
+                                if !voiceViewModel.voiceService.liveTranscript.isEmpty {
+                                    Text(voiceViewModel.voiceService.liveTranscript)
+                                        .font(.subheadline)
+                                        .foregroundStyle(Color.primary)
+                                        .multilineTextAlignment(.leading)
+                                        .lineLimit(2)
+                                        .minimumScaleFactor(0.8)
+                                } else {
+                                    Text("Recording...")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.secondary)
+                                }
+                            } else {
+                                Text("Tap voice to report incident")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                            }
+                            
+                            Spacer()
                         }
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if isHoldingMic {
+                                // Tap while recording → stop early and send
+                                stopRecording()
+                            } else {
+                                // Start recording
+                                isHoldingMic = true
+                                recordingSecondsLeft = 10
+                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                voiceViewModel.startVoiceCapture()
+                                withAnimation(.spring(response: 0.4)) { showVoiceRecordingBanner = true }
+
+                                recordingTask = Task {
+                                    // Tick down every second
+                                    for remaining in stride(from: 9, through: 0, by: -1) {
+                                        try? await Task.sleep(for: .seconds(1))
+                                        guard !Task.isCancelled else { return }
+                                        await MainActor.run { recordingSecondsLeft = remaining }
+                                    }
+                                    // Auto-stop after 10 s
+                                    guard !Task.isCancelled else { return }
+                                    await MainActor.run { stopRecording() }
+                                }
+                            }
+                        }
+                        .disabled(voiceViewModel.isProcessing)
                         
                         // Expanding Post-Trip Checklist button (always active)
                         Button {
@@ -384,13 +381,48 @@ struct TripDetailView: View {
                             Label("Post-Trip Checklist", systemImage: "checklist")
                                 .font(.headline)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 54)
+                                .frame(height: 44)
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(.red)
                         .disabled(voiceViewModel.voiceService.isRecording)
                         .buttonBorderShape(.capsule)
                     }
+                }
+                .padding(.horizontal)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+                .background(.ultraThinMaterial)
+            } else if isScheduled {
+                VStack(spacing: 8) {
+                    let canStart = canStartTrip
+                    
+                    Button {
+                        showingChecklist = .preTrip
+                    } label: {
+                        if canStart {
+                            Label("Start Pre-Trip Checklist", systemImage: "checklist")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 44)
+                        } else {
+                            if let start = trip.startTime {
+                                Label("Scheduled for \(start.formatted(date: .abbreviated, time: .shortened))", systemImage: "calendar.badge.clock")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 44)
+                            } else {
+                                Label("Start Pre-Trip Checklist", systemImage: "checklist")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 44)
+                            }
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(canStart ? .green : .secondary)
+                    .buttonBorderShape(.capsule)
+                    .disabled(!canStart)
                 }
                 .padding(.horizontal)
                 .padding(.top, 12)
@@ -485,14 +517,14 @@ struct TripDetailView: View {
             zoneTask?.cancel()
             zoneTask = nil
         }
-        .navigationDestination(isPresented: $showingReportIncident) {
-            DriverReportIncidentView(trip: trip)
-        }
         .sheet(item: $showingChecklist) { type in
             DriverChecklistView(checklistType: type, vehicle: vehicle) { notes, urls in
                 if type == .preTrip {
                     preTripNotes = notes
                     preTripUrls = urls
+                    onStart(trip.id, trip.vehicleId, notes, urls)
+                    withAnimation { currentStatus = .active }
+                    openMapsNavigation()
                 } else {
                     onEnd(trip.id, trip.vehicleId, estimatedDistance, notes, urls)
                     withAnimation { currentStatus = .completed }

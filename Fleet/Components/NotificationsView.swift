@@ -76,6 +76,10 @@ struct NotificationsView: View {
             await viewModel.loadData()
             viewModel.setupRealtime()
         }
+        .onDisappear {
+            // Mark every notification that was visible as read when the sheet closes
+            viewModel.markAllAsRead()
+        }
     }
 }
 

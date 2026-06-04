@@ -285,21 +285,27 @@ struct MaintenanceTask: Codable, Identifiable, Hashable, Sendable {
   var scheduleType: MaintenanceScheduleType?
   var status: MaintenanceTaskStatus?
   var completedAt: Date?
+  var laborHours: String?        // e.g. "2.5" — hours spent
+  var laborCost: String?         // e.g. "1200" — cost in ₹
+  var estimatedDuration: String? // e.g. "1-2 hrs"
 
   enum CodingKeys: String, CodingKey {
       case id
-      case workOrderId = "work_order_id"
-      case vehicleId = "vehicle_id"
-      case scheduledBy = "scheduled_by"
-      case assignedTo = "assigned_to"
-      case taskType = "task_type"
+      case workOrderId           = "work_order_id"
+      case vehicleId             = "vehicle_id"
+      case scheduledBy           = "scheduled_by"
+      case assignedTo            = "assigned_to"
+      case taskType              = "task_type"
       case description
-      case scheduledDate = "scheduled_date"
-      case targetMileage = "target_mileage"
+      case scheduledDate         = "scheduled_date"
+      case targetMileage         = "target_mileage"
       case serviceIntervalMonths = "service_interval_months"
-      case scheduleType = "schedule_type"
+      case scheduleType          = "schedule_type"
       case status
-      case completedAt = "completed_at"
+      case completedAt           = "completed_at"
+      case laborHours            = "labor_hours"
+      case laborCost             = "labor_cost"
+      case estimatedDuration     = "estimated_duration"
   }
 }
 
@@ -313,16 +319,20 @@ struct WorkOrder: Codable, Identifiable, Hashable, Sendable {
   var status: WorkOrderStatus?
   var createdAt: Date?
   var completedAt: Date?
+  var scheduledDate: Date?   // when the maintenance tech schedules it
+  var notes: String?         // technician notes saved during work
 
   enum CodingKeys: String, CodingKey {
       case id
-      case vehicleId = "vehicle_id"
-      case createdBy = "created_by"
-      case assignedTo = "assigned_to"
+      case vehicleId    = "vehicle_id"
+      case createdBy    = "created_by"
+      case assignedTo   = "assigned_to"
       case priority
-      case status = "status"
-      case createdAt = "created_at"
-      case completedAt = "completed_at"
+      case status       = "status"
+      case createdAt    = "created_at"
+      case completedAt  = "completed_at"
+      case scheduledDate = "scheduled_date"
+      case notes
   }
 }
 
@@ -784,19 +794,36 @@ struct IssueReportRecord: Codable, Identifiable, Hashable, Sendable {
     var status: String
     var assignedTo: UUID?
     var createdAt: Date?
-    var issuePhoto: String?   // comma-separated public URLs
+    var issuePhoto: String?       // comma-separated public URLs
+    // Populated when maintenance marks the work complete:
+    var workStartedAt: Date?      // when maintenance started (status → inProgress)
+    var resolvedAt: Date?         // when the work was completed
+    var maintenanceNotes: String? // technician's service notes
+    var laborCost: String?        // labour cost (₹)
+    var extraCost: String?        // extra/miscellaneous cost (₹)
+    var partsCost: String?        // auto-calculated inventory parts cost (₹)
+    var totalCost: String?        // labour + parts + extra (₹)
+    var partsUsed: String?        // comma-separated parts with quantities
 
     enum CodingKeys: String, CodingKey {
         case id
-        case vehicleId  = "vehicle_id"
-        case reportedBy = "reported_by"
+        case vehicleId        = "vehicle_id"
+        case reportedBy       = "reported_by"
         case category
         case severity
         case description
         case status
-        case assignedTo = "assigned_to"
-        case createdAt  = "created_at"
-        case issuePhoto = "issue_photo"
+        case assignedTo       = "assigned_to"
+        case createdAt        = "created_at"
+        case issuePhoto       = "issue_photo"
+        case workStartedAt    = "work_started_at"
+        case resolvedAt       = "resolved_at"
+        case maintenanceNotes = "maintenance_notes"
+        case laborCost        = "labor_cost"
+        case extraCost        = "extra_cost"
+        case partsCost        = "parts_cost"
+        case totalCost        = "total_cost"
+        case partsUsed        = "parts_used"
     }
 }
 
