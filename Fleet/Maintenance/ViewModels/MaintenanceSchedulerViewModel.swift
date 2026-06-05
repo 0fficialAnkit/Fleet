@@ -582,9 +582,19 @@ final class MaintenanceSchedulerViewModel {
                                 completedAt: Date()
                             )
                             try? await MaintenanceHistoryService.createHistory(history)
+                            var updatedV = vehicle
+                            updatedV.status = .active
+                            try? await VehicleService.updateVehicle(updatedV)
                         }
                     } else {
                         try? await WorkOrderService.updateWorkOrderStatus(id: sourceId, status: status)
+                        if status == .inProgress {
+                            if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                                var updatedV = vehicle
+                                updatedV.status = .maintenance
+                                try? await VehicleService.updateVehicle(updatedV)
+                            }
+                        }
                     }
                     try? await Task.sleep(for: .seconds(2))
                     woStatusOverrides.removeValue(forKey: id)
@@ -597,13 +607,18 @@ final class MaintenanceSchedulerViewModel {
                         try? await IssueReportService.markInProgress(id: sourceIrId, assignedTo: uid)
                         
                         // Sync to pending maintenance tasks
-                        if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }),
-                           let userTasks = try? await MaintenanceTaskService.fetchTasksForUser(assignedTo: uid) {
-                            let pendingTasks = userTasks.filter { $0.vehicleId == vehicle.id && $0.status == .pending }
-                            for t in pendingTasks {
-                                try? await MaintenanceTaskService.updateTaskStatus(id: t.id, status: .inProgress)
-                                if let wId = t.workOrderId {
-                                    try? await WorkOrderService.updateWorkOrderStatus(id: wId, status: .inProgress)
+                        if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                            var updatedV = vehicle
+                            updatedV.status = .maintenance
+                            try? await VehicleService.updateVehicle(updatedV)
+                            
+                            if let userTasks = try? await MaintenanceTaskService.fetchTasksForUser(assignedTo: uid) {
+                                let pendingTasks = userTasks.filter { $0.vehicleId == vehicle.id && $0.status == .pending }
+                                for t in pendingTasks {
+                                    try? await MaintenanceTaskService.updateTaskStatus(id: t.id, status: .inProgress)
+                                    if let wId = t.workOrderId {
+                                        try? await WorkOrderService.updateWorkOrderStatus(id: wId, status: .inProgress)
+                                    }
                                 }
                             }
                         }
@@ -626,6 +641,10 @@ final class MaintenanceSchedulerViewModel {
 
                         // 2. Create maintenance history for the vehicle record
                         if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                            var updatedV = vehicle
+                            updatedV.status = .active
+                            try? await VehicleService.updateVehicle(updatedV)
+                            
                             let costDouble = Double(laborStr.filter { $0.isNumber || $0 == "." })
                             let history = MaintenanceHistory(
                                 id: UUID(),
@@ -731,6 +750,10 @@ final class MaintenanceSchedulerViewModel {
                     try? await WorkOrderService.updateWorkOrderStatusWithCompletion(
                         id: sourceId, status: .completed, completedAt: completedAt)
                     if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                        var updatedV = vehicle
+                        updatedV.status = .active
+                        try? await VehicleService.updateVehicle(updatedV)
+                        
                         let details = "Work order completed: \(wo.vehicleIssue)"
                             + (serviceNotes.isEmpty ? "" : "\nNotes: \(serviceNotes)")
                             + (partsDetail.isEmpty  ? "" : "\nParts: \(partsDetail)")
@@ -755,6 +778,10 @@ final class MaintenanceSchedulerViewModel {
                         resolvedAt: completedAt
                     )
                     if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                        var updatedV = vehicle
+                        updatedV.status = .active
+                        try? await VehicleService.updateVehicle(updatedV)
+                        
                         let details = "Issue resolved: \(wo.vehicleIssue)"
                             + (serviceNotes.isEmpty ? "" : "\nNotes: \(serviceNotes)")
                             + (partsDetail.isEmpty  ? "" : "\nParts: \(partsDetail)")

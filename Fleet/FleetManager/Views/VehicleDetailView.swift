@@ -99,7 +99,7 @@ struct VehicleDetailView: View {
                         Label("Delete", systemImage: "trash")
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Image(systemName: "ellipsis")
                         .foregroundStyle(.primary)
                 }
             }
