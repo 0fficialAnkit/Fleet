@@ -64,7 +64,7 @@ struct DriverReportIssueView: View {
     let vehicle: Vehicle
 
     @State private var selectedCategory: IssueCategory = .engine
-    @State private var selectedSeverity: DefectSeverity = .medium
+    @State private var selectedSeverity: DefectSeverity = .low
     @State private var selectedLocation: IssueLocation = .highway
     @State private var issueDate: Date = Date()
     @State private var isDriveable: Bool = true
@@ -97,12 +97,14 @@ struct DriverReportIssueView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                if isSubmitting {
-                    ProgressView()
-                } else {
-                    Button("Submit") { handleSubmit() }
-                        .fontWeight(.semibold)
-                        .disabled(!canSubmit)
+                if !isSubmitted {
+                    if isSubmitting {
+                        ProgressView()
+                    } else {
+                        Button("Submit") { handleSubmit() }
+                            .fontWeight(.semibold)
+                            .disabled(!canSubmit)
+                    }
                 }
             }
         }
@@ -306,7 +308,6 @@ struct DriverReportIssueView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .tint(Color(.label))
             .padding(.horizontal, 32)
             .padding(.bottom, 40)
         }
@@ -350,9 +351,9 @@ struct DriverReportIssueView: View {
                         let fileName = "defects/\(UUID().uuidString)_\(index).jpg"
                         do {
                             try await supabase.storage
-                                .from("fleet-uploads")
-                                .upload(fileName, data: data, options: .init(contentType: "image/jpeg"))
-                            if let url = try? supabase.storage.from("fleet-uploads").getPublicURL(path: fileName).absoluteString {
+                                .from("vehicle_issues")
+                                .upload(path: fileName, file: data, options: .init(contentType: "image/jpeg"))
+                            if let url = try? supabase.storage.from("vehicle_issues").getPublicURL(path: fileName).absoluteString {
                                 uploadedUrls.append(url)
                             }
                         } catch {
@@ -390,7 +391,8 @@ struct DriverReportIssueView: View {
                     forVehicle: vehicle.id,
                     title: isUrgent ? "Urgent: \(selectedCategory.rawValue)" : "New Issue Report",
                     message: "\(selectedCategory.rawValue) on \(vehicle.make ?? "") \(vehicle.model ?? "") (\(vehicle.licensePlate ?? "")). Severity: \(selectedSeverity.rawValue.capitalized).",
-                    type: .maintenance
+                    type: .maintenance,
+                    referenceId: report.id
                 )
 
                 await MainActor.run {

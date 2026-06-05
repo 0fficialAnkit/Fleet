@@ -285,6 +285,7 @@ struct ReportRowView: View {
                 .foregroundStyle(Color(.tertiaryLabel))
         }
         .padding(.vertical, 6)
+        .contentShape(Rectangle())
     }
 
     private func timeAgo(from date: Date) -> String {

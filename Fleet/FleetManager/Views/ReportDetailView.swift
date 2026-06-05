@@ -13,6 +13,8 @@ struct ReportDetailView: View {
     @State private var isVehicleDetailsExpanded = false
     @State private var isLastTripExpanded = false
     @State private var isComplianceExpanded = false
+    @State private var isShowingViewer = false
+    @State private var viewerIndex = 0
     @Environment(\.dismiss) private var dismiss
 
     // Track original assignment to detect changes on Done
@@ -144,29 +146,35 @@ struct ReportDetailView: View {
                     Section {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
-                                ForEach(photoURLs, id: \.absoluteString) { url in
-                                    AsyncImage(url: url) { phase in
-                                        switch phase {
-                                        case .success(let img):
-                                            img.resizable()
-                                                .scaledToFill()
-                                                .frame(width: 110, height: 110)
-                                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        case .failure:
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .fill(Color(.tertiarySystemFill))
-                                                .frame(width: 110, height: 110)
-                                                .overlay(
-                                                    Image(systemName: "photo.slash")
-                                                        .foregroundStyle(Color(.tertiaryLabel))
-                                                )
-                                        default:
-                                            RoundedRectangle(cornerRadius: 10)
-                                                .fill(Color(.tertiarySystemFill))
-                                                .frame(width: 110, height: 110)
-                                                .overlay(ProgressView())
+                                ForEach(Array(photoURLs.enumerated()), id: \.element.absoluteString) { index, url in
+                                    Button {
+                                        viewerIndex = index
+                                        isShowingViewer = true
+                                    } label: {
+                                        AsyncImage(url: url) { phase in
+                                            switch phase {
+                                            case .success(let img):
+                                                img.resizable()
+                                                    .scaledToFill()
+                                                    .frame(width: 110, height: 110)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                            case .failure:
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .fill(Color(.tertiarySystemFill))
+                                                    .frame(width: 110, height: 110)
+                                                    .overlay(
+                                                        Image(systemName: "photo.slash")
+                                                            .foregroundStyle(Color(.tertiaryLabel))
+                                                    )
+                                            default:
+                                                RoundedRectangle(cornerRadius: 10)
+                                                    .fill(Color(.tertiarySystemFill))
+                                                    .frame(width: 110, height: 110)
+                                                    .overlay(ProgressView())
+                                            }
                                         }
                                     }
+                                    .buttonStyle(.plain)
                                 }
                             }
                             .padding(.vertical, 6)
@@ -262,6 +270,106 @@ struct ReportDetailView: View {
                         }
                 }
 
+                // ── Maintenance Work Report (shown when resolved) ─
+                if report.status == .resolved {
+                    Section {
+                        // Start → End timing
+                        HStack(spacing: 14) {
+                            Image(systemName: "checkmark.seal.fill")
+                                .foregroundStyle(.green)
+                                .font(.title3)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Work Completed")
+                                    .font(.subheadline.weight(.semibold))
+                                if let resolved = report.resolvedAt {
+                                    Text(resolved.formatted(date: .long, time: .shortened))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 4)
+
+                        if let started = report.workStartedAt {
+                            LabeledContent("Work Started") {
+                                Text(started.formatted(date: .abbreviated, time: .shortened))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        if let started = report.workStartedAt, let ended = report.resolvedAt {
+                            let duration = ended.timeIntervalSince(started)
+                            let hrs  = Int(duration) / 3600
+                            let mins = (Int(duration) % 3600) / 60
+                            LabeledContent("Duration") {
+                                Text(hrs > 0 ? "\(hrs)h \(mins)m" : "\(mins) min")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        // Service notes
+                        if let notes = report.maintenanceNotes, !notes.isEmpty {
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Service Notes")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                    .textCase(.uppercase)
+                                Text(notes)
+                                    .font(.body)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.vertical, 4)
+                        }
+
+                        // Parts used
+                        if let parts = report.partsUsed, !parts.isEmpty {
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Parts Used")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                    .textCase(.uppercase)
+                                Text(parts)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.primary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.vertical, 4)
+                        }
+
+                        // Cost breakdown
+                        let hasAnyCost = [report.laborCost, report.extraCost,
+                                          report.partsCost, report.totalCost]
+                            .contains { $0 != nil && !($0!.isEmpty) }
+                        if hasAnyCost {
+                            if let lc = report.laborCost, !lc.isEmpty {
+                                LabeledContent("Labour Cost", value: "₹\(lc)")
+                            }
+                            if let ec = report.extraCost, !ec.isEmpty {
+                                LabeledContent("Extra Cost", value: "₹\(ec)")
+                            }
+                            if let pc = report.partsCost, !pc.isEmpty {
+                                LabeledContent("Parts Cost", value: "₹\(pc)")
+                            }
+                            if let tc = report.totalCost, !tc.isEmpty {
+                                HStack {
+                                    Text("Total Cost")
+                                        .font(.subheadline.weight(.semibold))
+                                    Spacer()
+                                    Text("₹\(tc)")
+                                        .font(.subheadline.weight(.bold))
+                                        .foregroundStyle(.primary)
+                                }
+                                .padding(.top, 4)
+                            }
+                        }
+                    } header: {
+                        HStack {
+                            Text("Maintenance Report")
+                            Spacer()
+                            StatusBadge(text: "Resolved", color: .green).textCase(nil)
+                        }
+                    }
+                }
+
                 // ── Information ───────────────────────────────────
                 Section("Information") {
                     // ── Reporter ──────────────────────────────────────
@@ -302,106 +410,6 @@ struct ReportDetailView: View {
                         }
                     }
                     
-                    // ── Maintenance Work Report (shown when resolved) ─
-                    if report.status == .resolved {
-                        Section {
-                            // Start → End timing
-                            HStack(spacing: 14) {
-                                Image(systemName: "checkmark.seal.fill")
-                                    .foregroundStyle(.green)
-                                    .font(.title3)
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text("Work Completed")
-                                        .font(.subheadline.weight(.semibold))
-                                    if let resolved = report.resolvedAt {
-                                        Text(resolved.formatted(date: .long, time: .shortened))
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                            }
-                            .padding(.vertical, 4)
-
-                            if let started = report.workStartedAt {
-                                LabeledContent("Work Started") {
-                                    Text(started.formatted(date: .abbreviated, time: .shortened))
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            if let started = report.workStartedAt, let ended = report.resolvedAt {
-                                let duration = ended.timeIntervalSince(started)
-                                let hrs  = Int(duration) / 3600
-                                let mins = (Int(duration) % 3600) / 60
-                                LabeledContent("Duration") {
-                                    Text(hrs > 0 ? "\(hrs)h \(mins)m" : "\(mins) min")
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-
-                            // Service notes
-                            if let notes = report.maintenanceNotes, !notes.isEmpty {
-                                VStack(alignment: .leading, spacing: 5) {
-                                    Text("Service Notes")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                        .textCase(.uppercase)
-                                    Text(notes)
-                                        .font(.body)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                .padding(.vertical, 4)
-                            }
-
-                            // Parts used
-                            if let parts = report.partsUsed, !parts.isEmpty {
-                                VStack(alignment: .leading, spacing: 5) {
-                                    Text("Parts Used")
-                                        .font(.caption.weight(.semibold))
-                                        .foregroundStyle(.secondary)
-                                        .textCase(.uppercase)
-                                    Text(parts)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.primary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                .padding(.vertical, 4)
-                            }
-                        } header: {
-                            HStack {
-                                Text("Maintenance Report")
-                                Spacer()
-                                StatusBadge(text: "Resolved", color: .green).textCase(nil)
-                            }
-                        }
-
-                        // Cost breakdown in a separate section
-                        let hasAnyCost = [report.laborCost, report.extraCost,
-                                          report.partsCost, report.totalCost]
-                            .contains { $0 != nil && !($0!.isEmpty) }
-                        if hasAnyCost {
-                            Section("Cost Breakdown") {
-                                if let lc = report.laborCost, !lc.isEmpty {
-                                    LabeledContent("Labour Cost", value: "₹\(lc)")
-                                }
-                                if let ec = report.extraCost, !ec.isEmpty {
-                                    LabeledContent("Extra Cost", value: "₹\(ec)")
-                                }
-                                if let pc = report.partsCost, !pc.isEmpty {
-                                    LabeledContent("Parts Cost", value: "₹\(pc)")
-                                }
-                                if let tc = report.totalCost, !tc.isEmpty {
-                                    HStack {
-                                        Text("Total Cost")
-                                            .font(.subheadline.weight(.semibold))
-                                        Spacer()
-                                        Text("₹\(tc)")
-                                            .font(.subheadline.weight(.bold))
-                                            .foregroundStyle(.primary)
-                                    }
-                                }
-                            }
-                        }
-                    }
 
                     // ── Last Trip ─────────────────────────────────────
                     if let trip = lastTrip {
@@ -498,6 +506,9 @@ struct ReportDetailView: View {
                 if let url = exportURL {
                     ShareSheet(items: [url])
                 }
+            }
+            .fullScreenCover(isPresented: $isShowingViewer) {
+                PhotoViewer(urls: photoURLs, selectedIndex: viewerIndex)
             }
         }
     }
@@ -797,6 +808,58 @@ struct ShareSheet: UIViewControllerRepresentable {
         UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
     func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
+}
+
+// MARK: - Photo Viewer
+
+struct PhotoViewer: View {
+    let urls: [URL]
+    @State var selectedIndex: Int
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            TabView(selection: $selectedIndex) {
+                ForEach(Array(urls.enumerated()), id: \.offset) { index, url in
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image {
+                            image
+                                .resizable()
+                                .scaledToFit()
+                        } else if phase.error != nil {
+                            VStack {
+                                Image(systemName: "photo.slash")
+                                    .font(.largeTitle)
+                                Text("Failed to load image")
+                            }
+                            .foregroundStyle(.gray)
+                        } else {
+                            ProgressView()
+                                .tint(.white)
+                        }
+                    }
+                    .tag(index)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .always))
+            .background(Color.black.ignoresSafeArea())
+            .toolbarBackground(.black, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .symbolRenderingMode(.hierarchical)
+                            .font(.title2)
+                            .foregroundStyle(.white)
+                    }
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Preview

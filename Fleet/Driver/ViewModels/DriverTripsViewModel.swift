@@ -120,7 +120,8 @@ final class DriverTripsViewModel {
                         forVehicle: vehicleId,
                         title: "Trip Ended",
                         message: "Driver has completed the trip. Trip is now ending.",
-                        type: .info
+                        type: .info,
+                        referenceId: id
                     )
                 }
                 try await TripService.endTrip(id: id, distance: distance)
@@ -172,7 +173,8 @@ final class DriverTripsViewModel {
                 forVehicle: vehicleId,
                 title: "Drop-off Completed",
                 message: "Driver has completed the drop-off.",
-                type: .info
+                type: .info,
+                referenceId: tripId
             )
         }
     }
@@ -208,7 +210,8 @@ final class DriverTripsViewModel {
                 forVehicle: vehicleId,
                 title: "✅ Pickup Completed",
                 message: "Driver completed pickup and is heading to drop-off.",
-                type: .info
+                type: .info,
+                referenceId: tripId
             )
         }
     }

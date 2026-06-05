@@ -32,8 +32,7 @@ final class MaintenanceDashboardViewModel {
     var upcomingItems: [UpcomingDisplayItem] {
         var items: [UpcomingDisplayItem] = []
 
-        // Tasks — show anything not completed
-        let tItems = tasks.filter { $0.status != .completed && $0.status != .cancelled }.map { task -> UpcomingDisplayItem in
+        let tItems = tasks.filter { $0.status == .pending }.map { task -> UpcomingDisplayItem in
             return UpcomingDisplayItem(
                 id: task.id,
                 priorityLabel: nil,
@@ -53,10 +52,7 @@ final class MaintenanceDashboardViewModel {
         }
         items.append(contentsOf: tItems)
 
-        // Work orders — treat nil status as active (not yet set by DB)
-        let woItems = workOrders.filter {
-            $0.status != .completed && $0.status != .cancelled
-        }.map { wo -> UpcomingDisplayItem in
+        let woItems = workOrders.filter { $0.status == .open || $0.status == nil || $0.status == .pending }.map { wo -> UpcomingDisplayItem in
             return UpcomingDisplayItem(
                 id: wo.id,
                 priorityLabel: woPriorityLabel(wo.priority),
@@ -76,7 +72,7 @@ final class MaintenanceDashboardViewModel {
         }
         items.append(contentsOf: woItems)
 
-        let irItems = issueReports.filter { $0.status.lowercased() != "resolved" && $0.status.lowercased() != "closed" }.map { ir -> UpcomingDisplayItem in
+        let irItems = issueReports.filter { $0.status.lowercased() == "open" || $0.status.lowercased() == "assigned" }.map { ir -> UpcomingDisplayItem in
             return UpcomingDisplayItem(
                 id: ir.id,
                 priorityLabel: ir.severity.uppercased(),
@@ -97,7 +93,73 @@ final class MaintenanceDashboardViewModel {
         items.append(contentsOf: irItems)
         
         items.sort { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
+        return Array(items.prefix(3))
+    }
 
+    var inProgressItems: [UpcomingDisplayItem] {
+        var items: [UpcomingDisplayItem] = []
+
+        let tItems = tasks.filter { $0.status == .inProgress }.map { task -> UpcomingDisplayItem in
+            return UpcomingDisplayItem(
+                id: task.id,
+                priorityLabel: nil,
+                priorityColor: nil,
+                referenceId: "TSK-\(task.id.uuidString.prefix(4).uppercased())",
+                assignmentTag: "IN PROGRESS",
+                vehicleName: vehicleDisplayName(for: task.vehicleId),
+                taskDescription: taskTypeString(for: task.taskType),
+                estimatedDuration: "1h 30m",
+                location: "Bay 01",
+                actionButtonTitle: "Continue Task",
+                actionButtonIcon: "play.fill",
+                destination: .scheduledWorkOrderDetail(buildScheduledWOFromTask(task)),
+                isTask: true,
+                createdAt: task.scheduledDate
+            )
+        }
+        items.append(contentsOf: tItems)
+
+        let woItems = workOrders.filter { $0.status == .inProgress }.map { wo -> UpcomingDisplayItem in
+            return UpcomingDisplayItem(
+                id: wo.id,
+                priorityLabel: woPriorityLabel(wo.priority),
+                priorityColor: woPriorityColor(wo.priority),
+                referenceId: "WO-\(wo.id.uuidString.prefix(4).uppercased())",
+                assignmentTag: "IN PROGRESS",
+                vehicleName: vehicleDisplayName(for: wo.vehicleId),
+                taskDescription: "Work Order Execution",
+                estimatedDuration: "2h 30m",
+                location: "Bay 04",
+                actionButtonTitle: "Continue Work",
+                actionButtonIcon: "play.fill",
+                destination: .scheduledWorkOrderDetail(buildScheduledWO(wo)),
+                isTask: false,
+                createdAt: wo.createdAt
+            )
+        }
+        items.append(contentsOf: woItems)
+
+        let irItems = issueReports.filter { $0.status.lowercased() == "in_progress" }.map { ir -> UpcomingDisplayItem in
+            return UpcomingDisplayItem(
+                id: ir.id,
+                priorityLabel: ir.severity.uppercased(),
+                priorityColor: irSeverityColor(ir.severity),
+                referenceId: "REP-\(ir.id.uuidString.prefix(4).uppercased())",
+                assignmentTag: "IN PROGRESS",
+                vehicleName: vehicleDisplayName(for: ir.vehicleId),
+                taskDescription: ir.category + (ir.description?.isEmpty == false ? " - \(ir.description!)" : ""),
+                estimatedDuration: "1h 00m",
+                location: "Bay 02",
+                actionButtonTitle: "Continue Repair",
+                actionButtonIcon: "play.fill",
+                destination: .scheduledWorkOrderDetail(buildScheduledWOFromIR(ir)),
+                isTask: false,
+                createdAt: ir.createdAt
+            )
+        }
+        items.append(contentsOf: irItems)
+        
+        items.sort { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
         return Array(items.prefix(3))
     }
 

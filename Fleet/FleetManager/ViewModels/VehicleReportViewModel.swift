@@ -106,7 +106,11 @@ final class VehicleReportViewModel {
     }
     
     var activeMaintenanceCount: Int {
-        maintenanceTasks.filter { $0.status == .pending || $0.status == .inProgress }.count
+        activeMaintenanceTasks.count
+    }
+    
+    var activeMaintenanceTasks: [MaintenanceTask] {
+        maintenanceTasks.filter { $0.status != .completed && $0.status != .cancelled }
     }
     
     var completedMaintenanceCount: Int {

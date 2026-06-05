@@ -1,9 +1,19 @@
 import SwiftUI
+import Supabase
+
+struct IdentifiableURL: Identifiable {
+    let id = UUID()
+    let url: URL
+}
 
 struct VehicleReportView: View {
     let vehicle: Vehicle
     @State private var viewModel: VehicleReportViewModel
     @State private var selectedTab = ReportTab.overview
+    
+    @State private var ordersViewModel = OrdersViewModel()
+    @Environment(AuthViewModel.self) private var authViewModel
+    @State private var invoiceToView: IdentifiableURL?
     
     enum ReportTab: String, CaseIterable, Identifiable {
         case overview = "Overview"
@@ -97,11 +107,53 @@ struct VehicleReportView: View {
         .navigationTitle("Vehicle Report")
         .navigationBarTitleDisplayMode(.inline)
         .task {
+            if let adminId = authViewModel.currentUser?.id {
+                ordersViewModel.adminId = adminId
+                async let _ = ordersViewModel.loadData()
+            }
             await viewModel.loadData()
             viewModel.setupRealtime()
         }
         .refreshable {
             await viewModel.loadData()
+            await ordersViewModel.loadData()
+        }
+        .fullScreenCover(item: $invoiceToView) { item in
+            NavigationStack {
+                ZStack {
+                    Color.black.ignoresSafeArea()
+                    AsyncImage(url: item.url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFit()
+                        case .failure:
+                            VStack {
+                                Image(systemName: "photo.slash")
+                                    .font(.largeTitle)
+                                Text("Failed to load image")
+                            }
+                            .foregroundStyle(.gray)
+                        default:
+                            ProgressView().tint(.white)
+                        }
+                    }
+                }
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            invoiceToView = nil
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .symbolRenderingMode(.hierarchical)
+                                .font(.title2)
+                                .foregroundStyle(.white)
+                        }
+                    }
+                }
+                .toolbarBackground(.black, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
+                .toolbarColorScheme(.dark, for: .navigationBar)
+            }
         }
     }
     
@@ -251,12 +303,14 @@ struct VehicleReportView: View {
                 }
             }
             
-            if let billUrl = log.billUrl, let _ = URL(string: billUrl) {
+            if let billUrl = log.billUrl, let url = URL(string: billUrl) {
                 Divider().background(Color(.separator))
                 
                 HStack {
                     Spacer()
-                    Link(destination: URL(string: billUrl) ?? URL(string: "https://supabase.com")!) {
+                    Button {
+                        invoiceToView = IdentifiableURL(url: url)
+                    } label: {
                         Label("View Receipt / Invoice", systemImage: "doc.text.viewfinder")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.teal)
@@ -271,13 +325,13 @@ struct VehicleReportView: View {
     
     private var maintenanceTabContent: some View {
         Group {
-            if viewModel.maintenanceTasks.isEmpty && viewModel.maintenanceHistories.isEmpty {
+            if viewModel.activeMaintenanceTasks.isEmpty && viewModel.maintenanceHistories.isEmpty {
                 emptyHistoryView(icon: "wrench.and.screwdriver", title: "No Maintenance Found", subtitle: "No current tasks or past maintenance history exists.")
             } else {
                 List {
-                    if !viewModel.maintenanceTasks.isEmpty {
+                    if !viewModel.activeMaintenanceTasks.isEmpty {
                         Section("Active & Scheduled Tasks") {
-                            ForEach(viewModel.maintenanceTasks) { task in
+                            ForEach(viewModel.activeMaintenanceTasks) { task in
                                 maintenanceTaskRow(task)
                             }
                         }
@@ -343,13 +397,29 @@ struct VehicleReportView: View {
     }
     
     private func maintenanceHistoryRow(_ history: MaintenanceHistory) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(history.serviceDetails ?? "Completed Maintenance")
-                        .font(.body.weight(.medium))
+        let rawText = history.serviceDetails ?? "Completed Maintenance"
+        let parts = rawText.components(separatedBy: "[Photos]")
+        let detailsText = parts.first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? rawText
+        
+        let photoUrls: [URL]
+        if parts.count > 1 {
+            let lines = parts[1].components(separatedBy: .newlines)
+            photoUrls = lines.compactMap { line -> URL? in
+                let cleaned = line.replacingOccurrences(of: "- ", with: "").trimmingCharacters(in: .whitespaces)
+                guard cleaned.hasPrefix("http") else { return nil }
+                return URL(string: cleaned)
+            }
+        } else {
+            photoUrls = []
+        }
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(detailsText)
+                        .font(.subheadline)
                     
-                    Text("Date: \(history.completedAt?.formatted(date: .abbreviated, time: .omitted) ?? "Unknown")")
+                    Text("Date: \(history.completedAt?.formatted(date: .abbreviated, time: .shortened) ?? "Unknown")")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -362,8 +432,34 @@ struct VehicleReportView: View {
                         .foregroundStyle(.red)
                 }
             }
+            
+            if !photoUrls.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(photoUrls, id: \.self) { url in
+                            AsyncImage(url: url) { phase in
+                                if let image = phase.image {
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 70, height: 70)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                } else {
+                                    Color(.secondarySystemBackground)
+                                        .frame(width: 70, height: 70)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                        .overlay(ProgressView())
+                                }
+                            }
+                            .onTapGesture {
+                                invoiceToView = IdentifiableURL(url: url)
+                            }
+                        }
+                    }
+                }
+            }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 8)
     }
     
     // MARK: - Trips Tab
@@ -375,7 +471,9 @@ struct VehicleReportView: View {
             } else {
                 List {
                     ForEach(viewModel.trips) { trip in
-                        tripRow(trip)
+                        NavigationLink(destination: OrderDetailView(trip: trip, viewModel: ordersViewModel)) {
+                            tripRow(trip)
+                        }
                     }
                 }
                 .listStyle(.insetGrouped)

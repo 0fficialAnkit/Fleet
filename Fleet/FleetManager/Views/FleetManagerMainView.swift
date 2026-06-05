@@ -1,5 +1,10 @@
 import SwiftUI
 
+extension Notification.Name {
+    static let navigateToTrip = Notification.Name("navigateToTrip")
+    static let navigateToReport = Notification.Name("navigateToReport")
+}
+
 struct FleetManagerMainView: View {
     @State private var selectedTab = 0
 
@@ -34,6 +39,12 @@ struct FleetManagerMainView: View {
                 .tag(3)
         }
         .tint(Color.teal)
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToTrip)) { _ in
+            selectedTab = 1
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToReport)) { _ in
+            selectedTab = 3
+        }
     }
 }
 

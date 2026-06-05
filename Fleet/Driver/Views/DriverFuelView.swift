@@ -5,6 +5,8 @@ import Supabase
 struct DriverFuelView: View {
 
     var isReadOnly: Bool = false
+    var vehicleId: UUID? = nil
+    var tripId: UUID? = nil
 
     // MARK: - State
 
@@ -173,13 +175,9 @@ struct DriverFuelView: View {
                     }
                 } header: {
                     HStack {
-                        Text("Bill Photo")
+                        Text("* ").foregroundStyle(.red) + Text("Bill Photo")
                         Spacer()
-                        if billImage == nil {
-                            Text("Required")
-                                .foregroundStyle(.red)
-                                .textCase(.none)
-                        } else {
+                        if billImage != nil {
                             Label("Captured", systemImage: "checkmark.circle.fill")
                                 .font(.caption)
                                 .foregroundStyle(.green)
@@ -193,7 +191,7 @@ struct DriverFuelView: View {
                 // ── Success row ───────────────────────────────────────
                 if showSuccess {
                     Section {
-                        Label("Synced with Fleet Manager", systemImage: "checkmark.circle.fill")
+                        Label("Record stored..", systemImage: "checkmark.circle.fill")
                             .foregroundStyle(.green)
                     }
                     .transition(.opacity.combined(with: .move(edge: .top)))
@@ -253,12 +251,8 @@ struct DriverFuelView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Add") { dismiss() }
+                    Button("Done") { dismiss() }
                         .fontWeight(.semibold)
-                }
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("Done") { activeField = nil }
                 }
             }
             // ── Gallery selection ─────────────────────────────────────
@@ -300,8 +294,13 @@ struct DriverFuelView: View {
                 Task {
                     await viewModel.loadData()
                     viewModel.setupRealtime()
-                    let vehicle = try? await VehicleService.fetchVehicleForDriver(driverId: userId)
-                    assignedVehicleId = vehicle?.id
+                    
+                    if let preAssignedId = vehicleId {
+                        assignedVehicleId = preAssignedId
+                    } else {
+                        let vehicle = try? await VehicleService.fetchVehicleForDriver(driverId: userId)
+                        assignedVehicleId = vehicle?.id
+                    }
                 }
             }
         }
@@ -363,7 +362,8 @@ struct DriverFuelView: View {
                         forVehicle: vehicleId,
                         title: "Fuel Log Submitted",
                         message: "Driver logged \(String(format: "%.1f", liters))L — ₹\(Int(cost)).",
-                        type: .info
+                        type: .info,
+                        referenceId: tripId
                     )
                 }
 

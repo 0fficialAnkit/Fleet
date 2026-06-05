@@ -270,7 +270,10 @@ struct TripDetailView: View {
             }
         }
         .sheet(isPresented: $showingFuelSheet) {
-            DriverFuelView(isReadOnly: isCompleted)
+            DriverFuelView(isReadOnly: isCompleted, vehicleId: trip.vehicleId, tripId: trip.id)
+        }
+        .refreshable {
+            await fetchTripData()
         }
         .safeAreaInset(edge: .bottom) {
             if isActive {
@@ -472,24 +475,7 @@ struct TripDetailView: View {
         .onAppear {
         }
         .task {
-            // Route and vehicle fetches start immediately (concurrent)
-            async let r = trip.routeId != nil ? RouteService.fetchRoute(id: trip.routeId!) : nil
-            async let v = VehicleService.fetchVehicle(id: trip.vehicleId)
-
-            // Zone restore runs concurrently with the above fetches.
-            // CRITICAL: this must NOT be placed after calculateDistance — MKDirections
-            // can take 5-10 seconds, and if the driver navigates away before it finishes
-            // the task is cancelled and zone state is never restored from DB.
-            await refreshZoneStatus()
-
-            // Now collect the concurrent results
-            route   = try? await r
-            vehicle = try? await v
-
-            // Distance calc is display-only — run last so it never blocks zone UI
-            if let s = route?.startLocation, let e = route?.endLocation {
-                await calculateDistance(from: s, to: e)
-            }
+            await fetchTripData()
 
             if currentStatus == .active {
                 startZonePolling()
@@ -592,6 +578,27 @@ struct TripDetailView: View {
     }
 
     // MARK: - Helpers
+
+    private func fetchTripData() async {
+        // Route and vehicle fetches start immediately (concurrent)
+        async let r = trip.routeId != nil ? RouteService.fetchRoute(id: trip.routeId!) : nil
+        async let v = VehicleService.fetchVehicle(id: trip.vehicleId)
+
+        // Zone restore runs concurrently with the above fetches.
+        // CRITICAL: this must NOT be placed after calculateDistance — MKDirections
+        // can take 5-10 seconds, and if the driver navigates away before it finishes
+        // the task is cancelled and zone state is never restored from DB.
+        await refreshZoneStatus()
+
+        // Now collect the concurrent results
+        route   = try? await r
+        vehicle = try? await v
+
+        // Distance calc is display-only — run last so it never blocks zone UI
+        if let s = route?.startLocation, let e = route?.endLocation {
+            await calculateDistance(from: s, to: e)
+        }
+    }
 
     private func openMapsNavigation() {
         guard let s = route?.startLocation, !s.isEmpty,

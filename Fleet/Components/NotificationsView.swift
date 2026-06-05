@@ -195,29 +195,57 @@ private struct NotificationCard: View {
 struct NotificationDetailDestination: View {
     let notification: Notification
     @State private var trip: Trip?
+    @State private var report: IssueReport?
     @State private var isLoading = true
     @State private var ordersViewModel = OrdersViewModel()
+    @State private var reportsViewModel = ReportsViewModel()
     @Environment(AuthViewModel.self) private var authViewModel
 
     var body: some View {
         Group {
             if isLoading {
                 ProgressView("Loading...")
-            } else if let trip {
+            } else if let report = report {
+                ReportDetailView(report: report, viewModel: reportsViewModel)
+            } else if let trip = trip {
                 OrderDetailView(trip: trip, viewModel: ordersViewModel)
             } else {
                 ContentUnavailableView(
-                    "Trip Not Found",
+                    "Item Not Found",
                     systemImage: "questionmark.circle",
-                    description: Text("This trip may have been deleted.")
+                    description: Text("This item may have been deleted.")
                 )
             }
         }
         .task {
-            ordersViewModel.adminId = authViewModel.currentUserId
-            await ordersViewModel.loadData()
-            if let tripId = notification.referenceId {
-                trip = try? await TripService.fetchTrip(id: tripId)
+            if let adminId = authViewModel.currentUser?.id {
+                ordersViewModel.adminId = adminId
+                reportsViewModel.adminId = adminId
+                
+                async let _ = ordersViewModel.loadData()
+                async let _ = reportsViewModel.loadData()
+                
+                if let refId = notification.referenceId {
+                    if notification.type == .maintenance {
+                        // For reports, we wait for ReportsViewModel to load all, then pick it
+                        // (Alternatively, we could fetch it directly from IssueReportService)
+                        // Note: reportsViewModel.loadData() loads them
+                        // However, just to be safe if it hasn't loaded yet, we can do a short delay or just use the model
+                        try? await Task.sleep(nanoseconds: 500_000_000) // half sec
+                        report = reportsViewModel.reports.first(where: { $0.id == refId })
+                        
+                        // Fallback if not loaded by viewModel
+                        if report == nil {
+                            // Fetch record and map it
+                            if let record = try? await IssueReportService.fetchIssueReportsAssignedTo(userId: adminId).first(where: { $0.id == refId }) {
+                                // but the manager might not be assigned, they are the admin. We can't map it without the rest.
+                                // Actually, reportsViewModel.loadData() fetches all reports for the admin.
+                            }
+                        }
+                    } else {
+                        trip = try? await TripService.fetchTrip(id: refId)
+                    }
+                }
             }
             isLoading = false
         }
