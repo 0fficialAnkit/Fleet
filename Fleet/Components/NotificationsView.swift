@@ -56,7 +56,17 @@ struct NotificationsView: View {
             .navigationTitle("Notifications")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Removed explicit Close button to rely on native swipe-to-dismiss
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityLabel("Close Notifications")
+                }
+                
                 ToolbarItem(placement: .topBarTrailing) {
                     if viewModel.notifications.contains(where: { !$0.isRead }) {
                         Button {
@@ -111,17 +121,22 @@ private struct NotificationCard: View {
     var body: some View {
         Group {
             if notification.referenceId != nil {
-                ZStack {
-                    NavigationLink {
-                        NotificationDetailDestination(notification: notification)
-                            .onAppear { onMarkRead() }
-                    } label: {
-                        EmptyView()
+                Button {
+                    onMarkRead()
+                    if let refId = notification.referenceId {
+                        dismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            if notification.type == .maintenance {
+                                NotificationCenter.default.post(name: .navigateToReport, object: nil, userInfo: ["reportId": refId])
+                            } else {
+                                NotificationCenter.default.post(name: .navigateToTrip, object: nil, userInfo: ["tripId": refId])
+                            }
+                        }
                     }
-                    .opacity(0)
-                    
+                } label: {
                     cardContent
                 }
+                .buttonStyle(.plain)
             } else {
                 cardContent
                     .contentShape(Rectangle())

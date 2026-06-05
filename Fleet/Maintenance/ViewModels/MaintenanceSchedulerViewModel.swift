@@ -777,7 +777,7 @@ final class MaintenanceSchedulerViewModel {
                             id: UUID(), userId: manager.id,
                             title: "✅ Maintenance Complete — \(wo.vehicleNumber)",
                             message: lines.joined(separator: "\n"),
-                            type: .maintenance, isRead: false, createdAt: completedAt)
+                            type: .maintenance, isRead: false, createdAt: completedAt, referenceId: wo.sourceIssueReportId)
                         try? await NotificationService.createNotification(notification)
                     }
                 }

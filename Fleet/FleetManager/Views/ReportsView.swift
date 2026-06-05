@@ -122,6 +122,14 @@ struct ReportsView: View {
                 }
             }
             .refreshable { await viewModel.loadData() }
+            .onReceive(NotificationCenter.default.publisher(for: .navigateToReport)) { notification in
+                if let reportId = notification.userInfo?["reportId"] as? UUID {
+                    selectedTab = .maintenance
+                    if let report = viewModel.reports.first(where: { $0.id == reportId }) {
+                        selectedReport = report
+                    }
+                }
+            }
         }
     }
 

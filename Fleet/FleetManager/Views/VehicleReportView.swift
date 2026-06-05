@@ -14,6 +14,8 @@ struct VehicleReportView: View {
     @State private var ordersViewModel = OrdersViewModel()
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var invoiceToView: IdentifiableURL?
+    @State private var selectedMaintenanceTask: MaintenanceTask?
+    @State private var selectedHistory: MaintenanceHistory?
     
     enum ReportTab: String, CaseIterable, Identifiable {
         case overview = "Overview"
@@ -153,6 +155,46 @@ struct VehicleReportView: View {
                 .toolbarBackground(.black, for: .navigationBar)
                 .toolbarBackground(.visible, for: .navigationBar)
                 .toolbarColorScheme(.dark, for: .navigationBar)
+            }
+            .sheet(item: $selectedMaintenanceTask) { task in
+                WorkOrderDetailSheet(
+                    workOrder: ScheduledWorkOrder(
+                        id: task.id,
+                        vehicleNumber: vehicle.licensePlate ?? "Unknown",
+                        vehicleName: "\(vehicle.make ?? "") \(vehicle.model ?? "")",
+                        priority: .medium,
+                        status: .open,
+                        createdAt: task.scheduledDate ?? Date(),
+                        assignedBy: "System",
+                        laborHours: "—",
+                        laborCost: "—",
+                        notes: task.description ?? "",
+                        partsUsed: [],
+                        sourceWorkOrderId: task.workOrderId,
+                        vehicleIssue: task.description ?? "Active task."
+                    ),
+                    viewModel: MaintenanceSchedulerViewModel()
+                )
+            }
+            .sheet(item: $selectedHistory) { history in
+                WorkOrderDetailSheet(
+                    workOrder: ScheduledWorkOrder(
+                        id: history.id,
+                        vehicleNumber: vehicle.licensePlate ?? "Unknown",
+                        vehicleName: "\(vehicle.make ?? "") \(vehicle.model ?? "")",
+                        priority: .medium,
+                        status: .completed,
+                        createdAt: history.completedAt ?? Date(),
+                        assignedBy: "System",
+                        laborHours: "—",
+                        laborCost: String(format: "₹%.2f", history.cost ?? 0),
+                        notes: history.serviceDetails ?? "",
+                        partsUsed: [],
+                        sourceWorkOrderId: history.workOrderId,
+                        vehicleIssue: "Completed maintenance."
+                    ),
+                    viewModel: MaintenanceSchedulerViewModel()
+                )
             }
         }
     }
@@ -332,7 +374,12 @@ struct VehicleReportView: View {
                     if !viewModel.activeMaintenanceTasks.isEmpty {
                         Section("Active & Scheduled Tasks") {
                             ForEach(viewModel.activeMaintenanceTasks) { task in
-                                maintenanceTaskRow(task)
+                                Button {
+                                    selectedMaintenanceTask = task
+                                } label: {
+                                    maintenanceTaskRow(task)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -340,7 +387,12 @@ struct VehicleReportView: View {
                     if !viewModel.maintenanceHistories.isEmpty {
                         Section("Completed Service Logs") {
                             ForEach(viewModel.maintenanceHistories) { history in
-                                maintenanceHistoryRow(history)
+                                Button {
+                                    selectedHistory = history
+                                } label: {
+                                    maintenanceHistoryRow(history)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                     }
