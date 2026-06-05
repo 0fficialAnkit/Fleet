@@ -19,6 +19,8 @@ class OCRService {
                     observation.topCandidates(1).first?.string
                 }
                 
+                print("[OCRService] Extracted lines: \(extractedStrings)")
+                
                 let (volume, price, date) = self.parseExtractedText(extractedStrings)
                 continuation.resume(returning: (volume, price, date))
             }
@@ -50,8 +52,8 @@ class OCRService {
         var foundPrice: Double?
         var foundDate: Date?
         
-        let volumePattern = "(?i)(\\d+(\\.\\d+)?)\\s*(l|ltr|liters|litre|litres)\\b"
-        let pricePattern = "(?i)(rs|inr|total|₹)\\s*[:\\-]?\\s*(\\d+(\\.\\d+)?)"
+        let volumePattern = "(?i)(\\d+(\\.\\d+)?)\\s*(l|ltr|liters|litre|litres|gal|gallons)\\b"
+        let pricePattern = "(?i)(rs|inr|total|amount|amt|₹|\\$)\\s*[:\\-]?\\s*(\\d+(\\.\\d+)?)"
         
         // Setup Date detector
         let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
@@ -75,15 +77,44 @@ class OCRService {
             }
         }
         
-        // If price wasn't found, try matching 'amount' or 'amt'
+        // Fallback 1: If price is missing, look for a decimal number at the end of a line containing volume units (e.g. "PETROL 1.00 LTR 87.88")
         if foundPrice == nil {
-            let amountPattern = "(?i)(amount|amt)\\s*[:\\-]?\\s*(\\d+(\\.\\d+)?)"
+            let trailingPricePattern = "(?i)(?:l|ltr|liters|litre|litres|gal|gallons)\\b.*?\\s*(\\d+(\\.\\d{1,2})?)\\s*$"
             for line in lines {
-                if let priceMatch = extractNumber(from: line, using: amountPattern, groupIndex: 2) {
+                if let priceMatch = extractNumber(from: line, using: trailingPricePattern, groupIndex: 1) {
+                    // Make sure the trailing number isn't just the volume again (e.g. if the line is just "1.00 LTR")
+                    if priceMatch != foundVolume {
+                        foundPrice = priceMatch
+                        break
+                    }
+                }
+            }
+        }
+        
+        // Fallback 2: Look for an `@` rate (e.g., "@ ₹ 87.88") which is common on Indian fuel receipts
+        if foundPrice == nil {
+            let ratePattern = "(?i)@\\s*[^\\d]*?(\\d+(\\.\\d{1,2})?)"
+            for line in lines {
+                if let priceMatch = extractNumber(from: line, using: ratePattern, groupIndex: 1) {
                     foundPrice = priceMatch
                     break
                 }
             }
+        }
+        
+        // Fallback 3: Just find any valid decimal number that looks like a price (has exactly two decimal places)
+        if foundPrice == nil {
+            var possiblePrices: [Double] = []
+            let genericPricePattern = "\\b(\\d+\\.\\d{2})\\b"
+            for line in lines {
+                if let priceMatch = extractNumber(from: line, using: genericPricePattern, groupIndex: 1) {
+                    if priceMatch != foundVolume {
+                        possiblePrices.append(priceMatch)
+                    }
+                }
+            }
+            // Assume the largest 2-decimal number is the total price
+            foundPrice = possiblePrices.max()
         }
         
         return (foundVolume, foundPrice, foundDate)
