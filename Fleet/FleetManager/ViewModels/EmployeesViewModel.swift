@@ -117,6 +117,9 @@ final class EmployeesViewModel {
     /// Dynamically determines the operational status label for any employee profile.
     func getOperationalStatusText(for profile: Profile) -> String {
         if profile.role == "driver" {
+            if !(profile.isOnDuty ?? true) {
+                return "Inactive"
+            }
             let isOnTrip = trips.contains { $0.driverId == profile.id && $0.status == .active }
             return isOnTrip ? "On Trip" : "Idle"
         } else if profile.role == "maintenance" {
@@ -143,6 +146,8 @@ final class EmployeesViewModel {
             return Color.orange
         case "Idle":
             return Color.green
+        case "Inactive":
+            return Color.gray
         default:
             return Color.secondary
         }

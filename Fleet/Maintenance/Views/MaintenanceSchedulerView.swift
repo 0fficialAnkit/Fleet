@@ -379,8 +379,8 @@ private struct WorkOrderCard: View {
             }
 
             // Issue / description
-            if !workOrder.vehicleIssue.isEmpty {
-                Text(workOrder.vehicleIssue)
+            if !workOrder.parsedIssueDescription.isEmpty {
+                Text(workOrder.parsedIssueDescription)
                     .font(.subheadline)
                     .foregroundStyle(Color.secondary)
                     .lineLimit(2)
@@ -1074,6 +1074,8 @@ struct WorkOrderDetailSheet: View {
     @State private var inventoryItems: [Inventory] = []
     @State private var partQuantities: [UUID: Int] = [:]
     @State private var isShowingPartSelector = false
+    @State private var isShowingViewer = false
+    @State private var viewerIndex = 0
     @Environment(\.dismiss) private var dismiss
 
     private var partsCost: Double {
@@ -1122,17 +1124,53 @@ struct WorkOrderDetailSheet: View {
 
                         // MARK: Reported Problem
                         SheetSection(title: "Reported Problem") {
-                            HStack(alignment: .top, spacing: 14) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.title3)
-                                    .foregroundStyle(Color.red)
-                                    .padding(.top, 2)
+                            VStack(alignment: .leading, spacing: 16) {
+                                HStack(alignment: .top, spacing: 14) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.title3)
+                                        .foregroundStyle(priorityColor(currentWO.priority))
+                                        .padding(.top, 2)
+                                    
+                                    Text(currentWO.parsedIssueDescription)
+                                        .font(.subheadline)
+                                        .foregroundStyle(Color.primary)
+                                        .lineSpacing(4)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
                                 
-                                Text(currentWO.vehicleIssue)
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.primary)
-                                    .lineSpacing(4)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                if !currentWO.issuePhotoURLs.isEmpty {
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 12) {
+                                            ForEach(Array(currentWO.issuePhotoURLs.enumerated()), id: \.element.absoluteString) { index, url in
+                                                Button {
+                                                    viewerIndex = index
+                                                    isShowingViewer = true
+                                                } label: {
+                                                    AsyncImage(url: url) { phase in
+                                                        if let image = phase.image {
+                                                            image
+                                                                .resizable()
+                                                                .scaledToFill()
+                                                                .frame(width: 80, height: 80)
+                                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                        } else if phase.error != nil {
+                                                            Color(.secondarySystemBackground)
+                                                                .frame(width: 80, height: 80)
+                                                                .overlay(Image(systemName: "photo.badge.exclamationmark").foregroundStyle(.secondary))
+                                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                        } else {
+                                                            ProgressView()
+                                                                .frame(width: 80, height: 80)
+                                                                .background(Color(.secondarySystemBackground))
+                                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                                        }
+                                                    }
+                                                }
+                                                .buttonStyle(.plain)
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -1190,7 +1228,7 @@ struct WorkOrderDetailSheet: View {
                                     } label: {
                                         HStack(spacing: 8) {
                                             Image(systemName: "play.fill")
-                                            Text("Start")
+                                            Text("Start Now")
                                         }
                                         .font(.headline)
                                         .foregroundStyle(Color(.label))

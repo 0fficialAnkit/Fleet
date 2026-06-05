@@ -27,9 +27,9 @@ final class DriverReportIncidentViewModel {
                         let fileName = "incidents/\(UUID().uuidString)_\(index).jpg"
                         do {
                             try await supabase.storage
-                                .from("fleet-uploads")
+                                .from("vehicle_issues")
                                 .upload(fileName, data: data, options: .init(contentType: "image/jpeg"))
-                            if let publicUrl = try? supabase.storage.from("fleet-uploads").getPublicURL(path: fileName).absoluteString {
+                            if let publicUrl = try? supabase.storage.from("vehicle_issues").getPublicURL(path: fileName).absoluteString {
                                 uploadedUrls.append(publicUrl)
                             }
                         } catch {

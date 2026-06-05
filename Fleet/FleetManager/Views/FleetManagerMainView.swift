@@ -34,6 +34,12 @@ struct FleetManagerMainView: View {
                 .tag(3)
         }
         .tint(Color.teal)
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToTrip)) { _ in
+            selectedTab = 1
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .navigateToReport)) { _ in
+            selectedTab = 3
+        }
     }
 }
 

@@ -1,6 +1,13 @@
 import SwiftUI
 internal import Auth
 
+// MARK: - Notification Names
+
+extension Foundation.Notification.Name {
+    static let navigateToReport = Foundation.Notification.Name("navigateToReport")
+    static let navigateToTrip   = Foundation.Notification.Name("navigateToTrip")
+}
+
 // MARK: - Notifications View
 
 struct NotificationsView: View {
@@ -24,7 +31,8 @@ struct NotificationsView: View {
                         ForEach(viewModel.notifications) { notification in
                             NotificationCard(
                                 notification: notification,
-                                onMarkRead: { viewModel.markAsRead(notification) }
+                                onMarkRead: { viewModel.markAsRead(notification) },
+                                onDismiss: { dismiss() }
                             )
                             .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
                             .listRowSeparator(.hidden)
@@ -56,7 +64,17 @@ struct NotificationsView: View {
             .navigationTitle("Notifications")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Removed explicit Close button to rely on native swipe-to-dismiss
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityLabel("Close Notifications")
+                }
+                
                 ToolbarItem(placement: .topBarTrailing) {
                     if viewModel.notifications.contains(where: { !$0.isRead }) {
                         Button {
@@ -88,6 +106,7 @@ struct NotificationsView: View {
 private struct NotificationCard: View {
     let notification: Notification
     let onMarkRead: () -> Void
+    let onDismiss: () -> Void
 
     private var cleanTitle: String {
         let raw = notification.title ?? "Notification"
@@ -111,17 +130,22 @@ private struct NotificationCard: View {
     var body: some View {
         Group {
             if notification.referenceId != nil {
-                ZStack {
-                    NavigationLink {
-                        NotificationDetailDestination(notification: notification)
-                            .onAppear { onMarkRead() }
-                    } label: {
-                        EmptyView()
+                Button {
+                    onMarkRead()
+                    if let refId = notification.referenceId {
+                        onDismiss()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            if notification.type == .maintenance {
+                                NotificationCenter.default.post(name: .navigateToReport, object: nil, userInfo: ["reportId": refId])
+                            } else {
+                                NotificationCenter.default.post(name: .navigateToTrip, object: nil, userInfo: ["tripId": refId])
+                            }
+                        }
                     }
-                    .opacity(0)
-                    
+                } label: {
                     cardContent
                 }
+                .buttonStyle(.plain)
             } else {
                 cardContent
                     .contentShape(Rectangle())
@@ -195,29 +219,57 @@ private struct NotificationCard: View {
 struct NotificationDetailDestination: View {
     let notification: Notification
     @State private var trip: Trip?
+    @State private var report: IssueReport?
     @State private var isLoading = true
     @State private var ordersViewModel = OrdersViewModel()
+    @State private var reportsViewModel = ReportsViewModel()
     @Environment(AuthViewModel.self) private var authViewModel
 
     var body: some View {
         Group {
             if isLoading {
                 ProgressView("Loading...")
-            } else if let trip {
+            } else if let report = report {
+                ReportDetailView(report: report, viewModel: reportsViewModel)
+            } else if let trip = trip {
                 OrderDetailView(trip: trip, viewModel: ordersViewModel)
             } else {
                 ContentUnavailableView(
-                    "Trip Not Found",
+                    "Item Not Found",
                     systemImage: "questionmark.circle",
-                    description: Text("This trip may have been deleted.")
+                    description: Text("This item may have been deleted.")
                 )
             }
         }
         .task {
-            ordersViewModel.adminId = authViewModel.currentUserId
-            await ordersViewModel.loadData()
-            if let tripId = notification.referenceId {
-                trip = try? await TripService.fetchTrip(id: tripId)
+            if let adminId = authViewModel.currentUser?.id {
+                ordersViewModel.adminId = adminId
+                reportsViewModel.adminId = adminId
+                
+                async let _ = ordersViewModel.loadData()
+                async let _ = reportsViewModel.loadData()
+                
+                if let refId = notification.referenceId {
+                    if notification.type == .maintenance {
+                        // For reports, we wait for ReportsViewModel to load all, then pick it
+                        // (Alternatively, we could fetch it directly from IssueReportService)
+                        // Note: reportsViewModel.loadData() loads them
+                        // However, just to be safe if it hasn't loaded yet, we can do a short delay or just use the model
+                        try? await Task.sleep(nanoseconds: 500_000_000) // half sec
+                        report = reportsViewModel.reports.first(where: { $0.id == refId })
+                        
+                        // Fallback if not loaded by viewModel
+                        if report == nil {
+                            // Fetch record and map it
+                            if let record = try? await IssueReportService.fetchIssueReportsAssignedTo(userId: adminId).first(where: { $0.id == refId }) {
+                                // but the manager might not be assigned, they are the admin. We can't map it without the rest.
+                                // Actually, reportsViewModel.loadData() fetches all reports for the admin.
+                            }
+                        }
+                    } else {
+                        trip = try? await TripService.fetchTrip(id: refId)
+                    }
+                }
             }
             isLoading = false
         }

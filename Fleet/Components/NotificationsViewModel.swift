@@ -22,11 +22,11 @@ final class NotificationsViewModel {
                 "driver dropped off"
             ]
             
-            // Only show unread notifications — read ones are hidden after the sheet closes
+            // Show both read and unread notifications
             notifications = fetched.filter { notification in
                 let title = (notification.title ?? "").lowercased()
                 let notExcluded = !excludedTitles.contains(where: { title.contains($0) })
-                return notExcluded && (notification.isRead == false)
+                return notExcluded
             }
         } catch {
             errorMessage = error.localizedDescription

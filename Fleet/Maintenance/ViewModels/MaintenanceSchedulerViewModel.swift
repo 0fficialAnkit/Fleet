@@ -80,6 +80,24 @@ struct ScheduledWorkOrder: Identifiable, Hashable {
     var sourceIssueReportId: UUID? = nil // link to Supabase IssueReportRecord.id
     let vehicleIssue: String
 
+    var parsedIssueDescription: String {
+        if let range = vehicleIssue.range(of: "[Photos]") {
+            return String(vehicleIssue[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return vehicleIssue
+    }
+
+    var issuePhotoURLs: [URL] {
+        if let range = vehicleIssue.range(of: "[Photos]") {
+            let photosString = String(vehicleIssue[range.upperBound...])
+            return photosString.components(separatedBy: .newlines)
+                .map { $0.replacingOccurrences(of: "- ", with: "").trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { $0.hasPrefix("http") }
+                .compactMap { URL(string: $0) }
+        }
+        return []
+    }
+
     /// The effective calendar date — uses scheduledDate if set, otherwise createdAt
     var effectiveDate: Date { scheduledDate ?? createdAt }
 }
@@ -564,9 +582,19 @@ final class MaintenanceSchedulerViewModel {
                                 completedAt: Date()
                             )
                             try? await MaintenanceHistoryService.createHistory(history)
+                            var updatedV = vehicle
+                            updatedV.status = .active
+                            try? await VehicleService.updateVehicle(updatedV)
                         }
                     } else {
                         try? await WorkOrderService.updateWorkOrderStatus(id: sourceId, status: status)
+                        if status == .inProgress {
+                            if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                                var updatedV = vehicle
+                                updatedV.status = .maintenance
+                                try? await VehicleService.updateVehicle(updatedV)
+                            }
+                        }
                     }
                     try? await Task.sleep(for: .seconds(2))
                     woStatusOverrides.removeValue(forKey: id)
@@ -577,6 +605,23 @@ final class MaintenanceSchedulerViewModel {
                     if status == .inProgress {
                         // Record the start time on the issue report
                         try? await IssueReportService.markInProgress(id: sourceIrId, assignedTo: uid)
+                        
+                        // Sync to pending maintenance tasks
+                        if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                            var updatedV = vehicle
+                            updatedV.status = .maintenance
+                            try? await VehicleService.updateVehicle(updatedV)
+                            
+                            if let userTasks = try? await MaintenanceTaskService.fetchTasksForUser(assignedTo: uid) {
+                                let pendingTasks = userTasks.filter { $0.vehicleId == vehicle.id && $0.status == .pending }
+                                for t in pendingTasks {
+                                    try? await MaintenanceTaskService.updateTaskStatus(id: t.id, status: .inProgress)
+                                    if let wId = t.workOrderId {
+                                        try? await WorkOrderService.updateWorkOrderStatus(id: wId, status: .inProgress)
+                                    }
+                                }
+                            }
+                        }
                     } else if status == .completed {
                         let partsStr  = wo.partsUsed.joined(separator: ", ")
                         let laborStr  = wo.laborCost.isEmpty ? "" : wo.laborCost
@@ -596,6 +641,10 @@ final class MaintenanceSchedulerViewModel {
 
                         // 2. Create maintenance history for the vehicle record
                         if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                            var updatedV = vehicle
+                            updatedV.status = .active
+                            try? await VehicleService.updateVehicle(updatedV)
+                            
                             let costDouble = Double(laborStr.filter { $0.isNumber || $0 == "." })
                             let history = MaintenanceHistory(
                                 id: UUID(),
@@ -606,6 +655,19 @@ final class MaintenanceSchedulerViewModel {
                                 completedAt: Date()
                             )
                             try? await MaintenanceHistoryService.createHistory(history)
+                            
+                            // 2b. Also complete any pending maintenance tasks created for this issue
+                            if let userTasks = try? await MaintenanceTaskService.fetchTasksForUser(assignedTo: uid) {
+                                let pendingTasks = userTasks.filter { $0.vehicleId == vehicle.id && $0.status != .completed }
+                                for t in pendingTasks {
+                                    // We mark any pending task for this vehicle assigned to this mechanic as completed
+                                    try? await MaintenanceTaskService.updateTaskStatusWithCompletion(id: t.id, status: .completed, completedAt: Date())
+                                    // Also complete the associated WorkOrder if it exists
+                                    if let wId = t.workOrderId {
+                                        try? await WorkOrderService.updateWorkOrderStatusWithCompletion(id: wId, status: .completed, completedAt: Date())
+                                    }
+                                }
+                            }
                         }
 
                         // 3. Notify ALL fleet managers with the full completion report
@@ -621,6 +683,7 @@ final class MaintenanceSchedulerViewModel {
                                 message: "\(wo.vehicleIssue)\(partsLine)\(costLine)\(noteLine)",
                                 type: .maintenance,
                                 isRead: false,
+                                referenceId: wo.sourceIssueReportId,
                                 createdAt: Date()
                             )
                             try? await NotificationService.createNotification(notification)
@@ -687,6 +750,10 @@ final class MaintenanceSchedulerViewModel {
                     try? await WorkOrderService.updateWorkOrderStatusWithCompletion(
                         id: sourceId, status: .completed, completedAt: completedAt)
                     if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                        var updatedV = vehicle
+                        updatedV.status = .active
+                        try? await VehicleService.updateVehicle(updatedV)
+                        
                         let details = "Work order completed: \(wo.vehicleIssue)"
                             + (serviceNotes.isEmpty ? "" : "\nNotes: \(serviceNotes)")
                             + (partsDetail.isEmpty  ? "" : "\nParts: \(partsDetail)")
@@ -711,6 +778,10 @@ final class MaintenanceSchedulerViewModel {
                         resolvedAt: completedAt
                     )
                     if let vehicle = vehicles.first(where: { $0.licensePlate == wo.vehicleNumber }) {
+                        var updatedV = vehicle
+                        updatedV.status = .active
+                        try? await VehicleService.updateVehicle(updatedV)
+                        
                         let details = "Issue resolved: \(wo.vehicleIssue)"
                             + (serviceNotes.isEmpty ? "" : "\nNotes: \(serviceNotes)")
                             + (partsDetail.isEmpty  ? "" : "\nParts: \(partsDetail)")
@@ -734,7 +805,9 @@ final class MaintenanceSchedulerViewModel {
                             id: UUID(), userId: manager.id,
                             title: "✅ Maintenance Complete — \(wo.vehicleNumber)",
                             message: lines.joined(separator: "\n"),
-                            type: .maintenance, isRead: false, createdAt: completedAt)
+                            type: .maintenance, isRead: false,
+                            referenceId: wo.sourceIssueReportId,
+                            createdAt: completedAt)
                         try? await NotificationService.createNotification(notification)
                     }
                 }

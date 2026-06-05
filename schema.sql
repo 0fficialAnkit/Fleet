@@ -131,8 +131,8 @@ CREATE TABLE public.trip_geofences (
   radius_meters double precision NOT NULL DEFAULT 250,
   is_active boolean DEFAULT true,
   CONSTRAINT trip_geofences_pkey PRIMARY KEY (id),
-  CONSTRAINT trip_geofences_trip_id_fkey FOREIGN KEY (trip_id) REFERENCES public.trips(id),
-  CONSTRAINT trip_geofences_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES public.vehicles(id)
+  CONSTRAINT trip_geofences_trip_id_fkey FOREIGN KEY (trip_id) REFERENCES public.trips(id) ON DELETE CASCADE,
+  CONSTRAINT trip_geofences_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES public.vehicles(id) ON DELETE CASCADE
 );
 CREATE TABLE public.trip_geofence_events (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

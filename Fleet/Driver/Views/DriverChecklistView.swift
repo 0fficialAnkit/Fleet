@@ -293,9 +293,9 @@ struct DriverChecklistView: View {
                 if let data = img.jpegData(compressionQuality: 0.7) {
                     let path = "inspections/\(UUID().uuidString)_\(i).jpg"
                     do {
-                        try await supabase.storage.from("fleet-uploads")
+                        try await supabase.storage.from("inspections")
                             .upload(path, data: data, options: .init(contentType: "image/jpeg"))
-                        if let url = try? supabase.storage.from("fleet-uploads")
+                        if let url = try? supabase.storage.from("inspections")
                             .getPublicURL(path: path).absoluteString { urls.append(url) }
                     } catch { print("Photo upload failed: \(error)") }
                 }
