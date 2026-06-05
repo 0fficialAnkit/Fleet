@@ -210,13 +210,13 @@ struct DashboardView: View {
 
                 HStack(spacing: 0) {
                     kpiCell(
-                        value: "\(viewModel.driversOnTrip)",
+                        value: "\(viewModel.activeVehicles)",
                         label: "Active",
                         color: .green
                     )
                     Divider().frame(height: 36)
                     kpiCell(
-                        value: "\(max(0, viewModel.totalVehicles - viewModel.driversOnTrip - viewModel.inServiceVehicles))",
+                        value: "\(viewModel.idleVehicles)",
                         label: "Idle",
                         color: .orange
                     )
