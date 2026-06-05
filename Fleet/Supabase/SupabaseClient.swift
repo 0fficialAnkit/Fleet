@@ -1,8 +1,20 @@
 import Foundation
 import Supabase
 
-let supabaseURL = URL(string: "https://seqotjiuflrjjdrdayrc.supabase.co")!
-let supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlcW90aml1ZmxyampkcmRheXJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNTQ1NjcsImV4cCI6MjA5NDczMDU2N30.ObrXGupUnqpi-QQoCOqAyxghwXZW97xTAqp5FSW2Yo8"
+// Helper to read from Secrets.plist
+var supabaseConfig: (url: URL, key: String) {
+    guard let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
+          let dict = NSDictionary(contentsOfFile: path) as? [String: Any],
+          let urlString = dict["SUPABASE_URL"] as? String,
+          let url = URL(string: urlString),
+          let key = dict["SUPABASE_KEY"] as? String else {
+        fatalError("Secrets.plist is missing or invalid. Please add your Supabase keys to it.")
+    }
+    return (url, key)
+}
+
+let supabaseURL = supabaseConfig.url
+let supabaseKey = supabaseConfig.key
 
 let customDecoder: JSONDecoder = {
     let decoder = JSONDecoder()
