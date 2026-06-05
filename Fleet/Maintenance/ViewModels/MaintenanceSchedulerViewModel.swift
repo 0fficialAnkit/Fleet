@@ -664,6 +664,7 @@ final class MaintenanceSchedulerViewModel {
                                 message: "\(wo.vehicleIssue)\(partsLine)\(costLine)\(noteLine)",
                                 type: .maintenance,
                                 isRead: false,
+                                referenceId: wo.sourceIssueReportId,
                                 createdAt: Date()
                             )
                             try? await NotificationService.createNotification(notification)
@@ -777,7 +778,9 @@ final class MaintenanceSchedulerViewModel {
                             id: UUID(), userId: manager.id,
                             title: "✅ Maintenance Complete — \(wo.vehicleNumber)",
                             message: lines.joined(separator: "\n"),
-                            type: .maintenance, isRead: false, createdAt: completedAt, referenceId: wo.sourceIssueReportId)
+                            type: .maintenance, isRead: false,
+                            referenceId: wo.sourceIssueReportId,
+                            createdAt: completedAt)
                         try? await NotificationService.createNotification(notification)
                     }
                 }

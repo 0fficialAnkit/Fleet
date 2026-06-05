@@ -1,10 +1,5 @@
 import SwiftUI
 
-extension Notification.Name {
-    static let navigateToTrip = Notification.Name("navigateToTrip")
-    static let navigateToReport = Notification.Name("navigateToReport")
-}
-
 struct FleetManagerMainView: View {
     @State private var selectedTab = 0
 

@@ -1,6 +1,13 @@
 import SwiftUI
 internal import Auth
 
+// MARK: - Notification Names
+
+extension Foundation.Notification.Name {
+    static let navigateToReport = Foundation.Notification.Name("navigateToReport")
+    static let navigateToTrip   = Foundation.Notification.Name("navigateToTrip")
+}
+
 // MARK: - Notifications View
 
 struct NotificationsView: View {
@@ -24,7 +31,8 @@ struct NotificationsView: View {
                         ForEach(viewModel.notifications) { notification in
                             NotificationCard(
                                 notification: notification,
-                                onMarkRead: { viewModel.markAsRead(notification) }
+                                onMarkRead: { viewModel.markAsRead(notification) },
+                                onDismiss: { dismiss() }
                             )
                             .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
                             .listRowSeparator(.hidden)
@@ -98,6 +106,7 @@ struct NotificationsView: View {
 private struct NotificationCard: View {
     let notification: Notification
     let onMarkRead: () -> Void
+    let onDismiss: () -> Void
 
     private var cleanTitle: String {
         let raw = notification.title ?? "Notification"
@@ -124,7 +133,7 @@ private struct NotificationCard: View {
                 Button {
                     onMarkRead()
                     if let refId = notification.referenceId {
-                        dismiss()
+                        onDismiss()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                             if notification.type == .maintenance {
                                 NotificationCenter.default.post(name: .navigateToReport, object: nil, userInfo: ["reportId": refId])
