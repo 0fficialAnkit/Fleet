@@ -84,7 +84,7 @@ struct LoginView: View {
         Button(action: {
             navigationPath.append(.createAccount)
         }) {
-            AppLogoView(size: 160, cornerRadius: 32)
+            AppLogoView(size: 120, cornerRadius: 26)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -118,6 +118,16 @@ struct LoginView: View {
         }
     }
 
+    // MARK: - Theme Color
+    var themeColor: Color {
+        switch selectedRoleId {
+        case 1: return .teal
+        case 2: return .green
+        case 3: return .brown
+        default: return .teal
+        }
+    }
+
     // MARK: - Continue Button
     var continueButton: some View {
         Button(action: handleContinue) {
@@ -126,7 +136,7 @@ struct LoginView: View {
                 .foregroundStyle(Color(.systemBackground))
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
-                .background(Color.teal)
+                .background(themeColor)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
     }
@@ -178,10 +188,10 @@ struct RoleCardView: View {
 
     var selectionDot: some View {
         Circle()
-            .fill(isSelected ? Color.teal : Color.clear)
+            .fill(isSelected ? item.iconColor : Color.clear)
             .overlay(
                 Circle().stroke(
-                    isSelected ? Color.teal : Color(.opaqueSeparator),
+                    isSelected ? item.iconColor : Color(.opaqueSeparator),
                     lineWidth: 1.5
                 )
             )
@@ -192,14 +202,14 @@ struct RoleCardView: View {
         RoundedRectangle(cornerRadius: 16)
             .fill(
                 isSelected
-                    ? Color.teal.opacity(0.12)
+                    ? item.iconColor.opacity(0.12)
                     : Color(.systemBackground)
             )
     }
 
     var cardBorder: some View {
         RoundedRectangle(cornerRadius: 16)
-            .stroke(isSelected ? Color.teal : Color.clear, lineWidth: 1.5)
+            .stroke(isSelected ? item.iconColor : Color.clear, lineWidth: 1.5)
     }
 }
 

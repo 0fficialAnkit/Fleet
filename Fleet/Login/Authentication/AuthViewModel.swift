@@ -115,18 +115,32 @@ class AuthViewModel {
         self.isSessionChecked = true
     }
 
-    func signIn(email: String, password: String) async {
+    func signIn(email: String, password: String, expectedRole: String? = nil) async {
         print("[AuthViewModel] signIn: attempting email=\(email)")
         isLoading = true
         errorMessage = nil
         do {
             // 1. Verify Password First
-            _ = try await supabase.auth.signIn(email: email, password: password)
+            let response = try await supabase.auth.signIn(email: email, password: password)
+            self.currentUser = response.user
             
-            // 2. Send OTP
+            // 2. Validate Role
+            if let expectedRole = expectedRole {
+                await fetchProfile()
+                if let role = self.currentProfile?.role, role != expectedRole {
+                    try? await supabase.auth.signOut()
+                    self.currentUser = nil
+                    self.currentProfile = nil
+                    self.errorMessage = "Access denied: Account is not a \(expectedRole.replacingOccurrences(of: "_", with: " ").capitalized)."
+                    isLoading = false
+                    return
+                }
+            }
+            
+            // 3. Send OTP
             try await supabase.auth.signInWithOTP(email: email)
             
-            // 3. Update state to show OTP screen
+            // 4. Update state to show OTP screen
             self.tempEmailForOTP = email
             self.isWaitingForOTP = true
             
@@ -141,7 +155,7 @@ class AuthViewModel {
         isLoading = false
     }
 
-    func verifyOTP(token: String) async {
+    func verifyOTP(token: String, expectedRole: String? = nil) async {
         guard let email = tempEmailForOTP else { return }
         
         print("[AuthViewModel] verifyOTP: attempting for email=\(email)")
@@ -158,6 +172,16 @@ class AuthViewModel {
             self.currentUser = response.user
             print("[AuthViewModel] verifyOTP: auth OK userId=\(response.user.id)")
             await fetchProfile()
+            
+            if let expectedRole = expectedRole, let role = self.currentProfile?.role, role != expectedRole {
+                try? await supabase.auth.signOut()
+                self.isAuthenticated = false
+                self.currentUser = nil
+                self.currentProfile = nil
+                self.errorMessage = "Access denied: Account is not a \(expectedRole.replacingOccurrences(of: "_", with: " ").capitalized)."
+                isLoading = false
+                return
+            }
             
             if self.currentProfile != nil {
                 self.isAuthenticated = true
@@ -188,12 +212,34 @@ class AuthViewModel {
         errorMessage = nil
         do {
             try await supabase.auth.resetPasswordForEmail(email)
-            print("[AuthViewModel] resetPassword: reset email sent successfully")
+            print("[AuthViewModel] resetPassword: reset OTP sent successfully")
         } catch {
             print("[AuthViewModel] resetPassword ERROR: \(error)")
             self.errorMessage = error.localizedDescription
         }
         isLoading = false
+    }
+    
+    func verifyRecoveryOTP(email: String, token: String) async -> Bool {
+        print("[AuthViewModel] verifyRecoveryOTP: attempting email=\(email)")
+        isLoading = true
+        errorMessage = nil
+        do {
+            let response = try await supabase.auth.verifyOTP(
+                email: email,
+                token: token,
+                type: .recovery // Using native recovery OTP
+            )
+            self.currentUser = response.user
+            print("[AuthViewModel] verifyRecoveryOTP: successful")
+            isLoading = false
+            return true
+        } catch {
+            print("[AuthViewModel] verifyRecoveryOTP ERROR: \(error)")
+            self.errorMessage = error.localizedDescription
+            isLoading = false
+            return false
+        }
     }
     
     func updatePassword(newPassword: String) async {

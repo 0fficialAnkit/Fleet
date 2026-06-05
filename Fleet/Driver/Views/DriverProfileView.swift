@@ -43,17 +43,27 @@ struct DriverProfileView: View {
                     }
                 }
 
-                // Account actions
+                // Change Password
                 Section {
                     Button { showingChangePassword = true } label: {
-                        Label("Change Password", systemImage: "key")
+                        Label("Change Password", systemImage: "key.fill")
+                            .foregroundStyle(.primary)
                     }
+                }
 
+                // Sign out
+                Section {
                     Button(role: .destructive) {
                         Task { await authViewModel.signOut() }
                     } label: {
-                        Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
-                            .frame(maxWidth: .infinity, alignment: .center)
+                        Label {
+                            Text("Sign Out")
+                        } icon: {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                                .font(.body)
+                                .foregroundStyle(.red)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
             }

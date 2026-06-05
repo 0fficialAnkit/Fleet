@@ -6,6 +6,7 @@ struct MaintenanceDashboardView: View {
     var schedulerViewModel: MaintenanceSchedulerViewModel
     @State private var viewModel = MaintenanceDashboardViewModel()
     @State private var isShowingProfile = false
+    @State private var showingNotifications = false
     @Environment(AuthViewModel.self) private var authViewModel
 
     var body: some View {
@@ -29,12 +30,16 @@ struct MaintenanceDashboardView: View {
             .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: { isShowingProfile = true }) {
-                        Image(systemName: "person.crop.circle")
-                            .foregroundStyle(.primary)
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button { showingNotifications = true } label: {
+                        Image(systemName: "bell")
                     }
-                    .buttonStyle(.plain)
+                    .tint(.primary)
+
+                    Button { isShowingProfile = true } label: {
+                        Image(systemName: "person.crop.circle")
+                    }
+                    .tint(.primary)
                 }
             }
             .navigationDestination(for: MaintenanceDestination.self) { destination in
@@ -46,6 +51,9 @@ struct MaintenanceDashboardView: View {
                 case .workOrderList(let filter, let assignedTo, let priority):
                     WorkOrderListView(initialFilter: filter, assignedUserId: assignedTo, priorityFilter: priority)
                 }
+            }
+            .sheet(isPresented: $showingNotifications) {
+                NotificationsView()
             }
             .sheet(isPresented: $isShowingProfile) {
                 MaintenanceProfileView()

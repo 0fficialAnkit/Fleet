@@ -78,7 +78,7 @@ struct VehicleDetailView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .navigationTitle("Details")
+        .navigationTitle("Detail")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -99,8 +99,8 @@ struct VehicleDetailView: View {
                         Label("Delete", systemImage: "trash")
                     }
                 } label: {
-                    Image(systemName: "ellipsis")
-                        .foregroundStyle(.black)
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundStyle(.primary)
                 }
             }
         }

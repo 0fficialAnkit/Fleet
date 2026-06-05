@@ -28,15 +28,13 @@ struct DriverDashboardView: View {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button { showingNotifications = true } label: {
                         Image(systemName: "bell")
-                            .foregroundStyle(.primary)
                     }
-                    .buttonStyle(.plain)
+                    .tint(.primary)
 
                     Button { showingProfile = true } label: {
                         Image(systemName: "person.crop.circle")
-                            .foregroundStyle(.primary)
                     }
-                    .buttonStyle(.plain)
+                    .tint(.primary)
                 }
             }
             .sheet(isPresented: $showingNotifications) { NotificationsView() }

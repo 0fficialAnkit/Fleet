@@ -20,76 +20,87 @@ struct ESGComplianceDashboardView: View {
         ScrollView {
             VStack(spacing: 20) {
                 if let metrics = esgMetrics {
-                    // Total Emissions Card
+                    // 1. Emission Efficiency Card
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Image(systemName: "leaf.arrow.circlepath")
+                            Image(systemName: "gauge.with.dots.needle.bottom.100percent")
                                 .font(.title2)
-                                .foregroundStyle(.green)
-                            Text("Total Fleet CO2 Emissions")
+                                .foregroundStyle(.blue)
+                            Text("Emission Efficiency")
                                 .font(.headline)
                             Spacer()
-                            let isOverLimit = metrics.totalCO2EmissionsKg > metrics.recommendedCO2LimitKg
-                            Text(isOverLimit ? "Over Target" : "Within Target")
+                            let targetIntensity = 0.25
+                            let isEfficient = metrics.averageCarbonIntensity <= targetIntensity
+                            Text(isEfficient ? "Efficient" : "Needs Improvement")
                                 .font(.caption.bold())
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(isOverLimit ? Color.red.opacity(0.15) : Color.green.opacity(0.15))
-                                .foregroundStyle(isOverLimit ? Color.red : Color.green)
+                                .background(isEfficient ? Color.green.opacity(0.15) : Color.orange.opacity(0.15))
+                                .foregroundStyle(isEfficient ? Color.green : Color.orange)
                                 .clipShape(Capsule())
                         }
                         
                         HStack(alignment: .firstTextBaseline) {
-                            Text(String(format: "%.1f kg", metrics.totalCO2EmissionsKg))
+                            Text(String(format: "%.2f", metrics.averageCarbonIntensity))
                                 .font(.system(size: 34, weight: .bold))
                                 .foregroundStyle(.primary)
-                            
-                            Spacer()
-                            
-                            VStack(alignment: .trailing, spacing: 2) {
-                                Text(String(format: "Limit: %.1f kg", metrics.recommendedCO2LimitKg))
-                                    .font(.subheadline.bold())
-                                    .foregroundStyle(.secondary)
-                                Text("Recommended Max")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        
-                        // Progress bar for the limit
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color(.systemGray5))
-                                    .frame(height: 8)
-                                
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(metrics.totalCO2EmissionsKg > metrics.recommendedCO2LimitKg ? Color.red : Color.green)
-                                    .frame(width: min(geo.size.width, geo.size.width * CGFloat(metrics.totalCO2EmissionsKg / max(1.0, metrics.recommendedCO2LimitKg))), height: 8)
-                            }
-                        }
-                        .frame(height: 8)
-                        
-                        HStack {
-                            Text("YTD 2026")
-                                .font(.caption)
+                            Text("kg CO2 / km")
+                                .font(.headline)
                                 .foregroundStyle(.secondary)
                             Spacer()
-                            if metrics.totalCO2EmissionsKg > metrics.recommendedCO2LimitKg {
-                                Text(String(format: "Exceeded by %.1f%%", (metrics.totalCO2EmissionsKg - metrics.recommendedCO2LimitKg) / max(1.0, metrics.recommendedCO2LimitKg) * 100.0))
-                                    .font(.caption.bold())
-                                    .foregroundStyle(.red)
-                            } else {
-                                Text(String(format: "Remaining capacity: %.1f kg", metrics.recommendedCO2LimitKg - metrics.totalCO2EmissionsKg))
-                                    .font(.caption.bold())
-                                    .foregroundStyle(.green)
-                            }
                         }
+                        
+                        Text("Target: 0.25 kg CO2 / km")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color(uiColor: .secondarySystemGroupedBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal)
+
+                    // 2. Total Impact vs Distance & CO2 Saved Cards
+                    HStack(spacing: 16) {
+                        // Total Impact
+                        VStack(alignment: .leading, spacing: 8) {
+                            Image(systemName: "smoke.fill")
+                                .font(.title2)
+                                .foregroundStyle(.secondary)
+                            Text("Total Impact")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Text(String(format: "%.0f kg", metrics.totalCO2EmissionsKg))
+                                .font(.title3.bold())
+                            Text(String(format: "Over %.0f km", metrics.totalDistance))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(uiColor: .secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                        // CO2 Saved
+                        VStack(alignment: .leading, spacing: 8) {
+                            Image(systemName: "leaf.fill")
+                                .font(.title2)
+                                .foregroundStyle(.green)
+                            Text("CO2 Saved")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Text(String(format: "%.0f kg", metrics.estimatedCO2SavedKg))
+                                .font(.title3.bold())
+                                .foregroundStyle(.green)
+                            Text("vs Industry Baseline")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color(uiColor: .secondarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
                     .padding(.horizontal)
                     
                     // Emissions by Vehicle Type Chart
@@ -238,20 +249,16 @@ struct ESGComplianceDashboardView: View {
             row("Total Trips Evaluated", "\(trips.count)")
 
             // Carbon Emissions Summary
-            section("Emissions Summary")
-            row("Total Fleet CO2 Emissions", String(format: "%.1f kg", metrics.totalCO2EmissionsKg), isValueBold: true)
-            row("Recommended Limit (Compliance target)", String(format: "%.1f kg", metrics.recommendedCO2LimitKg))
+            section("Efficiency Summary")
+            row("Average Carbon Intensity", String(format: "%.2f kg/km", metrics.averageCarbonIntensity), isValueBold: true)
+            row("Total Fleet CO2 Emissions", String(format: "%.1f kg", metrics.totalCO2EmissionsKg))
+            row("Total Distance Driven", String(format: "%.1f km", metrics.totalDistance))
+            row("Estimated CO2 Saved", String(format: "%.1f kg", metrics.estimatedCO2SavedKg), isValueBold: true)
             
-            let isOverLimit = metrics.totalCO2EmissionsKg > metrics.recommendedCO2LimitKg
-            let statusText: String
-            if isOverLimit {
-                let pct = (metrics.totalCO2EmissionsKg - metrics.recommendedCO2LimitKg) / max(1.0, metrics.recommendedCO2LimitKg) * 100
-                statusText = String(format: "EXCEEDED by %.1f%%", pct)
-            } else {
-                let remaining = metrics.recommendedCO2LimitKg - metrics.totalCO2EmissionsKg
-                statusText = String(format: "COMPLIANT (Remaining capacity: %.1f kg)", remaining)
-            }
-            row("Compliance Status", statusText, isValueBold: true)
+            let targetIntensity = 0.25
+            let isEfficient = metrics.averageCarbonIntensity <= targetIntensity
+            let statusText = isEfficient ? "HIGH EFFICIENCY" : "NEEDS IMPROVEMENT"
+            row("Fleet Status", statusText, isValueBold: true)
 
             // Emissions by Vehicle Type
             section("Emissions by Vehicle Type")
@@ -264,10 +271,10 @@ struct ESGComplianceDashboardView: View {
             // Recommendations
             section("Recommendations & Action Items")
             let recommendation: String
-            if isOverLimit {
-                recommendation = "Action Required: The fleet's carbon footprint exceeds the recommended sustainability target of \(String(format: "%.1f kg", metrics.recommendedCO2LimitKg)). It is highly recommended to transition high-emission vehicles (especially heavy trucks) to electric/low-emission alternatives, optimize route planning to reduce total trip distance, and implement eco-driving guidelines for drivers."
+            if isEfficient {
+                recommendation = "Sustainability Maintained: The fleet is currently operating highly efficiently with an average intensity of \(String(format: "%.2f kg/km", metrics.averageCarbonIntensity)). To maintain this, continue active route optimization, schedule periodic preventative maintenance, and monitor new vehicle acquisitions."
             } else {
-                recommendation = "Sustainability Maintained: The fleet is currently operating within the target carbon limit of \(String(format: "%.1f kg", metrics.recommendedCO2LimitKg)). To maintain compliance, continue active route optimization, schedule periodic preventative maintenance to optimize fuel efficiency, and monitor new vehicle acquisitions for low-emission ratings."
+                recommendation = "Action Required: The fleet's carbon intensity exceeds the target of \(targetIntensity) kg/km. It is highly recommended to transition high-emission vehicles to electric/low-emission alternatives and implement eco-driving guidelines for drivers."
             }
             y += drawText(recommendation, font: .systemFont(ofSize: 11), color: .label)
         }
