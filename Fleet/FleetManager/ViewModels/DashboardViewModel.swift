@@ -140,9 +140,23 @@ final class DashboardViewModel {
 
     var totalVehicles: Int { vehicles.count }
 
+    /// Vehicles currently on an active trip.
+    var activeVehicles: Int {
+        let activeVehicleIds = Set(trips.filter { $0.status == .active }.map { $0.vehicleId })
+        return vehicles.filter { activeVehicleIds.contains($0.id) }.count
+    }
+
     /// Vehicles fleet manager has explicitly sent to the service bay (status == .maintenance).
     var inServiceVehicles: Int {
         vehicles.filter { $0.status == .maintenance }.count
+    }
+
+    /// Vehicles that are neither on an active trip nor in maintenance.
+    var idleVehicles: Int {
+        let activeVehicleIds = Set(trips.filter { $0.status == .active }.map { $0.vehicleId })
+        return vehicles.filter {
+            $0.status != .maintenance && !activeVehicleIds.contains($0.id)
+        }.count
     }
 
     var activeTrips: Int {

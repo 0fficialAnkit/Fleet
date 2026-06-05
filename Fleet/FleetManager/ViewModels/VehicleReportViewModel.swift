@@ -10,6 +10,7 @@ final class VehicleReportViewModel {
     private(set) var fuelLogs: [FuelLog] = []
     private(set) var maintenanceTasks: [MaintenanceTask] = []
     private(set) var maintenanceHistories: [MaintenanceHistory] = []
+    private(set) var issueReports: [IssueReportRecord] = []
     private(set) var trips: [Trip] = []
     private(set) var profiles: [Profile] = []
     
@@ -31,14 +32,20 @@ final class VehicleReportViewModel {
             async let mHistory = MaintenanceHistoryService.fetchHistory(vehicleId: vehicle.id)
             async let tripsTask = TripService.fetchTripsForVehicle(vehicleId: vehicle.id)
             async let profilesTask = ProfileService.fetchAllProfiles()
+            async let issueTask = IssueReportService.fetchAllIssueReports()
             
-            let (fetchedFuel, fetchedAllTasks, fetchedHistory, fetchedTrips, fetchedProfiles) = try await (
-                fuelTask, mTasks, mHistory, tripsTask, profilesTask
+            let (fetchedFuel, fetchedAllTasks, fetchedHistory, fetchedTrips, fetchedProfiles, fetchedIssues) = try await (
+                fuelTask, mTasks, mHistory, tripsTask, profilesTask, issueTask
             )
             
             self.fuelLogs = fetchedFuel
             self.maintenanceTasks = fetchedAllTasks.filter { $0.vehicleId == vehicle.id }
             self.maintenanceHistories = fetchedHistory
+            // Only keep resolved issue reports for this vehicle (used to suppress stale pending tasks)
+            self.issueReports = fetchedIssues.filter {
+                $0.vehicleId == vehicle.id &&
+                ($0.status.lowercased() == "resolved" || $0.status.lowercased() == "closed")
+            }
             self.trips = fetchedTrips.sorted { ($0.startTime ?? .distantPast) > ($1.startTime ?? .distantPast) }
             self.profiles = fetchedProfiles
             
@@ -110,7 +117,22 @@ final class VehicleReportViewModel {
     }
     
     var activeMaintenanceTasks: [MaintenanceTask] {
-        maintenanceTasks.filter { $0.status != .completed && $0.status != .cancelled }
+        // WorkOrder IDs that have a corresponding history entry (resolved via WorkOrder flow)
+        let resolvedWorkOrderIds = Set(maintenanceHistories.compactMap { $0.workOrderId })
+        // Descriptions from resolved issue reports (e.g. "Less air") for fuzzy matching
+        let resolvedIssueDescriptions = Set(issueReports.compactMap { $0.description?.lowercased().trimmingCharacters(in: .whitespacesAndNewlines) })
+        
+        return maintenanceTasks.filter { task in
+            // Exclude tasks already marked completed or cancelled in the DB
+            guard task.status != .completed && task.status != .cancelled else { return false }
+            // Exclude tasks whose work order was completed and logged in maintenance history
+            if let woId = task.workOrderId, resolvedWorkOrderIds.contains(woId) { return false }
+            // Exclude tasks whose description matches a resolved issue report for this vehicle
+            // (handles the case where the issue was resolved but the task status wasn't synced back)
+            if let desc = task.description?.lowercased().trimmingCharacters(in: .whitespacesAndNewlines),
+               !desc.isEmpty, resolvedIssueDescriptions.contains(desc) { return false }
+            return true
+        }
     }
     
     var completedMaintenanceCount: Int {
