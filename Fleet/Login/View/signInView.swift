@@ -71,17 +71,57 @@ struct SignInView: View {
     var inputFields: some View {
         VStack(spacing: 14) {
             if let errorMessage = authViewModel.errorMessage {
-                Text(errorMessage)
-                    .foregroundStyle(Color.red)
-                    .font(.caption)
-                    .multilineTextAlignment(.center)
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.caption)
+                    Text(errorMessage)
+                        .font(.caption)
+                }
+                .foregroundStyle(Color.red)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 8)
             }
             
             if authViewModel.isWaitingForOTP {
+                // Predefined OTP Quick Fill Card
+                HStack(spacing: 12) {
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(themeColor)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Two-Factor Authentication")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.primary)
+                        Text("Predefined OTP: \(predefinedOTP)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.secondary)
+                    }
+                    Spacer()
+                    Button {
+                        otpCode = predefinedOTP
+                    } label: {
+                        Text("Auto Fill")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(themeColor)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(themeColor.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(themeColor.opacity(0.25), lineWidth: 1)
+                )
+
                 TextField(
                     "",
                     text: $otpCode,
-                    prompt: Text("Enter 6-digit OTP")
+                    prompt: Text("Enter 6-digit OTP (e.g. \(predefinedOTP))")
                         .foregroundStyle(Color(.placeholderText))
                 )
                 .keyboardType(.numberPad)
@@ -95,24 +135,76 @@ struct SignInView: View {
                     RoundedRectangle(cornerRadius: 14)
                         .stroke(Color(.separator), lineWidth: 1)
                 )
+
+                // Change Email / Back Button
+                Button {
+                    authViewModel.resetOTPState()
+                    otpCode = ""
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.left")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("Change email / password")
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundStyle(themeColor)
+                }
+                .padding(.top, 4)
+
             } else {
+                // Predefined Credentials Quick Fill Card
+                HStack(spacing: 12) {
+                    Image(systemName: "key.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(themeColor)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Predefined Account")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.primary)
+                        Text("\(predefinedEmail) • \(predefinedPassword)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.secondary)
+                    }
+                    Spacer()
+                    Button {
+                        emailOrPhone = predefinedEmail
+                        password = predefinedPassword
+                    } label: {
+                        Text("Auto Fill")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(themeColor)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(themeColor.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(themeColor.opacity(0.25), lineWidth: 1)
+                )
+
                 TextField(
                     "",
                     text: $emailOrPhone,
                     prompt: Text("Enter email")
                         .foregroundStyle(Color(.placeholderText))
                 )
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .foregroundStyle(Color.primary)
-                    .padding(.horizontal, 18)
-                    .frame(height: 56)
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(Color(.separator), lineWidth: 1)
-                    )
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .foregroundStyle(Color.primary)
+                .padding(.horizontal, 18)
+                .frame(height: 56)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color(.separator), lineWidth: 1)
+                )
 
                 HStack {
                     if isPasswordVisible {
@@ -179,6 +271,23 @@ struct SignInView: View {
         case 3: return "maintenance"
         default: return "fleet_manager"
         }
+    }
+
+    var predefinedEmail: String {
+        switch roleId {
+        case 1: return "manager@kafila.com"
+        case 2: return "driver@kafila.com"
+        case 3: return "maintenance@kafila.com"
+        default: return "manager@kafila.com"
+        }
+    }
+
+    var predefinedPassword: String {
+        return "password123"
+    }
+
+    var predefinedOTP: String {
+        return "123456"
     }
 
     // MARK: - Main Button

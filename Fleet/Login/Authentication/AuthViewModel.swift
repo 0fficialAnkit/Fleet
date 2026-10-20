@@ -13,18 +13,19 @@ class AuthViewModel {
     var isLoading = false
     var isSessionChecked = false
     
-    // OTP Variables
+    // OTP & Predefined State
     var isWaitingForOTP = false
     var tempEmailForOTP: String?
+    var pendingProfile: Profile?
     
     var currentUserEmail: String? {
-        currentUser?.email
+        currentUser?.email ?? currentProfile?.email
     }
 
     /// Convenience: the logged-in user's UUID (same as currentUser?.id).
     /// All FleetManager ViewModels use this as their `adminId` to scope data.
     var currentUserId: UUID? {
-        currentUser.map { UUID(uuidString: $0.id.uuidString) } ?? nil
+        currentUser.map { UUID(uuidString: $0.id.uuidString) } ?? currentProfile?.id
     }
 
     /// Role name derived from the users + roles tables ("fleet_manager", "driver", "maintenance")
@@ -32,340 +33,287 @@ class AuthViewModel {
         currentProfile?.role
     }
 
-    func fetchProfile() async {
-        guard let user = currentUser else {
-            print("[AuthViewModel] fetchProfile: no currentUser, skipping")
-            return
-        }
-        print("[AuthViewModel] fetchProfile: fetching for userId=\(user.id)")
-        do {
-            // Query the existing users table
-            let userRow: User = try await supabase
-                .from("users")
-                .select()
-                .eq("id", value: user.id)
-                .single()
-                .execute()
-                .value
-
-            print("[AuthViewModel] fetchProfile: found user '\(userRow.fullName)' roleId=\(userRow.roleId)")
-
-            // Query the role name
-            let roleName: String
-            let role: Role = try await supabase
-                .from("roles")
-                .select()
-                .eq("id", value: userRow.roleId)
-                .single()
-                .execute()
-                .value
-            roleName = role.roleName
-            print("[AuthViewModel] fetchProfile: roleName='\(roleName)'")
-
-            // Normalize role name for routing
-            let normalizedRole: String
-            switch roleName.lowercased() {
-            case "fleet manager", "fleet_manager", "manager": normalizedRole = "fleet_manager"
-            case "driver": normalizedRole = "driver"
-            case "maintenance", "maintenance staff": normalizedRole = "maintenance"
-            default: normalizedRole = roleName.lowercased().replacingOccurrences(of: " ", with: "_")
-            }
-            print("[AuthViewModel] fetchProfile: normalizedRole='\(normalizedRole)'")
-
-            self.currentProfile = Profile(
-                id: userRow.id,
-                fullName: userRow.fullName,
-                email: userRow.email,
-                phone: userRow.phone,
-                licenseNumber: userRow.licenseNumber,
-                role: normalizedRole,
-                status: userRow.status?.rawValue ?? "active",
-                createdAt: userRow.createdAt
+    // MARK: - Predefined Accounts for Bypassing Auth
+    struct PredefinedAccount {
+        let role: String
+        let email: String
+        let aliases: [String]
+        let passwords: [String]
+        let fullName: String
+        let userId: UUID
+        let phone: String?
+        let licenseNumber: String?
+        
+        func toProfile() -> Profile {
+            Profile(
+                id: userId,
+                fullName: fullName,
+                email: email,
+                phone: phone,
+                licenseNumber: licenseNumber,
+                role: role,
+                status: "active",
+                isOnDuty: true,
+                createdAt: Date()
             )
-            print("[AuthViewModel] fetchProfile: profile set successfully")
-        } catch {
-            print("[AuthViewModel] fetchProfile ERROR: \(error)")
-            self.errorMessage = "Failed to load user profile. Ensure your account exists in the users table with a valid role_id."
         }
     }
 
+    static let predefinedAccounts: [PredefinedAccount] = [
+        PredefinedAccount(
+            role: "fleet_manager",
+            email: "manager@kafila.com",
+            aliases: ["manager@fleet.com", "admin@fleet.com", "manager", "admin", "fleet_manager", "manager@kafila.in"],
+            passwords: ["password123", "123456", "password", "admin123"],
+            fullName: "Fleet Manager",
+            userId: UUID(uuidString: "cb66109f-e887-4586-baed-2761a9029c61") ?? UUID(),
+            phone: "+91 9876543210",
+            licenseNumber: nil
+        ),
+        PredefinedAccount(
+            role: "driver",
+            email: "driver@kafila.com",
+            aliases: ["driver@fleet.com", "driver", "ravi@fleet.in", "driver@kafila.in"],
+            passwords: ["password123", "123456", "password", "driver123"],
+            fullName: "Ravi Kumar",
+            userId: UUID(uuidString: "41d7aa4d-5ad4-4fda-82da-992b8ac14657") ?? UUID(),
+            phone: "+91 9876543211",
+            licenseNumber: "DL-1420110012345"
+        ),
+        PredefinedAccount(
+            role: "maintenance",
+            email: "maintenance@kafila.com",
+            aliases: ["maintenance@fleet.com", "maintenance", "maint@fleet.com", "mechanic", "maintenance@kafila.in"],
+            passwords: ["password123", "123456", "password", "maint123"],
+            fullName: "Suresh Sharma",
+            userId: UUID(uuidString: "7cb95205-1a35-4ffb-889a-3f8067f43cb9") ?? UUID(),
+            phone: "+91 9876543212",
+            licenseNumber: nil
+        )
+    ]
+
+    static let predefinedOTP = "123456"
+
+    private let mockSessionKey = "kafila_mock_session_profile"
+
+    private func saveMockSession(profile: Profile) {
+        if let data = try? JSONEncoder().encode(profile) {
+            UserDefaults.standard.set(data, forKey: mockSessionKey)
+        }
+    }
+
+    private func clearMockSession() {
+        UserDefaults.standard.removeObject(forKey: mockSessionKey)
+    }
+
+    private func loadMockSession() -> Profile? {
+        guard let data = UserDefaults.standard.data(forKey: mockSessionKey),
+              let profile = try? JSONDecoder().decode(Profile.self, from: data) else {
+            return nil
+        }
+        return profile
+    }
+
+    private func makeAuthUser(from profile: Profile) -> Auth.User {
+        Auth.User(
+            id: profile.id,
+            appMetadata: [:],
+            userMetadata: [
+                "full_name": .string(profile.fullName),
+                "role": .string(profile.role)
+            ],
+            aud: "authenticated",
+            email: profile.email,
+            createdAt: profile.createdAt ?? Date(),
+            updatedAt: Date()
+        )
+    }
+
+    func fetchProfile() async {
+        if self.currentProfile != nil { return }
+        if let sessionProfile = loadMockSession() {
+            self.currentProfile = sessionProfile
+            return
+        }
+        guard let user = currentUser else { return }
+        print("[AuthViewModel] fetchProfile: offline mode active for \(user.id)")
+    }
+
     func checkUserSession() async {
-        print("[AuthViewModel] checkUserSession: checking...")
-        do {
-            let session = try await supabase.auth.session
-            self.currentUser = session.user
-            print("[AuthViewModel] checkUserSession: session found for userId=\(session.user.id)")
-            await fetchProfile()
-            if self.currentProfile != nil {
-                self.isAuthenticated = true
-                print("[AuthViewModel] checkUserSession: authenticated, role=\(self.resolvedRoleName ?? "nil")")
-            } else {
-                try? await supabase.auth.signOut()
-                self.isAuthenticated = false
-                self.currentUser = nil
-                self.errorMessage = nil
-            }
-        } catch {
-            print("[AuthViewModel] checkUserSession: no active session — \(error)")
+        print("[AuthViewModel] checkUserSession: checking offline mock session...")
+        if let profile = loadMockSession() {
+            let user = makeAuthUser(from: profile)
+            self.currentUser = user
+            self.currentProfile = profile
+            self.isAuthenticated = true
+            print("[AuthViewModel] checkUserSession: restored mock session for role=\(profile.role)")
+        } else {
             self.isAuthenticated = false
             self.currentUser = nil
             self.currentProfile = nil
-            self.errorMessage = nil
         }
         self.isSessionChecked = true
     }
 
     func signIn(email: String, password: String, expectedRole: String? = nil) async {
-        print("[AuthViewModel] signIn: attempting email=\(email)")
+        print("[AuthViewModel] signIn: attempting email=\(email), expectedRole=\(expectedRole ?? "nil")")
         isLoading = true
         errorMessage = nil
-        do {
-            // 1. Verify Password First
-            let response = try await supabase.auth.signIn(email: email, password: password)
-            self.currentUser = response.user
-            
-            // 2. Validate Role
-            if let expectedRole = expectedRole {
-                await fetchProfile()
-                if let role = self.currentProfile?.role, role != expectedRole {
-                    try? await supabase.auth.signOut()
-                    self.currentUser = nil
-                    self.currentProfile = nil
-                    self.errorMessage = "Access denied: Account is not a \(expectedRole.replacingOccurrences(of: "_", with: " ").capitalized)."
-                    isLoading = false
-                    return
-                }
-            }
-            
-            // 3. Send OTP
-            try await supabase.auth.signInWithOTP(email: email)
-            
-            // 4. Update state to show OTP screen
-            self.tempEmailForOTP = email
-            self.isWaitingForOTP = true
-            
-            // Note: We don't set isAuthenticated = true here because they still need to verify the OTP.
-            // Sign out the temporary session created by signIn so they are fully required to enter OTP.
-            try? await supabase.auth.signOut()
-            
-        } catch {
-            print("[AuthViewModel] signIn ERROR: \(error)")
-            self.errorMessage = error.localizedDescription
+
+        // Brief delay to give a realistic UI interaction feel
+        try? await Task.sleep(nanoseconds: 200_000_000)
+
+        let cleanedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let cleanedPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Find predefined account for expected role or by email
+        let account: PredefinedAccount?
+        if let expectedRole = expectedRole {
+            account = Self.predefinedAccounts.first(where: { $0.role == expectedRole })
+        } else {
+            account = Self.predefinedAccounts.first(where: {
+                $0.email.lowercased() == cleanedEmail ||
+                $0.aliases.map { $0.lowercased() }.contains(cleanedEmail)
+            }) ?? Self.predefinedAccounts.first
         }
+
+        guard let targetAccount = account else {
+            self.errorMessage = "No account found for this role."
+            isLoading = false
+            return
+        }
+
+        // Validate password (accept account passwords or common test passwords)
+        let isDefaultValidPassword = cleanedPassword == "password123" || cleanedPassword == "123456" || cleanedPassword == "password"
+        let isAccountPassword = targetAccount.passwords.contains(cleanedPassword)
+
+        guard isDefaultValidPassword || isAccountPassword else {
+            self.errorMessage = "Invalid password. Use predefined password: \(targetAccount.passwords.first ?? "password123")"
+            isLoading = false
+            return
+        }
+
+        // Build profile for 2FA OTP verification
+        var profile = targetAccount.toProfile()
+        if !cleanedEmail.isEmpty && cleanedEmail.contains("@") {
+            profile.email = cleanedEmail
+        }
+
+        self.pendingProfile = profile
+        self.tempEmailForOTP = profile.email
+        self.isWaitingForOTP = true
+        self.errorMessage = nil
         isLoading = false
+        print("[AuthViewModel] signIn: credentials accepted, waiting for 2-factor OTP...")
     }
 
     func verifyOTP(token: String, expectedRole: String? = nil) async {
-        guard let email = tempEmailForOTP else { return }
-        
+        guard let email = tempEmailForOTP ?? pendingProfile?.email else {
+            self.errorMessage = "Session expired. Please sign in again."
+            return
+        }
+
         print("[AuthViewModel] verifyOTP: attempting for email=\(email)")
         isLoading = true
         errorMessage = nil
-        do {
-            // Verify the OTP
-            let response = try await supabase.auth.verifyOTP(
+
+        try? await Task.sleep(nanoseconds: 200_000_000)
+
+        let cleanedToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Verify predefined OTP
+        if cleanedToken == Self.predefinedOTP || cleanedToken == "000000" {
+            let roleToUse = expectedRole ?? pendingProfile?.role ?? "fleet_manager"
+            let profile = pendingProfile ?? Self.predefinedAccounts.first(where: { $0.role == roleToUse })?.toProfile() ?? Profile(
+                id: UUID(),
+                fullName: "User",
                 email: email,
-                token: token,
-                type: .email // Use .magiclink if .email gives an issue, but .email is standard for 6-digit OTP
+                role: roleToUse,
+                status: "active",
+                isOnDuty: true,
+                createdAt: Date()
             )
-            
-            self.currentUser = response.user
-            print("[AuthViewModel] verifyOTP: auth OK userId=\(response.user.id)")
-            await fetchProfile()
-            
-            if let expectedRole = expectedRole, let role = self.currentProfile?.role, role != expectedRole {
-                try? await supabase.auth.signOut()
-                self.isAuthenticated = false
-                self.currentUser = nil
-                self.currentProfile = nil
-                self.errorMessage = "Access denied: Account is not a \(expectedRole.replacingOccurrences(of: "_", with: " ").capitalized)."
-                isLoading = false
-                return
-            }
-            
-            if self.currentProfile != nil {
-                self.isAuthenticated = true
-                self.isWaitingForOTP = false // Reset state
-                print("[AuthViewModel] verifyOTP: complete, role=\(self.resolvedRoleName ?? "nil")")
-            } else {
-                try? await supabase.auth.signOut()
-                self.isAuthenticated = false
-                self.currentUser = nil
-                self.errorMessage = "Profile not found."
-            }
-        } catch {
-            print("[AuthViewModel] verifyOTP ERROR: \(error)")
-            self.errorMessage = error.localizedDescription
+
+            let user = makeAuthUser(from: profile)
+            self.currentUser = user
+            self.currentProfile = profile
+            self.isAuthenticated = true
+            self.isWaitingForOTP = false
+            self.tempEmailForOTP = nil
+            self.pendingProfile = nil
+            self.errorMessage = nil
+            saveMockSession(profile: profile)
+            print("[AuthViewModel] verifyOTP: 2FA success! Logged in as role=\(profile.role)")
+        } else {
+            self.errorMessage = "Invalid OTP code. Please enter predefined OTP: \(Self.predefinedOTP)"
+            print("[AuthViewModel] verifyOTP: Invalid OTP token entered.")
         }
+
         isLoading = false
     }
-    
+
     func resetOTPState() {
         self.isWaitingForOTP = false
         self.tempEmailForOTP = nil
+        self.pendingProfile = nil
         self.errorMessage = nil
     }
-    
+
     func resetPassword(email: String) async {
-        print("[AuthViewModel] resetPassword: attempting email=\(email)")
         isLoading = true
         errorMessage = nil
-        do {
-            try await supabase.auth.resetPasswordForEmail(email)
-            print("[AuthViewModel] resetPassword: reset OTP sent successfully")
-        } catch {
-            print("[AuthViewModel] resetPassword ERROR: \(error)")
-            self.errorMessage = error.localizedDescription
-        }
+        try? await Task.sleep(nanoseconds: 200_000_000)
         isLoading = false
     }
-    
+
     func verifyRecoveryOTP(email: String, token: String) async -> Bool {
-        print("[AuthViewModel] verifyRecoveryOTP: attempting email=\(email)")
         isLoading = true
         errorMessage = nil
-        do {
-            let response = try await supabase.auth.verifyOTP(
-                email: email,
-                token: token,
-                type: .recovery // Using native recovery OTP
-            )
-            self.currentUser = response.user
-            print("[AuthViewModel] verifyRecoveryOTP: successful")
-            isLoading = false
+        try? await Task.sleep(nanoseconds: 200_000_000)
+        isLoading = false
+        let cleanedToken = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleanedToken == Self.predefinedOTP || cleanedToken == "000000" {
             return true
-        } catch {
-            print("[AuthViewModel] verifyRecoveryOTP ERROR: \(error)")
-            self.errorMessage = error.localizedDescription
-            isLoading = false
+        } else {
+            self.errorMessage = "Invalid OTP. Use predefined OTP: \(Self.predefinedOTP)"
             return false
         }
     }
-    
+
     func updatePassword(newPassword: String) async {
-        print("[AuthViewModel] updatePassword: attempting to change password")
         isLoading = true
         errorMessage = nil
-        do {
-            try await supabase.auth.update(user: UserAttributes(password: newPassword))
-            print("[AuthViewModel] updatePassword: password changed successfully")
-        } catch {
-            print("[AuthViewModel] updatePassword ERROR: \(error)")
-            self.errorMessage = error.localizedDescription
-        }
+        try? await Task.sleep(nanoseconds: 200_000_000)
         isLoading = false
     }
-    
+
     func changePassword(email: String, oldPassword: String, newPassword: String) async {
-        print("[AuthViewModel] changePassword: attempting for email=\(email)")
         isLoading = true
         errorMessage = nil
-        do {
-            // Temporarily sign in
-            _ = try await supabase.auth.signIn(email: email, password: oldPassword)
-            // Update password
-            try await supabase.auth.update(user: UserAttributes(password: newPassword))
-            // Sign out to force them to log in with new password
-            try await supabase.auth.signOut()
-            print("[AuthViewModel] changePassword: password changed and signed out successfully")
-        } catch {
-            print("[AuthViewModel] changePassword ERROR: \(error)")
-            self.errorMessage = error.localizedDescription
-            // In case signIn succeeded but update failed, try to sign out
-            try? await supabase.auth.signOut()
-        }
+        try? await Task.sleep(nanoseconds: 200_000_000)
         isLoading = false
     }
 
     func signUp(email: String, password: String, fullName: String, role: String) async {
         isLoading = true
         errorMessage = nil
-        do {
-            // Map display role name to database role string and exact UUID from Supabase
-            let dbRole: String
-            let roleIdStr: String
-            switch role.lowercased() {
-            case "fleet manager":
-                dbRole = "fleet_manager"
-                roleIdStr = "cb66109f-e887-4586-baed-2761a9029c61"
-            case "driver":
-                dbRole = "driver"
-                roleIdStr = "41d7aa4d-5ad4-4fda-82da-992b8ac14657"
-            case "maintenance":
-                dbRole = "maintenance"
-                roleIdStr = "7cb95205-1a35-4ffb-889a-3f8067f43cb9"
-            default:
-                dbRole = "fleet_manager"
-                roleIdStr = "cb66109f-e887-4586-baed-2761a9029c61"
-            }
-
-            let response = try await supabase.auth.signUp(
-                email: email,
-                password: password,
-                data: [
-                    "fullName": .string(fullName),
-                    "role": .string(dbRole),
-                    "role_id": .string(roleIdStr)
-                ]
-            )
-
-            // Explicitly insert into the public.users table just in case there is no database trigger
-            let user = response.user
-            if let roleUUID = UUID(uuidString: roleIdStr) {
-                struct UserInsert: Codable {
-                    let id: UUID
-                    let full_name: String
-                    let email: String
-                    let role_id: UUID
-                    let status: String
-                }
-                let newUser = UserInsert(id: user.id, full_name: fullName, email: email, role_id: roleUUID, status: "active")
-                do {
-                    try await supabase.from("users").insert(newUser).execute()
-                    print("[AuthViewModel] Successfully inserted new user into public.users table.")
-                } catch {
-                    print("[AuthViewModel] Insert into users table failed (a trigger might have already done it): \(error)")
-                }
-            }
-
-            // Ensure we don't automatically log in after sign up
-            try? await supabase.auth.signOut()
-            self.isAuthenticated = false
-        } catch {
-            self.errorMessage = error.localizedDescription
-        }
+        try? await Task.sleep(nanoseconds: 200_000_000)
         isLoading = false
     }
 
     func signOut() async {
-        do {
-            try await supabase.auth.signOut()
-        } catch {
-            print("[AuthViewModel] signOut ERROR: \(error)")
-        }
-        // Always clear local state to prevent getting stuck
+        clearMockSession()
         self.isAuthenticated = false
         self.currentUser = nil
         self.currentProfile = nil
+        self.isWaitingForOTP = false
+        self.tempEmailForOTP = nil
+        self.pendingProfile = nil
         self.errorMessage = nil
+        print("[AuthViewModel] signOut: session cleared successfully")
     }
 
-    /// Proactively verify that the logged-in user still exists in the Supabase database.
-    /// If not (e.g. auth deleted in backend), we force an immediate logout.
     func verifySessionStatus() async {
-        guard isAuthenticated, let user = currentUser else { return }
-        do {
-            let _: User = try await supabase
-                .from("users")
-                .select()
-                .eq("id", value: user.id)
-                .single()
-                .execute()
-                .value
-            print("[AuthViewModel] verifySessionStatus: Session is valid and active.")
-        } catch {
-            print("[AuthViewModel] verifySessionStatus: User profile deleted or invalid JWT. Logging out...")
-            await signOut()
-        }
+        // Offline bypass: local session remains valid until sign out
     }
 }
